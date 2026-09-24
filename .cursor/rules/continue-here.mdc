@@ -1,0 +1,19 @@
+---
+description: Where TradeSimple Intel continues, and what other agents must not duplicate
+alwaysApply: true
+---
+
+# Continue in this repo
+
+TradeSimple Intel is this project: `~/tradesimple-intel`. Other agents working on the intelligence terminal, its frontend, preview, or later feeds continue here. Do not start a second app under `~/Tradesimple` or `Documents/TradeSimple`.
+
+The Cursor-hosted remote is the shared copy once Origin has a namespace. Until `origin repo create` succeeds, keep working in this folder and do not invent another remote.
+
+Product rules:
+
+- One screen: top nav, center map, one list, one dossier. Do not add a second permanent rail.
+- Research terminal only. Do not place live orders.
+- Keys stay in `.env.local`. Never commit them or send them to the browser.
+- Label every feed with source, as-of time, and real latency.
+- Do not invent ticker joins. Use `data/tickers.json`.
+- China, Europe, the Middle East, Eastern Europe, South Asia, and Southeast Asia stay empty until a feed is real.
