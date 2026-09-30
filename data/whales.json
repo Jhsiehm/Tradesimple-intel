@@ -1,0 +1,23 @@
+[
+  { "cik": "0001067983", "name": "Berkshire Hathaway" },
+  { "cik": "0001350694", "name": "Bridgewater Associates" },
+  { "cik": "0001037389", "name": "Renaissance Technologies" },
+  { "cik": "0001423053", "name": "Citadel Advisors" },
+  { "cik": "0001336528", "name": "Pershing Square" },
+  { "cik": "0001167483", "name": "Tiger Global" },
+  { "cik": "0001029160", "name": "Soros Fund Management" },
+  { "cik": "0001656456", "name": "Appaloosa" },
+  { "cik": "0001536411", "name": "Duquesne Family Office" },
+  { "cik": "0001649339", "name": "Scion Asset Management" },
+  { "cik": "0001040273", "name": "Third Point" },
+  { "cik": "0001135730", "name": "Coatue Management" },
+  { "cik": "0001061165", "name": "Lone Pine Capital" },
+  { "cik": "0001103804", "name": "Viking Global" },
+  { "cik": "0001273087", "name": "Millennium Management" },
+  { "cik": "0001179392", "name": "Two Sigma Investments" },
+  { "cik": "0001009207", "name": "D. E. Shaw" },
+  { "cik": "0001697748", "name": "ARK Investment Management" },
+  { "cik": "0001061768", "name": "Baupost Group" },
+  { "cik": "0001791786", "name": "Elliott Investment Management" },
+  { "cik": "0001603466", "name": "Point72 Asset Management" }
+]

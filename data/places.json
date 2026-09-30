@@ -1,0 +1,1545 @@
+[
+  {
+    "name": "United States",
+    "aliases": [
+      "U.S.",
+      "US",
+      "USA",
+      "America",
+      "American",
+      "Washington",
+      "White House",
+      "Pentagon",
+      "Congress"
+    ],
+    "lon": -77.04,
+    "lat": 38.9,
+    "region": "americas",
+    "strict": [
+      "US"
+    ]
+  },
+  {
+    "name": "New York",
+    "aliases": [
+      "Wall Street",
+      "Manhattan"
+    ],
+    "lon": -74,
+    "lat": 40.71,
+    "region": "americas"
+  },
+  {
+    "name": "California",
+    "aliases": [
+      "Los Angeles",
+      "San Francisco",
+      "Silicon Valley"
+    ],
+    "lon": -119.4,
+    "lat": 36.8,
+    "region": "americas"
+  },
+  {
+    "name": "Texas",
+    "aliases": [
+      "Houston",
+      "Dallas",
+      "Austin"
+    ],
+    "lon": -99,
+    "lat": 31,
+    "region": "americas"
+  },
+  {
+    "name": "Florida",
+    "aliases": [
+      "Miami"
+    ],
+    "lon": -81.7,
+    "lat": 27.8,
+    "region": "americas"
+  },
+  {
+    "name": "Chicago",
+    "aliases": [
+      "Illinois"
+    ],
+    "lon": -87.63,
+    "lat": 41.88,
+    "region": "americas"
+  },
+  {
+    "name": "Alaska",
+    "aliases": [],
+    "lon": -150,
+    "lat": 63.5,
+    "region": "americas"
+  },
+  {
+    "name": "Canada",
+    "aliases": [
+      "Canadian",
+      "Ottawa",
+      "Toronto",
+      "Carney",
+      "Trudeau"
+    ],
+    "lon": -75.7,
+    "lat": 45.42,
+    "region": "americas"
+  },
+  {
+    "name": "Mexico",
+    "aliases": [
+      "Mexican",
+      "Sheinbaum"
+    ],
+    "lon": -99.13,
+    "lat": 19.43,
+    "region": "americas"
+  },
+  {
+    "name": "Cuba",
+    "aliases": [
+      "Cuban",
+      "Havana"
+    ],
+    "lon": -82.37,
+    "lat": 23.11,
+    "region": "americas"
+  },
+  {
+    "name": "Haiti",
+    "aliases": [
+      "Haitian",
+      "Port-au-Prince"
+    ],
+    "lon": -72.34,
+    "lat": 18.54,
+    "region": "americas"
+  },
+  {
+    "name": "Venezuela",
+    "aliases": [
+      "Venezuelan",
+      "Caracas",
+      "Maduro"
+    ],
+    "lon": -66.9,
+    "lat": 10.49,
+    "region": "americas"
+  },
+  {
+    "name": "Colombia",
+    "aliases": [
+      "Colombian",
+      "Bogota",
+      "Bogotá",
+      "Petro"
+    ],
+    "lon": -74.07,
+    "lat": 4.71,
+    "region": "americas"
+  },
+  {
+    "name": "Brazil",
+    "aliases": [
+      "Brazilian",
+      "Brasilia",
+      "Sao Paulo",
+      "São Paulo",
+      "Rio de Janeiro",
+      "Lula",
+      "Bolsonaro"
+    ],
+    "lon": -47.88,
+    "lat": -15.79,
+    "region": "americas"
+  },
+  {
+    "name": "Argentina",
+    "aliases": [
+      "Argentine",
+      "Argentinian",
+      "Buenos Aires",
+      "Milei"
+    ],
+    "lon": -58.38,
+    "lat": -34.6,
+    "region": "americas"
+  },
+  {
+    "name": "Chile",
+    "aliases": [
+      "Chilean",
+      "Santiago"
+    ],
+    "lon": -70.67,
+    "lat": -33.45,
+    "region": "americas"
+  },
+  {
+    "name": "Peru",
+    "aliases": [
+      "Peruvian",
+      "Lima"
+    ],
+    "lon": -77.04,
+    "lat": -12.05,
+    "region": "americas"
+  },
+  {
+    "name": "Ecuador",
+    "aliases": [
+      "Ecuadorian",
+      "Quito"
+    ],
+    "lon": -78.47,
+    "lat": -0.18,
+    "region": "americas"
+  },
+  {
+    "name": "Bolivia",
+    "aliases": [
+      "Bolivian",
+      "La Paz"
+    ],
+    "lon": -68.15,
+    "lat": -16.5,
+    "region": "americas"
+  },
+  {
+    "name": "Panama",
+    "aliases": [
+      "Panama Canal",
+      "Panamanian"
+    ],
+    "lon": -79.52,
+    "lat": 8.98,
+    "region": "americas"
+  },
+  {
+    "name": "Guatemala",
+    "aliases": [
+      "Guatemalan"
+    ],
+    "lon": -90.51,
+    "lat": 14.63,
+    "region": "americas"
+  },
+  {
+    "name": "Nicaragua",
+    "aliases": [
+      "Nicaraguan",
+      "Ortega",
+      "Managua"
+    ],
+    "lon": -86.25,
+    "lat": 12.13,
+    "region": "americas"
+  },
+  {
+    "name": "Greenland",
+    "aliases": [
+      "Nuuk"
+    ],
+    "lon": -51.7,
+    "lat": 64.18,
+    "region": "americas"
+  },
+  {
+    "name": "United Kingdom",
+    "aliases": [
+      "UK",
+      "U.K.",
+      "Britain",
+      "British",
+      "London",
+      "Downing Street",
+      "Starmer",
+      "England",
+      "Scotland",
+      "Wales"
+    ],
+    "lon": -0.13,
+    "lat": 51.51,
+    "region": "europe",
+    "strict": [
+      "UK"
+    ]
+  },
+  {
+    "name": "Ireland",
+    "aliases": [
+      "Irish",
+      "Dublin"
+    ],
+    "lon": -6.26,
+    "lat": 53.35,
+    "region": "europe"
+  },
+  {
+    "name": "France",
+    "aliases": [
+      "French",
+      "Paris",
+      "Macron",
+      "Élysée"
+    ],
+    "lon": 2.35,
+    "lat": 48.86,
+    "region": "europe"
+  },
+  {
+    "name": "Germany",
+    "aliases": [
+      "German",
+      "Berlin",
+      "Merz",
+      "Bundestag",
+      "Frankfurt",
+      "Munich"
+    ],
+    "lon": 13.4,
+    "lat": 52.52,
+    "region": "europe"
+  },
+  {
+    "name": "European Union",
+    "aliases": [
+      "EU",
+      "E.U.",
+      "Brussels",
+      "European Commission",
+      "von der Leyen",
+      "Eurozone",
+      "ECB",
+      "NATO"
+    ],
+    "lon": 4.35,
+    "lat": 50.85,
+    "region": "europe",
+    "strict": [
+      "EU",
+      "ECB",
+      "NATO"
+    ]
+  },
+  {
+    "name": "Netherlands",
+    "aliases": [
+      "Dutch",
+      "Amsterdam",
+      "The Hague"
+    ],
+    "lon": 4.9,
+    "lat": 52.37,
+    "region": "europe"
+  },
+  {
+    "name": "Belgium",
+    "aliases": [
+      "Belgian"
+    ],
+    "lon": 4.35,
+    "lat": 50.85,
+    "region": "europe"
+  },
+  {
+    "name": "Spain",
+    "aliases": [
+      "Spanish",
+      "Madrid",
+      "Barcelona",
+      "Sánchez",
+      "Sanchez"
+    ],
+    "lon": -3.7,
+    "lat": 40.42,
+    "region": "europe"
+  },
+  {
+    "name": "Portugal",
+    "aliases": [
+      "Portuguese",
+      "Lisbon"
+    ],
+    "lon": -9.14,
+    "lat": 38.72,
+    "region": "europe"
+  },
+  {
+    "name": "Italy",
+    "aliases": [
+      "Italian",
+      "Rome",
+      "Milan",
+      "Meloni"
+    ],
+    "lon": 12.5,
+    "lat": 41.9,
+    "region": "europe"
+  },
+  {
+    "name": "Vatican",
+    "aliases": [
+      "Pope",
+      "Holy See"
+    ],
+    "lon": 12.45,
+    "lat": 41.9,
+    "region": "europe"
+  },
+  {
+    "name": "Switzerland",
+    "aliases": [
+      "Swiss",
+      "Geneva",
+      "Zurich",
+      "Bern",
+      "Davos"
+    ],
+    "lon": 7.45,
+    "lat": 46.95,
+    "region": "europe"
+  },
+  {
+    "name": "Austria",
+    "aliases": [
+      "Austrian",
+      "Vienna"
+    ],
+    "lon": 16.37,
+    "lat": 48.21,
+    "region": "europe"
+  },
+  {
+    "name": "Sweden",
+    "aliases": [
+      "Swedish",
+      "Stockholm"
+    ],
+    "lon": 18.07,
+    "lat": 59.33,
+    "region": "europe"
+  },
+  {
+    "name": "Norway",
+    "aliases": [
+      "Norwegian",
+      "Oslo"
+    ],
+    "lon": 10.75,
+    "lat": 59.91,
+    "region": "europe"
+  },
+  {
+    "name": "Denmark",
+    "aliases": [
+      "Danish",
+      "Copenhagen"
+    ],
+    "lon": 12.57,
+    "lat": 55.68,
+    "region": "europe"
+  },
+  {
+    "name": "Finland",
+    "aliases": [
+      "Finnish",
+      "Helsinki"
+    ],
+    "lon": 24.94,
+    "lat": 60.17,
+    "region": "europe"
+  },
+  {
+    "name": "Greece",
+    "aliases": [
+      "Greek",
+      "Athens"
+    ],
+    "lon": 23.73,
+    "lat": 37.98,
+    "region": "europe"
+  },
+  {
+    "name": "Iceland",
+    "aliases": [
+      "Icelandic",
+      "Reykjavik"
+    ],
+    "lon": -21.9,
+    "lat": 64.15,
+    "region": "europe"
+  },
+  {
+    "name": "Ukraine",
+    "aliases": [
+      "Ukrainian",
+      "Kyiv",
+      "Kiev",
+      "Zelensky",
+      "Zelenskyy",
+      "Kharkiv",
+      "Odesa",
+      "Donbas",
+      "Donetsk",
+      "Crimea",
+      "Zaporizhzhia"
+    ],
+    "lon": 30.52,
+    "lat": 50.45,
+    "region": "easteurope"
+  },
+  {
+    "name": "Russia",
+    "aliases": [
+      "Russian",
+      "Moscow",
+      "Kremlin",
+      "Putin",
+      "St Petersburg"
+    ],
+    "lon": 37.62,
+    "lat": 55.75,
+    "region": "easteurope"
+  },
+  {
+    "name": "Belarus",
+    "aliases": [
+      "Belarusian",
+      "Minsk",
+      "Lukashenko"
+    ],
+    "lon": 27.56,
+    "lat": 53.9,
+    "region": "easteurope"
+  },
+  {
+    "name": "Poland",
+    "aliases": [
+      "Polish",
+      "Warsaw",
+      "Tusk"
+    ],
+    "lon": 21.01,
+    "lat": 52.23,
+    "region": "easteurope"
+  },
+  {
+    "name": "Hungary",
+    "aliases": [
+      "Hungarian",
+      "Budapest",
+      "Orban",
+      "Orbán"
+    ],
+    "lon": 19.04,
+    "lat": 47.5,
+    "region": "easteurope"
+  },
+  {
+    "name": "Romania",
+    "aliases": [
+      "Romanian",
+      "Bucharest"
+    ],
+    "lon": 26.1,
+    "lat": 44.43,
+    "region": "easteurope"
+  },
+  {
+    "name": "Moldova",
+    "aliases": [
+      "Moldovan",
+      "Chisinau",
+      "Transnistria"
+    ],
+    "lon": 28.86,
+    "lat": 47.01,
+    "region": "easteurope"
+  },
+  {
+    "name": "Serbia",
+    "aliases": [
+      "Serbian",
+      "Belgrade",
+      "Kosovo"
+    ],
+    "lon": 20.46,
+    "lat": 44.82,
+    "region": "easteurope"
+  },
+  {
+    "name": "Czech Republic",
+    "aliases": [
+      "Czech",
+      "Prague"
+    ],
+    "lon": 14.42,
+    "lat": 50.08,
+    "region": "easteurope"
+  },
+  {
+    "name": "Slovakia",
+    "aliases": [
+      "Slovak",
+      "Bratislava",
+      "Fico"
+    ],
+    "lon": 17.11,
+    "lat": 48.15,
+    "region": "easteurope"
+  },
+  {
+    "name": "Baltics",
+    "aliases": [
+      "Estonia",
+      "Latvia",
+      "Lithuania",
+      "Tallinn",
+      "Riga",
+      "Vilnius"
+    ],
+    "lon": 24.1,
+    "lat": 56.95,
+    "region": "easteurope"
+  },
+  {
+    "name": "Georgia (country)",
+    "aliases": [
+      "Tbilisi",
+      "Georgian Dream"
+    ],
+    "lon": 44.79,
+    "lat": 41.72,
+    "region": "easteurope"
+  },
+  {
+    "name": "Armenia",
+    "aliases": [
+      "Armenian",
+      "Yerevan"
+    ],
+    "lon": 44.51,
+    "lat": 40.18,
+    "region": "easteurope"
+  },
+  {
+    "name": "Azerbaijan",
+    "aliases": [
+      "Azerbaijani",
+      "Baku"
+    ],
+    "lon": 49.87,
+    "lat": 40.41,
+    "region": "easteurope"
+  },
+  {
+    "name": "Turkey",
+    "aliases": [
+      "Turkish",
+      "Türkiye",
+      "Ankara",
+      "Istanbul",
+      "Erdogan",
+      "Erdoğan"
+    ],
+    "lon": 32.85,
+    "lat": 39.93,
+    "region": "mideast"
+  },
+  {
+    "name": "Israel",
+    "aliases": [
+      "Israeli",
+      "Jerusalem",
+      "Tel Aviv",
+      "Netanyahu",
+      "IDF",
+      "Knesset"
+    ],
+    "lon": 35.21,
+    "lat": 31.77,
+    "region": "mideast",
+    "strict": [
+      "IDF"
+    ]
+  },
+  {
+    "name": "Gaza",
+    "aliases": [
+      "Gazan",
+      "Hamas",
+      "Rafah",
+      "Khan Younis"
+    ],
+    "lon": 34.45,
+    "lat": 31.5,
+    "region": "mideast"
+  },
+  {
+    "name": "West Bank",
+    "aliases": [
+      "Ramallah",
+      "Palestinian Authority",
+      "Jenin",
+      "Hebron"
+    ],
+    "lon": 35.2,
+    "lat": 31.9,
+    "region": "mideast"
+  },
+  {
+    "name": "Lebanon",
+    "aliases": [
+      "Lebanese",
+      "Beirut",
+      "Hezbollah"
+    ],
+    "lon": 35.5,
+    "lat": 33.89,
+    "region": "mideast"
+  },
+  {
+    "name": "Syria",
+    "aliases": [
+      "Syrian",
+      "Damascus",
+      "Aleppo"
+    ],
+    "lon": 36.29,
+    "lat": 33.51,
+    "region": "mideast"
+  },
+  {
+    "name": "Jordan",
+    "aliases": [
+      "Jordanian",
+      "Amman"
+    ],
+    "lon": 35.93,
+    "lat": 31.95,
+    "region": "mideast"
+  },
+  {
+    "name": "Iraq",
+    "aliases": [
+      "Iraqi",
+      "Baghdad",
+      "Kurdistan",
+      "Erbil"
+    ],
+    "lon": 44.37,
+    "lat": 33.31,
+    "region": "mideast"
+  },
+  {
+    "name": "Iran",
+    "aliases": [
+      "Iranian",
+      "Tehran",
+      "Khamenei",
+      "IRGC"
+    ],
+    "lon": 51.39,
+    "lat": 35.69,
+    "region": "mideast",
+    "strict": [
+      "IRGC"
+    ]
+  },
+  {
+    "name": "Saudi Arabia",
+    "aliases": [
+      "Saudi",
+      "Riyadh",
+      "Jeddah",
+      "MBS"
+    ],
+    "lon": 46.72,
+    "lat": 24.71,
+    "region": "mideast"
+  },
+  {
+    "name": "United Arab Emirates",
+    "aliases": [
+      "UAE",
+      "Emirati",
+      "Dubai",
+      "Abu Dhabi"
+    ],
+    "lon": 54.37,
+    "lat": 24.45,
+    "region": "mideast",
+    "strict": [
+      "UAE"
+    ]
+  },
+  {
+    "name": "Qatar",
+    "aliases": [
+      "Qatari",
+      "Doha"
+    ],
+    "lon": 51.53,
+    "lat": 25.29,
+    "region": "mideast"
+  },
+  {
+    "name": "Kuwait",
+    "aliases": [
+      "Kuwaiti"
+    ],
+    "lon": 47.98,
+    "lat": 29.38,
+    "region": "mideast"
+  },
+  {
+    "name": "Bahrain",
+    "aliases": [
+      "Bahraini",
+      "Manama"
+    ],
+    "lon": 50.59,
+    "lat": 26.23,
+    "region": "mideast"
+  },
+  {
+    "name": "Oman",
+    "aliases": [
+      "Omani",
+      "Muscat"
+    ],
+    "lon": 58.41,
+    "lat": 23.59,
+    "region": "mideast"
+  },
+  {
+    "name": "Yemen",
+    "aliases": [
+      "Yemeni",
+      "Sanaa",
+      "Houthi",
+      "Houthis",
+      "Aden"
+    ],
+    "lon": 44.21,
+    "lat": 15.37,
+    "region": "mideast"
+  },
+  {
+    "name": "Red Sea",
+    "aliases": [
+      "Bab el-Mandeb",
+      "Suez"
+    ],
+    "lon": 38.5,
+    "lat": 20,
+    "region": "mideast"
+  },
+  {
+    "name": "Strait of Hormuz",
+    "aliases": [
+      "Hormuz",
+      "Persian Gulf"
+    ],
+    "lon": 56.3,
+    "lat": 26.6,
+    "region": "mideast"
+  },
+  {
+    "name": "Egypt",
+    "aliases": [
+      "Egyptian",
+      "Cairo",
+      "Sisi"
+    ],
+    "lon": 31.24,
+    "lat": 30.04,
+    "region": "africa"
+  },
+  {
+    "name": "Libya",
+    "aliases": [
+      "Libyan",
+      "Tripoli",
+      "Benghazi"
+    ],
+    "lon": 13.19,
+    "lat": 32.89,
+    "region": "africa"
+  },
+  {
+    "name": "Tunisia",
+    "aliases": [
+      "Tunisian",
+      "Tunis"
+    ],
+    "lon": 10.18,
+    "lat": 36.81,
+    "region": "africa"
+  },
+  {
+    "name": "Algeria",
+    "aliases": [
+      "Algerian",
+      "Algiers"
+    ],
+    "lon": 3.06,
+    "lat": 36.75,
+    "region": "africa"
+  },
+  {
+    "name": "Morocco",
+    "aliases": [
+      "Moroccan",
+      "Rabat",
+      "Casablanca"
+    ],
+    "lon": -6.84,
+    "lat": 34.02,
+    "region": "africa"
+  },
+  {
+    "name": "Sudan",
+    "aliases": [
+      "Sudanese",
+      "Khartoum",
+      "Darfur",
+      "El Fasher",
+      "RSF"
+    ],
+    "lon": 32.56,
+    "lat": 15.5,
+    "region": "africa",
+    "strict": [
+      "RSF"
+    ]
+  },
+  {
+    "name": "South Sudan",
+    "aliases": [
+      "Juba"
+    ],
+    "lon": 31.58,
+    "lat": 4.85,
+    "region": "africa"
+  },
+  {
+    "name": "Ethiopia",
+    "aliases": [
+      "Ethiopian",
+      "Addis Ababa",
+      "Tigray",
+      "Amhara"
+    ],
+    "lon": 38.74,
+    "lat": 9.03,
+    "region": "africa"
+  },
+  {
+    "name": "Eritrea",
+    "aliases": [
+      "Eritrean",
+      "Asmara"
+    ],
+    "lon": 38.93,
+    "lat": 15.32,
+    "region": "africa"
+  },
+  {
+    "name": "Somalia",
+    "aliases": [
+      "Somali",
+      "Mogadishu",
+      "al-Shabab",
+      "Al-Shabaab"
+    ],
+    "lon": 45.32,
+    "lat": 2.05,
+    "region": "africa"
+  },
+  {
+    "name": "Kenya",
+    "aliases": [
+      "Kenyan",
+      "Nairobi",
+      "Ruto"
+    ],
+    "lon": 36.82,
+    "lat": -1.29,
+    "region": "africa"
+  },
+  {
+    "name": "Uganda",
+    "aliases": [
+      "Ugandan",
+      "Kampala",
+      "Museveni"
+    ],
+    "lon": 32.58,
+    "lat": 0.35,
+    "region": "africa"
+  },
+  {
+    "name": "Tanzania",
+    "aliases": [
+      "Tanzanian",
+      "Dar es Salaam",
+      "Dodoma"
+    ],
+    "lon": 39.28,
+    "lat": -6.79,
+    "region": "africa"
+  },
+  {
+    "name": "Rwanda",
+    "aliases": [
+      "Rwandan",
+      "Kigali",
+      "Kagame"
+    ],
+    "lon": 30.06,
+    "lat": -1.95,
+    "region": "africa"
+  },
+  {
+    "name": "DR Congo",
+    "aliases": [
+      "Congo",
+      "Congolese",
+      "Kinshasa",
+      "Goma",
+      "M23",
+      "DRC"
+    ],
+    "lon": 15.27,
+    "lat": -4.44,
+    "region": "africa",
+    "strict": [
+      "DRC",
+      "M23"
+    ]
+  },
+  {
+    "name": "Nigeria",
+    "aliases": [
+      "Nigerian",
+      "Abuja",
+      "Lagos",
+      "Tinubu"
+    ],
+    "lon": 7.49,
+    "lat": 9.06,
+    "region": "africa"
+  },
+  {
+    "name": "Ghana",
+    "aliases": [
+      "Ghanaian",
+      "Accra"
+    ],
+    "lon": -0.19,
+    "lat": 5.6,
+    "region": "africa"
+  },
+  {
+    "name": "Senegal",
+    "aliases": [
+      "Senegalese",
+      "Dakar"
+    ],
+    "lon": -17.47,
+    "lat": 14.72,
+    "region": "africa"
+  },
+  {
+    "name": "Mali",
+    "aliases": [
+      "Malian",
+      "Bamako"
+    ],
+    "lon": -8,
+    "lat": 12.64,
+    "region": "africa"
+  },
+  {
+    "name": "Burkina Faso",
+    "aliases": [
+      "Ouagadougou"
+    ],
+    "lon": -1.53,
+    "lat": 12.37,
+    "region": "africa"
+  },
+  {
+    "name": "Niger",
+    "aliases": [
+      "Niamey"
+    ],
+    "lon": 2.11,
+    "lat": 13.51,
+    "region": "africa"
+  },
+  {
+    "name": "Sahel",
+    "aliases": [],
+    "lon": 1,
+    "lat": 15,
+    "region": "africa"
+  },
+  {
+    "name": "Cameroon",
+    "aliases": [
+      "Cameroonian",
+      "Yaoundé",
+      "Yaounde"
+    ],
+    "lon": 11.52,
+    "lat": 3.87,
+    "region": "africa"
+  },
+  {
+    "name": "Angola",
+    "aliases": [
+      "Angolan",
+      "Luanda"
+    ],
+    "lon": 13.23,
+    "lat": -8.84,
+    "region": "africa"
+  },
+  {
+    "name": "Mozambique",
+    "aliases": [
+      "Mozambican",
+      "Maputo"
+    ],
+    "lon": 32.57,
+    "lat": -25.97,
+    "region": "africa"
+  },
+  {
+    "name": "Zimbabwe",
+    "aliases": [
+      "Zimbabwean",
+      "Harare"
+    ],
+    "lon": 31.05,
+    "lat": -17.83,
+    "region": "africa"
+  },
+  {
+    "name": "Zambia",
+    "aliases": [
+      "Zambian",
+      "Lusaka"
+    ],
+    "lon": 28.32,
+    "lat": -15.39,
+    "region": "africa"
+  },
+  {
+    "name": "South Africa",
+    "aliases": [
+      "South African",
+      "Johannesburg",
+      "Pretoria",
+      "Cape Town",
+      "Ramaphosa"
+    ],
+    "lon": 28.19,
+    "lat": -25.75,
+    "region": "africa"
+  },
+  {
+    "name": "Madagascar",
+    "aliases": [
+      "Malagasy",
+      "Antananarivo"
+    ],
+    "lon": 47.52,
+    "lat": -18.88,
+    "region": "africa"
+  },
+  {
+    "name": "India",
+    "aliases": [
+      "Indian",
+      "New Delhi",
+      "Delhi",
+      "Mumbai",
+      "Modi",
+      "Bengaluru",
+      "Kashmir"
+    ],
+    "lon": 77.21,
+    "lat": 28.61,
+    "region": "southasia"
+  },
+  {
+    "name": "Pakistan",
+    "aliases": [
+      "Pakistani",
+      "Islamabad",
+      "Karachi",
+      "Lahore",
+      "Sharif",
+      "Imran Khan"
+    ],
+    "lon": 73.05,
+    "lat": 33.68,
+    "region": "southasia"
+  },
+  {
+    "name": "Afghanistan",
+    "aliases": [
+      "Afghan",
+      "Kabul",
+      "Taliban"
+    ],
+    "lon": 69.21,
+    "lat": 34.53,
+    "region": "southasia"
+  },
+  {
+    "name": "Bangladesh",
+    "aliases": [
+      "Bangladeshi",
+      "Dhaka"
+    ],
+    "lon": 90.41,
+    "lat": 23.81,
+    "region": "southasia"
+  },
+  {
+    "name": "Sri Lanka",
+    "aliases": [
+      "Sri Lankan",
+      "Colombo"
+    ],
+    "lon": 79.86,
+    "lat": 6.93,
+    "region": "southasia"
+  },
+  {
+    "name": "Nepal",
+    "aliases": [
+      "Nepali",
+      "Nepalese",
+      "Kathmandu"
+    ],
+    "lon": 85.32,
+    "lat": 27.72,
+    "region": "southasia"
+  },
+  {
+    "name": "Central Asia",
+    "aliases": [
+      "Kazakhstan",
+      "Uzbekistan",
+      "Kyrgyzstan",
+      "Tajikistan",
+      "Turkmenistan",
+      "Astana",
+      "Tashkent"
+    ],
+    "lon": 71.43,
+    "lat": 51.13,
+    "region": "southasia"
+  },
+  {
+    "name": "China",
+    "aliases": [
+      "Chinese",
+      "Beijing",
+      "Xi Jinping",
+      "Shanghai",
+      "Shenzhen",
+      "Guangzhou",
+      "PLA"
+    ],
+    "lon": 116.4,
+    "lat": 39.9,
+    "region": "eastasia",
+    "strict": [
+      "PLA"
+    ]
+  },
+  {
+    "name": "Hong Kong",
+    "aliases": [],
+    "lon": 114.17,
+    "lat": 22.32,
+    "region": "eastasia"
+  },
+  {
+    "name": "Taiwan",
+    "aliases": [
+      "Taiwanese",
+      "Taipei",
+      "Lai Ching-te"
+    ],
+    "lon": 121.56,
+    "lat": 25.03,
+    "region": "eastasia"
+  },
+  {
+    "name": "Taiwan Strait",
+    "aliases": [],
+    "lon": 119.5,
+    "lat": 24.5,
+    "region": "eastasia"
+  },
+  {
+    "name": "Tibet",
+    "aliases": [
+      "Tibetan",
+      "Lhasa",
+      "Dalai Lama"
+    ],
+    "lon": 91.13,
+    "lat": 29.65,
+    "region": "eastasia"
+  },
+  {
+    "name": "Xinjiang",
+    "aliases": [
+      "Uyghur",
+      "Uighur"
+    ],
+    "lon": 87.62,
+    "lat": 43.82,
+    "region": "eastasia"
+  },
+  {
+    "name": "Japan",
+    "aliases": [
+      "Japanese",
+      "Tokyo",
+      "Osaka",
+      "Ishiba",
+      "Takaichi"
+    ],
+    "lon": 139.69,
+    "lat": 35.69,
+    "region": "eastasia"
+  },
+  {
+    "name": "South Korea",
+    "aliases": [
+      "South Korean",
+      "Seoul",
+      "Korean"
+    ],
+    "lon": 126.98,
+    "lat": 37.57,
+    "region": "eastasia"
+  },
+  {
+    "name": "North Korea",
+    "aliases": [
+      "North Korean",
+      "Pyongyang",
+      "Kim Jong Un",
+      "DPRK"
+    ],
+    "lon": 125.76,
+    "lat": 39.04,
+    "region": "eastasia",
+    "strict": [
+      "DPRK"
+    ]
+  },
+  {
+    "name": "Mongolia",
+    "aliases": [
+      "Mongolian",
+      "Ulaanbaatar"
+    ],
+    "lon": 106.92,
+    "lat": 47.92,
+    "region": "eastasia"
+  },
+  {
+    "name": "South China Sea",
+    "aliases": [
+      "Spratly",
+      "Scarborough Shoal",
+      "Paracel"
+    ],
+    "lon": 114,
+    "lat": 12,
+    "region": "seasia"
+  },
+  {
+    "name": "Philippines",
+    "aliases": [
+      "Philippine",
+      "Filipino",
+      "Manila",
+      "Marcos"
+    ],
+    "lon": 120.98,
+    "lat": 14.6,
+    "region": "seasia"
+  },
+  {
+    "name": "Vietnam",
+    "aliases": [
+      "Vietnamese",
+      "Hanoi",
+      "Ho Chi Minh City"
+    ],
+    "lon": 105.85,
+    "lat": 21.03,
+    "region": "seasia"
+  },
+  {
+    "name": "Thailand",
+    "aliases": [
+      "Thai",
+      "Bangkok"
+    ],
+    "lon": 100.5,
+    "lat": 13.76,
+    "region": "seasia"
+  },
+  {
+    "name": "Cambodia",
+    "aliases": [
+      "Cambodian",
+      "Phnom Penh"
+    ],
+    "lon": 104.92,
+    "lat": 11.56,
+    "region": "seasia"
+  },
+  {
+    "name": "Myanmar",
+    "aliases": [
+      "Burma",
+      "Burmese",
+      "Yangon",
+      "Naypyidaw"
+    ],
+    "lon": 96.13,
+    "lat": 19.75,
+    "region": "seasia"
+  },
+  {
+    "name": "Laos",
+    "aliases": [
+      "Lao",
+      "Vientiane"
+    ],
+    "lon": 102.6,
+    "lat": 17.97,
+    "region": "seasia"
+  },
+  {
+    "name": "Malaysia",
+    "aliases": [
+      "Malaysian",
+      "Kuala Lumpur",
+      "Anwar"
+    ],
+    "lon": 101.69,
+    "lat": 3.14,
+    "region": "seasia"
+  },
+  {
+    "name": "Singapore",
+    "aliases": [
+      "Singaporean"
+    ],
+    "lon": 103.82,
+    "lat": 1.35,
+    "region": "seasia"
+  },
+  {
+    "name": "Indonesia",
+    "aliases": [
+      "Indonesian",
+      "Jakarta",
+      "Prabowo",
+      "Bali"
+    ],
+    "lon": 106.85,
+    "lat": -6.21,
+    "region": "seasia"
+  },
+  {
+    "name": "Strait of Malacca",
+    "aliases": [
+      "Malacca"
+    ],
+    "lon": 100.5,
+    "lat": 3.5,
+    "region": "seasia"
+  },
+  {
+    "name": "Australia",
+    "aliases": [
+      "Australian",
+      "Canberra",
+      "Sydney",
+      "Melbourne",
+      "Albanese"
+    ],
+    "lon": 149.13,
+    "lat": -35.28,
+    "region": "oceania"
+  },
+  {
+    "name": "New Zealand",
+    "aliases": [
+      "Wellington",
+      "Auckland"
+    ],
+    "lon": 174.78,
+    "lat": -41.29,
+    "region": "oceania"
+  },
+  {
+    "name": "Papua New Guinea",
+    "aliases": [
+      "Port Moresby"
+    ],
+    "lon": 147.18,
+    "lat": -9.44,
+    "region": "oceania"
+  },
+  {
+    "name": "Pacific Islands",
+    "aliases": [
+      "Fiji",
+      "Solomon Islands",
+      "Samoa",
+      "Tonga",
+      "Vanuatu"
+    ],
+    "lon": 178.44,
+    "lat": -18.14,
+    "region": "oceania"
+  },
+  {
+    "name": "Antarctica",
+    "aliases": [
+      "Antarctic"
+    ],
+    "lon": 0,
+    "lat": -72,
+    "region": "oceania"
+  },
+  {
+    "name": "Arctic",
+    "aliases": [],
+    "lon": 0,
+    "lat": 72,
+    "region": "europe"
+  }
+]

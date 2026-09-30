@@ -1,0 +1,20 @@
+[
+  { "id": "hormuz", "name": "Strait of Hormuz", "lon": 56.25, "lat": 26.57 },
+  { "id": "bab-el-mandeb", "name": "Bab el-Mandeb", "lon": 43.33, "lat": 12.58 },
+  { "id": "suez", "name": "Suez Canal", "lon": 32.34, "lat": 30.58 },
+  { "id": "malacca", "name": "Strait of Malacca", "lon": 101.2, "lat": 2.5 },
+  { "id": "singapore", "name": "Singapore Strait", "lon": 103.9, "lat": 1.2 },
+  { "id": "panama", "name": "Panama Canal", "lon": -79.68, "lat": 9.08 },
+  { "id": "bosporus", "name": "Bosporus", "lon": 29.07, "lat": 41.12 },
+  { "id": "gibraltar", "name": "Strait of Gibraltar", "lon": -5.6, "lat": 35.96 },
+  { "id": "dover", "name": "Dover Strait", "lon": 1.45, "lat": 51.0 },
+  { "id": "oresund", "name": "Øresund", "lon": 12.7, "lat": 55.9 },
+  { "id": "taiwan", "name": "Taiwan Strait", "lon": 119.6, "lat": 24.4 },
+  { "id": "luzon", "name": "Luzon Strait", "lon": 121.0, "lat": 20.5 },
+  { "id": "lombok", "name": "Lombok Strait", "lon": 115.75, "lat": -8.7 },
+  { "id": "sunda", "name": "Sunda Strait", "lon": 105.8, "lat": -6.0 },
+  { "id": "good-hope", "name": "Cape of Good Hope", "lon": 18.47, "lat": -34.36 },
+  { "id": "korea", "name": "Korea Strait", "lon": 129.3, "lat": 34.4 },
+  { "id": "bering", "name": "Bering Strait", "lon": -168.9, "lat": 65.8 },
+  { "id": "magellan", "name": "Strait of Magellan", "lon": -70.6, "lat": -53.4 }
+]

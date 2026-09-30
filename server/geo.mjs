@@ -50,11 +50,17 @@ export function stageFromText(text) {
 export function ladderFromActions(actions) {
   let highest = 0;
   const hits = [];
+  const seen = new Set();
   for (const action of actions) {
-    const stage = stageFromText(action.text || action.latestAction?.text || "");
+    const text = action.text || action.latestAction?.text || "";
+    const stage = stageFromText(text);
     if (!stage) continue;
+    const date = action.actionDate || action.date || null;
+    const sig = `${date}|${text}`;
+    if (seen.has(sig)) continue;
+    seen.add(sig);
     const idx = STAGES.indexOf(stage);
-    hits.push({ stage, date: action.actionDate || action.date || null, text: action.text || "" });
+    hits.push({ stage, date, text });
     if (idx > highest) highest = idx;
   }
   return {

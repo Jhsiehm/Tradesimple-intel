@@ -1,0 +1,20 @@
+[
+  { "symbol": "BTC-USD", "code": "BTC", "name": "Bitcoin", "gecko": "bitcoin" },
+  { "symbol": "ETH-USD", "code": "ETH", "name": "Ethereum", "gecko": "ethereum" },
+  { "symbol": "USDT-USD", "code": "USDT", "name": "Tether", "gecko": "tether" },
+  { "symbol": "XRP-USD", "code": "XRP", "name": "XRP", "gecko": "ripple" },
+  { "symbol": "BNB-USD", "code": "BNB", "name": "BNB", "gecko": "binancecoin" },
+  { "symbol": "SOL-USD", "code": "SOL", "name": "Solana", "gecko": "solana" },
+  { "symbol": "USDC-USD", "code": "USDC", "name": "USD Coin", "gecko": "usd-coin" },
+  { "symbol": "DOGE-USD", "code": "DOGE", "name": "Dogecoin", "gecko": "dogecoin" },
+  { "symbol": "TRX-USD", "code": "TRX", "name": "TRON", "gecko": "tron" },
+  { "symbol": "ADA-USD", "code": "ADA", "name": "Cardano", "gecko": "cardano" },
+  { "symbol": "LINK-USD", "code": "LINK", "name": "Chainlink", "gecko": "chainlink" },
+  { "symbol": "AVAX-USD", "code": "AVAX", "name": "Avalanche", "gecko": "avalanche-2" },
+  { "symbol": "XLM-USD", "code": "XLM", "name": "Stellar", "gecko": "stellar" },
+  { "symbol": "BCH-USD", "code": "BCH", "name": "Bitcoin Cash", "gecko": "bitcoin-cash" },
+  { "symbol": "LTC-USD", "code": "LTC", "name": "Litecoin", "gecko": "litecoin" },
+  { "symbol": "HBAR-USD", "code": "HBAR", "name": "Hedera", "gecko": "hedera-hashgraph" },
+  { "symbol": "DOT-USD", "code": "DOT", "name": "Polkadot", "gecko": "polkadot" },
+  { "symbol": "SHIB-USD", "code": "SHIB", "name": "Shiba Inu", "gecko": "shiba-inu" }
+]

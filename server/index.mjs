@@ -4,11 +4,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv } from "./env.mjs";
 import { listTickers, openDb, tickerBySymbol } from "./db.mjs";
-import { billDetail, calendar, listBills, listVotes, searchMembers, voteDetail } from "./congress.mjs";
+import { billDetail, billVote, calendar, committeeDetail, committeeList, compareMembers, listBills, listVotes, memberProfile, memberRoster, searchMembers, seatsForCodes, voteDetail } from "./congress.mjs";
 import { fecForName, lobbyingForClient } from "./lobby.mjs";
 import { awardsForRecipient } from "./contracts.mjs";
-import { insiderFilings, politicianTrades, shortInterest, whaleFilings } from "./markets.mjs";
-import { THEATERS, aisSnapshot, satelliteStill, straitNews } from "./strait.mjs";
+import { shortInterest } from "./markets.mjs";
+import { congressTrades, insiderTrades, memberTrades, positionsBoard, positionsFor, shortBoard, warmPositions, whaleHoldings } from "./positions.mjs";
+import { newsWire, xPulse, xWire } from "./news.mjs";
+import { globalBoard } from "./globals.mjs";
+import { supplyChain, chainSymbols } from "./supply.mjs";
+import { airspace, flightRoute } from "./air.mjs";
+import { priceChart, quoteBoard, sessionQuote } from "./chart.mjs";
+import { THEATERS, aisSnapshot, straitNews } from "./strait.mjs";
+import { imagery, liveImagery, shippingLanes } from "./earth.mjs";
+import { cryptoBoard, fxBoard, instrumentBySymbol } from "./instruments.mjs";
+import { econCalendar, fomcMeetings, macroMarks, macroStrip, warmMacro } from "./macro.mjs";
+import { contractsFor, earningsCalendar, earningsHistory, equityEvents, lobbyingBoard, lobbyingFor, pacData, pacFor, warmCorporate } from "./corporate.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv(root);
@@ -34,6 +44,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/congress/bills") {
       return send(res, 200, await listBills(db));
     }
+    const billVoteMatch = url.pathname.match(/^\/api\/congress\/bills\/([^/]+)\/vote$/);
+    if (billVoteMatch) {
+      const chamber = url.searchParams.get("chamber") === "senate" ? "senate" : "house";
+      return send(res, 200, await billVote(db, decodeURIComponent(billVoteMatch[1]), chamber));
+    }
     if (url.pathname.startsWith("/api/congress/bills/")) {
       const id = decodeURIComponent(url.pathname.split("/").pop());
       return send(res, 200, await billDetail(db, id));
@@ -52,6 +67,29 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/congress/members") {
       return send(res, 200, await searchMembers(db, url.searchParams.get("q") || ""));
     }
+    if (url.pathname === "/api/congress/compare") {
+      const chamber = url.searchParams.get("chamber") === "senate" ? "senate" : "house";
+      return send(res, 200, await compareMembers(db, url.searchParams.get("a") || "", url.searchParams.get("b") || "", chamber));
+    }
+    if (url.pathname === "/api/congress/roster") {
+      return send(res, 200, await memberRoster(db));
+    }
+    if (url.pathname === "/api/congress/committees") {
+      return send(res, 200, await committeeList(db));
+    }
+    const committeeMatch = url.pathname.match(/^\/api\/congress\/committees\/([A-Za-z0-9]+)$/);
+    if (committeeMatch) {
+      return send(res, 200, await committeeDetail(db, committeeMatch[1]));
+    }
+    const tradesMatch = url.pathname.match(/^\/api\/congress\/member\/([A-Za-z]\d{6})\/trades$/);
+    if (tradesMatch) {
+      return send(res, 200, { ok: true, items: await memberTrades(db, tradesMatch[1].toUpperCase()) });
+    }
+    const memberMatch = url.pathname.match(/^\/api\/congress\/member\/([A-Za-z]\d{6})$/);
+    if (memberMatch) {
+      const chamber = url.searchParams.get("chamber") === "senate" ? "senate" : "house";
+      return send(res, 200, await memberProfile(db, memberMatch[1], chamber));
+    }
     if (url.pathname === "/api/lobby") {
       return send(res, 200, await lobbyingForClient(db, url.searchParams.get("client") || ""));
     }
@@ -66,16 +104,107 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, await tickerDossier(tickerMatch[1].toUpperCase()));
     }
     if (url.pathname === "/api/markets/politicians") {
-      return send(res, 200, await politicianTrades(db));
+      return send(res, 200, await congressTrades(db));
     }
     if (url.pathname === "/api/markets/insiders") {
-      return send(res, 200, await insiderFilings(db));
+      return send(res, 200, await insiderTrades(db));
     }
     if (url.pathname === "/api/markets/whales") {
-      return send(res, 200, await whaleFilings(db));
+      return send(res, 200, await whaleHoldings(db));
     }
     if (url.pathname === "/api/markets/shorts") {
-      return send(res, 200, await shortInterest(db, url.searchParams.get("symbol") || ""));
+      const symbol = url.searchParams.get("symbol") || "";
+      return send(res, 200, symbol ? await shortInterest(db, symbol) : await shortBoard(db));
+    }
+    if (url.pathname === "/api/markets/positions") {
+      return send(res, 200, await positionsBoard(db));
+    }
+    const positionMatch = url.pathname.match(/^\/api\/markets\/positions\/([A-Za-z.\-]+)$/);
+    if (positionMatch) {
+      return send(res, 200, await positionsFor(db, positionMatch[1]));
+    }
+    if (url.pathname === "/api/news") {
+      return send(res, 200, await newsWire(db));
+    }
+    if (url.pathname === "/api/news/xpulse") {
+      return send(res, 200, await xPulse(db));
+    }
+    if (url.pathname === "/api/markets/globals") {
+      return send(res, 200, await globalBoard(db));
+    }
+    if (url.pathname === "/api/markets/supply") {
+      return send(res, 200, { ok: true, items: chainSymbols() });
+    }
+    const supplyMatch = url.pathname.match(/^\/api\/markets\/supply\/([A-Za-z.\-]+)$/);
+    if (supplyMatch) {
+      return send(res, 200, await supplyChain(db, supplyMatch[1]));
+    }
+    if (url.pathname === "/api/air") {
+      const theater = THEATERS.find((t) => t.id === url.searchParams.get("theater")) || THEATERS[0];
+      return send(res, 200, await airspace(db, theater));
+    }
+    const routeMatch = url.pathname.match(/^\/api\/air\/route\/([A-Za-z0-9]+)$/);
+    if (routeMatch) {
+      return send(res, 200, await flightRoute(db, routeMatch[1]));
+    }
+    if (url.pathname === "/api/news/x") {
+      return send(res, 200, await xWire(db));
+    }
+    if (url.pathname === "/api/markets/board") {
+      return send(res, 200, await quoteBoard(db));
+    }
+    if (url.pathname === "/api/markets/chart") {
+      const span = url.searchParams.get("span") || url.searchParams.get("range") || "6mo";
+      return send(res, 200, await priceChart(db, url.searchParams.get("symbol") || "", span));
+    }
+    if (url.pathname === "/api/fx/board") {
+      return send(res, 200, await fxBoard(db));
+    }
+    if (url.pathname === "/api/crypto/board") {
+      return send(res, 200, await cryptoBoard(db));
+    }
+    if (url.pathname === "/api/macro/strip") {
+      return send(res, 200, await macroStrip(db));
+    }
+    if (url.pathname === "/api/macro/fomc") {
+      return send(res, 200, await fomcMeetings(db));
+    }
+    if (url.pathname === "/api/calendar/macro") {
+      const back = Math.min(30, Number(url.searchParams.get("back") || 3));
+      const ahead = Math.min(45, Number(url.searchParams.get("ahead") || 21));
+      return send(res, 200, await econCalendar(db, back, ahead));
+    }
+    if (url.pathname === "/api/calendar/earnings") {
+      return send(res, 200, await earningsCalendar(db));
+    }
+    if (url.pathname === "/api/calendar/lobbying") {
+      return send(res, 200, await lobbyingBoard(db));
+    }
+    if (url.pathname === "/api/calendar/pacs") {
+      const data = await pacData(db);
+      const since = new Date(Date.now() - 120 * 86400000).toISOString().slice(0, 10);
+      return send(res, 200, { ...data, rows: data.rows.filter((r) => r.date >= since).slice(0, 500) });
+    }
+    if (url.pathname === "/api/markets/events") {
+      const symbol = (url.searchParams.get("symbol") || "").toUpperCase();
+      const kinds = url.searchParams.get("kinds")?.split(",").filter(Boolean);
+      const from = Date.now() - 6 * 365 * 86400000;
+      const inst = tickerBySymbol(db, symbol) ? null : instrumentBySymbol(symbol);
+      const macroCcys = inst?.kind === "fx" ? [inst.base, inst.quote].filter(Boolean) : inst?.kind === "crypto" ? ["USD"] : ["USD"];
+      const [corp, macro] = await Promise.all([
+        inst ? [] : equityEvents(db, symbol, kinds),
+        !kinds || kinds.includes("macro") ? macroMarks(db, macroCcys, from) : []
+      ]);
+      return send(res, 200, { ok: true, symbol, source: "SEC 8-K · LDA.gov · FEC · USAspending · Fed · Nasdaq economic calendar", marks: [...corp, ...macro].sort((a, b) => a.t - b.t) });
+    }
+    const corpMatch = url.pathname.match(/^\/api\/corporate\/(lobbying|pac|contracts|earnings)\/([A-Za-z.\-]+)$/);
+    if (corpMatch) {
+      const ticker = tickerBySymbol(db, corpMatch[2]);
+      if (!ticker) return send(res, 404, { ok: false, error: "Ticker is not in the join table" });
+      if (corpMatch[1] === "lobbying") return send(res, 200, await lobbyingFor(db, ticker, 5));
+      if (corpMatch[1] === "pac") return send(res, 200, await pacFor(db, ticker.symbol));
+      if (corpMatch[1] === "contracts") return send(res, 200, await contractsFor(db, ticker));
+      return send(res, 200, { ok: true, source: "SEC EDGAR 8-K item 2.02", items: await earningsHistory(db, ticker) });
     }
     if (url.pathname === "/api/strait/news") {
       return send(res, 200, await straitNews(db));
@@ -83,8 +212,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/strait/ais") {
       return send(res, 200, aisSnapshot());
     }
-    if (url.pathname === "/api/strait/satellite") {
-      return send(res, 200, satelliteStill());
+    if (url.pathname === "/api/earth/imagery") {
+      return send(res, 200, await imagery(db));
+    }
+    if (url.pathname === "/api/earth/live") {
+      return send(res, 200, await liveImagery(db));
+    }
+    if (url.pathname === "/api/earth/lanes") {
+      return send(res, 200, await shippingLanes(db));
     }
     if (url.pathname === "/api/strait/theaters") {
       return send(res, 200, { ok: true, items: THEATERS });
@@ -100,6 +235,10 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
+  warmPositions(db);
+  setTimeout(() => {
+    warmCorporate(db).then(() => warmMacro(db)).then((n) => console.log(`macro warm: ${n} days fetched`)).catch((err) => console.error("warm", err.message));
+  }, 5000);
 });
 
 async function tickerDossier(symbol) {
@@ -107,12 +246,15 @@ async function tickerDossier(symbol) {
   if (!ticker) return { ok: false, error: "Ticker is not in the join table" };
   const client = ticker.ldaClients[0] || ticker.name;
   const recipient = ticker.recipients[0] || ticker.name;
-  const [lobby, fec, contracts] = await Promise.all([
+  const [lobby, fec, contracts, quote, positions, seats] = await Promise.all([
     lobbyingForClient(db, client).catch((err) => ({ ok: false, error: err.message, filings: [] })),
     fecForName(db, ticker.name).catch((err) => ({ ok: false, error: err.message, committees: [] })),
-    awardsForRecipient(db, recipient).catch((err) => ({ ok: false, error: err.message, awards: [] }))
+    awardsForRecipient(db, recipient).catch((err) => ({ ok: false, error: err.message, awards: [] })),
+    sessionQuote(ticker).catch(() => null),
+    positionsFor(db, ticker.symbol).catch(() => null),
+    seatsForCodes(db, ticker.districts || []).catch(() => [])
   ]);
-  return { ok: true, ticker, lobby, fec, contracts };
+  return { ok: true, ticker, lobby, fec, contracts, quote, positions, seats };
 }
 
 async function search(q) {

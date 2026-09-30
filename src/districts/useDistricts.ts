@@ -72,7 +72,8 @@ export function useDistricts(query: string, selectedId: string | null) {
           { label: "Ticker", value: selected.symbol },
           { label: "District", value: selected.district },
           { label: "Kind", value: selected.kind }
-        ]
+        ],
+        links: [{ label: "Chart", value: selected.symbol, action: `ticker:${selected.symbol}` }]
       }
     : null;
 

@@ -1,0 +1,358 @@
+{
+  "_note": "Curated from public filings and company announcements. Every edge carries its basis. No revenue amounts are stored; segment names follow the latest 10-K. Suppliers and customers use their listed line (home exchange suffix per Yahoo).",
+  "AAPL": {
+    "segments": [
+      { "name": "iPhone", "inputs": ["TSM", "2317.TW", "QCOM", "AVGO", "SWKS", "QRVO", "CRUS", "005930.KS", "6758.T", "GLW"] },
+      { "name": "Mac", "inputs": ["TSM", "2382.TW"] },
+      { "name": "iPad", "inputs": ["TSM", "2317.TW", "034220.KS"] },
+      { "name": "Wearables, Home & Accessories", "inputs": ["002475.SZ", "2317.TW"] },
+      { "name": "Services", "inputs": ["GOOGL"] }
+    ],
+    "suppliers": [
+      { "symbol": "TSM", "name": "TSMC", "what": "A- and M-series processors (foundry)", "basis": "Apple 10-K single-source risk factor; TSMC Arizona first-customer announcements" },
+      { "symbol": "2317.TW", "name": "Hon Hai (Foxconn)", "what": "iPhone and iPad final assembly", "basis": "Apple Supplier List" },
+      { "symbol": "4938.TW", "name": "Pegatron", "what": "Device assembly", "basis": "Apple Supplier List" },
+      { "symbol": "2382.TW", "name": "Quanta Computer", "what": "Mac notebook assembly", "basis": "Apple Supplier List" },
+      { "symbol": "002475.SZ", "name": "Luxshare Precision", "what": "AirPods, Watch, and iPhone assembly", "basis": "Apple Supplier List" },
+      { "symbol": "QCOM", "name": "Qualcomm", "what": "Cellular modems", "basis": "Qualcomm 8-K modem supply agreement with Apple (through 2026 launches)" },
+      { "symbol": "AVGO", "name": "Broadcom", "what": "RF, wireless, and 5G components", "basis": "Apple multi-year agreement with Broadcom (May 2023 announcement)" },
+      { "symbol": "SWKS", "name": "Skyworks", "what": "RF front-end modules", "basis": "Skyworks 10-K: Apple is its largest customer" },
+      { "symbol": "QRVO", "name": "Qorvo", "what": "RF front-end modules", "basis": "Qorvo 10-K: Apple is its largest customer" },
+      { "symbol": "CRUS", "name": "Cirrus Logic", "what": "Audio codecs and mixed-signal chips", "basis": "Cirrus Logic 10-K: Apple is its largest customer" },
+      { "symbol": "005930.KS", "name": "Samsung Electronics", "what": "OLED displays (Samsung Display) and memory", "basis": "Apple Supplier List" },
+      { "symbol": "034220.KS", "name": "LG Display", "what": "Displays", "basis": "Apple Supplier List" },
+      { "symbol": "6758.T", "name": "Sony Group", "what": "Camera image sensors", "basis": "Apple Supplier List" },
+      { "symbol": "GLW", "name": "Corning", "what": "Cover glass (Ceramic Shield)", "basis": "Apple Advanced Manufacturing Fund awards to Corning" }
+    ],
+    "customers": [
+      { "symbol": "GOOGL", "name": "Alphabet", "what": "Pays Apple for default search placement (Services revenue)", "basis": "U.S. v. Google trial record" },
+      { "symbol": "VZ", "name": "Verizon", "what": "Carrier channel for iPhone", "basis": "Apple 10-K: indirect channel via cellular carriers" },
+      { "symbol": "T", "name": "AT&T", "what": "Carrier channel for iPhone", "basis": "Apple 10-K: indirect channel via cellular carriers" },
+      { "symbol": "TMUS", "name": "T-Mobile US", "what": "Carrier channel for iPhone", "basis": "Apple 10-K: indirect channel via cellular carriers" }
+    ]
+  },
+  "NVDA": {
+    "segments": [
+      { "name": "Data Center (compute + networking)", "inputs": ["TSM", "000660.KS", "MU", "005930.KS", "2317.TW", "2382.TW", "3711.TW", "AMKR"] },
+      { "name": "Gaming", "inputs": ["TSM", "MU"] },
+      { "name": "Professional Visualization", "inputs": ["TSM"] },
+      { "name": "Automotive", "inputs": ["TSM"] }
+    ],
+    "suppliers": [
+      { "symbol": "TSM", "name": "TSMC", "what": "GPU wafers and CoWoS advanced packaging", "basis": "NVIDIA 10-K names TSMC as a foundry partner" },
+      { "symbol": "000660.KS", "name": "SK hynix", "what": "HBM stacks for data-center GPUs", "basis": "SK hynix earnings disclosures on HBM supply" },
+      { "symbol": "MU", "name": "Micron", "what": "HBM3E and GDDR memory", "basis": "Micron HBM3E production announcement for NVIDIA H200" },
+      { "symbol": "005930.KS", "name": "Samsung Electronics", "what": "Memory", "basis": "Public supply qualification reporting" },
+      { "symbol": "2317.TW", "name": "Hon Hai (Foxconn)", "what": "GPU server and rack assembly", "basis": "Foxconn earnings commentary on AI servers" },
+      { "symbol": "2382.TW", "name": "Quanta Computer", "what": "AI server assembly", "basis": "Quanta earnings commentary on AI servers" },
+      { "symbol": "3711.TW", "name": "ASE Technology", "what": "Packaging and test", "basis": "NVIDIA 10-K lists ASE among subcontractors" },
+      { "symbol": "AMKR", "name": "Amkor", "what": "Advanced packaging (Arizona)", "basis": "Amkor Arizona facility announcement naming NVIDIA" }
+    ],
+    "customers": [
+      { "symbol": "MSFT", "name": "Microsoft", "what": "Azure GPU capacity", "basis": "Hyperscaler capex disclosures" },
+      { "symbol": "AMZN", "name": "Amazon", "what": "AWS GPU instances", "basis": "AWS instance announcements" },
+      { "symbol": "GOOGL", "name": "Alphabet", "what": "Google Cloud GPU instances", "basis": "Google Cloud instance announcements" },
+      { "symbol": "META", "name": "Meta", "what": "Training clusters", "basis": "Meta disclosures of H100 fleet" },
+      { "symbol": "ORCL", "name": "Oracle", "what": "OCI GPU clusters", "basis": "Oracle earnings commentary" },
+      { "symbol": "DELL", "name": "Dell", "what": "OEM AI servers", "basis": "Dell AI server backlog disclosures" },
+      { "symbol": "SMCI", "name": "Super Micro", "what": "OEM AI servers", "basis": "Super Micro 10-K" }
+    ]
+  },
+  "TSM": {
+    "segments": [
+      { "name": "High Performance Computing", "inputs": ["ASML", "AMAT", "LRCX", "KLAC", "8035.T"] },
+      { "name": "Smartphone", "inputs": ["ASML", "AMAT", "4063.T", "3436.T"] },
+      { "name": "IoT", "inputs": ["AMAT", "4063.T"] },
+      { "name": "Automotive", "inputs": ["AMAT", "3436.T"] }
+    ],
+    "suppliers": [
+      { "symbol": "ASML", "name": "ASML", "what": "EUV and DUV lithography", "basis": "ASML annual report: largest customers are leading-edge foundries" },
+      { "symbol": "AMAT", "name": "Applied Materials", "what": "Deposition and etch tools", "basis": "Applied Materials 10-K customer concentration (TSMC)" },
+      { "symbol": "LRCX", "name": "Lam Research", "what": "Etch and deposition tools", "basis": "Lam Research 10-K customer concentration (TSMC)" },
+      { "symbol": "KLAC", "name": "KLA", "what": "Process control and inspection", "basis": "KLA 10-K customer concentration (TSMC)" },
+      { "symbol": "8035.T", "name": "Tokyo Electron", "what": "Coater/developer and etch tools", "basis": "Tokyo Electron annual report" },
+      { "symbol": "4063.T", "name": "Shin-Etsu Chemical", "what": "Silicon wafers and photoresist", "basis": "Shin-Etsu annual report" },
+      { "symbol": "3436.T", "name": "SUMCO", "what": "Silicon wafers", "basis": "SUMCO annual report" }
+    ],
+    "customers": [
+      { "symbol": "AAPL", "name": "Apple", "what": "Largest customer", "basis": "TSMC 20-F: largest customer ~ a quarter of revenue (unnamed); Apple widely reported" },
+      { "symbol": "NVDA", "name": "NVIDIA", "what": "GPUs and CoWoS", "basis": "NVIDIA 10-K" },
+      { "symbol": "AMD", "name": "AMD", "what": "CPUs and GPUs", "basis": "AMD 10-K names TSMC" },
+      { "symbol": "AVGO", "name": "Broadcom", "what": "Custom ASICs and networking", "basis": "Broadcom 10-K names TSMC" },
+      { "symbol": "QCOM", "name": "Qualcomm", "what": "Snapdragon", "basis": "Qualcomm 10-K names TSMC" },
+      { "symbol": "INTC", "name": "Intel", "what": "Outsourced compute tiles", "basis": "Intel 10-K: uses external foundries including TSMC" },
+      { "symbol": "MRVL", "name": "Marvell", "what": "Custom silicon", "basis": "Marvell 10-K names TSMC" }
+    ]
+  },
+  "AVGO": {
+    "segments": [
+      { "name": "Semiconductor solutions", "inputs": ["TSM"] },
+      { "name": "Infrastructure software (incl. VMware)", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "TSM", "name": "TSMC", "what": "Wafer foundry", "basis": "Broadcom 10-K names TSMC" }
+    ],
+    "customers": [
+      { "symbol": "AAPL", "name": "Apple", "what": "RF and wireless", "basis": "Broadcom 10-K customer concentration; 2023 Apple agreement" },
+      { "symbol": "GOOGL", "name": "Alphabet", "what": "TPU custom accelerators", "basis": "Public reporting on TPU co-design" },
+      { "symbol": "META", "name": "Meta", "what": "Custom AI silicon", "basis": "Public reporting on MTIA partnership" }
+    ]
+  },
+  "INTC": {
+    "segments": [
+      { "name": "Client Computing", "inputs": ["TSM", "ASML"] },
+      { "name": "Data Center and AI", "inputs": ["ASML", "AMAT", "LRCX"] },
+      { "name": "Intel Foundry", "inputs": ["ASML", "AMAT", "LRCX", "KLAC"] },
+      { "name": "Mobileye", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "TSM", "name": "TSMC", "what": "Outsourced tiles (e.g. Lunar Lake)", "basis": "Intel 10-K: external foundry use" },
+      { "symbol": "ASML", "name": "ASML", "what": "EUV and High-NA EUV", "basis": "Intel/ASML High-NA delivery announcements" },
+      { "symbol": "AMAT", "name": "Applied Materials", "what": "Fab tools", "basis": "Applied Materials 10-K customer concentration (Intel)" },
+      { "symbol": "LRCX", "name": "Lam Research", "what": "Fab tools", "basis": "Lam Research 10-K customer concentration" },
+      { "symbol": "KLAC", "name": "KLA", "what": "Process control", "basis": "KLA 10-K customer concentration" }
+    ],
+    "customers": [
+      { "symbol": "DELL", "name": "Dell", "what": "PCs and servers", "basis": "Intel 10-K: Dell among largest customers" },
+      { "symbol": "HPQ", "name": "HP Inc.", "what": "PCs", "basis": "Intel 10-K customer concentration" },
+      { "symbol": "0992.HK", "name": "Lenovo", "what": "PCs and servers", "basis": "Intel 10-K: Lenovo among largest customers" },
+      { "symbol": "MBLY", "name": "Mobileye", "what": "Majority-owned subsidiary", "basis": "Intel 10-K" }
+    ]
+  },
+  "MSFT": {
+    "segments": [
+      { "name": "Productivity and Business Processes", "inputs": [] },
+      { "name": "Intelligent Cloud", "inputs": ["NVDA", "AMD", "CRWV"] },
+      { "name": "More Personal Computing", "inputs": ["QCOM", "INTC", "AMD"] }
+    ],
+    "suppliers": [
+      { "symbol": "NVDA", "name": "NVIDIA", "what": "Azure AI GPUs", "basis": "Azure ND-series instance announcements" },
+      { "symbol": "AMD", "name": "AMD", "what": "Azure MI300X instances; Xbox SoCs", "basis": "Azure ND MI300X announcement" },
+      { "symbol": "CRWV", "name": "CoreWeave", "what": "Leased GPU capacity", "basis": "CoreWeave S-1: Microsoft largest customer" },
+      { "symbol": "QCOM", "name": "Qualcomm", "what": "Snapdragon X for Copilot+ PCs / Surface", "basis": "Surface Copilot+ PC launch" },
+      { "symbol": "INTC", "name": "Intel", "what": "Surface and Azure CPUs", "basis": "Product specifications" }
+    ],
+    "customers": []
+  },
+  "AMZN": {
+    "segments": [
+      { "name": "North America", "inputs": ["UPS", "RIVN"] },
+      { "name": "International", "inputs": [] },
+      { "name": "AWS", "inputs": ["NVDA", "MRVL", "TSM"] }
+    ],
+    "suppliers": [
+      { "symbol": "NVDA", "name": "NVIDIA", "what": "AWS GPU instances", "basis": "AWS P5 instance announcements" },
+      { "symbol": "MRVL", "name": "Marvell", "what": "Custom AI and networking silicon", "basis": "Marvell/AWS five-year agreement (Dec 2024)" },
+      { "symbol": "TSM", "name": "TSMC", "what": "Graviton / Trainium wafers", "basis": "Public reporting" },
+      { "symbol": "UPS", "name": "UPS", "what": "Parcel delivery", "basis": "UPS 10-K: Amazon is its largest customer" },
+      { "symbol": "RIVN", "name": "Rivian", "what": "Electric delivery vans", "basis": "Rivian 10-K: Amazon commercial van agreement" }
+    ],
+    "customers": []
+  },
+  "GOOGL": {
+    "segments": [
+      { "name": "Google Services", "inputs": ["AAPL"] },
+      { "name": "Google Cloud", "inputs": ["AVGO", "TSM", "NVDA"] },
+      { "name": "Other Bets", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "AVGO", "name": "Broadcom", "what": "TPU co-design", "basis": "Public reporting" },
+      { "symbol": "TSM", "name": "TSMC", "what": "TPU and Tensor wafers", "basis": "Public reporting" },
+      { "symbol": "NVDA", "name": "NVIDIA", "what": "Cloud GPUs", "basis": "Google Cloud A3 instance announcements" },
+      { "symbol": "AAPL", "name": "Apple", "what": "Safari default search (traffic acquisition cost)", "basis": "U.S. v. Google trial record" }
+    ],
+    "customers": []
+  },
+  "META": {
+    "segments": [
+      { "name": "Family of Apps", "inputs": ["NVDA", "AMD", "AVGO"] },
+      { "name": "Reality Labs", "inputs": ["EL.PA", "QCOM"] }
+    ],
+    "suppliers": [
+      { "symbol": "NVDA", "name": "NVIDIA", "what": "Training GPUs", "basis": "Meta disclosures of H100 fleet" },
+      { "symbol": "AMD", "name": "AMD", "what": "MI300X inference", "basis": "AMD Advancing AI event (Meta on stage)" },
+      { "symbol": "AVGO", "name": "Broadcom", "what": "Custom AI silicon", "basis": "Public reporting on MTIA" },
+      { "symbol": "EL.PA", "name": "EssilorLuxottica", "what": "Ray-Ban Meta smart glasses", "basis": "Meta / EssilorLuxottica long-term agreement" },
+      { "symbol": "QCOM", "name": "Qualcomm", "what": "Quest and glasses chipsets", "basis": "Qualcomm XR platform announcements" }
+    ],
+    "customers": []
+  },
+  "BA": {
+    "segments": [
+      { "name": "Commercial Airplanes", "inputs": ["SPR", "GE", "SAF.PA", "7011.T", "3402.T", "HWM", "RTX"] },
+      { "name": "Defense, Space & Security", "inputs": ["RTX", "HON"] },
+      { "name": "Global Services", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "SPR", "name": "Spirit AeroSystems", "what": "737 fuselages", "basis": "Spirit 10-K: Boeing largest customer; Boeing acquisition agreement" },
+      { "symbol": "GE", "name": "GE Aerospace", "what": "LEAP-1B (via CFM) and GEnx engines", "basis": "GE Aerospace 10-K" },
+      { "symbol": "SAF.PA", "name": "Safran", "what": "CFM International 50/50 partner", "basis": "Safran annual report" },
+      { "symbol": "7011.T", "name": "Mitsubishi Heavy Industries", "what": "787 composite wings", "basis": "Boeing 787 program partner disclosures" },
+      { "symbol": "3402.T", "name": "Toray Industries", "what": "787 carbon fiber", "basis": "Toray/Boeing supply agreement" },
+      { "symbol": "HWM", "name": "Howmet Aerospace", "what": "Engine and structural parts", "basis": "Howmet 10-K aerospace customer list" },
+      { "symbol": "RTX", "name": "RTX", "what": "Collins avionics and systems", "basis": "RTX 10-K" },
+      { "symbol": "HON", "name": "Honeywell", "what": "Avionics and APUs", "basis": "Honeywell 10-K" }
+    ],
+    "customers": [
+      { "symbol": "UAL", "name": "United Airlines", "what": "737 MAX and 787 orders", "basis": "Boeing orders and deliveries" },
+      { "symbol": "DAL", "name": "Delta Air Lines", "what": "737 MAX and 787 orders", "basis": "Boeing orders and deliveries" },
+      { "symbol": "AAL", "name": "American Airlines", "what": "737 MAX and 787", "basis": "Boeing orders and deliveries" },
+      { "symbol": "LUV", "name": "Southwest", "what": "All-737 fleet", "basis": "Southwest 10-K" },
+      { "symbol": "RYAAY", "name": "Ryanair", "what": "737 MAX orders", "basis": "Ryanair annual report" }
+    ]
+  },
+  "GE": {
+    "segments": [
+      { "name": "Commercial Engines & Services", "inputs": ["SAF.PA", "HWM", "ATI"] },
+      { "name": "Defense & Propulsion Technologies", "inputs": ["HWM"] }
+    ],
+    "suppliers": [
+      { "symbol": "SAF.PA", "name": "Safran", "what": "CFM International partner", "basis": "GE Aerospace 10-K" },
+      { "symbol": "HWM", "name": "Howmet Aerospace", "what": "Engine castings", "basis": "Howmet 10-K" },
+      { "symbol": "ATI", "name": "ATI", "what": "Nickel and titanium alloys", "basis": "ATI 10-K aerospace customers" }
+    ],
+    "customers": [
+      { "symbol": "BA", "name": "Boeing", "what": "737 MAX, 787, 777X engines", "basis": "GE Aerospace 10-K" },
+      { "symbol": "AIR.PA", "name": "Airbus", "what": "A320neo LEAP-1A engines", "basis": "GE Aerospace 10-K" }
+    ]
+  },
+  "RTX": {
+    "segments": [
+      { "name": "Collins Aerospace", "inputs": ["HWM"] },
+      { "name": "Pratt & Whitney", "inputs": ["HWM", "ATI"] },
+      { "name": "Raytheon", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "HWM", "name": "Howmet Aerospace", "what": "Engine castings", "basis": "Howmet 10-K" },
+      { "symbol": "ATI", "name": "ATI", "what": "Specialty alloys", "basis": "ATI 10-K" }
+    ],
+    "customers": [
+      { "symbol": "BA", "name": "Boeing", "what": "Collins systems", "basis": "RTX 10-K" },
+      { "symbol": "AIR.PA", "name": "Airbus", "what": "GTF engines, Collins systems", "basis": "RTX 10-K" },
+      { "symbol": "LMT", "name": "Lockheed Martin", "what": "F135 engine for F-35", "basis": "RTX 10-K" }
+    ]
+  },
+  "LMT": {
+    "segments": [
+      { "name": "Aeronautics", "inputs": ["NOC", "BA.L", "RTX"] },
+      { "name": "Missiles and Fire Control", "inputs": [] },
+      { "name": "Rotary and Mission Systems", "inputs": ["GE"] },
+      { "name": "Space", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "NOC", "name": "Northrop Grumman", "what": "F-35 center fuselage", "basis": "F-35 program partner disclosures" },
+      { "symbol": "BA.L", "name": "BAE Systems", "what": "F-35 aft fuselage", "basis": "F-35 program partner disclosures" },
+      { "symbol": "RTX", "name": "RTX", "what": "F135 engine", "basis": "RTX 10-K" },
+      { "symbol": "GE", "name": "GE Aerospace", "what": "T700 helicopter engines (Black Hawk)", "basis": "GE Aerospace defense programs" }
+    ],
+    "customers": []
+  },
+  "NOC": {
+    "segments": [
+      { "name": "Aeronautics Systems", "inputs": [] },
+      { "name": "Defense Systems", "inputs": [] },
+      { "name": "Mission Systems", "inputs": [] },
+      { "name": "Space Systems", "inputs": [] }
+    ],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "LMT", "name": "Lockheed Martin", "what": "F-35 center fuselage", "basis": "F-35 program partner disclosures" }
+    ]
+  },
+  "GD": {
+    "segments": [
+      { "name": "Aerospace (Gulfstream)", "inputs": ["RR.L", "HON"] },
+      { "name": "Marine Systems", "inputs": ["HII"] },
+      { "name": "Combat Systems", "inputs": [] },
+      { "name": "Technologies", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "RR.L", "name": "Rolls-Royce", "what": "Pearl engines for Gulfstream", "basis": "Gulfstream G700/G800 specifications" },
+      { "symbol": "HON", "name": "Honeywell", "what": "Avionics (Symmetry flight deck)", "basis": "Gulfstream specifications" },
+      { "symbol": "HII", "name": "Huntington Ingalls", "what": "Submarine co-builder (Virginia and Columbia class)", "basis": "Navy submarine teaming agreements" }
+    ],
+    "customers": []
+  },
+  "HON": {
+    "segments": [
+      { "name": "Aerospace Technologies", "inputs": [] },
+      { "name": "Industrial Automation", "inputs": [] },
+      { "name": "Building Automation", "inputs": [] },
+      { "name": "Energy and Sustainability Solutions", "inputs": [] }
+    ],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "BA", "name": "Boeing", "what": "Avionics and APUs", "basis": "Honeywell 10-K" },
+      { "symbol": "AIR.PA", "name": "Airbus", "what": "Avionics and APUs", "basis": "Honeywell 10-K" },
+      { "symbol": "GD", "name": "General Dynamics", "what": "Gulfstream avionics", "basis": "Gulfstream specifications" }
+    ]
+  },
+  "CAT": {
+    "segments": [
+      { "name": "Construction Industries", "inputs": [] },
+      { "name": "Resource Industries", "inputs": [] },
+      { "name": "Energy & Transportation", "inputs": [] }
+    ],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "BHP", "name": "BHP", "what": "Mining trucks and autonomy", "basis": "Caterpillar/BHP autonomy announcements" },
+      { "symbol": "RIO", "name": "Rio Tinto", "what": "Mining fleet", "basis": "Caterpillar/Rio Tinto announcements" }
+    ]
+  },
+  "XOM": {
+    "segments": [
+      { "name": "Upstream", "inputs": ["SLB", "HAL", "BKR"] },
+      { "name": "Energy Products", "inputs": [] },
+      { "name": "Chemical Products", "inputs": [] },
+      { "name": "Specialty Products", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "SLB", "name": "SLB", "what": "Oilfield services", "basis": "Industry-standard upstream services (Guyana, Permian contracts)" },
+      { "symbol": "HAL", "name": "Halliburton", "what": "Completion and fracturing", "basis": "Permian service contracts" },
+      { "symbol": "BKR", "name": "Baker Hughes", "what": "LNG equipment and oilfield services", "basis": "Baker Hughes contract announcements" }
+    ],
+    "customers": []
+  },
+  "CVX": {
+    "segments": [
+      { "name": "Upstream", "inputs": ["SLB", "HAL", "BKR"] },
+      { "name": "Downstream", "inputs": [] }
+    ],
+    "suppliers": [
+      { "symbol": "SLB", "name": "SLB", "what": "Oilfield services", "basis": "Service contract announcements" },
+      { "symbol": "HAL", "name": "Halliburton", "what": "Completion and fracturing", "basis": "Halliburton/Chevron electric frac announcement" },
+      { "symbol": "BKR", "name": "Baker Hughes", "what": "Equipment and services", "basis": "Contract announcements" }
+    ],
+    "customers": []
+  },
+  "LLY": {
+    "segments": [{ "name": "Human pharmaceutical products", "inputs": [] }],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "MCK", "name": "McKesson", "what": "Wholesale distribution", "basis": "Lilly 10-K: three wholesalers are its largest customers" },
+      { "symbol": "COR", "name": "Cencora", "what": "Wholesale distribution", "basis": "Lilly 10-K" },
+      { "symbol": "CAH", "name": "Cardinal Health", "what": "Wholesale distribution", "basis": "Lilly 10-K" }
+    ]
+  },
+  "PFE": {
+    "segments": [{ "name": "Biopharma", "inputs": [] }],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "MCK", "name": "McKesson", "what": "Wholesale distribution", "basis": "Pfizer 10-K: three wholesalers are its largest U.S. customers" },
+      { "symbol": "COR", "name": "Cencora", "what": "Wholesale distribution", "basis": "Pfizer 10-K" },
+      { "symbol": "CAH", "name": "Cardinal Health", "what": "Wholesale distribution", "basis": "Pfizer 10-K" }
+    ]
+  },
+  "JNJ": {
+    "segments": [
+      { "name": "Innovative Medicine", "inputs": [] },
+      { "name": "MedTech", "inputs": [] }
+    ],
+    "suppliers": [],
+    "customers": [
+      { "symbol": "MCK", "name": "McKesson", "what": "Wholesale distribution", "basis": "J&J 10-K: three wholesalers account for a large share of U.S. sales" },
+      { "symbol": "COR", "name": "Cencora", "what": "Wholesale distribution", "basis": "J&J 10-K" },
+      { "symbol": "CAH", "name": "Cardinal Health", "what": "Wholesale distribution", "basis": "J&J 10-K" }
+    ]
+  }
+}

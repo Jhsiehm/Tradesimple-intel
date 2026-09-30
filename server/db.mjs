@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+let extras = new Map();
+
 export function openDb(root) {
+  extras = new Map(JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8")).map((row) => [row.symbol, row]));
   const file = path.join(root, "data", "cache.sqlite");
   const db = new DatabaseSync(file);
   db.exec(`
@@ -24,9 +27,9 @@ export function openDb(root) {
       lon REAL
     );
   `);
-  const count = db.prepare("SELECT COUNT(*) AS n FROM tickers").get().n;
-  if (!count) {
+  {
     const rows = JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8"));
+    db.exec("DELETE FROM tickers");
     const insert = db.prepare(`
       INSERT INTO tickers (symbol, name, cik, lda_clients, recipients, districts, state, lat, lon)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -82,6 +85,15 @@ function hydrate(row) {
     districts: JSON.parse(row.districts),
     state: row.state,
     lat: row.lat,
-    lon: row.lon
+    lon: row.lon,
+    pacs: extras.get(row.symbol)?.pacs || [],
+    core: extras.get(row.symbol)?.core !== false,
+    index: extras.get(row.symbol)?.index || [],
+    sector: extras.get(row.symbol)?.sector || "",
+    industry: extras.get(row.symbol)?.industry || ""
   };
+}
+
+export function listCore(db) {
+  return listTickers(db).filter((t) => t.core);
 }

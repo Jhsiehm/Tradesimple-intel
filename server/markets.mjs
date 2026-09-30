@@ -4,7 +4,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fetchText } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { listTickers, readCache, writeCache } from "./db.mjs";
 
 const execFileAsync = promisify(execFile);
 const SEC_UA = "TradeSimpleIntel/0.1 (local research terminal)";
@@ -194,17 +194,28 @@ function splitCsv(line) {
 }
 
 async function edgarList(db, form, source, latency) {
-  const cacheKey = `edgar:${form}`;
+  const cacheKey = `edgar:${form}:joined`;
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=${encodeURIComponent(form)}&owner=include&count=20&output=atom`;
   const xml = await fetchText(url, { headers: { "User-Agent": SEC_UA, Accept: "application/atom+xml" } });
+  const tickers = listTickers(db);
   const items = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map((m, i) => {
     const block = m[1];
     const title = tag(block, "title");
     const updated = tag(block, "updated");
     const link = /<link[^>]*href="([^"]+)"/.exec(block)?.[1] || "";
-    return { id: `${form}-${i}-${updated}`, title, updated, link, form };
+    const ciks = [...title.matchAll(/\((\d{7,10})\)/g)].map((hit) => hit[1].padStart(10, "0"));
+    const known = tickers.find((ticker) => ciks.includes(ticker.cik));
+    return {
+      id: `${form}-${i}-${updated}`,
+      title,
+      updated,
+      link,
+      form,
+      symbol: known?.symbol || "",
+      disclosure: updated
+    };
   });
   items.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
   const result = {

@@ -4,3 +4,6 @@ dist
 data/cache.sqlite
 data/cache.sqlite-*
 .DS_Store
+.cursor/*.log
+.cursor/shots
+*.tsbuildinfo

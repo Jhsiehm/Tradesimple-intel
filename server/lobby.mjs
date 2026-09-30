@@ -9,9 +9,9 @@ export async function lobbyingForClient(db, clientName) {
   const cacheKey = `lda:${clientName.toLowerCase()}`;
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
-  const url = new URL("https://lda.senate.gov/api/v1/filings/");
+  const url = new URL("https://lda.gov/api/v1/filings/");
   url.searchParams.set("client_name", clientName);
-  url.searchParams.set("filing_year", "2025");
+  url.searchParams.set("filing_year", String(new Date().getUTCFullYear()));
   const body = await fetchJson(url, { headers: { Authorization: `Token ${apiKey}` } });
   const filings = (body.results || []).map((f) => ({
     id: f.filing_uuid,
@@ -27,7 +27,7 @@ export async function lobbyingForClient(db, clientName) {
   filings.splice(8);
   const result = {
     ok: true,
-    source: "Senate LDA",
+    source: "LDA.gov",
     asOf: new Date().toISOString(),
     filings
   };

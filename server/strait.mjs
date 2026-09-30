@@ -58,22 +58,6 @@ async function rssNews(db) {
   return result;
 }
 
-export function satelliteStill() {
-  const date = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  return {
-    ok: true,
-    source: "NASA GIBS VIIRS true color",
-    asOf: date,
-    note: "Open scene, not a tasked satellite.",
-    tiles: [
-      `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
-    ],
-    map: [
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-    ]
-  };
-}
-
 export function aisSnapshot() {
   const apiKey = process.env.AISSTREAM_API_KEY || "";
   if (!apiKey) {
@@ -146,5 +130,6 @@ export const THEATERS = [
   { id: "middle-east", name: "Middle East", lon: 44, lat: 28, zoom: 3.6, live: false },
   { id: "eastern-europe", name: "Eastern Europe", lon: 31, lat: 49, zoom: 3.6, live: false },
   { id: "south-asia", name: "South Asia", lon: 78, lat: 22, zoom: 3.6, live: false },
-  { id: "southeast-asia", name: "Southeast Asia", lon: 112, lat: 8, zoom: 3.4, live: false }
+  { id: "southeast-asia", name: "Southeast Asia", lon: 112, lat: 8, zoom: 3.4, live: false },
+  { id: "world", name: "World · military air", lon: 10, lat: 30, zoom: 1.4, live: false }
 ];

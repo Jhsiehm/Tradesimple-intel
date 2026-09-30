@@ -1,0 +1,20 @@
+[
+  { "group": "Policy & officials", "why": "Tariffs, sanctions, rates, and regulation move whole sectors", "handles": [
+    ["realDonaldTrump", "Donald Trump"], ["WhiteHouse", "The White House"], ["federalreserve", "Federal Reserve"], ["USTreasury", "U.S. Treasury"], ["SECGov", "U.S. SEC"], ["CFTC", "CFTC"], ["USTradeRep", "U.S. Trade Representative"], ["ecb", "European Central Bank"]
+  ] },
+  { "group": "Headline squawks", "why": "Fastest public relays of wire headlines", "handles": [
+    ["DeItaone", "Walter Bloomberg"], ["FirstSquawk", "First Squawk"], ["LiveSquawk", "LiveSquawk"], ["unusual_whales", "Unusual Whales"], ["zerohedge", "ZeroHedge"], ["KobeissiLetter", "Kobeissi Letter"]
+  ] },
+  { "group": "Wires & outlets", "why": "Primary reporting", "handles": [
+    ["Reuters", "Reuters"], ["AP", "Associated Press"], ["business", "Bloomberg"], ["markets", "Bloomberg Markets"], ["WSJ", "Wall Street Journal"], ["FT", "Financial Times"], ["CNBC", "CNBC"], ["ReutersBiz", "Reuters Business"], ["BBCBreaking", "BBC Breaking"], ["AJEnglish", "Al Jazeera English"]
+  ] },
+  { "group": "Executives & investors", "why": "Single posts have moved single names", "handles": [
+    ["elonmusk", "Elon Musk"], ["BillAckman", "Bill Ackman"], ["chamath", "Chamath Palihapitiya"], ["CathieDWood", "Cathie Wood"], ["saylor", "Michael Saylor"], ["jimcramer", "Jim Cramer"]
+  ] },
+  { "group": "Macro & Fed reporters", "why": "Fed-whisperer and data context", "handles": [
+    ["NickTimiraos", "Nick Timiraos (WSJ)"], ["charliebilello", "Charlie Bilello"], ["M_McDonough", "Michael McDonough"]
+  ] },
+  { "group": "Congress trades & OSINT", "why": "Disclosure trackers and conflict monitoring", "handles": [
+    ["QuiverQuant", "Quiver Quantitative"], ["sentdefender", "OSINTdefender"], ["Osinttechnical", "OSINTtechnical"]
+  ] }
+]
