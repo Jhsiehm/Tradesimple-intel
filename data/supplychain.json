@@ -6,7 +6,7 @@
       { "name": "Mac", "inputs": ["TSM", "2382.TW"] },
       { "name": "iPad", "inputs": ["TSM", "2317.TW", "034220.KS"] },
       { "name": "Wearables, Home & Accessories", "inputs": ["002475.SZ", "2317.TW"] },
-      { "name": "Services", "inputs": ["GOOGL"] }
+      { "name": "Services", "inputs": [] }
     ],
     "suppliers": [
       { "symbol": "TSM", "name": "TSMC", "what": "A- and M-series processors (foundry)", "basis": "Apple 10-K single-source risk factor; TSMC Arizona first-customer announcements" },

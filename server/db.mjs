@@ -6,7 +6,7 @@ let extras = new Map();
 
 export function openDb(root) {
   extras = new Map(JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8")).map((row) => [row.symbol, row]));
-  const file = path.join(root, "data", "cache.sqlite");
+  const file = process.env.INTEL_CACHE || path.join(root, "data", "cache.sqlite");
   const db = new DatabaseSync(file);
   db.exec(`
     CREATE TABLE IF NOT EXISTS cache (
@@ -97,4 +97,11 @@ function hydrate(row) {
 
 export function listCore(db) {
   return listTickers(db).filter((t) => t.core);
+}
+
+/** Short fingerprint of the full-join set; scan caches keyed on it rebuild when joins are added. */
+export function coreKey(db) {
+  let h = 0;
+  for (const t of listCore(db)) for (const ch of `${t.symbol}:${t.cik}|`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return (h >>> 0).toString(36);
 }

@@ -130,6 +130,7 @@ scripts/       dev runner, S&P 500 rows, derived joins
 npm run dev      # API and web UI
 npm start        # API only
 npm run build    # production build of the web UI into dist/
+npm test         # parser checks against real filings in test/fixtures, join rules, data integrity, API routes (no network)
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
 node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins for the largest quote-only names
 ```

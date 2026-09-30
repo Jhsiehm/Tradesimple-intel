@@ -3,6 +3,7 @@
 //   node scripts/joins.mjs [--count 75] [--refresh]
 import fs from "node:fs";
 import { fecBulk } from "../server/corporate.mjs";
+import { districtCode, ldaMatches, norm, pacsByOrg } from "./joins-match.mjs";
 
 const FILE = new URL("../data/tickers.json", import.meta.url);
 const ENV = new URL("../.env.local", import.meta.url);
@@ -17,21 +18,6 @@ const args = process.argv.slice(2);
 const COUNT = Number(args[args.indexOf("--count") + 1]) || 75;
 const REFRESH = args.includes("--refresh");
 const SEC_UA = { "User-Agent": "TradeSimpleIntel/0.1 research contact@tradesimple.local" };
-
-const SUFFIX = new Set(["INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "COMPANIES", "LLC", "LTD", "LIMITED", "PLC", "NV", "SA", "AG", "HOLDINGS", "HOLDING", "GROUP", "THE", "AND", "DE", "USA", "US"]);
-export function norm(value) {
-  const words = String(value || "")
-    .toUpperCase()
-    .replace(/\s*\/\s*[A-Z]{2,3}\s*\/?\s*$/g, "")
-    .replace(/\(?\bCLASS [A-C]\b\)?/g, "")
-    .replace(/&/g, " AND ")
-    .replace(/[^A-Z0-9 ]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words[0] === "THE") words.shift();
-  while (words.length > 1 && SUFFIX.has(words[words.length - 1])) words.pop();
-  return words.join(" ");
-}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function json(url, headers = {}, tries = 3) {
@@ -76,7 +62,7 @@ async function district(address) {
     if (!match) continue;
     const key = Object.keys(match.geographies || {}).find((k) => /119th Congressional/.test(k));
     const cd = key ? match.geographies[key][0] : null;
-    const code = cd?.BASENAME && /^\d+$/.test(cd.BASENAME) ? `${address.stateOrCountry}-${cd.BASENAME.padStart(2, "0")}` : null;
+    const code = districtCode(address.stateOrCountry, cd);
     return {
       code,
       atLarge: cd && !code ? cd.BASENAME : null,
@@ -90,42 +76,25 @@ async function district(address) {
 
 async function ldaClients(targets) {
   if (!LDA_KEY) return [];
-  const hits = new Map();
+  const names = [];
   for (const target of targets) {
     let url = `https://lda.gov/api/v1/clients/?client_name=${encodeURIComponent(target)}&page_size=25`;
     for (let page = 0; url && page < 4; page += 1) {
       const body = await json(url, { Authorization: `Token ${LDA_KEY}` });
-      for (const c of body?.results || []) {
-        if (targets.includes(norm(c.name))) hits.set(c.name.trim(), c.id);
-      }
+      names.push(...(body?.results || []).map((c) => c.name));
       url = body?.next || null;
       await sleep(600);
     }
   }
-  const names = [...hits.keys()].sort((a, b) => a.length - b.length);
-  const keep = [];
-  const strip = (s) => s.toUpperCase().replace(/[.,]/g, "");
-  for (const name of names) if (!keep.some((k) => strip(name).includes(strip(k)))) keep.push(name);
-  return keep;
+  return ldaMatches(names, targets);
 }
 
 async function pacIndex() {
   const year = new Date().getUTCFullYear();
   const cycle = year % 2 ? year + 1 : year;
-  const byOrg = new Map();
-  for (const cy of [cycle, cycle - 2]) {
-    const text = await fecBulk(`cm${String(cy).slice(2)}`, cy, "cm.txt");
-    for (const line of text.split("\n")) {
-      const c = line.split("|");
-      if (!c[0] || !["C", "W"].includes(c[12]) || !["Q", "N"].includes(c[9])) continue;
-      const key = norm(c[13]);
-      if (key.length < 4) continue;
-      const list = byOrg.get(key) || new Set();
-      list.add(c[0]);
-      byOrg.set(key, list);
-    }
-  }
-  return byOrg;
+  const lines = [];
+  for (const cy of [cycle, cycle - 2]) lines.push(...(await fecBulk(`cm${String(cy).slice(2)}`, cy, "cm.txt")).split("\n"));
+  return pacsByOrg(lines);
 }
 
 async function marketCaps() {

@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { extractText, getDocumentProxy } from "unpdf";
 import { fetchJson, fetchText } from "./http.mjs";
-import { listCore, listTickers, readCache, writeCache } from "./db.mjs";
+import { coreKey, listCore, listTickers, readCache, writeCache } from "./db.mjs";
 import { roster } from "./roster.mjs";
 import { shortInterest } from "./markets.mjs";
 import { pacData } from "./corporate.mjs";
@@ -128,11 +128,16 @@ async function ptrLines(db, filing) {
   const url = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const pdf = await getDocumentProxy(new Uint8Array(await res.arrayBuffer()));
-  const { text } = await extractText(pdf, { mergePages: true });
-  const lines = parsePtr(text);
+  const lines = await parsePtrPdf(new Uint8Array(await res.arrayBuffer()));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
+}
+
+/** Transaction lines from an electronic House PTR PDF. */
+export async function parsePtrPdf(bytes) {
+  const pdf = await getDocumentProxy(bytes);
+  const { text } = await extractText(pdf, { mergePages: true });
+  return parsePtr(text);
 }
 
 const PTR_NOISE = /:|^(ID Owner|Owner Asset|Type$|Date$|Date Notification|Notification|Amount|Gains|\$200\?|Filing ID|\* For the complete|Yes No|I CERTIFY|Digitally Signed|Clerk of the House|P\s+T\s+R|F\s+I|T\s*$)/;
@@ -297,8 +302,16 @@ async function efdLines(db, href, session) {
   const html = await fetchText(`https://efdsearch.senate.gov${href}`, {
     headers: { "User-Agent": "Mozilla/5.0", Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" }
   });
+  const lines = parseEfd(html);
+  writeCache(db, key, { lines }, 6 * MONTH);
+  return lines;
+}
+
+/** Rows of a Senate eFD periodic transaction report page. Throws if the page has no transaction table. */
+export function parseEfd(html) {
+  if (!/<tbody>/.test(html)) throw new Error("Report page had no table");
   const body = /<tbody>([\s\S]*?)<\/tbody>/.exec(html)?.[1] || "";
-  const lines = [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((row) => {
+  return [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((row) => {
     const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((c) => c[1]);
     const text = (value) => String(value || "").replace(/<div[\s\S]*?<\/div>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
     const ticker = text(cells[3]);
@@ -316,9 +329,6 @@ async function efdLines(db, href, session) {
       amountLow: Number((amount.match(/\$([\d,]+)/)?.[1] || "0").replace(/,/g, "")) || 0
     };
   });
-  if (!/<tbody>/.test(html)) throw new Error("Report page had no table");
-  writeCache(db, key, { lines }, 6 * MONTH);
-  return lines;
 }
 
 const FORM4_CODES = {
@@ -335,11 +345,13 @@ const FORM4_CODES = {
 
 export function insiderTrades(db) {
   return once("insider-trades", async () => {
-    const hit = readCache(db, "pos:insiders:v1");
+    const key = `pos:insiders:v2:${coreKey(db)}`;
+    const hit = readCache(db, key);
     if (hit) return hit;
     const tickers = listCore(db).filter((t) => t.cik);
     const rows = [];
     const errors = [];
+    const scanned = [];
     await pool(tickers, 2, async (ticker) => {
       try {
         const subs = await secSubmissions(db, ticker.cik);
@@ -371,6 +383,7 @@ export function insiderTrades(db) {
             });
           });
         }
+        scanned.push(ticker.symbol);
       } catch (err) {
         errors.push(`${ticker.symbol}: ${err.message}`);
       }
@@ -382,9 +395,10 @@ export function insiderTrades(db) {
       asOf: new Date().toISOString(),
       latency: "Form 4 is due two business days after the trade. Rows are the latest eight Form 4s per join-table issuer. Code P is an open-market buy, S a sale, A a grant, F tax withholding.",
       errors,
+      scanned: scanned.sort(),
       items: rows
     };
-    if (rows.length) writeCache(db, "pos:insiders:v1", result, 2 * HOUR);
+    if (rows.length) writeCache(db, key, result, 2 * HOUR);
     return result;
   });
 }
@@ -410,13 +424,20 @@ async function secSubmissions(db, cik) {
 }
 
 async function form4(db, cik, pick) {
-  const key = `sec:f4:${pick.accession}`;
+  const key = `sec:f4:v2:${pick.accession}`;
   const hit = readCache(db, key);
   if (hit) return hit;
   const raw = String(pick.doc || "").replace(/^xslF345X\d+\//, "");
   const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${pick.accession.replace(/-/g, "")}/${raw}`;
   await sleep(120);
   const xml = await fetchText(url, { headers: { "User-Agent": SEC_UA } });
+  const parsed = parseForm4(xml);
+  writeCache(db, key, parsed, 6 * MONTH);
+  return parsed;
+}
+
+/** Owner, role, and non-derivative transactions from a Form 4 XML document. */
+export function parseForm4(xml) {
   const owner = xmlVal(xml, "rptOwnerName");
   const title = xmlVal(xml, "officerTitle") || (xmlVal(xml, "isDirector") === "1" || xmlVal(xml, "isDirector") === "true" ? "Director" : "") || (xmlVal(xml, "isTenPercentOwner") === "1" ? "10% owner" : "");
   const lines = (xml.match(/<nonDerivativeTransaction>[\s\S]*?<\/nonDerivativeTransaction>/g) || []).map((block) => ({
@@ -427,14 +448,21 @@ async function form4(db, cik, pick) {
     ad: xmlVal(block, "transactionAcquiredDisposedCode"),
     owned: Number(xmlVal(block, "sharesOwnedFollowingTransaction")) || null
   }));
-  const parsed = { owner: titleCase(owner), title, lines };
-  writeCache(db, key, parsed, 6 * MONTH);
-  return parsed;
+  return { owner: titleCase(owner), title, lines };
 }
 
 function xmlVal(xml, name) {
   const m = new RegExp(`<${name}>\\s*(?:<value>)?\\s*([^<]*?)\\s*(?:</value>)?\\s*(?:<footnoteId[^>]*/>\\s*)*</${name}>`).exec(xml);
-  return m ? m[1].trim() : "";
+  return m ? decodeXml(m[1].trim()) : "";
+}
+
+function decodeXml(value) {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/&amp;/g, "&");
 }
 
 export function whaleHoldings(db) {
@@ -575,12 +603,15 @@ function normIssuer(value) {
 
 export function shortBoard(db) {
   return once("short-board", async () => {
-    const hit = readCache(db, "pos:shorts:v1");
+    const key = `pos:shorts:v2:${coreKey(db)}`;
+    const hit = readCache(db, key);
     if (hit) return hit;
     const tickers = listCore(db);
     const rows = [];
+    const scanned = [];
     await pool(tickers, 3, async (ticker) => {
       const res = await shortInterest(db, ticker.symbol).catch(() => null);
+      if (res) scanned.push(ticker.symbol);
       const items = res?.items || [];
       items.forEach((row, i) => {
         const prev = items[i + 1];
@@ -605,9 +636,10 @@ export function shortBoard(db) {
       source: "FINRA consolidated short interest",
       asOf: new Date().toISOString(),
       latency: "Settlement-date snapshots published twice a month, about a week after settlement.",
+      scanned: scanned.sort(),
       items: rows
     };
-    if (rows.length) writeCache(db, "pos:shorts:v1", result, 6 * HOUR);
+    if (rows.length) writeCache(db, key, result, 6 * HOUR);
     return result;
   });
 }
@@ -739,8 +771,21 @@ export async function positionsFor(db, symbol) {
     pacNote: "Corporate PAC gifts (FEC) from the last two years to members who traded this symbol. Only PACs joined in data/tickers.json are tracked.",
     insiders: (insiders.items || []).filter((r) => r.symbol === sym),
     whales: (whales.items || []).filter((r) => r.symbol === sym),
-    shorts: (shorts.items || []).filter((r) => r.symbol === sym)
+    shorts: (shorts.items || []).filter((r) => r.symbol === sym),
+    coverage: {
+      insiders: coverage(insiders, sym, join, "Form 4 scan"),
+      shorts: coverage(shorts, sym, join, "FINRA short-interest scan")
+    }
   };
+}
+
+/** Whether an empty list means "none filed" or "never looked". Only scanned symbols can report zero. */
+export function coverage(scan, sym, join, label) {
+  if (!join) return { scanned: false, note: `${sym} is not in data/tickers.json, so the ${label} does not cover it.` };
+  if (!join.core) return { scanned: false, note: `${sym} is quotes-only in data/tickers.json; the ${label} covers full-join names only.` };
+  if (!Array.isArray(scan?.scanned)) return { scanned: false, note: `The ${label} has not finished or failed; retry shortly.` };
+  if (!scan.scanned.includes(sym)) return { scanned: false, note: `The ${label} could not read ${sym} this run.` };
+  return { scanned: true, note: "" };
 }
 
 export async function memberTrades(db, bioguide) {

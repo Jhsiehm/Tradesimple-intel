@@ -72,8 +72,11 @@ export type DrawerLink = {
 export type DrawerTable = {
   title: string;
   cols: string[];
-  rows: { cells: string[]; action?: string; href?: string; tone?: "up" | "down" | "dem" | "rep" | "" }[];
+  /** `filing` is the original disclosure; rendered as its own link so `action` can still open the member. */
+  rows: { cells: string[]; action?: string; href?: string; filing?: string; tone?: "up" | "down" | "dem" | "rep" | "" }[];
   note?: string;
+  /** Shown instead of rows when the feed never looked at this symbol (so an empty list is not read as zero). */
+  empty?: string;
 };
 
 export type DrawerModel = {

@@ -226,7 +226,17 @@ type Positions = {
   shorts: Row[];
   pacs?: Row[];
   pacNote?: string;
+  coverage?: Record<"insiders" | "shorts", Coverage>;
 };
+
+type Coverage = { scanned: boolean; note: string };
+
+/** Note to show instead of an empty list when the scan never covered this symbol. Missing coverage (older API) counts as unknown. */
+function notScanned(res: Pick<Positions, "coverage">, feed: "insiders" | "shorts") {
+  const c = res.coverage?.[feed];
+  if (!c) return "Coverage unknown for this feed; an empty list may mean it was not scanned.";
+  return c.scanned ? "" : c.note;
+}
 
 function avgLag(rows: Row[]) {
   const lags = rows.map((r) => Number(r.lag)).filter((v) => validLag(v));
@@ -235,6 +245,11 @@ function avgLag(rows: Row[]) {
 function validLag(v: number) { return Number.isFinite(v) && v >= 0; }
 function latest(rows: Row[], key: string) {
   return rows.map((r) => String(r[key] || "")).filter(Boolean).sort().pop() || "—";
+}
+
+function newestFiling(rows: Row[]) {
+  const top = [...rows].sort((a, b) => String(b.filed || "").localeCompare(String(a.filed || "")))[0];
+  return top?.link ? String(top.link) : undefined;
 }
 
 function byPerson(rows: Row[], isBuy: (r: Row) => boolean, isSell: (r: Row) => boolean) {
@@ -257,6 +272,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
   const members = new Set(res.congress.map((r) => r.bioguide || r.person));
   const people = byPerson(res.congress, (r) => r.side === "buy", (r) => r.side === "sell");
   const insiders = byPerson(res.insiders, (r) => r.code === "P", (r) => r.code === "S");
+  const insiderGap = notScanned(res, "insiders");
   const pacs = res.pacs || [];
   const tables: DrawerTable[] = [
     {
@@ -266,6 +282,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
       rows: people.map(({ list, buys, sells }) => ({
         cells: [String(list[0].person), String(list[0].party || "—"), String(buys.length), String(sells.length), latest(buys, "traded"), latest(sells, "traded"), latest(list, "filed"), avgLag(list)],
         action: list[0].bioguide ? `member:${list[0].bioguide}` : undefined,
+        filing: newestFiling(list),
         tone: buys.length > sells.length ? "up" as const : sells.length > buys.length ? "down" as const : "" as const
       }))
     },
@@ -286,12 +303,13 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
       rows: res.congress.map((r) => ({
         cells: [String(r.person), String(r.party || "—"), String(r.type), String(r.amount), String(r.traded || "—"), r.amended ? `${r.filed} (am. ${r.amended})` : String(r.filed), r.lag == null ? "—" : `${r.lag}d`],
         action: r.bioguide ? `member:${r.bioguide}` : undefined,
-        href: r.bioguide ? undefined : String(r.link),
+        filing: r.link ? String(r.link) : undefined,
         tone: r.side === "buy" ? "up" as const : r.side === "sell" ? "down" as const : "" as const
       }))
     },
     {
       title: "Insiders · by person",
+      empty: insiderGap || undefined,
       cols: ["Insider", "Buys", "Sales", "Last buy", "Last sale", "Last filed", "Avg lag"],
       rows: insiders.map(({ list, buys, sells }) => ({
         cells: [String(list[0].person), String(buys.length), String(sells.length), latest(buys, "traded"), latest(sells, "traded"), latest(list, "filed"), avgLag(list)],
@@ -301,6 +319,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
     },
     {
       title: "Insiders (Form 4)",
+      empty: insiderGap || undefined,
       cols: ["Insider", "Code", "Shares", "Price", "Traded", "Filed", "Lag"],
       rows: res.insiders.map((r) => ({
         cells: [String(r.person), String(r.code), compact(Number(r.shares)), r.price ? Number(r.price).toFixed(2) : "—", String(r.traded), String(r.filed), r.lag == null ? "—" : `${r.lag}d`],
@@ -321,6 +340,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
     {
       title: "Short interest (FINRA)",
       note: "Settlement-date snapshots; FINRA publishes about seven business days after settlement.",
+      empty: notScanned(res, "shorts") || undefined,
       cols: ["Settlement", "Short shares", "Change"],
       rows: res.shorts.map((r) => ({
         cells: [String(r.traded), compact(Number(r.shares)), `${r.change || "—"}%`],
@@ -356,7 +376,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
         { label: "PAC gifts", value: pacs.length ? `${pacs.length} to these members in 2 years · $${pacs.reduce((a, r) => a + Number(r.amount || 0), 0).toLocaleString()}` : "None from joined PACs" },
         { label: "Avg lag", value: lags.length ? `${Math.round(lags.reduce((a, b) => a + b, 0) / lags.length)} days` : "—" },
         { label: "Last filed", value: String(res.congress[0]?.filed || "—") },
-        { label: "Insiders", value: `${res.insiders.filter((r) => r.code === "P").length} buys · ${res.insiders.filter((r) => r.code === "S").length} sales · ${res.insiders.length} lines` },
+        { label: "Insiders", value: insiderGap ? `Not scanned · ${insiderGap}` : `${res.insiders.filter((r) => r.code === "P").length} buys · ${res.insiders.filter((r) => r.code === "S").length} sales · ${res.insiders.length} lines` },
         { label: "Funds", value: `${res.whales.filter((r) => Number(r.shares) > 0).length} holders · ${res.whales.filter((r) => r.side === "buy").length} added · ${res.whales.filter((r) => r.side === "sell").length} cut` }
       ],
       links: ([
@@ -398,7 +418,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
       },
       { label: "As of", value: when(res.quote?.asOf) },
       { label: "Congress", value: pos ? `${new Set(pos.congress.map((r) => r.bioguide || r.person)).size} members · ${pos.congress.length} lines` : "—" },
-      { label: "Insiders", value: pos ? `${pos.insiders.length} Form 4 lines` : "—" }
+      { label: "Insiders", value: !pos ? "—" : notScanned(pos, "insiders") ? `Not scanned · ${notScanned(pos, "insiders")}` : `${pos.insiders.length} Form 4 lines` }
     ],
     links: [
       { label: "Positions", value: `${res.ticker.symbol} · every filer`, action: `pos:${res.ticker.symbol}` },

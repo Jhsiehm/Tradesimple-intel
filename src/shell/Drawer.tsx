@@ -83,15 +83,16 @@ export function Drawer({
 }
 
 function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action: string) => void }) {
+  const filings = table.rows.some((row) => row.filing);
   return (
     <section className="block">
-      <h3>{table.title} <small>{table.rows.length}</small></h3>
+      <h3>{table.title} <small>{table.empty ? "—" : table.rows.length}</small></h3>
       {table.note ? <p className="table-note">{table.note}</p> : null}
       {table.rows.length ? (
         <div className="dt-scroll">
           <table className="dt">
             <thead>
-              <tr>{table.cols.map((col) => <th key={col}>{col}</th>)}</tr>
+              <tr>{table.cols.map((col) => <th key={col}>{col}</th>)}{filings ? <th>Filing</th> : null}</tr>
             </thead>
             <tbody>
               {table.rows.map((row, index) => {
@@ -106,13 +107,18 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
                     }}
                   >
                     {row.cells.map((cell, i) => <td key={i}>{cell}</td>)}
+                    {filings ? (
+                      <td>
+                        {row.filing ? <a className="dt-filing" href={row.filing} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-      ) : <p>None on this feed.</p>}
+      ) : <p>{table.empty || "None on this feed."}</p>}
     </section>
   );
 }

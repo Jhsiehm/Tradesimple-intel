@@ -99,7 +99,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/contracts") {
       return send(res, 200, await awardsForRecipient(db, url.searchParams.get("recipient") || ""));
     }
-    const tickerMatch = url.pathname.match(/^\/api\/tickers\/([A-Za-z.]+)$/);
+    const tickerMatch = url.pathname.match(/^\/api\/tickers\/([A-Za-z.\-]+)$/);
     if (tickerMatch) {
       return send(res, 200, await tickerDossier(tickerMatch[1].toUpperCase()));
     }
@@ -235,6 +235,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
+  if (process.env.INTEL_NO_WARM) return;
   warmPositions(db);
   setTimeout(() => {
     warmCorporate(db).then(() => warmMacro(db)).then((n) => console.log(`macro warm: ${n} days fetched`)).catch((err) => console.error("warm", err.message));

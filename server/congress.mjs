@@ -619,7 +619,11 @@ export async function compareMembers(db, a, b, chamber) {
 }
 
 export async function seatsForCodes(db, codes) {
-  const index = await memberIndex(db);
+  return matchSeats(codes, await memberIndex(db));
+}
+
+/** District codes like "CA-17" or "ID-02" to the House members holding them. Senators (no district) never match. */
+export function matchSeats(codes, index) {
   const seats = [];
   for (const code of codes) {
     const match = String(code || "").toUpperCase().match(/^([A-Z]{2})-(\d+)$/);

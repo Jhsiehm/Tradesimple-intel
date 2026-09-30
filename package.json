@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "start": "node server/index.mjs",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "node --test \"test/*.test.mjs\""
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",

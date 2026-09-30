@@ -863,6 +863,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .dt th { position: sticky; top: 0; background: #11161b; color: var(--faint); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase; }
 .dt tr.live { cursor: pointer; }
 .dt tr.live:hover { background: rgba(214, 168, 74, 0.08); }
+.dt-filing { color: var(--amber); text-decoration: none; }
+.dt-filing:hover { text-decoration: underline; }
 .dt tr.tone-up td:first-child, .dt tr.tone-up td:nth-child(3) { color: var(--yea); }
 .dt tr.tone-down td:first-child, .dt tr.tone-down td:nth-child(3) { color: var(--nay); }
 .dt tr.tone-dem td:nth-child(3) { color: #8fb2d6; }

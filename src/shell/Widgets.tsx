@@ -275,12 +275,13 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
       {trades === null ? <p className="note">Loading parsed periodic transaction reports…</p> : trades.length ? (
         <table className="dt">
           <thead>
-            <tr><th>Sym</th><th>Side</th><th>Amount</th><th>Traded</th><th>Filed</th><th>Lag</th></tr>
+            <tr><th>Sym</th><th>Side</th><th>Amount</th><th>Traded</th><th>Filed</th><th>Lag</th><th>Filing</th></tr>
           </thead>
           <tbody>
             {trades.slice(0, 40).map((t) => (
               <tr key={t.id} className={`live tone-${t.side === "buy" ? "up" : t.side === "sell" ? "down" : ""}`} onClick={() => onFollow(`pos:${t.symbol}`)}>
                 <td>{t.symbol}</td><td>{t.type}</td><td>{t.amount}</td><td>{t.traded}</td><td>{t.filed}</td><td>{t.lag == null ? "—" : `${t.lag}d`}</td>
+                <td>{t.link ? <a className="dt-filing" href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}</td>
               </tr>
             ))}
           </tbody>
