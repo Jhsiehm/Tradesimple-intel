@@ -356,7 +356,7 @@ function lagDays(from, to) {
   return Number.isFinite(d) && d >= 0 ? d : null;
 }
 
-async function fecBulk(name, cycle, inner) {
+export async function fecBulk(name, cycle, inner) {
   const zip = path.join(os.tmpdir(), `fec-${name}.zip`);
   const fresh = fs.existsSync(zip) && Date.now() - fs.statSync(zip).mtimeMs < (cycle >= new Date().getUTCFullYear() ? DAY : 7 * DAY);
   if (!fresh) {

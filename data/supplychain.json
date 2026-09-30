@@ -354,5 +354,748 @@
       { "symbol": "COR", "name": "Cencora", "what": "Wholesale distribution", "basis": "J&J 10-K" },
       { "symbol": "CAH", "name": "Cardinal Health", "what": "Wholesale distribution", "basis": "J&J 10-K" }
     ]
+  },
+  "AMD": {
+    "segments": [
+      {
+        "name": "Data Center",
+        "inputs": [
+          "TSM",
+          "002156.SZ"
+        ]
+      },
+      {
+        "name": "Client",
+        "inputs": [
+          "TSM",
+          "GFS"
+        ]
+      },
+      {
+        "name": "Gaming (semi-custom)",
+        "inputs": [
+          "TSM"
+        ]
+      },
+      {
+        "name": "Embedded",
+        "inputs": [
+          "TSM"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Leading-edge wafers and CoWoS",
+        "basis": "AMD 10-K names TSMC as primary wafer foundry"
+      },
+      {
+        "symbol": "GFS",
+        "name": "GlobalFoundries",
+        "what": "Mature-node wafers",
+        "basis": "AMD 10-K: wafer supply agreement with GlobalFoundries"
+      },
+      {
+        "symbol": "002156.SZ",
+        "name": "Tongfu Microelectronics",
+        "what": "Assembly and test",
+        "basis": "AMD 10-K: TF-AMD assembly/test joint ventures (AMD holds 15%)"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "MSFT",
+        "name": "Microsoft",
+        "what": "Xbox semi-custom SoC and Azure MI300X",
+        "basis": "AMD 10-K semi-custom customers; Microsoft Azure MI300X announcement"
+      },
+      {
+        "symbol": "SONY",
+        "name": "Sony",
+        "what": "PlayStation semi-custom SoC",
+        "basis": "AMD 10-K semi-custom customers"
+      },
+      {
+        "symbol": "META",
+        "name": "Meta",
+        "what": "EPYC and Instinct MI300X",
+        "basis": "AMD Advancing AI event (Dec 2023) customer announcement"
+      },
+      {
+        "symbol": "ORCL",
+        "name": "Oracle",
+        "what": "Instinct GPUs on OCI",
+        "basis": "Oracle OCI MI300X announcement"
+      }
+    ]
+  },
+  "QCOM": {
+    "segments": [
+      {
+        "name": "Handsets",
+        "inputs": [
+          "TSM",
+          "005930.KS"
+        ]
+      },
+      {
+        "name": "Automotive",
+        "inputs": [
+          "TSM"
+        ]
+      },
+      {
+        "name": "IoT",
+        "inputs": [
+          "TSM"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Foundry for Snapdragon",
+        "basis": "Qualcomm 10-K names TSMC as a foundry supplier"
+      },
+      {
+        "symbol": "005930.KS",
+        "name": "Samsung Electronics",
+        "what": "Foundry",
+        "basis": "Qualcomm 10-K names Samsung as a foundry supplier"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "AAPL",
+        "name": "Apple",
+        "what": "Modems",
+        "basis": "Qualcomm 10-K: Apple is a >10% revenue customer"
+      },
+      {
+        "symbol": "005930.KS",
+        "name": "Samsung Electronics",
+        "what": "Galaxy Snapdragon SoCs",
+        "basis": "Qualcomm 10-K: Samsung is a >10% revenue customer"
+      }
+    ]
+  },
+  "MU": {
+    "segments": [
+      {
+        "name": "Cloud Memory (HBM)",
+        "inputs": [
+          "ASML",
+          "AMAT",
+          "LRCX",
+          "8035.T"
+        ]
+      },
+      {
+        "name": "Core Data Center",
+        "inputs": [
+          "AMAT",
+          "LRCX",
+          "KLAC"
+        ]
+      },
+      {
+        "name": "Mobile and Client",
+        "inputs": [
+          "AMAT",
+          "LRCX"
+        ]
+      },
+      {
+        "name": "Automotive and Embedded",
+        "inputs": [
+          "AMAT"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "ASML",
+        "name": "ASML",
+        "what": "EUV lithography for 1-gamma DRAM",
+        "basis": "Micron 1-gamma EUV announcements; ASML annual report (memory customers)"
+      },
+      {
+        "symbol": "AMAT",
+        "name": "Applied Materials",
+        "what": "Deposition and etch",
+        "basis": "Applied Materials 10-K: memory customers"
+      },
+      {
+        "symbol": "LRCX",
+        "name": "Lam Research",
+        "what": "Etch and deposition",
+        "basis": "Lam Research 10-K lists Micron among major customers"
+      },
+      {
+        "symbol": "KLAC",
+        "name": "KLA",
+        "what": "Process control",
+        "basis": "KLA 10-K: memory customers"
+      },
+      {
+        "symbol": "8035.T",
+        "name": "Tokyo Electron",
+        "what": "Coater/developer and etch",
+        "basis": "Tokyo Electron annual report"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA",
+        "what": "HBM3E for H200 and Blackwell",
+        "basis": "Micron HBM3E volume-production announcement (Feb 2024) naming NVIDIA H200"
+      }
+    ]
+  },
+  "AMAT": {
+    "segments": [
+      {
+        "name": "Semiconductor Systems",
+        "inputs": [
+          "MKSI",
+          "UCTT",
+          "ICHR"
+        ]
+      },
+      {
+        "name": "Applied Global Services",
+        "inputs": []
+      },
+      {
+        "name": "Display",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "MKSI",
+        "name": "MKS Instruments",
+        "what": "Power, gas and vacuum subsystems",
+        "basis": "MKS 10-K names Applied Materials as a top customer"
+      },
+      {
+        "symbol": "UCTT",
+        "name": "Ultra Clean Holdings",
+        "what": "Gas delivery and critical subsystems",
+        "basis": "Ultra Clean 10-K names Applied Materials as a >10% customer"
+      },
+      {
+        "symbol": "ICHR",
+        "name": "Ichor Holdings",
+        "what": "Fluid delivery subsystems",
+        "basis": "Ichor 10-K names Applied Materials as a >10% customer"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Logic fabs",
+        "basis": "Applied Materials 10-K customer concentration"
+      },
+      {
+        "symbol": "005930.KS",
+        "name": "Samsung Electronics",
+        "what": "Memory and foundry fabs",
+        "basis": "Applied Materials 10-K customer concentration"
+      },
+      {
+        "symbol": "INTC",
+        "name": "Intel",
+        "what": "Logic fabs",
+        "basis": "Applied Materials 10-K customer concentration"
+      }
+    ]
+  },
+  "LRCX": {
+    "segments": [
+      {
+        "name": "Etch",
+        "inputs": [
+          "MKSI",
+          "UCTT",
+          "ICHR"
+        ]
+      },
+      {
+        "name": "Deposition",
+        "inputs": [
+          "MKSI",
+          "UCTT",
+          "ICHR"
+        ]
+      },
+      {
+        "name": "Customer Support",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "MKSI",
+        "name": "MKS Instruments",
+        "what": "RF power and vacuum",
+        "basis": "MKS 10-K names Lam Research as a top customer"
+      },
+      {
+        "symbol": "UCTT",
+        "name": "Ultra Clean Holdings",
+        "what": "Gas delivery subsystems",
+        "basis": "Ultra Clean 10-K names Lam Research as a >10% customer"
+      },
+      {
+        "symbol": "ICHR",
+        "name": "Ichor Holdings",
+        "what": "Fluid delivery subsystems",
+        "basis": "Ichor 10-K names Lam Research as its largest customer"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Logic etch/dep",
+        "basis": "Lam Research 10-K customer concentration"
+      },
+      {
+        "symbol": "005930.KS",
+        "name": "Samsung Electronics",
+        "what": "Memory etch/dep",
+        "basis": "Lam Research 10-K customer concentration"
+      },
+      {
+        "symbol": "MU",
+        "name": "Micron",
+        "what": "Memory etch/dep",
+        "basis": "Lam Research 10-K customer concentration"
+      }
+    ]
+  },
+  "KLAC": {
+    "segments": [
+      {
+        "name": "Semiconductor Process Control",
+        "inputs": []
+      },
+      {
+        "name": "Specialty Semiconductor Process",
+        "inputs": []
+      },
+      {
+        "name": "PCB and Component Inspection",
+        "inputs": []
+      }
+    ],
+    "suppliers": [],
+    "customers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Inspection and metrology",
+        "basis": "KLA 10-K: TSMC is a >10% revenue customer"
+      },
+      {
+        "symbol": "005930.KS",
+        "name": "Samsung Electronics",
+        "what": "Inspection and metrology",
+        "basis": "KLA 10-K customer concentration"
+      }
+    ]
+  },
+  "ORCL": {
+    "segments": [
+      {
+        "name": "Cloud (OCI)",
+        "inputs": [
+          "NVDA",
+          "AMD"
+        ]
+      },
+      {
+        "name": "License and support",
+        "inputs": []
+      },
+      {
+        "name": "Hardware",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA",
+        "what": "GPU clusters for OCI",
+        "basis": "Oracle and NVIDIA OCI Supercluster announcements"
+      },
+      {
+        "symbol": "AMD",
+        "name": "AMD",
+        "what": "Instinct GPUs and EPYC CPUs",
+        "basis": "Oracle OCI MI300X and EPYC announcements"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "MSFT",
+        "name": "Microsoft",
+        "what": "Azure capacity on OCI (Oracle Interconnect)",
+        "basis": "Oracle/Microsoft/OpenAI capacity announcement (Jun 2024)"
+      }
+    ]
+  },
+  "DELL": {
+    "segments": [
+      {
+        "name": "Infrastructure Solutions (ISG)",
+        "inputs": [
+          "NVDA",
+          "AMD",
+          "INTC"
+        ]
+      },
+      {
+        "name": "Client Solutions (CSG)",
+        "inputs": [
+          "INTC",
+          "AMD"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA",
+        "what": "AI server GPUs",
+        "basis": "Dell AI Factory with NVIDIA announcements"
+      },
+      {
+        "symbol": "INTC",
+        "name": "Intel",
+        "what": "Xeon and Core CPUs",
+        "basis": "Dell 10-K supply discussion; PowerEdge and Latitude specs"
+      },
+      {
+        "symbol": "AMD",
+        "name": "AMD",
+        "what": "EPYC and Ryzen CPUs",
+        "basis": "Dell PowerEdge and client specs"
+      }
+    ],
+    "customers": []
+  },
+  "TSLA": {
+    "segments": [
+      {
+        "name": "Automotive",
+        "inputs": [
+          "6752.T",
+          "300750.SZ",
+          "373220.KS"
+        ]
+      },
+      {
+        "name": "Energy Generation and Storage",
+        "inputs": [
+          "300750.SZ"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "6752.T",
+        "name": "Panasonic",
+        "what": "Cylindrical cells (Gigafactory Nevada)",
+        "basis": "Tesla 10-K names Panasonic as a cell supplier"
+      },
+      {
+        "symbol": "300750.SZ",
+        "name": "CATL",
+        "what": "LFP cells",
+        "basis": "Tesla 10-K names CATL as a cell supplier"
+      },
+      {
+        "symbol": "373220.KS",
+        "name": "LG Energy Solution",
+        "what": "Cells",
+        "basis": "Tesla 10-K names LG Energy Solution as a cell supplier"
+      },
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA",
+        "what": "Training compute",
+        "basis": "Tesla earnings calls: H100 training clusters"
+      }
+    ],
+    "customers": []
+  },
+  "GM": {
+    "segments": [
+      {
+        "name": "GM North America",
+        "inputs": [
+          "373220.KS",
+          "006400.KS"
+        ]
+      },
+      {
+        "name": "GM International",
+        "inputs": []
+      },
+      {
+        "name": "GM Financial",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "373220.KS",
+        "name": "LG Energy Solution",
+        "what": "Ultium cells",
+        "basis": "GM 10-K: Ultium Cells LLC joint venture with LG Energy Solution"
+      },
+      {
+        "symbol": "006400.KS",
+        "name": "Samsung SDI",
+        "what": "Cells (Indiana JV)",
+        "basis": "GM and Samsung SDI joint venture announcement (Jun 2023)"
+      }
+    ],
+    "customers": []
+  },
+  "F": {
+    "segments": [
+      {
+        "name": "Ford Blue",
+        "inputs": []
+      },
+      {
+        "name": "Model e",
+        "inputs": [
+          "096770.KS",
+          "373220.KS",
+          "300750.SZ"
+        ]
+      },
+      {
+        "name": "Ford Pro",
+        "inputs": [
+          "096770.KS"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "096770.KS",
+        "name": "SK Innovation",
+        "what": "Cells (BlueOval SK JV)",
+        "basis": "Ford 10-K: BlueOval SK joint venture with SK On"
+      },
+      {
+        "symbol": "373220.KS",
+        "name": "LG Energy Solution",
+        "what": "Mustang Mach-E cells",
+        "basis": "Ford/LGES supply announcements"
+      },
+      {
+        "symbol": "300750.SZ",
+        "name": "CATL",
+        "what": "LFP technology license (Marshall, MI)",
+        "basis": "Ford BlueOval Battery Park Michigan announcement (Feb 2023)"
+      }
+    ],
+    "customers": []
+  },
+  "UPS": {
+    "segments": [
+      {
+        "name": "U.S. Domestic Package",
+        "inputs": [
+          "BA"
+        ]
+      },
+      {
+        "name": "International Package",
+        "inputs": [
+          "BA"
+        ]
+      },
+      {
+        "name": "Supply Chain Solutions",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "BA",
+        "name": "Boeing",
+        "what": "767F and 747-8F freighters",
+        "basis": "UPS 10-K aircraft fleet and purchase commitments"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "AMZN",
+        "name": "Amazon",
+        "what": "Largest customer (volume glide-down announced)",
+        "basis": "UPS 10-K: Amazon is the largest customer; Q4 2024 glide-down announcement"
+      }
+    ]
+  },
+  "FDX": {
+    "segments": [
+      {
+        "name": "Federal Express",
+        "inputs": [
+          "BA",
+          "GE"
+        ]
+      },
+      {
+        "name": "FedEx Freight",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "BA",
+        "name": "Boeing",
+        "what": "777F and 767F freighters",
+        "basis": "FedEx 10-K aircraft purchase commitments"
+      },
+      {
+        "symbol": "GE",
+        "name": "GE Aerospace",
+        "what": "Engines (GE90 on 777F, CF6 on 767F)",
+        "basis": "Aircraft type certificates for FedEx freighter fleet"
+      }
+    ],
+    "customers": []
+  },
+  "DAL": {
+    "segments": [
+      {
+        "name": "Airline",
+        "inputs": [
+          "AIR.PA",
+          "BA",
+          "RTX"
+        ]
+      },
+      {
+        "name": "Refinery",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "AIR.PA",
+        "name": "Airbus",
+        "what": "A220, A321neo, A330neo, A350",
+        "basis": "Delta 10-K aircraft purchase commitments"
+      },
+      {
+        "symbol": "BA",
+        "name": "Boeing",
+        "what": "737-10 on order; 737/757/767 fleet",
+        "basis": "Delta 10-K aircraft purchase commitments"
+      },
+      {
+        "symbol": "RTX",
+        "name": "RTX (Pratt & Whitney)",
+        "what": "GTF engines on A220 and A321neo",
+        "basis": "Delta fleet engine selection; RTX GTF disclosures"
+      }
+    ],
+    "customers": []
+  },
+  "UAL": {
+    "segments": [
+      {
+        "name": "Mainline",
+        "inputs": [
+          "BA",
+          "AIR.PA",
+          "GE"
+        ]
+      },
+      {
+        "name": "Regional",
+        "inputs": []
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "BA",
+        "name": "Boeing",
+        "what": "737 MAX and 787",
+        "basis": "United 10-K aircraft purchase commitments"
+      },
+      {
+        "symbol": "AIR.PA",
+        "name": "Airbus",
+        "what": "A321neo and A350",
+        "basis": "United 10-K aircraft purchase commitments"
+      },
+      {
+        "symbol": "GE",
+        "name": "GE Aerospace",
+        "what": "GEnx on 787, CFM LEAP on 737 MAX",
+        "basis": "Engine type on United 787 and 737 MAX fleet"
+      }
+    ],
+    "customers": []
+  },
+  "MRVL": {
+    "segments": [
+      {
+        "name": "Data Center",
+        "inputs": [
+          "TSM"
+        ]
+      },
+      {
+        "name": "Enterprise Networking",
+        "inputs": [
+          "TSM"
+        ]
+      },
+      {
+        "name": "Carrier and Automotive",
+        "inputs": [
+          "TSM"
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "symbol": "TSM",
+        "name": "TSMC",
+        "what": "Leading-edge wafers",
+        "basis": "Marvell 10-K names TSMC"
+      }
+    ],
+    "customers": [
+      {
+        "symbol": "AMZN",
+        "name": "Amazon",
+        "what": "Custom AI silicon (Trainium)",
+        "basis": "Marvell/AWS five-year agreement (Dec 2024)"
+      },
+      {
+        "symbol": "MSFT",
+        "name": "Microsoft",
+        "what": "Custom accelerator program",
+        "basis": "Marvell earnings disclosures on hyperscaler custom silicon"
+      }
+    ]
   }
 }

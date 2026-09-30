@@ -25,6 +25,212 @@
     "hq": "Cupertino, California"
   },
   {
+    "symbol": "ABBV",
+    "name": "AbbVie",
+    "cik": "0001551152",
+    "ldaClients": [
+      "ABBVIE"
+    ],
+    "recipients": [
+      "ABBVIE"
+    ],
+    "districts": [],
+    "state": "IL",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00536573"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Biotechnology",
+    "hq": "North Chicago, Illinois",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "AbbVie Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"ABBVIE\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "ABT",
+    "name": "Abbott Laboratories",
+    "cik": "0000001800",
+    "ldaClients": [
+      "ABBOTT LABORATORIES"
+    ],
+    "recipients": [
+      "ABBOTT LABORATORIES"
+    ],
+    "districts": [],
+    "state": "IL",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00040279"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Health Care Equipment",
+    "hq": "North Chicago, Illinois",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "ABBOTT LABORATORIES",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"ABBOTT LABORATORIES\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "ADI",
+    "name": "Analog Devices",
+    "cik": "0000006281",
+    "ldaClients": [
+      "ANALOG DEVICES"
+    ],
+    "recipients": [
+      "ANALOG DEVICES"
+    ],
+    "districts": [],
+    "state": "MA",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "Wilmington, Massachusetts",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "ANALOG DEVICES INC",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"ANALOG DEVICES\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "AMAT",
+    "name": "Applied Materials",
+    "cik": "0000006951",
+    "ldaClients": [
+      "APPLIED MATERIALS"
+    ],
+    "recipients": [
+      "APPLIED MATERIALS"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3768,
+    "lon": -121.9779,
+    "pacs": [
+      "C00406892"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductor Materials & Equipment",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "APPLIED MATERIALS INC /DE",
+      "district": "SEC business address → Census geocoder (3050 BOWERS AVE, SANTA CLARA, CA, 95054) → 119th CD",
+      "lda": "LDA client names equal to \"APPLIED MATERIALS\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "AMD",
+    "name": "Advanced Micro Devices",
+    "cik": "0000002488",
+    "ldaClients": [
+      "ADVANCED MICRO DEVICES"
+    ],
+    "recipients": [
+      "ADVANCED MICRO DEVICES"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3823,
+    "lon": -121.9718,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "ADVANCED MICRO DEVICES INC",
+      "district": "SEC business address → Census geocoder (2485 AUGUSTINE DR, SANTA CLARA, CA, 95054) → 119th CD",
+      "lda": "LDA client names equal to \"ADVANCED MICRO DEVICES\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "AMGN",
+    "name": "Amgen",
+    "cik": "0000318154",
+    "ldaClients": [
+      "AMGEN"
+    ],
+    "recipients": [
+      "AMGEN"
+    ],
+    "districts": [
+      "CA-26"
+    ],
+    "state": "CA",
+    "lat": 34.1877,
+    "lon": -118.9178,
+    "pacs": [
+      "C00251876"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Biotechnology",
+    "hq": "Thousand Oaks, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "AMGEN INC",
+      "district": "SEC business address → Census geocoder (1 AMGEN CENTER DR, THOUSAND OAKS, CA, 91320) → 119th CD",
+      "lda": "LDA client names equal to \"AMGEN\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "AMZN",
     "name": "Amazon",
     "cik": "0001018724",
@@ -53,6 +259,72 @@
     "hq": "Seattle, Washington"
   },
   {
+    "symbol": "ANET",
+    "name": "Arista Networks",
+    "cik": "0001596532",
+    "ldaClients": [
+      "ARISTA NETWORKS INC."
+    ],
+    "recipients": [
+      "ARISTA NETWORKS"
+    ],
+    "districts": [],
+    "state": "CA",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Communications Equipment",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Arista Networks, Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"ARISTA NETWORKS\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "APH",
+    "name": "Amphenol",
+    "cik": "0000820313",
+    "ldaClients": [
+      "AMPHENOL CORPORATION"
+    ],
+    "recipients": [
+      "AMPHENOL"
+    ],
+    "districts": [
+      "CT-03"
+    ],
+    "state": "CT",
+    "lat": 41.4608,
+    "lon": -72.8325,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Electronic Components",
+    "hq": "Wallingford, Connecticut",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "AMPHENOL CORP /DE/",
+      "district": "SEC business address → Census geocoder (358 HALL AVE, WALLINGFORD, CT, 06492) → 119th CD",
+      "lda": "LDA client names equal to \"AMPHENOL\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "AVGO",
     "name": "Broadcom",
     "cik": "0001730168",
@@ -78,6 +350,40 @@
     "sector": "Information Technology",
     "industry": "Semiconductors",
     "hq": "Palo Alto, California"
+  },
+  {
+    "symbol": "AXP",
+    "name": "American Express",
+    "cik": "0000004962",
+    "ldaClients": [
+      "AMERICAN EXPRESS"
+    ],
+    "recipients": [
+      "AMERICAN EXPRESS"
+    ],
+    "districts": [],
+    "state": "NY",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00040535"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Consumer Finance",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "AMERICAN EXPRESS CO",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"AMERICAN EXPRESS\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "BA",
@@ -109,6 +415,181 @@
     "hq": "Arlington, Virginia"
   },
   {
+    "symbol": "BAC",
+    "name": "Bank of America",
+    "cik": "0000070858",
+    "ldaClients": [
+      "BANK OF AMERICA"
+    ],
+    "recipients": [
+      "BANK OF AMERICA"
+    ],
+    "districts": [
+      "NC-12"
+    ],
+    "state": "NC",
+    "lat": 35.2272,
+    "lon": -80.843,
+    "pacs": [
+      "C00043489",
+      "C00364778"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Diversified Banks",
+    "hq": "Charlotte, North Carolina",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "BANK OF AMERICA CORP /DE/",
+      "district": "SEC business address → Census geocoder (100 N TRYON ST, CHARLOTTE, NC, 28202) → 119th CD",
+      "lda": "LDA client names equal to \"BANK OF AMERICA\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "BLK",
+    "name": "BlackRock",
+    "cik": "0002012383",
+    "ldaClients": [
+      "BLACKROCK"
+    ],
+    "recipients": [
+      "BLACKROCK"
+    ],
+    "districts": [],
+    "state": "NY",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Asset Management & Custody Banks",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "BlackRock, Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"BLACKROCK\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "BMY",
+    "name": "Bristol Myers Squibb",
+    "cik": "0000014272",
+    "ldaClients": [
+      "BRISTOL-MYERS SQUIBB",
+      "BRISTOL MYERS SQUIBB"
+    ],
+    "recipients": [
+      "BRISTOL MYERS SQUIBB"
+    ],
+    "districts": [
+      "NJ-12"
+    ],
+    "state": "NJ",
+    "lat": 40.3029,
+    "lon": -74.6754,
+    "pacs": [
+      "C00035675"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Pharmaceuticals",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "BRISTOL MYERS SQUIBB CO",
+      "district": "SEC business address → Census geocoder (206 PROVINCE LINE RD, PRINCETON, NJ, 08540) → 119th CD",
+      "lda": "LDA client names equal to \"BRISTOL MYERS SQUIBB\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "BRK-B",
+    "name": "Berkshire Hathaway",
+    "cik": "0001067983",
+    "ldaClients": [],
+    "recipients": [
+      "BERKSHIRE HATHAWAY"
+    ],
+    "districts": [
+      "NE-02"
+    ],
+    "state": "NE",
+    "lat": 41.2577,
+    "lon": -95.9649,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Multi-Sector Holdings",
+    "hq": "Omaha, Nebraska",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "BERKSHIRE HATHAWAY INC",
+      "district": "SEC business address → Census geocoder (3555 FARNAM ST, OMAHA, NE, 68131) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "C",
+    "name": "Citigroup",
+    "cik": "0000831001",
+    "ldaClients": [
+      "CITIGROUP"
+    ],
+    "recipients": [
+      "CITIGROUP"
+    ],
+    "districts": [
+      "NY-10"
+    ],
+    "state": "NY",
+    "lat": 40.7207,
+    "lon": -74.0102,
+    "pacs": [
+      "C00008474",
+      "C00039305"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Diversified Banks",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "CITIGROUP INC",
+      "district": "SEC business address → Census geocoder (388 GREENWICH ST, NEW YORK, NY, 10013) → 119th CD",
+      "lda": "LDA client names equal to \"CITIGROUP\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "CAT",
     "name": "Caterpillar",
     "cik": "0000018230",
@@ -134,6 +615,218 @@
     "sector": "Industrials",
     "industry": "Construction Machinery & Heavy Transportation Equipment",
     "hq": "Irving, Texas"
+  },
+  {
+    "symbol": "CB",
+    "name": "Chubb Limited",
+    "cik": "0000896159",
+    "ldaClients": [
+      "CHUBB CORP"
+    ],
+    "recipients": [
+      "CHUBB"
+    ],
+    "districts": [],
+    "state": null,
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00348938"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Property & Casualty Insurance",
+    "hq": "Zurich, Switzerland",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Chubb Ltd",
+      "district": "SEC business address is outside the US",
+      "lda": "LDA client names equal to \"CHUBB\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "COP",
+    "name": "ConocoPhillips",
+    "cik": "0001163165",
+    "ldaClients": [
+      "CONOCOPHILLIPS"
+    ],
+    "recipients": [
+      "CONOCOPHILLIPS"
+    ],
+    "districts": [
+      "TX-38"
+    ],
+    "state": "TX",
+    "lat": 29.7833,
+    "lon": -95.6178,
+    "pacs": [
+      "C00112896"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Energy",
+    "industry": "Oil & Gas Exploration & Production",
+    "hq": "Houston, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "CONOCOPHILLIPS",
+      "district": "SEC business address → Census geocoder (925 N ELDRIDGE PKWY, HOUSTON, TX, 77079) → 119th CD",
+      "lda": "LDA client names equal to \"CONOCOPHILLIPS\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "COST",
+    "name": "Costco",
+    "cik": "0000909832",
+    "ldaClients": [
+      "COSTCO WHOLESALE CORPORATION"
+    ],
+    "recipients": [
+      "COSTCO WHOLESALE",
+      "COSTCO"
+    ],
+    "districts": [
+      "WA-08"
+    ],
+    "state": "WA",
+    "lat": 47.5497,
+    "lon": -122.0503,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Consumer Staples Merchandise Retail",
+    "hq": "Issaquah, Washington",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "COSTCO WHOLESALE CORP /NEW",
+      "district": "SEC business address → Census geocoder (999 LAKE DR, ISSAQUAH, WA, 98027) → 119th CD",
+      "lda": "LDA client names equal to \"COSTCO WHOLESALE\" / \"COSTCO\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "CRM",
+    "name": "Salesforce",
+    "cik": "0001108524",
+    "ldaClients": [
+      "SALESFORCE"
+    ],
+    "recipients": [
+      "SALESFORCE"
+    ],
+    "districts": [
+      "CA-11"
+    ],
+    "state": "CA",
+    "lat": 37.7903,
+    "lon": -122.3968,
+    "pacs": [
+      "C00511600"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Application Software",
+    "hq": "San Francisco, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Salesforce, Inc.",
+      "district": "SEC business address → Census geocoder (415 MISSION ST, SAN FRANCISCO, CA, 94105) → 119th CD",
+      "lda": "LDA client names equal to \"SALESFORCE\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "CRWD",
+    "name": "CrowdStrike",
+    "cik": "0001535527",
+    "ldaClients": [
+      "CROWDSTRIKE"
+    ],
+    "recipients": [
+      "CROWDSTRIKE"
+    ],
+    "districts": [
+      "TX-37"
+    ],
+    "state": "TX",
+    "lat": 30.2705,
+    "lon": -97.7403,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Systems Software",
+    "hq": "Austin, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "CrowdStrike Holdings, Inc.",
+      "district": "SEC business address → Census geocoder (206 E 9TH ST, AUSTIN, TX, 78701) → 119th CD",
+      "lda": "LDA client names equal to \"CROWDSTRIKE\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "CSCO",
+    "name": "Cisco",
+    "cik": "0000858877",
+    "ldaClients": [
+      "CISCO"
+    ],
+    "recipients": [
+      "CISCO SYSTEMS",
+      "CISCO"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.4101,
+    "lon": -121.954,
+    "pacs": [
+      "C00362707"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Communications Equipment",
+    "hq": "San Jose, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "CISCO SYSTEMS, INC.",
+      "district": "SEC business address → Census geocoder (170 W TASMAN DR, SAN JOSE, CA, 95134) → 119th CD",
+      "lda": "LDA client names equal to \"CISCO SYSTEMS\" / \"CISCO\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "CVX",
@@ -162,6 +855,211 @@
     "sector": "Energy",
     "industry": "Integrated Oil & Gas",
     "hq": "Houston, Texas"
+  },
+  {
+    "symbol": "DE",
+    "name": "Deere & Company",
+    "cik": "0000315189",
+    "ldaClients": [
+      "DEERE & CO",
+      "DEERE AND COMPANY"
+    ],
+    "recipients": [
+      "DEERE"
+    ],
+    "districts": [
+      "IL-17"
+    ],
+    "state": "IL",
+    "lat": 41.4774,
+    "lon": -90.4239,
+    "pacs": [
+      "C00204099"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Agricultural & Farm Machinery",
+    "hq": "Moline, Illinois",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "DEERE & CO",
+      "district": "SEC business address → Census geocoder (1 JOHN DEERE PL, MOLINE, IL, 61265) → 119th CD",
+      "lda": "LDA client names equal to \"DEERE\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "DELL",
+    "name": "Dell Technologies",
+    "cik": "0001571996",
+    "ldaClients": [
+      "DELL TECHNOLOGIES"
+    ],
+    "recipients": [
+      "DELL TECHNOLOGIES"
+    ],
+    "districts": [],
+    "state": "TX",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00369751"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Technology Hardware, Storage & Peripherals",
+    "hq": "Round Rock, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Dell Technologies Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"DELL TECHNOLOGIES\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "DHR",
+    "name": "Danaher Corporation",
+    "cik": "0000313616",
+    "ldaClients": [
+      "DANAHER CORP"
+    ],
+    "recipients": [
+      "DANAHER"
+    ],
+    "districts": [],
+    "state": "DC",
+    "lat": 38.902,
+    "lon": -77.0489,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Life Sciences Tools & Services",
+    "hq": "Washington, D.C.",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "DANAHER CORP /DE/",
+      "district": "Delegate District (at Large); no voting seat joined",
+      "lda": "LDA client names equal to \"DANAHER\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "DIS",
+    "name": "Walt Disney Company (The)",
+    "cik": "0001744489",
+    "ldaClients": [
+      "WALT DISNEY CO"
+    ],
+    "recipients": [
+      "WALT DISNEY"
+    ],
+    "districts": [
+      "CA-30"
+    ],
+    "state": "CA",
+    "lat": 34.1551,
+    "lon": -118.3265,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Movies & Entertainment",
+    "hq": "Burbank, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Walt Disney Co",
+      "district": "SEC business address → Census geocoder (500 S BUENA VISTA ST, BURBANK, CA, 91521) → 119th CD",
+      "lda": "LDA client names equal to \"WALT DISNEY\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "ETN",
+    "name": "Eaton Corporation",
+    "cik": "0001551182",
+    "ldaClients": [
+      "EATON"
+    ],
+    "recipients": [
+      "EATON"
+    ],
+    "districts": [],
+    "state": null,
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00034827"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Electrical Components & Equipment",
+    "hq": "Dublin, Ireland",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Eaton Corp plc",
+      "district": "SEC business address is outside the US",
+      "lda": "LDA client names equal to \"EATON\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "FTNT",
+    "name": "Fortinet",
+    "cik": "0001262039",
+    "ldaClients": [
+      "FORTINET"
+    ],
+    "recipients": [
+      "FORTINET"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3743,
+    "lon": -122.0086,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Systems Software",
+    "hq": "Sunnyvale, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Fortinet, Inc.",
+      "district": "SEC business address → Census geocoder (909 KIFER RD, SUNNYVALE, CA, 94086) → 119th CD",
+      "lda": "LDA client names equal to \"FORTINET\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "GD",
@@ -220,6 +1118,147 @@
     "hq": "Evendale, Ohio"
   },
   {
+    "symbol": "GEV",
+    "name": "GE Vernova",
+    "cik": "0001996810",
+    "ldaClients": [],
+    "recipients": [
+      "GE VERNOVA"
+    ],
+    "districts": [
+      "MA-07"
+    ],
+    "state": "MA",
+    "lat": 42.3675,
+    "lon": -71.0798,
+    "pacs": [
+      "C00861161"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Heavy Electrical Equipment",
+    "hq": "Cambridge, Massachusetts",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "GE Vernova Inc.",
+      "district": "SEC business address → Census geocoder (58 CHARLES ST, CAMBRIDGE, MA, 02141) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "GILD",
+    "name": "Gilead Sciences",
+    "cik": "0000882095",
+    "ldaClients": [
+      "GILEAD SCIENCES"
+    ],
+    "recipients": [
+      "GILEAD SCIENCES"
+    ],
+    "districts": [
+      "CA-15"
+    ],
+    "state": "CA",
+    "lat": 37.5664,
+    "lon": -122.2829,
+    "pacs": [
+      "C00396895"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Biotechnology",
+    "hq": "Foster City, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "GILEAD SCIENCES, INC.",
+      "district": "SEC business address → Census geocoder (333 LAKESIDE DR, FOSTER CITY, CA, 94404) → 119th CD",
+      "lda": "LDA client names equal to \"GILEAD SCIENCES\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "GLW",
+    "name": "Corning Inc.",
+    "cik": "0000024741",
+    "ldaClients": [
+      "CORNING"
+    ],
+    "recipients": [
+      "CORNING"
+    ],
+    "districts": [],
+    "state": "NY",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00033589"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Electronic Components",
+    "hq": "Corning, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "CORNING INC /NY",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"CORNING\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "GOOG",
+    "name": "Alphabet Inc. (Class C)",
+    "cik": "0001652044",
+    "ldaClients": [
+      "Alphabet Inc.",
+      "Google LLC"
+    ],
+    "recipients": [
+      "GOOGLE"
+    ],
+    "districts": [
+      "CA-16"
+    ],
+    "state": "CA",
+    "lat": 37.422,
+    "lon": -122.084,
+    "pacs": [
+      "C00428623"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Interactive Media & Services",
+    "hq": "Mountain View, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "shareClassOf": "GOOGL",
+      "district": "Same SEC CIK as GOOGL; joins copied",
+      "lda": "Same as GOOGL",
+      "pacs": "Same as GOOGL",
+      "recipients": "Same as GOOGL"
+    }
+  },
+  {
     "symbol": "GOOGL",
     "name": "Alphabet",
     "cik": "0001652044",
@@ -275,6 +1314,42 @@
     "hq": "New York City, New York"
   },
   {
+    "symbol": "HD",
+    "name": "Home Depot (The)",
+    "cik": "0000354950",
+    "ldaClients": [
+      "HOME DEPOT"
+    ],
+    "recipients": [
+      "HOME DEPOT"
+    ],
+    "districts": [
+      "GA-06"
+    ],
+    "state": "GA",
+    "lat": 33.8621,
+    "lon": -84.4832,
+    "pacs": [
+      "C00284885"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Discretionary",
+    "industry": "Home Improvement Retail",
+    "hq": "Atlanta, Georgia",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "HOME DEPOT, INC.",
+      "district": "SEC business address → Census geocoder (2455 PACES FERRY RD SE, ATLANTA, GA, 30339) → 119th CD",
+      "lda": "LDA client names equal to \"HOME DEPOT\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "HON",
     "name": "Honeywell",
     "cik": "0000773840",
@@ -300,6 +1375,40 @@
     "sector": "Industrials",
     "industry": "Industrial Conglomerates",
     "hq": "Charlotte, North Carolina"
+  },
+  {
+    "symbol": "IBM",
+    "name": "IBM",
+    "cik": "0000051143",
+    "ldaClients": [
+      "INTERNATIONAL BUSINESS MACHINES CORPORATION"
+    ],
+    "recipients": [
+      "INTERNATIONAL BUSINESS MACHINES"
+    ],
+    "districts": [
+      "NY-17"
+    ],
+    "state": "NY",
+    "lat": 41.1097,
+    "lon": -73.7246,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "IT Consulting & Other Services",
+    "hq": "Armonk, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "INTERNATIONAL BUSINESS MACHINES CORP",
+      "district": "SEC business address → Census geocoder (1 NEW ORCHARD RD, ARMONK, NY, 10504) → 119th CD",
+      "lda": "LDA client names equal to \"INTERNATIONAL BUSINESS MACHINES\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "INTC",
@@ -329,6 +1438,42 @@
     "sector": "Information Technology",
     "industry": "Semiconductors",
     "hq": "Santa Clara, California"
+  },
+  {
+    "symbol": "ISRG",
+    "name": "Intuitive Surgical",
+    "cik": "0001035267",
+    "ldaClients": [
+      "INTUITIVE SURGICAL"
+    ],
+    "recipients": [
+      "INTUITIVE SURGICAL"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3739,
+    "lon": -122.0036,
+    "pacs": [
+      "C00462622"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Health Care Equipment",
+    "hq": "Sunnyvale, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "INTUITIVE SURGICAL INC",
+      "district": "SEC business address → Census geocoder (1020 KIFER RD, SUNNYVALE, CA, 94086) → 119th CD",
+      "lda": "LDA client names equal to \"INTUITIVE SURGICAL\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "JNJ",
@@ -386,6 +1531,107 @@
     "hq": "New York City, New York"
   },
   {
+    "symbol": "KLAC",
+    "name": "KLA Corporation",
+    "cik": "0000319201",
+    "ldaClients": [],
+    "recipients": [
+      "KLA"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.421,
+    "lon": -121.9221,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductor Materials & Equipment",
+    "hq": "Milpitas, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "KLA CORP",
+      "district": "SEC business address → Census geocoder (1 TECHNOLOGY DR, MILPITAS, CA, 95035) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "KO",
+    "name": "Coca-Cola Company (The)",
+    "cik": "0000021344",
+    "ldaClients": [
+      "COCA-COLA",
+      "COCA COLA"
+    ],
+    "recipients": [
+      "COCA COLA"
+    ],
+    "districts": [
+      "GA-05"
+    ],
+    "state": "GA",
+    "lat": 33.7536,
+    "lon": -84.381,
+    "pacs": [
+      "C00012468"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Soft Drinks & Non-alcoholic Beverages",
+    "hq": "Atlanta, Georgia",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "COCA COLA CO",
+      "district": "SEC business address → Census geocoder (1 COCA COLA PL SE, ATLANTA, GA, 30303) → 119th CD",
+      "lda": "LDA client names equal to \"COCA COLA\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "LIN",
+    "name": "Linde plc",
+    "cik": "0001707925",
+    "ldaClients": [
+      "LINDE INC."
+    ],
+    "recipients": [
+      "LINDE"
+    ],
+    "districts": [],
+    "state": null,
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Materials",
+    "industry": "Industrial Gases",
+    "hq": "Guildford, United Kingdom",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "LINDE PLC",
+      "district": "SEC business address is outside the US",
+      "lda": "LDA client names equal to \"LINDE\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "LLY",
     "name": "Eli Lilly",
     "cik": "0000059478",
@@ -441,6 +1687,112 @@
     "hq": "Bethesda, Maryland"
   },
   {
+    "symbol": "LRCX",
+    "name": "Lam Research",
+    "cik": "0000707549",
+    "ldaClients": [
+      "LAM RESEARCH CORP"
+    ],
+    "recipients": [
+      "LAM RESEARCH"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.4838,
+    "lon": -121.9645,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductor Materials & Equipment",
+    "hq": "Fremont, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "LAM RESEARCH CORP",
+      "district": "SEC business address → Census geocoder (4650 CUSHING PKWY, FREMONT, CA, 94538) → 119th CD",
+      "lda": "LDA client names equal to \"LAM RESEARCH\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "MA",
+    "name": "Mastercard",
+    "cik": "0001141391",
+    "ldaClients": [
+      "MASTERCARD"
+    ],
+    "recipients": [
+      "MASTERCARD"
+    ],
+    "districts": [
+      "NY-16"
+    ],
+    "state": "NY",
+    "lat": 41.021,
+    "lon": -73.7097,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Transaction & Payment Processing Services",
+    "hq": "Harrison, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Mastercard Inc",
+      "district": "SEC business address → Census geocoder (2000 PURCHASE ST, PURCHASE, NY, 10577) → 119th CD",
+      "lda": "LDA client names equal to \"MASTERCARD\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "MCD",
+    "name": "McDonald's",
+    "cik": "0000063908",
+    "ldaClients": [
+      "MCDONALDS CORP",
+      "MCDONALD'S CORPORATION"
+    ],
+    "recipients": [
+      "MCDONALDS",
+      "MCDONALD S"
+    ],
+    "districts": [
+      "IL-07"
+    ],
+    "state": "IL",
+    "lat": 41.8832,
+    "lon": -87.6533,
+    "pacs": [
+      "C00063164"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Discretionary",
+    "industry": "Restaurants",
+    "hq": "Chicago, Illinois",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "MCDONALDS CORP",
+      "district": "SEC business address → Census geocoder (110 N CARPENTER ST, CHICAGO, IL, 60607) → 119th CD",
+      "lda": "LDA client names equal to \"MCDONALDS\" / \"MCDONALD S\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "META",
     "name": "Meta",
     "cik": "0001326801",
@@ -466,6 +1818,138 @@
     "sector": "Communication Services",
     "industry": "Interactive Media & Services",
     "hq": "Menlo Park, California"
+  },
+  {
+    "symbol": "MNST",
+    "name": "Monster Beverage",
+    "cik": "0000865752",
+    "ldaClients": [],
+    "recipients": [
+      "MONSTER BEVERAGE"
+    ],
+    "districts": [],
+    "state": "CA",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Soft Drinks & Non-alcoholic Beverages",
+    "hq": "Corona, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Monster Beverage Corp",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "MRK",
+    "name": "Merck & Co.",
+    "cik": "0000310158",
+    "ldaClients": [
+      "MERCK"
+    ],
+    "recipients": [
+      "MERCK"
+    ],
+    "districts": [
+      "NJ-07"
+    ],
+    "state": "NJ",
+    "lat": 40.6092,
+    "lon": -74.2583,
+    "pacs": [
+      "C00097485"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Pharmaceuticals",
+    "hq": "Kenilworth, New Jersey",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Merck & Co., Inc.",
+      "district": "SEC business address → Census geocoder (126 E LINCOLN AVE, RAHWAY, NJ, 07065) → 119th CD",
+      "lda": "LDA client names equal to \"MERCK\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "MRVL",
+    "name": "Marvell Technology",
+    "cik": "0001835632",
+    "ldaClients": [
+      "MARVELL TECHNOLOGY"
+    ],
+    "recipients": [
+      "MARVELL TECHNOLOGY"
+    ],
+    "districts": [],
+    "state": "DE",
+    "lat": 39.7471,
+    "lon": -75.5505,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Marvell Technology, Inc.",
+      "district": "Congressional District (at Large); no voting seat joined",
+      "lda": "LDA client names equal to \"MARVELL TECHNOLOGY\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "MS",
+    "name": "Morgan Stanley",
+    "cik": "0000895421",
+    "ldaClients": [
+      "MORGAN STANLEY"
+    ],
+    "recipients": [
+      "MORGAN STANLEY"
+    ],
+    "districts": [
+      "NY-12"
+    ],
+    "state": "NY",
+    "lat": 40.7595,
+    "lon": -73.9851,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Investment Banking & Brokerage",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "MORGAN STANLEY",
+      "district": "SEC business address → Census geocoder (1585 BROADWAY, NEW YORK, NY, 10036) → 119th CD",
+      "lda": "LDA client names equal to \"MORGAN STANLEY\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "MSFT",
@@ -495,6 +1979,146 @@
     "hq": "Redmond, Washington"
   },
   {
+    "symbol": "MU",
+    "name": "Micron Technology",
+    "cik": "0000723125",
+    "ldaClients": [
+      "MICRON TECHNOLOGY"
+    ],
+    "recipients": [
+      "MICRON TECHNOLOGY"
+    ],
+    "districts": [
+      "ID-02"
+    ],
+    "state": "ID",
+    "lat": 43.53,
+    "lon": -116.1508,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "Boise, Idaho",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "MICRON TECHNOLOGY INC",
+      "district": "SEC business address → Census geocoder (8000 S FEDERAL WAY, BOISE, ID, 83716) → 119th CD",
+      "lda": "LDA client names equal to \"MICRON TECHNOLOGY\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "NEE",
+    "name": "NextEra Energy",
+    "cik": "0000753308",
+    "ldaClients": [
+      "NEXTERA ENERGY"
+    ],
+    "recipients": [
+      "NEXTERA ENERGY"
+    ],
+    "districts": [
+      "FL-21"
+    ],
+    "state": "FL",
+    "lat": 26.8582,
+    "lon": -80.0598,
+    "pacs": [
+      "C00064774"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Utilities",
+    "industry": "Multi-Utilities",
+    "hq": "Juno Beach, Florida",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "NEXTERA ENERGY INC",
+      "district": "SEC business address → Census geocoder (700 UNIVERSE BLVD, JUNO BEACH, FL, 33408) → 119th CD",
+      "lda": "LDA client names equal to \"NEXTERA ENERGY\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "NEM",
+    "name": "Newmont",
+    "cik": "0001164727",
+    "ldaClients": [
+      "NEWMONT USA"
+    ],
+    "recipients": [
+      "NEWMONT"
+    ],
+    "districts": [],
+    "state": "CO",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00206672"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Materials",
+    "industry": "Gold",
+    "hq": "Denver, Colorado",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "NEWMONT Corp /DE/",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"NEWMONT\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "NFLX",
+    "name": "Netflix",
+    "cik": "0001065280",
+    "ldaClients": [
+      "NETFLIX"
+    ],
+    "recipients": [
+      "NETFLIX"
+    ],
+    "districts": [
+      "CA-16"
+    ],
+    "state": "CA",
+    "lat": 37.2561,
+    "lon": -121.9655,
+    "pacs": [
+      "C00518233"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Movies & Entertainment",
+    "hq": "Los Gatos, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "NETFLIX INC",
+      "district": "SEC business address → Census geocoder (121 ALBRIGHT WAY, LOS GATOS, CA, 95032) → 119th CD",
+      "lda": "LDA client names equal to \"NETFLIX\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "NOC",
     "name": "Northrop Grumman",
     "cik": "0001133421",
@@ -520,6 +2144,40 @@
     "sector": "Industrials",
     "industry": "Aerospace & Defense",
     "hq": "West Falls Church, Virginiaquote=Global Headquarters Northrop Grumman Corporation 2980 Fairview Park Drive Falls Church, VA 22042{{snd}}Even though the postal address says \"Falls Church, VA\", the place is physically in the West Falls Church, Virginia census-designated place in Fairfax County. [https://www2.census.gov/geo/maps/DC2020/DC20BLK/st51_va/place/p5184368_west_falls_church/DC20BLK_P5184368.pdf See map here]."
+  },
+  {
+    "symbol": "NOW",
+    "name": "ServiceNow",
+    "cik": "0001373715",
+    "ldaClients": [
+      "SERVICENOW"
+    ],
+    "recipients": [
+      "SERVICENOW"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3753,
+    "lon": -121.9626,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Systems Software",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "ServiceNow, Inc.",
+      "district": "SEC business address → Census geocoder (2225 LAWSON LN, SANTA CLARA, CA, 95054) → 119th CD",
+      "lda": "LDA client names equal to \"SERVICENOW\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "NVDA",
@@ -549,6 +2207,108 @@
     "hq": "Santa Clara, California"
   },
   {
+    "symbol": "ORCL",
+    "name": "Oracle Corporation",
+    "cik": "0001341439",
+    "ldaClients": [
+      "ORACLE"
+    ],
+    "recipients": [
+      "ORACLE"
+    ],
+    "districts": [],
+    "state": "TX",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Application Software",
+    "hq": "Austin, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "ORACLE CORP",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"ORACLE\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PANW",
+    "name": "Palo Alto Networks",
+    "cik": "0001327567",
+    "ldaClients": [
+      "PALO ALTO NETWORKS"
+    ],
+    "recipients": [
+      "PALO ALTO NETWORKS"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.3842,
+    "lon": -121.9796,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Systems Software",
+    "hq": "Santa Clara, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Palo Alto Networks Inc",
+      "district": "SEC business address → Census geocoder (3000 TANNERY WAY, SANTA CLARA, CA, 95054) → 119th CD",
+      "lda": "LDA client names equal to \"PALO ALTO NETWORKS\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PEP",
+    "name": "PepsiCo",
+    "cik": "0000077476",
+    "ldaClients": [
+      "PEPSICO"
+    ],
+    "recipients": [
+      "PEPSICO"
+    ],
+    "districts": [
+      "NY-16"
+    ],
+    "state": "NY",
+    "lat": 41.0385,
+    "lon": -73.6982,
+    "pacs": [
+      "C00039321"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Soft Drinks & Non-alcoholic Beverages",
+    "hq": "Purchase, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "PEPSICO INC",
+      "district": "SEC business address → Census geocoder (700 ANDERSON HILL RD, PURCHASE, NY, 10577) → 119th CD",
+      "lda": "LDA client names equal to \"PEPSICO\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "PFE",
     "name": "Pfizer",
     "cik": "0000078003",
@@ -574,6 +2334,246 @@
     "sector": "Health Care",
     "industry": "Pharmaceuticals",
     "hq": "New York City, New York"
+  },
+  {
+    "symbol": "PG",
+    "name": "Procter & Gamble",
+    "cik": "0000080424",
+    "ldaClients": [
+      "PROCTER AND GAMBLE"
+    ],
+    "recipients": [
+      "PROCTER & GAMBLE"
+    ],
+    "districts": [
+      "OH-01"
+    ],
+    "state": "OH",
+    "lat": 39.1031,
+    "lon": -84.5066,
+    "pacs": [
+      "C00257329"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Personal Care Products",
+    "hq": "Cincinnati, Ohio",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "PROCTER & GAMBLE Co",
+      "district": "SEC business address → Census geocoder (1 PROCTOR AND GAMBLE PLZ, CINCINNATI, OH, 45202) → 119th CD",
+      "lda": "LDA client names equal to \"PROCTER AND GAMBLE\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PGR",
+    "name": "Progressive Corporation",
+    "cik": "0000080661",
+    "ldaClients": [],
+    "recipients": [
+      "PROGRESSIVE"
+    ],
+    "districts": [
+      "OH-11"
+    ],
+    "state": "OH",
+    "lat": 41.5664,
+    "lon": -81.4423,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Property & Casualty Insurance",
+    "hq": "Mayfield Village, Ohio",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "PROGRESSIVE CORP/OH/",
+      "district": "SEC business address → Census geocoder (300 N COMMONS BLVD, MAYFIELD VILLAGE, OH, 44143) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PH",
+    "name": "Parker Hannifin",
+    "cik": "0000076334",
+    "ldaClients": [],
+    "recipients": [
+      "PARKER HANNIFIN"
+    ],
+    "districts": [
+      "OH-11"
+    ],
+    "state": "OH",
+    "lat": 41.506,
+    "lon": -81.4597,
+    "pacs": [
+      "C00135459"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Industrial Machinery & Supplies & Components",
+    "hq": "Cleveland, Ohio",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Parker-Hannifin Corp",
+      "district": "SEC business address → Census geocoder (6035 PARKLAND BLVD, CLEVELAND, OH, 44124) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PLD",
+    "name": "Prologis",
+    "cik": "0001045609",
+    "ldaClients": [
+      "PROLOGIS"
+    ],
+    "recipients": [
+      "PROLOGIS"
+    ],
+    "districts": [
+      "CA-11"
+    ],
+    "state": "CA",
+    "lat": 37.8065,
+    "lon": -122.4058,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Real Estate",
+    "industry": "Industrial REITs",
+    "hq": "San Francisco, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Prologis, Inc.",
+      "district": "SEC business address → Census geocoder (1 BAY ST, SAN FRANCISCO, CA, 94133) → 119th CD",
+      "lda": "LDA client names equal to \"PROLOGIS\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PLTR",
+    "name": "Palantir Technologies",
+    "cik": "0001321655",
+    "ldaClients": [
+      "PALANTIR TECHNOLOGIES"
+    ],
+    "recipients": [
+      "PALANTIR TECHNOLOGIES"
+    ],
+    "districts": [
+      "FL-24"
+    ],
+    "state": "FL",
+    "lat": 25.957,
+    "lon": -80.1468,
+    "pacs": [
+      "C00498691"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Application Software",
+    "hq": "Aventura, Florida",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Palantir Technologies Inc.",
+      "district": "SEC business address → Census geocoder (19505 BISCAYNE BLVD, AVENTURA, FL, 33180) → 119th CD",
+      "lda": "LDA client names equal to \"PALANTIR TECHNOLOGIES\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "PM",
+    "name": "Philip Morris International",
+    "cik": "0001413329",
+    "ldaClients": [],
+    "recipients": [
+      "PHILIP MORRIS INTERNATIONAL"
+    ],
+    "districts": [
+      "CT-04"
+    ],
+    "state": "CT",
+    "lat": 41.0492,
+    "lon": -73.5429,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Tobacco",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Philip Morris International Inc.",
+      "district": "SEC business address → Census geocoder (677 WASHINGTON BLVD, STAMFORD, CT, 06901) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "QCOM",
+    "name": "Qualcomm",
+    "cik": "0000804328",
+    "ldaClients": [
+      "QUALCOMM"
+    ],
+    "recipients": [
+      "QUALCOMM"
+    ],
+    "districts": [
+      "CA-51"
+    ],
+    "state": "CA",
+    "lat": 32.8972,
+    "lon": -117.1957,
+    "pacs": [
+      "C00339085"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "San Diego, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "QUALCOMM INC/DE",
+      "district": "SEC business address → Census geocoder (5775 MOREHOUSE DR, SAN DIEGO, CA, 92121) → 119th CD",
+      "lda": "LDA client names equal to \"QUALCOMM\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "RTX",
@@ -606,6 +2606,274 @@
     "hq": "Waltham, Massachusetts"
   },
   {
+    "symbol": "SCHW",
+    "name": "Charles Schwab Corporation",
+    "cik": "0000316709",
+    "ldaClients": [
+      "CHARLES SCHWAB"
+    ],
+    "recipients": [
+      "SCHWAB CHARLES",
+      "CHARLES SCHWAB"
+    ],
+    "districts": [
+      "TX-26"
+    ],
+    "state": "TX",
+    "lat": 32.9968,
+    "lon": -97.2081,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Investment Banking & Brokerage",
+    "hq": "Westlake, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "SCHWAB CHARLES CORP",
+      "district": "SEC business address → Census geocoder (3000 SCHWAB WAY, WESTLAKE, TX, 76262) → 119th CD",
+      "lda": "LDA client names equal to \"SCHWAB CHARLES\" / \"CHARLES SCHWAB\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "SNDK",
+    "name": "Sandisk",
+    "cik": "0002023554",
+    "ldaClients": [
+      "SANDISK CORP"
+    ],
+    "recipients": [
+      "SANDISK"
+    ],
+    "districts": [
+      "CA-17"
+    ],
+    "state": "CA",
+    "lat": 37.4179,
+    "lon": -121.9215,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Technology Hardware, Storage & Peripherals",
+    "hq": "Milpitas, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Sandisk Corp",
+      "district": "SEC business address → Census geocoder (951 SAN DISK DR, MILPITAS, CA, 95035) → 119th CD",
+      "lda": "LDA client names equal to \"SANDISK\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "STX",
+    "name": "Seagate Technology",
+    "cik": "0001137789",
+    "ldaClients": [
+      "SEAGATE TECHNOLOGY"
+    ],
+    "recipients": [
+      "SEAGATE TECHNOLOGY"
+    ],
+    "districts": [],
+    "state": null,
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Technology Hardware, Storage & Peripherals",
+    "hq": "Dublin, Ireland",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Seagate Technology Holdings plc",
+      "district": "SEC business address is outside the US",
+      "lda": "LDA client names equal to \"SEAGATE TECHNOLOGY\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "T",
+    "name": "AT&T",
+    "cik": "0000732717",
+    "ldaClients": [],
+    "recipients": [
+      "AT & T"
+    ],
+    "districts": [
+      "TX-30"
+    ],
+    "state": "TX",
+    "lat": 32.7797,
+    "lon": -96.7992,
+    "pacs": [
+      "C00109017",
+      "C00377044"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Integrated Telecommunication Services",
+    "hq": "Dallas, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "AT&T INC.",
+      "district": "SEC business address → Census geocoder (208 S AKARD ST, DALLAS, TX, 75202) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "TJX",
+    "name": "TJX Companies",
+    "cik": "0000109198",
+    "ldaClients": [],
+    "recipients": [
+      "TJX"
+    ],
+    "districts": [
+      "MA-05"
+    ],
+    "state": "MA",
+    "lat": 42.3087,
+    "lon": -71.3827,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Discretionary",
+    "industry": "Apparel Retail",
+    "hq": "Framingham, Massachusetts",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "TJX COMPANIES INC /DE/",
+      "district": "SEC business address → Census geocoder (770 COCHITUATE RD, FRAMINGHAM, MA, 01701) → 119th CD",
+      "lda": "No exact LDA client name match",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "TMO",
+    "name": "Thermo Fisher Scientific",
+    "cik": "0000097745",
+    "ldaClients": [
+      "THERMO FISHER SCIENTIFIC"
+    ],
+    "recipients": [
+      "THERMO FISHER SCIENTIFIC"
+    ],
+    "districts": [
+      "MA-05"
+    ],
+    "state": "MA",
+    "lat": 42.3962,
+    "lon": -71.2597,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Life Sciences Tools & Services",
+    "hq": "Waltham, Massachusetts",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "THERMO FISHER SCIENTIFIC INC.",
+      "district": "SEC business address → Census geocoder (168 3RD AVE, WALTHAM, MA, 02451) → 119th CD",
+      "lda": "LDA client names equal to \"THERMO FISHER SCIENTIFIC\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "TMUS",
+    "name": "T-Mobile US",
+    "cik": "0001283699",
+    "ldaClients": [
+      "T-MOBILE"
+    ],
+    "recipients": [
+      "T MOBILE"
+    ],
+    "districts": [
+      "WA-09"
+    ],
+    "state": "WA",
+    "lat": 47.5761,
+    "lon": -122.1685,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Wireless Telecommunication Services",
+    "hq": "Bellevue, Washington",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "T-Mobile US, Inc.",
+      "district": "SEC business address → Census geocoder (12920 SE 38TH ST, BELLEVUE, WA, 98006) → 119th CD",
+      "lda": "LDA client names equal to \"T MOBILE\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "TSLA",
+    "name": "Tesla, Inc.",
+    "cik": "0001318605",
+    "ldaClients": [
+      "TESLA"
+    ],
+    "recipients": [
+      "TESLA"
+    ],
+    "districts": [],
+    "state": "TX",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Discretionary",
+    "industry": "Automobile Manufacturers",
+    "hq": "Austin, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Tesla, Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"TESLA\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
     "symbol": "TSM",
     "name": "TSMC",
     "cik": "0001046179",
@@ -627,6 +2895,75 @@
     "sector": "",
     "industry": "",
     "hq": ""
+  },
+  {
+    "symbol": "TXN",
+    "name": "Texas Instruments",
+    "cik": "0000097476",
+    "ldaClients": [
+      "TEXAS INSTRUMENTS"
+    ],
+    "recipients": [
+      "TEXAS INSTRUMENTS"
+    ],
+    "districts": [],
+    "state": "TX",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00007070"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Semiconductors",
+    "hq": "Dallas, Texas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "TEXAS INSTRUMENTS INC",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"TEXAS INSTRUMENTS\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "UBER",
+    "name": "Uber",
+    "cik": "0001543151",
+    "ldaClients": [
+      "UBER TECHNOLOGIES"
+    ],
+    "recipients": [
+      "UBER TECHNOLOGIES",
+      "UBER"
+    ],
+    "districts": [
+      "CA-11"
+    ],
+    "state": "CA",
+    "lat": 37.7676,
+    "lon": -122.3891,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Passenger Ground Transportation",
+    "hq": "San Francisco, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Uber Technologies, Inc",
+      "district": "SEC business address → Census geocoder (1725 3RD ST, SAN FRANCISCO, CA, 94158) → 119th CD",
+      "lda": "LDA client names equal to \"UBER TECHNOLOGIES\" / \"UBER\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "UNH",
@@ -654,6 +2991,286 @@
     "sector": "Health Care",
     "industry": "Managed Health Care",
     "hq": "Eden Prairie, Minnesota"
+  },
+  {
+    "symbol": "UNP",
+    "name": "Union Pacific Corporation",
+    "cik": "0000100885",
+    "ldaClients": [
+      "UNION PACIFIC"
+    ],
+    "recipients": [
+      "UNION PACIFIC"
+    ],
+    "districts": [
+      "NE-02"
+    ],
+    "state": "NE",
+    "lat": 41.2587,
+    "lon": -95.9346,
+    "pacs": [
+      "C00010470"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Industrials",
+    "industry": "Rail Transportation",
+    "hq": "Omaha, Nebraska",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "UNION PACIFIC CORP",
+      "district": "SEC business address → Census geocoder (1400 DOUGLAS ST, OMAHA, NE, 68179) → 119th CD",
+      "lda": "LDA client names equal to \"UNION PACIFIC\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "V",
+    "name": "Visa Inc.",
+    "cik": "0001403161",
+    "ldaClients": [
+      "VISA"
+    ],
+    "recipients": [
+      "VISA"
+    ],
+    "districts": [],
+    "state": "CA",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00365122"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Transaction & Payment Processing Services",
+    "hq": "San Francisco, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "VISA INC.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"VISA\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "VRTX",
+    "name": "Vertex Pharmaceuticals",
+    "cik": "0000875320",
+    "ldaClients": [
+      "VERTEX PHARMACEUTICALS"
+    ],
+    "recipients": [
+      "VERTEX PHARMACEUTICALS"
+    ],
+    "districts": [
+      "MA-08"
+    ],
+    "state": "MA",
+    "lat": 42.354,
+    "lon": -71.0482,
+    "pacs": [
+      "C00468660"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Health Care",
+    "industry": "Biotechnology",
+    "hq": "Boston, Massachusetts",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "VERTEX PHARMACEUTICALS INC / MA",
+      "district": "SEC business address → Census geocoder (50 NORTHERN AVE, BOSTON, MA, 02210) → 119th CD",
+      "lda": "LDA client names equal to \"VERTEX PHARMACEUTICALS\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "VZ",
+    "name": "Verizon",
+    "cik": "0000732712",
+    "ldaClients": [
+      "VERIZON"
+    ],
+    "recipients": [
+      "VERIZON COMMUNICATIONS",
+      "VERIZON"
+    ],
+    "districts": [
+      "NY-12"
+    ],
+    "state": "NY",
+    "lat": 40.7543,
+    "lon": -73.9846,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Communication Services",
+    "industry": "Integrated Telecommunication Services",
+    "hq": "New York City, New York",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "VERIZON COMMUNICATIONS INC",
+      "district": "SEC business address → Census geocoder (1095 AVE OF THE AMERICAS, NEW YORK, NY, 10036) → 119th CD",
+      "lda": "LDA client names equal to \"VERIZON COMMUNICATIONS\" / \"VERIZON\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "WDC",
+    "name": "Western Digital",
+    "cik": "0000106040",
+    "ldaClients": [
+      "WESTERN DIGITAL"
+    ],
+    "recipients": [
+      "WESTERN DIGITAL"
+    ],
+    "districts": [],
+    "state": "CA",
+    "lat": null,
+    "lon": null,
+    "pacs": [],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Information Technology",
+    "industry": "Technology Hardware, Storage & Peripherals",
+    "hq": "San Jose, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "WESTERN DIGITAL CORP",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"WESTERN DIGITAL\" after suffix stripping",
+      "pacs": "No FEC connected-organization match",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "WELL",
+    "name": "Welltower",
+    "cik": "0000766704",
+    "ldaClients": [
+      "WELLTOWER"
+    ],
+    "recipients": [
+      "WELLTOWER"
+    ],
+    "districts": [
+      "OH-09"
+    ],
+    "state": "OH",
+    "lat": 41.6529,
+    "lon": -83.6475,
+    "pacs": [
+      "C00958215"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Real Estate",
+    "industry": "Health Care REITs",
+    "hq": "Toledo, Ohio",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "WELLTOWER INC.",
+      "district": "SEC business address → Census geocoder (4500 DORR ST, TOLEDO, OH, 43607) → 119th CD",
+      "lda": "LDA client names equal to \"WELLTOWER\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "WFC",
+    "name": "Wells Fargo",
+    "cik": "0000072971",
+    "ldaClients": [
+      "WELLS FARGO"
+    ],
+    "recipients": [
+      "WELLS FARGO"
+    ],
+    "districts": [
+      "CA-11"
+    ],
+    "state": "CA",
+    "lat": 37.7921,
+    "lon": -122.3976,
+    "pacs": [
+      "C00034595",
+      "C00300178"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Financials",
+    "industry": "Diversified Banks",
+    "hq": "San Francisco, California",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "WELLS FARGO & COMPANY/MN",
+      "district": "SEC business address → Census geocoder (333 MARKET ST, SAN FRANCISCO, CA, 94105) → 119th CD",
+      "lda": "LDA client names equal to \"WELLS FARGO\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
+  },
+  {
+    "symbol": "WMT",
+    "name": "Walmart",
+    "cik": "0000104169",
+    "ldaClients": [
+      "WALMART"
+    ],
+    "recipients": [
+      "WALMART"
+    ],
+    "districts": [],
+    "state": "AR",
+    "lat": null,
+    "lon": null,
+    "pacs": [
+      "C00093054"
+    ],
+    "core": true,
+    "index": [
+      "SP500"
+    ],
+    "sector": "Consumer Staples",
+    "industry": "Consumer Staples Merchandise Retail",
+    "hq": "Bentonville, Arkansas",
+    "joinBasis": {
+      "auto": true,
+      "derived": "2026-09-30",
+      "secName": "Walmart Inc.",
+      "district": "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+      "lda": "LDA client names equal to \"WALMART\" after suffix stripping",
+      "pacs": "FEC committee master: connected organization equals company name (corporate SSF)",
+      "recipients": "SEC conformed and index names without corporate suffix (USAspending text search)"
+    }
   },
   {
     "symbol": "XOM",
@@ -702,25 +3319,6 @@
     "hq": "Santa Clara, California"
   },
   {
-    "symbol": "ABBV",
-    "name": "AbbVie",
-    "cik": "0001551152",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "IL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Biotechnology",
-    "hq": "North Chicago, Illinois"
-  },
-  {
     "symbol": "ABNB",
     "name": "Airbnb",
     "cik": "0001559720",
@@ -738,25 +3336,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Hotels, Resorts & Cruise Lines",
     "hq": "San Francisco, California"
-  },
-  {
-    "symbol": "ABT",
-    "name": "Abbott Laboratories",
-    "cik": "0000001800",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "IL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Health Care Equipment",
-    "hq": "North Chicago, Illinois"
   },
   {
     "symbol": "ACGL",
@@ -814,25 +3393,6 @@
     "sector": "Information Technology",
     "industry": "Application Software",
     "hq": "San Jose, California"
-  },
-  {
-    "symbol": "ADI",
-    "name": "Analog Devices",
-    "cik": "0000006281",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "MA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "Wilmington, Massachusetts"
   },
   {
     "symbol": "ADM",
@@ -1120,25 +3680,6 @@
     "hq": "Dublin, Ireland"
   },
   {
-    "symbol": "AMAT",
-    "name": "Applied Materials",
-    "cik": "0000006951",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductor Materials & Equipment",
-    "hq": "Santa Clara, California"
-  },
-  {
     "symbol": "AMCR",
     "name": "Amcor",
     "cik": "0001748790",
@@ -1158,25 +3699,6 @@
     "hq": "Warmley, Bristol, United Kingdom"
   },
   {
-    "symbol": "AMD",
-    "name": "Advanced Micro Devices",
-    "cik": "0000002488",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "Santa Clara, California"
-  },
-  {
     "symbol": "AME",
     "name": "Ametek",
     "cik": "0001037868",
@@ -1194,25 +3716,6 @@
     "sector": "Industrials",
     "industry": "Electrical Components & Equipment",
     "hq": "Berwyn, Pennsylvania"
-  },
-  {
-    "symbol": "AMGN",
-    "name": "Amgen",
-    "cik": "0000318154",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Biotechnology",
-    "hq": "Thousand Oaks, California"
   },
   {
     "symbol": "AMP",
@@ -1251,25 +3754,6 @@
     "sector": "Real Estate",
     "industry": "Telecom Tower REITs",
     "hq": "Boston, Massachusetts"
-  },
-  {
-    "symbol": "ANET",
-    "name": "Arista Networks",
-    "cik": "0001596532",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Communications Equipment",
-    "hq": "Santa Clara, California"
   },
   {
     "symbol": "AON",
@@ -1346,25 +3830,6 @@
     "sector": "Materials",
     "industry": "Industrial Gases",
     "hq": "Upper Macungie Township, Pennsylvania"
-  },
-  {
-    "symbol": "APH",
-    "name": "Amphenol",
-    "cik": "0000820313",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CT",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Electronic Components",
-    "hq": "Wallingford, Connecticut"
   },
   {
     "symbol": "APO",
@@ -1538,25 +4003,6 @@
     "hq": "Scottsdale, Arizona"
   },
   {
-    "symbol": "AXP",
-    "name": "American Express",
-    "cik": "0000004962",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Consumer Finance",
-    "hq": "New York City, New York"
-  },
-  {
     "symbol": "AZO",
     "name": "AutoZone",
     "cik": "0000866787",
@@ -1574,25 +4020,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Automotive Retail",
     "hq": "Memphis, Tennessee"
-  },
-  {
-    "symbol": "BAC",
-    "name": "Bank of America",
-    "cik": "0000070858",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NC",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Diversified Banks",
-    "hq": "Charlotte, North Carolina"
   },
   {
     "symbol": "BALL",
@@ -1804,44 +4231,6 @@
     "hq": "Houston, Texas"
   },
   {
-    "symbol": "BLK",
-    "name": "BlackRock",
-    "cik": "0002012383",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Asset Management & Custody Banks",
-    "hq": "New York City, New York"
-  },
-  {
-    "symbol": "BMY",
-    "name": "Bristol Myers Squibb",
-    "cik": "0000014272",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Pharmaceuticals",
-    "hq": "New York City, New York"
-  },
-  {
     "symbol": "BNY",
     "name": "BNY Mellon",
     "cik": "0001390777",
@@ -1878,25 +4267,6 @@
     "sector": "Industrials",
     "industry": "Data Processing & Outsourced Services",
     "hq": "Lake Success, New York"
-  },
-  {
-    "symbol": "BRK-B",
-    "name": "Berkshire Hathaway",
-    "cik": "0001067983",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NE",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Multi-Sector Holdings",
-    "hq": "Omaha, Nebraska"
   },
   {
     "symbol": "BRO",
@@ -1975,25 +4345,6 @@
     "hq": "Boston, Massachusetts"
   },
   {
-    "symbol": "C",
-    "name": "Citigroup",
-    "cik": "0000831001",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Diversified Banks",
-    "hq": "New York City, New York"
-  },
-  {
     "symbol": "CAH",
     "name": "Cardinal Health",
     "cik": "0000721371",
@@ -2049,25 +4400,6 @@
     "sector": "Consumer Staples",
     "industry": "Food Retail",
     "hq": "Ankeny, Iowa"
-  },
-  {
-    "symbol": "CB",
-    "name": "Chubb Limited",
-    "cik": "0000896159",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": null,
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Property & Casualty Insurance",
-    "hq": "Zurich, Switzerland"
   },
   {
     "symbol": "CBOE",
@@ -2602,25 +4934,6 @@
     "hq": "San Ramon, California"
   },
   {
-    "symbol": "COP",
-    "name": "ConocoPhillips",
-    "cik": "0001163165",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Energy",
-    "industry": "Oil & Gas Exploration & Production",
-    "hq": "Houston, Texas"
-  },
-  {
     "symbol": "COR",
     "name": "Cencora",
     "cik": "0001140859",
@@ -2638,25 +4951,6 @@
     "sector": "Health Care",
     "industry": "Health Care Distributors",
     "hq": "Conshohocken, Pennsylvania"
-  },
-  {
-    "symbol": "COST",
-    "name": "Costco",
-    "cik": "0000909832",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "WA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Consumer Staples Merchandise Retail",
-    "hq": "Issaquah, Washington"
   },
   {
     "symbol": "CPAY",
@@ -2752,63 +5046,6 @@
     "sector": "Health Care",
     "industry": "Life Sciences Tools & Services",
     "hq": "Wilmington, Massachusetts"
-  },
-  {
-    "symbol": "CRM",
-    "name": "Salesforce",
-    "cik": "0001108524",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Application Software",
-    "hq": "San Francisco, California"
-  },
-  {
-    "symbol": "CRWD",
-    "name": "CrowdStrike",
-    "cik": "0001535527",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Systems Software",
-    "hq": "Austin, Texas"
-  },
-  {
-    "symbol": "CSCO",
-    "name": "Cisco",
-    "cik": "0000858877",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Communications Equipment",
-    "hq": "San Jose, California"
   },
   {
     "symbol": "CSGP",
@@ -3039,25 +5276,6 @@
     "hq": "New York City, New York"
   },
   {
-    "symbol": "DE",
-    "name": "Deere & Company",
-    "cik": "0000315189",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "IL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Agricultural & Farm Machinery",
-    "hq": "Moline, Illinois"
-  },
-  {
     "symbol": "DECK",
     "name": "Deckers Brands",
     "cik": "0000910521",
@@ -3075,25 +5293,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Footwear",
     "hq": "Goleta, California"
-  },
-  {
-    "symbol": "DELL",
-    "name": "Dell Technologies",
-    "cik": "0001571996",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Technology Hardware, Storage & Peripherals",
-    "hq": "Round Rock, Texas"
   },
   {
     "symbol": "DG",
@@ -3151,44 +5350,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Homebuilding",
     "hq": "Arlington, Texas"
-  },
-  {
-    "symbol": "DHR",
-    "name": "Danaher Corporation",
-    "cik": "0000313616",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "DC",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Life Sciences Tools & Services",
-    "hq": "Washington, D.C."
-  },
-  {
-    "symbol": "DIS",
-    "name": "Walt Disney Company (The)",
-    "cik": "0001744489",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Movies & Entertainment",
-    "hq": "Burbank, California"
   },
   {
     "symbol": "DLR",
@@ -3742,25 +5903,6 @@
     "hq": "San Mateo, California"
   },
   {
-    "symbol": "ETN",
-    "name": "Eaton Corporation",
-    "cik": "0001551182",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": null,
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Electrical Components & Equipment",
-    "hq": "Dublin, Ireland"
-  },
-  {
     "symbol": "ETR",
     "name": "Entergy",
     "cik": "0000065984",
@@ -4293,25 +6435,6 @@
     "hq": "Tempe, Arizona"
   },
   {
-    "symbol": "FTNT",
-    "name": "Fortinet",
-    "cik": "0001262039",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Systems Software",
-    "hq": "Sunnyvale, California"
-  },
-  {
     "symbol": "FTV",
     "name": "Fortive",
     "cik": "0001659166",
@@ -4388,44 +6511,6 @@
     "hq": "Tempe, Arizona"
   },
   {
-    "symbol": "GEV",
-    "name": "GE Vernova",
-    "cik": "0001996810",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "MA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Heavy Electrical Equipment",
-    "hq": "Cambridge, Massachusetts"
-  },
-  {
-    "symbol": "GILD",
-    "name": "Gilead Sciences",
-    "cik": "0000882095",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Biotechnology",
-    "hq": "Foster City, California"
-  },
-  {
     "symbol": "GIS",
     "name": "General Mills",
     "cik": "0000040704",
@@ -4464,25 +6549,6 @@
     "hq": "McKinney, Texas"
   },
   {
-    "symbol": "GLW",
-    "name": "Corning Inc.",
-    "cik": "0000024741",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Electronic Components",
-    "hq": "Corning, New York"
-  },
-  {
     "symbol": "GM",
     "name": "General Motors",
     "cik": "0001467858",
@@ -4519,25 +6585,6 @@
     "sector": "Industrials",
     "industry": "Heavy Electrical Equipment",
     "hq": "Waukesha, Wisconsin"
-  },
-  {
-    "symbol": "GOOG",
-    "name": "Alphabet Inc. (Class C)",
-    "cik": "0001652044",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Interactive Media & Services",
-    "hq": "Mountain View, California"
   },
   {
     "symbol": "GPC",
@@ -4690,25 +6737,6 @@
     "sector": "Health Care",
     "industry": "Health Care Facilities",
     "hq": "Nashville, Tennessee"
-  },
-  {
-    "symbol": "HD",
-    "name": "Home Depot (The)",
-    "cik": "0000354950",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "GA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Discretionary",
-    "industry": "Home Improvement Retail",
-    "hq": "Atlanta, Georgia"
   },
   {
     "symbol": "HIG",
@@ -4996,25 +7024,6 @@
     "hq": "Greenwich, Connecticut"
   },
   {
-    "symbol": "IBM",
-    "name": "IBM",
-    "cik": "0000051143",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "IT Consulting & Other Services",
-    "hq": "Armonk, New York"
-  },
-  {
     "symbol": "ICE",
     "name": "Intercontinental Exchange",
     "cik": "0001571949",
@@ -5241,25 +7250,6 @@
     "sector": "Real Estate",
     "industry": "Other Specialized REITs",
     "hq": "Portsmouth, New Hampshire"
-  },
-  {
-    "symbol": "ISRG",
-    "name": "Intuitive Surgical",
-    "cik": "0001035267",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Health Care Equipment",
-    "hq": "Sunnyvale, California"
   },
   {
     "symbol": "IT",
@@ -5528,25 +7518,6 @@
     "hq": "New York City, New York"
   },
   {
-    "symbol": "KLAC",
-    "name": "KLA Corporation",
-    "cik": "0000319201",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductor Materials & Equipment",
-    "hq": "Milpitas, California"
-  },
-  {
     "symbol": "KMB",
     "name": "Kimberly-Clark",
     "cik": "0000055785",
@@ -5583,25 +7554,6 @@
     "sector": "Energy",
     "industry": "Oil & Gas Storage & Transportation",
     "hq": "Houston, Texas"
-  },
-  {
-    "symbol": "KO",
-    "name": "Coca-Cola Company (The)",
-    "cik": "0000021344",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "GA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Soft Drinks & Non-alcoholic Beverages",
-    "hq": "Atlanta, Georgia"
   },
   {
     "symbol": "KR",
@@ -5756,25 +7708,6 @@
     "hq": "Richardson, Texas"
   },
   {
-    "symbol": "LIN",
-    "name": "Linde plc",
-    "cik": "0001707925",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": null,
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Materials",
-    "industry": "Industrial Gases",
-    "hq": "Guildford, United Kingdom"
-  },
-  {
     "symbol": "LITE",
     "name": "Lumentum",
     "cik": "0001633978",
@@ -5830,25 +7763,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Home Improvement Retail",
     "hq": "Mooresville, North Carolina"
-  },
-  {
-    "symbol": "LRCX",
-    "name": "Lam Research",
-    "cik": "0000707549",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductor Materials & Equipment",
-    "hq": "Fremont, California"
   },
   {
     "symbol": "LULU",
@@ -5946,25 +7860,6 @@
     "hq": "Beverly Hills, California"
   },
   {
-    "symbol": "MA",
-    "name": "Mastercard",
-    "cik": "0001141391",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Transaction & Payment Processing Services",
-    "hq": "Harrison, New York"
-  },
-  {
     "symbol": "MAA",
     "name": "Mid-America Apartment Communities",
     "cik": "0000912595",
@@ -6020,25 +7915,6 @@
     "sector": "Industrials",
     "industry": "Building Products",
     "hq": "Livonia, Michigan"
-  },
-  {
-    "symbol": "MCD",
-    "name": "McDonald's",
-    "cik": "0000063908",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "IL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Discretionary",
-    "industry": "Restaurants",
-    "hq": "Chicago, Illinois"
   },
   {
     "symbol": "MCHP",
@@ -6231,25 +8107,6 @@
     "hq": "Saint Paul, Minnesota"
   },
   {
-    "symbol": "MNST",
-    "name": "Monster Beverage",
-    "cik": "0000865752",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Soft Drinks & Non-alcoholic Beverages",
-    "hq": "Corona, California"
-  },
-  {
     "symbol": "MO",
     "name": "Altria",
     "cik": "0000764180",
@@ -6326,25 +8183,6 @@
     "hq": "Kirkland, Washington"
   },
   {
-    "symbol": "MRK",
-    "name": "Merck & Co.",
-    "cik": "0000310158",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NJ",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Pharmaceuticals",
-    "hq": "Kenilworth, New Jersey"
-  },
-  {
     "symbol": "MRNA",
     "name": "Moderna",
     "cik": "0001682852",
@@ -6380,44 +8218,6 @@
     ],
     "sector": "Financials",
     "industry": "Insurance Brokers",
-    "hq": "New York City, New York"
-  },
-  {
-    "symbol": "MRVL",
-    "name": "Marvell Technology",
-    "cik": "0001835632",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "Santa Clara, California"
-  },
-  {
-    "symbol": "MS",
-    "name": "Morgan Stanley",
-    "cik": "0000895421",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Investment Banking & Brokerage",
     "hq": "New York City, New York"
   },
   {
@@ -6497,25 +8297,6 @@
     "hq": "Columbus, Ohio"
   },
   {
-    "symbol": "MU",
-    "name": "Micron Technology",
-    "cik": "0000723125",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "ID",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "Boise, Idaho"
-  },
-  {
     "symbol": "NCLH",
     "name": "Norwegian Cruise Line Holdings",
     "cik": "0001513761",
@@ -6573,63 +8354,6 @@
     "hq": "Westlake, Ohio"
   },
   {
-    "symbol": "NEE",
-    "name": "NextEra Energy",
-    "cik": "0000753308",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "FL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Utilities",
-    "industry": "Multi-Utilities",
-    "hq": "Juno Beach, Florida"
-  },
-  {
-    "symbol": "NEM",
-    "name": "Newmont",
-    "cik": "0001164727",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CO",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Materials",
-    "industry": "Gold",
-    "hq": "Denver, Colorado"
-  },
-  {
-    "symbol": "NFLX",
-    "name": "Netflix",
-    "cik": "0001065280",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Movies & Entertainment",
-    "hq": "Los Gatos, California"
-  },
-  {
     "symbol": "NI",
     "name": "NiSource",
     "cik": "0001111711",
@@ -6666,25 +8390,6 @@
     "sector": "Consumer Discretionary",
     "industry": "Apparel, Accessories & Luxury Goods",
     "hq": "Washington County, Oregon"
-  },
-  {
-    "symbol": "NOW",
-    "name": "ServiceNow",
-    "cik": "0001373715",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Systems Software",
-    "hq": "Santa Clara, California"
   },
   {
     "symbol": "NRG",
@@ -6953,25 +8658,6 @@
     "hq": "Phoenix, Arizona"
   },
   {
-    "symbol": "ORCL",
-    "name": "Oracle Corporation",
-    "cik": "0001341439",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Application Software",
-    "hq": "Austin, Texas"
-  },
-  {
     "symbol": "ORLY",
     "name": "O'Reilly Automotive",
     "cik": "0000898173",
@@ -7045,25 +8731,6 @@
     ],
     "sector": "Information Technology",
     "industry": "Technology Hardware, Storage & Peripherals",
-    "hq": "Santa Clara, California"
-  },
-  {
-    "symbol": "PANW",
-    "name": "Palo Alto Networks",
-    "cik": "0001327567",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Systems Software",
     "hq": "Santa Clara, California"
   },
   {
@@ -7143,25 +8810,6 @@
     "hq": "Newark, New Jersey"
   },
   {
-    "symbol": "PEP",
-    "name": "PepsiCo",
-    "cik": "0000077476",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Soft Drinks & Non-alcoholic Beverages",
-    "hq": "Purchase, New York"
-  },
-  {
     "symbol": "PFG",
     "name": "Principal Financial Group",
     "cik": "0001126328",
@@ -7179,63 +8827,6 @@
     "sector": "Financials",
     "industry": "Life & Health Insurance",
     "hq": "Des Moines, Iowa"
-  },
-  {
-    "symbol": "PG",
-    "name": "Procter & Gamble",
-    "cik": "0000080424",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "OH",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Personal Care Products",
-    "hq": "Cincinnati, Ohio"
-  },
-  {
-    "symbol": "PGR",
-    "name": "Progressive Corporation",
-    "cik": "0000080661",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "OH",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Property & Casualty Insurance",
-    "hq": "Mayfield Village, Ohio"
-  },
-  {
-    "symbol": "PH",
-    "name": "Parker Hannifin",
-    "cik": "0000076334",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "OH",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Industrial Machinery & Supplies & Components",
-    "hq": "Cleveland, Ohio"
   },
   {
     "symbol": "PHM",
@@ -7274,63 +8865,6 @@
     "sector": "Materials",
     "industry": "Paper & Plastic Packaging Products & Materials",
     "hq": "Lake Forest, Illinois"
-  },
-  {
-    "symbol": "PLD",
-    "name": "Prologis",
-    "cik": "0001045609",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Real Estate",
-    "industry": "Industrial REITs",
-    "hq": "San Francisco, California"
-  },
-  {
-    "symbol": "PLTR",
-    "name": "Palantir Technologies",
-    "cik": "0001321655",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "FL",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Application Software",
-    "hq": "Aventura, Florida"
-  },
-  {
-    "symbol": "PM",
-    "name": "Philip Morris International",
-    "cik": "0001413329",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Tobacco",
-    "hq": "New York City, New York"
   },
   {
     "symbol": "PNC",
@@ -7597,25 +9131,6 @@
     "sector": "Information Technology",
     "industry": "Semiconductor Materials & Equipment",
     "hq": "Wilmington, Delaware"
-  },
-  {
-    "symbol": "QCOM",
-    "name": "Qualcomm",
-    "cik": "0000804328",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "San Diego, California"
   },
   {
     "symbol": "RCL",
@@ -7922,25 +9437,6 @@
     "hq": "Seattle, Washington"
   },
   {
-    "symbol": "SCHW",
-    "name": "Charles Schwab Corporation",
-    "cik": "0000316709",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Investment Banking & Brokerage",
-    "hq": "Westlake, Texas"
-  },
-  {
     "symbol": "SHW",
     "name": "Sherwin-Williams",
     "cik": "0000089800",
@@ -8034,25 +9530,6 @@
     "sector": "Industrials",
     "industry": "Industrial Machinery & Supplies & Components",
     "hq": "Kenosha, Wisconsin"
-  },
-  {
-    "symbol": "SNDK",
-    "name": "Sandisk",
-    "cik": "0002023554",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Technology Hardware, Storage & Peripherals",
-    "hq": "Milpitas, California"
   },
   {
     "symbol": "SNPS",
@@ -8226,25 +9703,6 @@
     "hq": "Boston, Massachusetts"
   },
   {
-    "symbol": "STX",
-    "name": "Seagate Technology",
-    "cik": "0001137789",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": null,
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Technology Hardware, Storage & Peripherals",
-    "hq": "Dublin, Ireland"
-  },
-  {
     "symbol": "STZ",
     "name": "Constellation Brands",
     "cik": "0000016918",
@@ -8376,25 +9834,6 @@
     "sector": "Consumer Staples",
     "industry": "Food Distributors",
     "hq": "Houston, Texas"
-  },
-  {
-    "symbol": "T",
-    "name": "AT&T",
-    "cik": "0000732717",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Integrated Telecommunication Services",
-    "hq": "Dallas, Texas"
   },
   {
     "symbol": "TDG",
@@ -8530,25 +9969,6 @@
     "hq": "Minneapolis, Minnesota"
   },
   {
-    "symbol": "TJX",
-    "name": "TJX Companies",
-    "cik": "0000109198",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "MA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Discretionary",
-    "industry": "Apparel Retail",
-    "hq": "Framingham, Massachusetts"
-  },
-  {
     "symbol": "TKO",
     "name": "TKO Group Holdings",
     "cik": "0001973266",
@@ -8566,44 +9986,6 @@
     "sector": "Communication Services",
     "industry": "Movies & Entertainment",
     "hq": "New York City, New York"
-  },
-  {
-    "symbol": "TMO",
-    "name": "Thermo Fisher Scientific",
-    "cik": "0000097745",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "MA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Life Sciences Tools & Services",
-    "hq": "Waltham, Massachusetts"
-  },
-  {
-    "symbol": "TMUS",
-    "name": "T-Mobile US",
-    "cik": "0001283699",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "WA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Wireless Telecommunication Services",
-    "hq": "Bellevue, Washington"
   },
   {
     "symbol": "TPL",
@@ -8739,25 +10121,6 @@
     "hq": "Brentwood, Tennessee"
   },
   {
-    "symbol": "TSLA",
-    "name": "Tesla, Inc.",
-    "cik": "0001318605",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Discretionary",
-    "industry": "Automobile Manufacturers",
-    "hq": "Austin, Texas"
-  },
-  {
     "symbol": "TSN",
     "name": "Tyson Foods",
     "cik": "0000100493",
@@ -8813,25 +10176,6 @@
     "sector": "Communication Services",
     "industry": "Interactive Home Entertainment",
     "hq": "New York City, New York"
-  },
-  {
-    "symbol": "TXN",
-    "name": "Texas Instruments",
-    "cik": "0000097476",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "TX",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Semiconductors",
-    "hq": "Dallas, Texas"
   },
   {
     "symbol": "TXT",
@@ -8891,25 +10235,6 @@
     "hq": "Chicago, Illinois"
   },
   {
-    "symbol": "UBER",
-    "name": "Uber",
-    "cik": "0001543151",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Passenger Ground Transportation",
-    "hq": "San Francisco, California"
-  },
-  {
     "symbol": "UDR",
     "name": "UDR, Inc.",
     "cik": "0000074208",
@@ -8967,25 +10292,6 @@
     "hq": "Bolingbrook, Illinois"
   },
   {
-    "symbol": "UNP",
-    "name": "Union Pacific Corporation",
-    "cik": "0000100885",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NE",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Industrials",
-    "industry": "Rail Transportation",
-    "hq": "Omaha, Nebraska"
-  },
-  {
     "symbol": "UPS",
     "name": "United Parcel Service",
     "cik": "0001090727",
@@ -9041,25 +10347,6 @@
     "sector": "Financials",
     "industry": "Diversified Banks",
     "hq": "Minneapolis, Minnesota"
-  },
-  {
-    "symbol": "V",
-    "name": "Visa Inc.",
-    "cik": "0001403161",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Transaction & Payment Processing Services",
-    "hq": "San Francisco, California"
   },
   {
     "symbol": "VEEV",
@@ -9233,25 +10520,6 @@
     "hq": "Westerville, Ohio"
   },
   {
-    "symbol": "VRTX",
-    "name": "Vertex Pharmaceuticals",
-    "cik": "0000875320",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "MA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Health Care",
-    "industry": "Biotechnology",
-    "hq": "Boston, Massachusetts"
-  },
-  {
     "symbol": "VST",
     "name": "Vistra Corp.",
     "cik": "0001692819",
@@ -9307,25 +10575,6 @@
     "sector": "Health Care",
     "industry": "Pharmaceuticals",
     "hq": "Pittsburgh, Pennsylvania"
-  },
-  {
-    "symbol": "VZ",
-    "name": "Verizon",
-    "cik": "0000732712",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "NY",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Communication Services",
-    "industry": "Integrated Telecommunication Services",
-    "hq": "New York City, New York"
   },
   {
     "symbol": "WAB",
@@ -9404,25 +10653,6 @@
     "hq": "Pleasanton, California"
   },
   {
-    "symbol": "WDC",
-    "name": "Western Digital",
-    "cik": "0000106040",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Information Technology",
-    "industry": "Technology Hardware, Storage & Peripherals",
-    "hq": "San Jose, California"
-  },
-  {
     "symbol": "WEC",
     "name": "WEC Energy Group",
     "cik": "0000783325",
@@ -9440,44 +10670,6 @@
     "sector": "Utilities",
     "industry": "Electric Utilities",
     "hq": "Milwaukee, Wisconsin"
-  },
-  {
-    "symbol": "WELL",
-    "name": "Welltower",
-    "cik": "0000766704",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "OH",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Real Estate",
-    "industry": "Health Care REITs",
-    "hq": "Toledo, Ohio"
-  },
-  {
-    "symbol": "WFC",
-    "name": "Wells Fargo",
-    "cik": "0000072971",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "CA",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Financials",
-    "industry": "Diversified Banks",
-    "hq": "San Francisco, California"
   },
   {
     "symbol": "WM",
@@ -9516,25 +10708,6 @@
     "sector": "Energy",
     "industry": "Oil & Gas Storage & Transportation",
     "hq": "Tulsa, Oklahoma"
-  },
-  {
-    "symbol": "WMT",
-    "name": "Walmart",
-    "cik": "0000104169",
-    "ldaClients": [],
-    "recipients": [],
-    "districts": [],
-    "state": "AR",
-    "lat": null,
-    "lon": null,
-    "pacs": [],
-    "core": false,
-    "index": [
-      "SP500"
-    ],
-    "sector": "Consumer Staples",
-    "industry": "Consumer Staples Merchandise Retail",
-    "hq": "Bentonville, Arkansas"
   },
   {
     "symbol": "WRB",

@@ -373,7 +373,7 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
 export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
   const res = await api<{
     ok: boolean;
-    ticker?: { symbol: string; name: string; districts: string[] };
+    ticker?: { symbol: string; name: string; districts: string[]; ldaClients?: string[]; pacs?: string[]; recipients?: string[]; joinBasis?: JoinBasis | null; core?: boolean };
     lobby?: { missing?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
     fec?: { missing?: string; committees?: { name: string; receipts: number | null }[] };
     contracts?: { awards?: { recipient: string; amount: number; agency: string; description: string }[] };
@@ -427,9 +427,28 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
       {
         title: "Contracts (USASpending)",
         lines: (res.contracts?.awards || []).slice(0, 4).map((a) => `${money(a.amount)} · ${a.agency} · ${a.description || a.recipient}`)
+      },
+      {
+        title: "How this ticker is joined",
+        lines: joinLines(res.ticker)
       }
     ]
   };
+}
+
+type JoinBasis = { auto?: boolean; derived?: string; secName?: string; district?: string; lda?: string; pacs?: string; recipients?: string };
+
+function joinLines(ticker: { ldaClients?: string[]; pacs?: string[]; recipients?: string[]; joinBasis?: JoinBasis | null; core?: boolean }) {
+  const basis = ticker.joinBasis;
+  const names = `LDA clients: ${ticker.ldaClients?.join(", ") || "none"} · PACs: ${ticker.pacs?.join(", ") || "none"} · contract names: ${ticker.recipients?.join(", ") || "none"}`;
+  if (!basis) return [ticker.core === false ? "Quotes only. No lobbying, PAC, contract, or district join yet." : "Hand-curated in data/tickers.json.", names];
+  return [
+    `Derived ${basis.derived || ""} by scripts/joins.mjs from SEC filer "${basis.secName || ""}"`,
+    `District: ${basis.district || "—"}`,
+    `Lobbying: ${basis.lda || "—"}`,
+    `PACs: ${basis.pacs || "—"}`,
+    names
+  ];
 }
 
 export function compact(value: number) {

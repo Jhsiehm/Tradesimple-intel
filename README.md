@@ -25,7 +25,7 @@ Every panel shows where its data came from, when it was fetched, and how late th
 - **Watchlist.** Star (☆) any ticker on the S&P board or a dossier, and any member on their card. The watchlist card shows quotes and each member's latest disclosed trade.
 - **Resizable layout.** Drag the divider between the map and the list panel. Drag it closed, double-click it, click the ▸ tab, or press `\` to hide the list. Cards resize from any edge and collapse to their title bar with **–**.
 - **Last buyer drill-down.** On Positions, the Last buyer columns name the most recent Congress and insider buyer. Click ▸ on a row to see the last six buyers, with traded date, filed date, and filing lag.
-- **Supply chain.** For a curated set of large caps, you get suppliers and customers mapped to revenue lines, each company's home exchange, index, and country ETF, six-month correlation and beta, and a rebased chart of how they moved together. Every link cites the filing or announcement it comes from.
+- **Supply chain.** For 38 curated large caps (semis, cloud, autos, airlines, defense, energy, pharma, logistics), you get suppliers and customers mapped to revenue lines, each company's home exchange, index, and country ETF, six-month correlation and beta, and a rebased chart of how they moved together. Every link cites the filing or announcement it comes from.
 - **Live imagery.** GOES-East, GOES-West, and Himawari frames every 10 minutes, VIIRS daily passes, and a time slider to scrub and play back.
 
 ### Keyboard
@@ -108,14 +108,19 @@ server/        Node HTTP API on :8787, no framework
   air.mjs, strait.mjs, earth.mjs  aircraft, ships, imagery
   db.mjs       SQLite cache (node:sqlite) and ticker join table
 src/           React 19 + TypeScript + MapLibre GL (Vite)
+  App.tsx      section state, action routing, and the one-screen layout
+  shell/       layout pieces: useCards (floating cards), useRail (list width),
+               useMapClock (imagery/news time), PanelsMenu, MapBar (toolbars),
+               SearchBox, mapView, follow (dossier link actions), sections
+  congress/ markets/ news/ districts/ strait/   one folder per section: data hook + boards
 data/          tickers.json (join table), places, supply chain, globals, geo
-scripts/       dev runner, S&P 500 join-table builder
+scripts/       dev runner, S&P 500 rows, derived joins
 ```
 
 ### Ground rules the code follows
 
 - **One screen:** top nav, center map or board, one list, one dossier. Extra views are floating cards, not extra rails.
-- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. The 25 curated names have full joins; the rest of the S&P 500 is quotes only.
+- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. 25 names are hand-curated and 76 more are derived by `scripts/joins.mjs` from exact matches only: SEC business address to Census 119th district, LDA client names, and FEC connected-organization PACs. Each derived row records its basis, and the dossier shows it. That makes 101 full-join names. The rest of the S&P 500 is quotes only.
 - **Empty is honest.** A region or feed with no real source stays empty and says why.
 - **Label everything** with its source, as-of time, and real latency.
 
@@ -126,6 +131,7 @@ npm run dev      # API and web UI
 npm start        # API only
 npm run build    # production build of the web UI into dist/
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
+node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins for the largest quote-only names
 ```
 
 ---

@@ -90,7 +90,8 @@ function hydrate(row) {
     core: extras.get(row.symbol)?.core !== false,
     index: extras.get(row.symbol)?.index || [],
     sector: extras.get(row.symbol)?.sector || "",
-    industry: extras.get(row.symbol)?.industry || ""
+    industry: extras.get(row.symbol)?.industry || "",
+    joinBasis: extras.get(row.symbol)?.joinBasis || null
   };
 }
 
