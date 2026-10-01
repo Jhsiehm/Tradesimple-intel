@@ -71,18 +71,29 @@ const fixed = [
 
 console.log(`snapshot from ${BASE}`);
 await pool(fixed, 4, grab);
+if (!store.has("/api/health")) {
+  console.error(`no API at ${BASE}; leaving demo/snapshot untouched`);
+  process.exit(1);
+}
 
 const votes = [...(store.get("/api/congress/votes?chamber=house")?.items || []), ...(store.get("/api/congress/votes?chamber=senate")?.items || [])];
 await pool(votes, 4, (v) => grab(`/api/congress/votes/${v.chamber}/${v.congress}/${v.session}/${v.roll}`));
 await pool(store.get("/api/congress/bills")?.items || [], 4, (b) => grab(`/api/congress/bills/${encodeURIComponent(b.id)}`));
-await pool(store.get("/api/congress/committees")?.items || [], 4, (c) => grab(`/api/congress/committees/${c.id}`));
+await pool(store.get("/api/congress/committees")?.items || [], 4, async (c) => {
+  const detail = await grab(`/api/congress/committees/${c.id}`);
+  for (const sub of detail?.committee?.subcommittees || []) await grab(`/api/congress/committees/${sub.id}`);
+});
+
+const roster = store.get("/api/congress/roster")?.items || [];
+const seatOf = new Map(roster.map((m) => [m.bioguide, m.chamber]));
+await pool(roster, 4, (m) => grab(`/api/congress/member/${m.bioguide}?chamber=${m.chamber}`));
 
 const trades = store.get("/api/markets/politicians")?.items || [];
 const counts = new Map();
-for (const t of trades) if (t.bioguide) counts.set(t.bioguide, { n: (counts.get(t.bioguide)?.n || 0) + 1, chamber: t.chamber || "house" });
-const members = [...counts.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, MEMBERS);
-await pool(members, 2, async ([id, { chamber }]) => {
-  await grab(`/api/congress/member/${id}?chamber=${chamber}`);
+for (const t of trades) if (t.bioguide) counts.set(t.bioguide, (counts.get(t.bioguide) || 0) + 1);
+const members = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, MEMBERS);
+await pool(members, 2, async ([id]) => {
+  await grab(`/api/congress/member/${id}?chamber=${seatOf.get(id) || "house"}`);
   await grab(`/api/congress/member/${id}/trades`);
   await grab(`/api/congress/member/${id}/timeline`);
 });

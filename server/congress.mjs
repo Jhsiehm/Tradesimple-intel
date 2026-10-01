@@ -515,8 +515,10 @@ export async function memberProfile(db, bioguide, chamber) {
   const latest = termList[termList.length - 1] || {};
   const history = Array.isArray(member.partyHistory) ? member.partyHistory : member.partyHistory?.item || [];
   const party = normalizeParty(member.partyName || latest.partyName || latest.party || history[0]?.partyName || "");
+  const seated = String(latest.chamber || "").toLowerCase();
+  const side = seated.includes("senate") ? "senate" : seated.includes("house") ? "house" : chamber === "senate" ? "senate" : "house";
   const [recent, seats, people, pacs] = await Promise.all([
-    recentCasts(db, id, chamber === "senate" ? "senate" : "house"),
+    recentCasts(db, id, side),
     memberCommittees(db, id).catch(() => []),
     roster(db).catch(() => ({ items: [] })),
     Promise.race([memberPacs(db, id).catch(() => null), new Promise((r) => setTimeout(() => r(null), 4000))])
@@ -536,7 +538,7 @@ export async function memberProfile(db, bioguide, chamber) {
       party,
       state: member.state || latest.stateCode || latest.state || "",
       district: latest.district == null ? "" : String(latest.district),
-      chamber: String(latest.chamber || chamber || ""),
+      chamber: String(latest.chamber || side),
       photo: member.depiction?.imageUrl || bioguidePhoto(id),
       url: member.officialWebsiteUrl || `https://bioguide.congress.gov/search/bio/${id}`,
       served: termList.length ? `${termList.length} terms on the Congress.gov record` : "Term count not on this record",
