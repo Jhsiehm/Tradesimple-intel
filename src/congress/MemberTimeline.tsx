@@ -298,11 +298,11 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
                   {lane.name.replace(/^(House|Senate|Joint) (Committee on )?(the )?/i, "").slice(0, view.narrow ? 11 : 24).toUpperCase()}
                 </text>
                 <text x={12} y={y + 24} className="tl-lane-sub">{view.narrow ? `${lane.hearings.length} mtgs` : `${[lane.title, lane.subs.length ? `${lane.subs.length} sub` : ""].filter(Boolean).join(" · ") || "Member"} · ${lane.hearings.length}`}</text>
-                {lane.hearings.map((h) => {
+                {lane.hearings.map((h, i) => {
                   const hx = view.x(h.date);
                   return (
                     <rect
-                      key={`${lane.id}-${h.id}`}
+                      key={`${lane.id}-${h.id}-${i}`}
                       x={hx - 1}
                       y={y + 8}
                       width={2}
