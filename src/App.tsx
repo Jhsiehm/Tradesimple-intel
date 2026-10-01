@@ -39,6 +39,8 @@ const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) =
 const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
 const TodayBoard = lazy(() => import("./congress/TodayBoard").then((m) => ({ default: m.TodayBoard })));
 const ContractsBoard = lazy(() => import("./contracts/ContractsBoard").then((m) => ({ default: m.ContractsBoard })));
+/** The demo snapshot has no intraday bars. */
+const OPEN_SPAN: ChartSpan = DEMO ? "1y" : "5m";
 
 const TRAIL_KEY = "intel:trail:v1";
 const TODAY_SEEN = "intel:today:seen";
@@ -55,7 +57,7 @@ export function App() {
   const [layer, setLayer] = useState<MarketLayer>("politicians");
   const [marketView, setMarketView] = useState<MarketView>("board");
   const [chartSymbol, setChartSymbol] = useState("AAPL");
-  const [chartSpan, setChartSpan] = useState<ChartSpan>("5m");
+  const [chartSpan, setChartSpan] = useState<ChartSpan>(OPEN_SPAN);
   const [chartMarks, setChartMarks] = useState<ChartMark[]>([]);
   const [chartFrom, setChartFrom] = useState<MarketView>("board");
   const [supplySymbol, setSupplySymbol] = useState("AAPL");
@@ -283,7 +285,7 @@ export function App() {
     news: (id) => { setDossier(null); setSelectedId(id); },
     committee: (id) => goCongress("committees", id, id.startsWith("HS") ? "house" : id.startsWith("SS") ? "senate" : undefined),
     meeting: (id) => { const meeting = calendar.find((m) => m.id === id); if (meeting) setDossier(meetingModel(meeting)); },
-    ticker: (symbol) => { showChart(symbol, "5m"); setSelectedId(null); setDossier(null); },
+    ticker: (symbol) => { showChart(symbol, OPEN_SPAN); setSelectedId(null); setDossier(null); },
     inst: (symbol) => showChart(symbol, "6mo"),
     chart: (symbol) => {
       showChart(symbol, "6mo", chartSymbol === symbol ? chartMarks : []);
@@ -387,7 +389,7 @@ export function App() {
 
   async function chooseHit(hit: SearchHit) {
     if (hit.kind === "ticker") {
-      showChart(hit.id, "5m");
+      showChart(hit.id, OPEN_SPAN);
       setDossier(await loadDossier(hit.id));
       setSelectedId(null);
     } else if (hit.kind === "site") {

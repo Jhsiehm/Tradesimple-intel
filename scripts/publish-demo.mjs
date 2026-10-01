@@ -4,6 +4,7 @@
  *   npm run publish:demo                      # build from the existing demo/snapshot and push
  *   npm run publish:demo -- --snapshot        # capture the running API first (needs `npm start` with your keys)
  *   npm run publish:demo -- --no-push         # build dist-demo/ only
+ *   npm run publish:demo -- --partial         # publish demo/snapshot.partial while a long snapshot is still running
  * Options: --base /Tradesimple-intel/  --url https://jhsiehm.github.io/Tradesimple-intel/  --branch gh-pages
  *   --trim full|lite (full keeps every list and rounds numbers; lite caps long lists)
  *   Snapshot pass-through: --members all|N --tickers all|N --spans 1d,6mo,1y,5y|all --contracts all|core|none --resume
@@ -15,6 +16,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { trimRoute } from "./trim.mjs";
+import { demoFile } from "../src/lib/demoPath.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -50,6 +52,9 @@ const partialDir = path.join(OUT, "snapshot.partial");
 if (PARTIAL) {
   fs.rmSync(snapDir, { recursive: true, force: true });
   fs.renameSync(partialDir, snapDir);
+  for (const name of ["states.geojson", "cd119.geojson"]) {
+    fs.copyFileSync(path.join(root, "data", "geo", name), path.join(snapDir, demoFile(`/geo/${name}`)));
+  }
   const names = fs.readdirSync(snapDir);
   const pick = (re) => names.map((n) => n.match(re)?.[1]).filter(Boolean);
   fs.writeFileSync(path.join(snapDir, "manifest.json"), JSON.stringify({
