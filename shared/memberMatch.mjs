@@ -39,12 +39,12 @@ function initials(m) {
     .map((given) => given[0] + lastParts.map((part) => part[0]).join(""));
 }
 
-function wordScore(q, m, names) {
+function wordScore(q, m, names, minPrefix) {
   if (m.bioguide && q === m.bioguide.toLowerCase()) return 10;
   let best = 0;
   for (const w of names) {
     if (w === q) return 3;
-    if (q.length >= 2 && w.startsWith(q)) best = Math.max(best, 2);
+    if (q.length >= minPrefix && w.startsWith(q)) best = Math.max(best, 2);
   }
   if (!best && q.length === 2 && q === String(m.state || "").toLowerCase()) best = 1;
   return best;
@@ -52,9 +52,10 @@ function wordScore(q, m, names) {
 
 function scoreMember(qWords, phrase, m) {
   const names = nameWords(m);
+  const minPrefix = qWords.length > 1 ? 2 : 3;
   let total = 0;
   for (const q of qWords) {
-    const s = wordScore(q, m, names);
+    const s = wordScore(q, m, names, minPrefix);
     if (!s) return 0;
     total += s;
   }
@@ -96,7 +97,7 @@ export function matchMembers(roster, query, limit = 8) {
   if (!qWords.length) return [];
   const phrase = qWords.join(" ");
   let ranked = roster.map((m) => ({ m, score: scoreMember(qWords, phrase, m) })).filter((r) => r.score > 0);
-  if (!ranked.length && qWords.length === 1 && qWords[0].length >= 2) {
+  if (!ranked.length && qWords.length === 1 && qWords[0].length >= 3) {
     ranked = roster.filter((m) => initials(m).includes(qWords[0])).map((m) => ({ m, score: 1 }));
   }
   return ranked.sort(order).slice(0, limit).map((r) => r.m);

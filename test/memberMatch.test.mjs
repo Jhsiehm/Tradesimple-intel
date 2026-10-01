@@ -64,3 +64,11 @@ test("bioguide ids, limits, and no-match queries", () => {
   assert.deepEqual(ids("   "), []);
   assert.deepEqual(ids("booker smith"), []);
 });
+
+test("a lone short word needs three letters before prefix or initials matching", () => {
+  assert.deepEqual(ids("am"), []);
+  assert.deepEqual(ids("pe"), []);
+  assert.deepEqual(ids("pel"), ["P000197"]);
+  assert.deepEqual(ids("nancy pe"), ["P000197"]);
+  assert.deepEqual(ids("cory bo"), ["B001288"]);
+});
