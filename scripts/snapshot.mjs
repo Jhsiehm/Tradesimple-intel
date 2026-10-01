@@ -60,13 +60,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function grab(route, { timeoutMs = 180_000, accept = null, retryMs = 0 } = {}) {
   if (bodies.has(route)) return bodies.get(route);
   const file = path.join(PARTIAL, demoFile(route));
-  if (written.has(route)) return null;
+  if (written.has(route)) return { cached: true };
   if (RESUME && fs.existsSync(file)) {
     const text = fs.readFileSync(file, "utf8");
     written.set(route, text.length);
     bytes += text.length;
-    const body = KEEP.test(route) ? JSON.parse(text) : null;
-    if (body) bodies.set(route, body);
+    if (!KEEP.test(route)) return { cached: true };
+    const body = JSON.parse(text);
+    bodies.set(route, body);
     return body;
   }
   for (let attempt = 0; attempt < (retryMs ? 2 : 1); attempt++) {
@@ -116,9 +117,10 @@ async function pool(items, size, fn) {
   }));
 }
 
-/** Minimum spacing between Yahoo-backed requests from this script (charts and dossier quotes). */
+/** Minimum spacing between Yahoo-backed requests from this script (charts and dossier quotes). Free for routes already on disk. */
 let yahooNext = 0;
-async function yahooSlot(ms = 350) {
+async function yahooSlot(route, ms = 350) {
+  if (written.has(route) || (RESUME && fs.existsSync(path.join(PARTIAL, demoFile(route))))) return;
   const now = Date.now();
   const at = Math.max(now, yahooNext);
   yahooNext = at + ms;
@@ -192,13 +194,14 @@ const symbols = [...new Set([...traded, ...joined])].slice(0, TICKERS);
 phase(`tickers (${symbols.length})`);
 await pool(symbols, 2, async (s) => {
   const q = encodeURIComponent(s);
-  await yahooSlot();
+  await yahooSlot(`/api/tickers/${q}`);
   await grab(`/api/tickers/${q}`);
   await grab(`/api/markets/positions/${q}`);
   await grab(`/api/markets/events?symbol=${q}`);
   for (const span of SPANS) {
-    await yahooSlot();
-    await grab(`/api/markets/chart?symbol=${q}&span=${span}`, { accept: okBody, retryMs: 8000 });
+    const route = `/api/markets/chart?symbol=${q}&span=${span}`;
+    await yahooSlot(route);
+    await grab(route, { accept: okBody, retryMs: 8000 });
   }
 });
 await pool(bodies.get("/api/markets/supply")?.items || [], 4, (s) => grab(`/api/markets/supply/${encodeURIComponent(s)}`));
