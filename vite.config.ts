@@ -8,6 +8,7 @@ export default defineConfig({
   base: process.env.VITE_BASE || "/",
   publicDir: demo ? "demo" : "public",
   build: {
+    outDir: demo ? "dist-demo" : "dist",
     // MapLibre alone is ~1 MB minified and loads lazily with the map; the app chunk stays near 330 kB.
     chunkSizeWarningLimit: 1100
   },

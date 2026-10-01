@@ -74,7 +74,25 @@ npm run demo                 # or: npm run build:demo  → static site in dist-d
 VITE_BASE=/Tradesimple-intel/ npm run build:demo   # for GitHub Pages under a repo path
 ```
 
-The snapshot covers the top 30 traders (cards, trades, timelines), up to 60 joined tickers (positions, charts, events, supply chains), and the main boards. Anything outside it says it isn't in the snapshot. The script aborts if any value from `.env.local` appears in a response.
+The snapshot covers the top 40 traders (cards, trades, timelines), up to 60 joined tickers (positions, charts, events, supply chains), and the main boards. Anything outside it says it isn't in the snapshot. The script aborts if any value from `.env.local` appears in a response.
+
+### Public demo on GitHub Pages
+
+Live copy: **https://jhsiehm.github.io/Tradesimple-intel/** (static, no keys, no server).
+
+```bash
+npm start                                  # API with your keys; let trades, timeline, and returns warm up
+npm run publish:demo -- --snapshot         # snapshot → build → trim → member pages → push gh-pages
+npm run publish:demo                       # rebuild from the existing demo/snapshot and push
+npm run publish:demo -- --no-push          # build dist-demo/ only
+VITE_DEMO=1 npx vite preview --base /Tradesimple-intel/ --port 4180   # check it locally
+```
+
+The keys never leave your machine. CI can't run the live API, so the snapshot is taken locally and only the built site goes to the `gh-pages` branch, as a normal commit (never forced). `main` holds no snapshot data; `demo/snapshot/` and `dist-demo/` stay gitignored.
+
+The published copy is trimmed by `scripts/trim.mjs`: the board-level lists keep their newest rows (3,000 of ~11,000 Congress trades on the Markets layer, 500 positions rows, 300 PAC calendar rows), display-only nested lists are shortened, and long strings are cut. Lists that feed a count or dollar total (timeline trades, ticker PAC and Congress rows) are kept whole. Every trimmed route says so in its latency label. The site is about 40 MB uncompressed; Pages serves it gzipped and each file loads only when opened.
+
+**Enable Pages once:** repo **Settings → Pages → Build and deployment → Source: Deploy from a branch → `gh-pages` / `(root)`**. Pages on a private repository needs a paid GitHub plan; on a free plan, make the repository public or publish `dist-demo/` from a separate public repo. `--base` and `--url` change the path and the absolute URL used in share links and preview images.
 
 ### API keys (all optional)
 
