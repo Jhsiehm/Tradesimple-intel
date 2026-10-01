@@ -1598,8 +1598,39 @@ body.dragging .map-body, body.dragging .widgets { pointer-events: none; }
 .ct-dod li a:hover { color: var(--amber); }
 .ct-dod li span { color: var(--faint); font-size: 10px; }
 .ct-note { margin: 0; color: var(--faint); font-size: 11px; line-height: 1.4; }
+.ct-error { margin: 4px 0 0; color: var(--nay); font-size: 11px; line-height: 1.4; }
 @container (max-width: 1180px) { .board.contracts .ct-sector { display: none; } }
 @container (max-width: 1040px) { .board.contracts .ct-trend { display: none; } }
 @container (max-width: 900px) { .ct-grid { grid-template-columns: minmax(0, 1fr); } .ct-dod { display: none; } }
 @media (max-width: 1180px) { .go-btn kbd { display: none; } }
 @media (max-width: 1080px) { .go-btn { display: none; } }
+
+/* Today: this week in Congress trading + leaderboards (center stage). */
+.board.today { grid-template-rows: auto minmax(0, 1fr); }
+.board.today .board-title { align-items: center; }
+.board.today .board-title .scope { margin-left: auto; }
+.board.today .scope button.on { color: var(--amber); background: rgba(232, 163, 61, 0.1); }
+.board.today .board-title .tl-close { position: static; }
+.today-explain { color: var(--ink) !important; font-size: 12px !important; }
+.today-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px 18px; padding-top: 12px; align-content: start; }
+.today-card { min-width: 0; border-top: 1px solid var(--line); padding-top: 8px; }
+.today-card h3 { margin: 0 0 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
+.today-card h3 small { margin-left: 8px; color: var(--faint); letter-spacing: 0.04em; text-transform: none; font-size: 10.5px; }
+.today-card ol { margin: 0; padding: 0; list-style: none; max-height: 340px; overflow: auto; }
+.today-empty { color: var(--dim); font-size: 11px; }
+.trade-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 5px 2px; border-bottom: 1px solid rgba(35, 44, 52, 0.6); font-size: 12px; line-height: 1.45; }
+.trade-line > span { min-width: 0; }
+.trade-line small { color: var(--dim); }
+.trade-line .when { grid-column: 1; font-size: 11px; }
+.trade-line a { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--faint); font-size: 11px; text-decoration: none; white-space: nowrap; }
+.trade-line a:hover { color: var(--amber); }
+.trade-line .up { color: var(--yea); font-weight: 500; }
+.trade-line .down { color: var(--nay); font-weight: 500; }
+.trade-line .late { color: var(--amber); font-weight: 500; }
+.trade-line .sym { color: var(--amber); letter-spacing: 0.04em; }
+button.link { padding: 0; border: 0; color: var(--ink); text-decoration: underline; text-decoration-color: rgba(228, 231, 230, 0.25); text-underline-offset: 2px; }
+button.link:hover { color: var(--amber); text-decoration-color: var(--amber); }
+button.link.sym { color: var(--amber); text-decoration-color: rgba(232, 163, 61, 0.35); }
+.today-card table { width: 100%; }
+.app.phone .today-grid { grid-template-columns: minmax(0, 1fr); }
+.app.phone .board.today { padding: 10px; }

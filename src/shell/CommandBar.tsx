@@ -9,6 +9,8 @@ type Command = { code: string; label: string; hint: string; action: string };
 
 /** Static destinations, Bloomberg-style mnemonics on the left. Actions route through App.go(). */
 const STATIC: Command[] = [
+  { code: "WEEK", label: "Today · this week in Congress trading", hint: "Newest filings, late filings, biggest trades", action: "today:week" },
+  { code: "LEAD", label: "Today · leaderboards", hint: "Buys vs S&P 500, most active, late filers", action: "today:leaders" },
   { code: "CONG", label: "Congress", hint: "Votes, bills, members, committees", action: "section:congress" },
   { code: "VOTE", label: "Congress · roll calls", hint: "Close votes first", action: "mode:votes" },
   { code: "BILL", label: "Congress · bills", hint: "By latest action", action: "mode:bills" },
@@ -118,7 +120,7 @@ export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean
           <input
             ref={input}
             value={text}
-            placeholder="LMT CTR · TX-12 · Pelosi TL · WEI · CAL"
+            placeholder="WEEK · LMT CTR · TX-12 · Pelosi TL · WEI · CAL"
             spellCheck={false}
             onChange={(e) => { setText(e.target.value); setAt(0); }}
             onKeyDown={(e) => {

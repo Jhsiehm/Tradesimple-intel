@@ -8,7 +8,8 @@ import { billDetail, billVote, calendar, committeeDetail, committeeList, compare
 import { fecForCommittees, fecForName, lobbyingForClient } from "./lobby.mjs";
 import { memberTimeline, warmTimeline } from "./timeline.mjs";
 import { alertsFor } from "./alerts.mjs";
-import { contractFeed, contractorBoard, dodAnnouncements } from "./contracts.mjs";
+import { congressFeed } from "./feed.mjs";
+import { contractFeed, contractorBoard, dodAnnouncements, warmContracts } from "./contracts.mjs";
 import { shortInterest } from "./markets.mjs";
 import { congressTrades, insiderTrades, memberTrades, positionsBoard, positionsFor, shortBoard, warmPositions, whaleHoldings } from "./positions.mjs";
 import { newsWire, xPulse, xWire } from "./news.mjs";
@@ -115,6 +116,9 @@ const server = http.createServer(async (req, res) => {
     const tickerMatch = url.pathname.match(/^\/api\/tickers\/([A-Za-z.\-]+)$/);
     if (tickerMatch) {
       return send(res, 200, await tickerDossier(tickerMatch[1].toUpperCase()));
+    }
+    if (url.pathname === "/api/congress/feed") {
+      return send(res, 200, await congressFeed(db));
     }
     if (url.pathname === "/api/markets/politicians") {
       return send(res, 200, await congressTrades(db));
@@ -256,6 +260,8 @@ server.listen(port, "127.0.0.1", () => {
   if (process.env.INTEL_NO_WARM) return;
   warmPositions(db);
   warmTimeline(db);
+  setTimeout(() => warmContracts(db), 3000);
+  setInterval(() => warmContracts(db), 60 * 60 * 1000).unref();
   setTimeout(() => {
     warmCorporate(db).then(() => warmMacro(db)).then((n) => console.log(`macro warm: ${n} days fetched`)).catch((err) => console.error("warm", err.message));
   }, 5000);

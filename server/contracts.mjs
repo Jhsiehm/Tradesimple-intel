@@ -1,4 +1,4 @@
-import { fetchJson, fetchText } from "./http.mjs";
+import { fetchJsonRetry, fetchText, usaspendingGate } from "./http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
 import { roster } from "./roster.mjs";
 import { contractsFor } from "./corporate.mjs";
@@ -68,11 +68,18 @@ export async function contractFeed(db, params) {
   const hit = readCache(db, key);
   if (hit) return { ...hit, scope };
   const t0 = Date.now();
-  const body = await fetchJson(`${USA}/search/spending_by_transaction/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" })
-  }, 60000);
+  let body;
+  try {
+    body = await fetchJsonRetry(`${USA}/search/spending_by_transaction/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" })
+    }, { timeoutMs: 45000, retries: 1, gate: usaspendingGate, priority: true });
+  } catch (err) {
+    const stale = readStale(db, key);
+    if (stale) return { ...stale.value, scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
+    return { ok: false, source: "USAspending.gov prime contract transactions", asOf: new Date().toISOString(), latency: LATENCY, error: `Contract feed: ${err.message}. Try again, or narrow the window.`, scope, items: [] };
+  }
   if (body?.detail) return { ok: false, error: String(body.detail).slice(0, 200), items: [] };
   const parents = parentIndex(db);
   const items = (body.results || []).map((r) => {
@@ -110,83 +117,169 @@ export async function contractFeed(db, params) {
   return { ...result, scope };
 }
 
-const board = { job: null, partial: null };
+const BOARD_KEY = "usa:board:v2";
+const BOARD_LATENCY = "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered.";
+const BOARD_COOLDOWN = 2 * 60 * 1000;
+const OUTAGE_STREAK = 8;
+const board = { job: null, partial: null, error: null, failedAt: 0 };
+
+/** Cache row even when expired, so a rebuild can serve the last good board instead of an empty one. */
+function readStale(db, key) {
+  const row = db.prepare("SELECT body, stored_at FROM cache WHERE key = ?").get(key);
+  return row ? { value: JSON.parse(row.body), storedAt: row.stored_at } : null;
+}
 
 /**
  * Joined S&P 500 contractors ranked by last full fiscal-year obligations, with obligations as a share of
- * revenue where SEC XBRL revenue exists. Built in the background; partial results stream in.
+ * revenue where SEC XBRL revenue exists. Never waits on USAspending: a fresh cache returns as is; otherwise a
+ * background build starts and the response is the last good board (or what has loaded so far) with
+ * `building` and `progress`, so the client polls.
  */
 export function contractorBoard(db) {
-  const hit = readCache(db, "usa:board:v2");
+  const hit = readCache(db, BOARD_KEY);
   if (hit) return Promise.resolve(hit);
-  if (!board.job) {
-    board.job = buildBoard(db)
+  const stale = readStale(db, BOARD_KEY)?.value || null;
+  const cooling = board.error && Date.now() - board.failedAt < BOARD_COOLDOWN;
+  if (!board.job && !cooling) {
+    board.error = null;
+    const t0 = Date.now();
+    board.job = buildBoard(db, stale, (res) => { board.partial = res; })
       .then((res) => {
-        if (res.items.length) writeCache(db, "usa:board:v2", res, 12 * HOUR);
-        console.log(`contractor board: ${res.items.length} joined contractors`);
-        return res;
+        if (res.items.length) writeCache(db, BOARD_KEY, res, res.progress.failed ? 2 * HOUR : DAY);
+        else throw new Error(res.progress.failed ? `USAspending failed for all ${res.progress.failed} contractors. ${res.note}` : "USAspending returned no contractor obligations.");
+        console.log(`contractor board: ${res.items.length} contractors, ${res.progress.failed} failed, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
       })
-      .catch((err) => console.error("contractor board", err.message))
+      .catch((err) => {
+        board.error = err.message;
+        board.failedAt = Date.now();
+        console.error("contractor board", err.message);
+      })
       .finally(() => { board.job = null; board.partial = null; });
   }
-  return Promise.resolve(board.partial || { ok: true, building: true, source: "USAspending.gov · SEC XBRL", asOf: new Date().toISOString(), items: [], progress: { done: 0, total: 0 } });
+  if (board.partial) return Promise.resolve(board.partial);
+  const total = listTickers(db).filter((t) => (t.contractParents || []).length).length;
+  const base = stale
+    ? { ...stale, building: true, progress: { done: 0, total, failed: 0 }, note: `Refreshing; showing the board from ${stale.asOf?.slice(0, 16).replace("T", " ")} UTC.` }
+    : { ok: true, building: true, source: "USAspending.gov prime contract obligations · SEC XBRL revenue", asOf: new Date().toISOString(), latency: BOARD_LATENCY, items: [], progress: { done: 0, total, failed: 0 } };
+  if (!board.job && board.error) {
+    const retryIn = Math.max(0, Math.ceil((BOARD_COOLDOWN - (Date.now() - board.failedAt)) / 1000));
+    return Promise.resolve({ ...base, ok: !!stale, building: false, error: `${board.error} Retrying in ${retryIn} s.` });
+  }
+  return Promise.resolve(base);
 }
 
-async function buildBoard(db) {
+/** Start or refresh the board in the background. Safe to call repeatedly; a fresh cache is a no-op. */
+export function warmContracts(db) {
+  contractorBoard(db);
+  dodAnnouncements(db).catch((err) => console.error("dod warm", err.message));
+}
+
+/** One board row from a contractsFor result, or null when USAspending had no fiscal-year data. */
+export function boardRow(t, res, fyNow = currentFy()) {
+  if (!res?.byYear) return null;
+  const dep = res.dependence;
+  const last = dep ? { fy: dep.fy, amount: dep.obligations } : res.byYear.filter((y) => y.fy < fyNow).at(-1);
+  return {
+    symbol: t.symbol,
+    name: t.name,
+    sector: t.sector,
+    industry: t.industry,
+    fy: last?.fy || null,
+    obligations: last?.amount || 0,
+    revenue: dep?.revenue || null,
+    revenueFy: dep?.revenueFy || null,
+    share: dep?.share ?? null,
+    byYear: res.byYear,
+    parents: (t.contractParents || []).length
+  };
+}
+
+/** Fetch order: largest prior obligations first, so the top of the board fills in first. Unknown names last. */
+export function boardOrder(tickers, prior) {
+  const rank = new Map((prior?.items || []).map((r) => [r.symbol, r.obligations || 0]));
+  return [...tickers].sort((a, b) => (rank.get(b.symbol) ?? -1) - (rank.get(a.symbol) ?? -1) || a.symbol.localeCompare(b.symbol));
+}
+
+/** Board payload from the rows loaded so far. Pure apart from the timestamp. */
+export function composeBoard({ rows, building, done, total, failed = [], constituents, note = "" }) {
+  const items = [...rows].sort((a, b) => b.obligations - a.obligations);
+  const fy = items.find((r) => r.fy)?.fy || null;
+  const obligations = items.reduce((s, r) => s + (r.obligations > 0 ? r.obligations : 0), 0);
+  const bySector = new Map();
+  for (const r of items) {
+    const cur = bySector.get(r.sector || "Other") || { sector: r.sector || "Other", obligations: 0, names: 0 };
+    cur.obligations += Math.max(0, r.obligations);
+    cur.names += 1;
+    bySector.set(cur.sector, cur);
+  }
+  const failedNote = failed.length ? `${failed.length} contractor${failed.length > 1 ? "s" : ""} failed to load from USAspending (${failed.slice(0, 6).join(", ")}${failed.length > 6 ? ", …" : ""}); retrying within two hours.` : "";
+  return {
+    ok: true,
+    building,
+    source: "USAspending.gov prime contract obligations · SEC XBRL revenue",
+    asOf: new Date().toISOString(),
+    latency: BOARD_LATENCY,
+    note: [note, failedNote].filter(Boolean).join(" "),
+    progress: { done, total, failed: failed.length },
+    index: { name: "S&P 500", joined: total, constituents, fy, obligations },
+    sectors: [...bySector.values()].sort((a, b) => b.obligations - a.obligations),
+    items
+  };
+}
+
+async function buildBoard(db, stale, publish) {
   const all = listTickers(db);
   const constituents = all.filter((t) => t.index?.includes("SP500")).length;
   const tickers = all.filter((t) => (t.contractParents || []).length);
-  const rows = [];
-  let done = 0;
+  const staleRows = new Map((stale?.items || []).map((r) => [r.symbol, r]));
+  const fresh = new Map();
+  const failed = new Map();
+  const pending = [];
+  for (const t of tickers) {
+    const res = await contractsFor(db, t, { cachedOnly: true });
+    const row = boardRow(t, res);
+    if (row) fresh.set(t.symbol, row);
+    else if (!res) pending.push(t);
+  }
   const compose = (building) => {
-    const items = [...rows].sort((a, b) => b.obligations - a.obligations);
-    const fy = items.find((r) => r.fy)?.fy || null;
-    const total = items.reduce((s, r) => s + (r.obligations > 0 ? r.obligations : 0), 0);
-    const bySector = new Map();
-    for (const r of items) {
-      const cur = bySector.get(r.sector || "Other") || { sector: r.sector || "Other", obligations: 0, names: 0 };
-      cur.obligations += Math.max(0, r.obligations);
-      cur.names += 1;
-      bySector.set(cur.sector, cur);
-    }
-    return {
-      ok: true,
-      building,
-      source: "USAspending.gov prime contract obligations · SEC XBRL revenue",
-      asOf: new Date().toISOString(),
-      latency: "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered.",
-      progress: { done, total: tickers.length },
-      index: { name: "S&P 500", joined: tickers.length, constituents, fy, obligations: total },
-      sectors: [...bySector.values()].sort((a, b) => b.obligations - a.obligations),
-      items
-    };
+    const rows = tickers.map((t) => fresh.get(t.symbol) || (building || failed.has(t.symbol) ? staleRows.get(t.symbol) : null)).filter(Boolean);
+    const done = tickers.length - pending.length;
+    const note = building && staleRows.size ? "Refreshing; names not yet reloaded show the previous build." : "";
+    return composeBoard({ rows, building, done, total: tickers.length, failed: [...failed.keys()], constituents, note });
   };
-  const queue = [...tickers];
-  await Promise.all(Array.from({ length: 3 }, async () => {
-    while (queue.length) {
-      const t = queue.shift();
-      const res = await contractsFor(db, t).catch(() => null);
-      done += 1;
-      if (res?.byYear) {
-        const dep = res.dependence;
-        const last = dep ? { fy: dep.fy, amount: dep.obligations } : res.byYear.filter((y) => y.fy < currentFy()).at(-1);
-        rows.push({
-          symbol: t.symbol,
-          name: t.name,
-          sector: t.sector,
-          industry: t.industry,
-          fy: last?.fy || null,
-          obligations: last?.amount || 0,
-          revenue: dep?.revenue || null,
-          revenueFy: dep?.revenueFy || null,
-          share: dep?.share ?? null,
-          byYear: res.byYear,
-          parents: (t.contractParents || []).length
-        });
+  let lastPublish = 0;
+  const tick = (force) => {
+    if (!force && Date.now() - lastPublish < 1000) return;
+    lastPublish = Date.now();
+    publish(compose(true));
+  };
+  tick(true);
+  let streak = 0;
+  let outage = "";
+  const run = async (list, workers) => {
+    const queue = boardOrder(list, stale);
+    await Promise.all(Array.from({ length: workers }, async () => {
+      while (queue.length && !outage) {
+        const t = queue.shift();
+        try {
+          const row = boardRow(t, await contractsFor(db, t));
+          if (row) fresh.set(t.symbol, row);
+          failed.delete(t.symbol);
+          streak = 0;
+        } catch (err) {
+          failed.set(t.symbol, err.message);
+          if (++streak >= OUTAGE_STREAK) outage = err.message;
+        }
+        if (pending.includes(t)) pending.splice(pending.indexOf(t), 1);
+        tick(false);
       }
-      if (done % 10 === 0) board.partial = compose(true);
-    }
-  }));
+    }));
+  };
+  await run(pending.slice(), 2);
+  const retry = tickers.filter((t) => failed.has(t.symbol));
+  if (retry.length && !outage) await run(retry, 2);
+  if (outage) throw new Error(`USAspending stopped answering after ${fresh.size} of ${tickers.length} contractors loaded (${OUTAGE_STREAK} failures in a row). Last error: ${outage}.`);
+  if (failed.size) console.error(`contractor board: ${failed.size} failed, e.g. ${[...failed.values()][0]}`);
   return compose(false);
 }
 
@@ -200,7 +293,16 @@ export async function dodAnnouncements(db) {
   const hit = readCache(db, "dod:contracts:v1");
   if (hit) return hit;
   const t0 = Date.now();
-  const xml = await fetchText("https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20", { headers: { "User-Agent": "Mozilla/5.0" } }, 20000);
+  const SOURCE = "War.gov (Department of Defense) daily contract announcements";
+  let xml;
+  try {
+    xml = await fetchText("https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20", { headers: { "User-Agent": "Mozilla/5.0" } }, 20000);
+  } catch (err) {
+    const why = err.name === "AbortError" ? "did not answer within 20 s" : err.message;
+    const stale = readStale(db, "dod:contracts:v1");
+    if (stale) return { ...stale.value, note: `War.gov RSS ${why}; showing the list fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
+    return { ok: false, source: SOURCE, asOf: new Date().toISOString(), latency: "Posted around 5 p.m. ET each business day for awards of $7.5 million or more.", error: `War.gov RSS ${why}.`, items: [] };
+  }
   const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const tag = (name) => (new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(m[1])?.[1] || "").trim();
     const published = new Date(tag("pubDate"));
@@ -208,7 +310,8 @@ export async function dodAnnouncements(db) {
   }).filter((r) => r.link);
   const result = {
     ok: items.length > 0,
-    source: "War.gov (Department of Defense) daily contract announcements",
+    ...(items.length ? {} : { error: "War.gov RSS returned no announcements." }),
+    source: SOURCE,
     asOf: new Date().toISOString(),
     latency: `Posted around 5 p.m. ET each business day for awards of $7.5 million or more, months before the same actions reach USAspending. Fetched in ${((Date.now() - t0) / 1000).toFixed(1)} s.`,
     items

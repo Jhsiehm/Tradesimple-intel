@@ -21,12 +21,12 @@ export type Contractor = {
   revenue: number | null; revenueFy: number | null; share: number | null; byYear: { fy: number; amount: number }[]; parents: number;
 };
 export type Board = {
-  ok: boolean; building?: boolean; source?: string; asOf?: string; latency?: string; progress?: { done: number; total: number };
+  ok: boolean; building?: boolean; error?: string; note?: string; source?: string; asOf?: string; latency?: string; progress?: { done: number; total: number; failed?: number };
   index?: { name: string; joined: number; constituents: number; fy: number | null; obligations: number };
   sectors?: { sector: string; obligations: number; names: number }[];
   items: Contractor[];
 };
-export type Dod = { ok: boolean; source?: string; asOf?: string; latency?: string; items: { id: string; title: string; link: string; published: string }[] };
+export type Dod = { ok: boolean; error?: string; note?: string; source?: string; asOf?: string; latency?: string; items: { id: string; title: string; link: string; published: string }[] };
 
 type Seat = { bioguide: string; name: string; chamber: string; state: string; district: string; party: string };
 
@@ -54,7 +54,7 @@ export function useContracts(scope: ContractScope, sort: ContractSort, days: num
   useEffect(() => {
     if (!active) return;
     let live = true;
-    setEmpty("Loading contract actions…");
+    setEmpty("Loading contract actions from USAspending… (can take up to a minute)");
     const q = new URLSearchParams({ sort, days: String(days) });
     if (scope.kind !== "all" && scope.value) q.set(scope.kind === "place" ? "place" : scope.kind, scope.value);
     api<Feed>(`/api/contracts/feed?${q}`)
@@ -63,7 +63,7 @@ export function useContracts(scope: ContractScope, sort: ContractSort, days: num
         setFeed(res);
         setEmpty(res.ok ? res.note || "No contract actions in this window." : res.error || "Contract feed failed.");
       })
-      .catch((err: Error) => live && setEmpty(err.message));
+      .catch((err: Error) => live && setEmpty(`Contract feed failed: ${err.message}`));
     return () => { live = false; };
   }, [active, scope.kind, scope.value, sort, days]);
 
@@ -74,10 +74,17 @@ export function useContracts(scope: ContractScope, sort: ContractSort, days: num
     const load = () => api<Board>("/api/contracts/board").then((res) => {
       if (!live) return;
       setBoard(res);
-      if (res.building) timer = window.setTimeout(load, 15000);
-    }).catch(() => null);
+      if (res.building) timer = window.setTimeout(load, 3000);
+      else if (res.error) timer = window.setTimeout(load, 30000);
+    }).catch((err: Error) => {
+      if (!live) return;
+      setBoard((prev) => ({ ...(prev || { items: [] }), ok: false, building: false, error: `Contractor board request failed: ${err.message}. Retrying in 10 s.` }));
+      timer = window.setTimeout(load, 10000);
+    });
     load();
-    api<Dod>("/api/contracts/dod").then((res) => live && setDod(res)).catch(() => null);
+    api<Dod>("/api/contracts/dod")
+      .then((res) => live && setDod(res))
+      .catch((err: Error) => live && setDod({ ok: false, error: `War.gov list request failed: ${err.message}`, items: [] }));
     return () => { live = false; window.clearTimeout(timer); };
   }, [active]);
 

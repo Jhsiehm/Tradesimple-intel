@@ -35,14 +35,45 @@ export function retryable(err) {
   return err.status === 429 || err.status >= 500;
 }
 
+/**
+ * At most `concurrency` jobs in flight, started at least `spacingMs` apart. Priority jobs jump the queue,
+ * so a user's request is not stuck behind a background warm.
+ */
+export function makeGate(concurrency, spacingMs) {
+  let active = 0;
+  let last = 0;
+  let timer = null;
+  const queue = [];
+  const pump = () => {
+    while (active < concurrency && queue.length) {
+      const wait = last + spacingMs - Date.now();
+      if (wait > 0) {
+        if (!timer) timer = setTimeout(() => { timer = null; pump(); }, wait);
+        return;
+      }
+      const job = queue.shift();
+      active += 1;
+      last = Date.now();
+      Promise.resolve().then(job.run).then(job.resolve, job.reject).finally(() => { active -= 1; pump(); });
+    }
+  };
+  return (run, { priority = false } = {}) => new Promise((resolve, reject) => {
+    queue[priority ? "unshift" : "push"]({ run, resolve, reject });
+    pump();
+  });
+}
+
+/** USAspending blocks a client's IP for a while after bursts of a few dozen requests per second. */
+export const usaspendingGate = makeGate(2, 300);
+
 /** fetchJson with retries. Errors carry a readable message naming the host and attempts. */
-export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, retries = 2 } = {}) {
+export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, retries = 2, gate = null, priority = false } = {}) {
   let last;
   let tried = 0;
   for (let attempt = 0; attempt <= retries; attempt++) {
     tried += 1;
     try {
-      return await fetchJson(url, options, timeoutMs);
+      return await (gate ? gate(() => fetchJson(url, options, timeoutMs), { priority }) : fetchJson(url, options, timeoutMs));
     } catch (err) {
       last = err;
       if (attempt === retries || !retryable(err)) break;

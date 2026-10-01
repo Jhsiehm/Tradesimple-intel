@@ -20,6 +20,10 @@ Every panel shows where its data came from, when it was fetched, and how late th
 | **Strait** | Taiwan Strait ships (AIS) and news, plus **Air**: live civil and military aircraft for every theater, including a worldwide military view, with flight routes. |
 | **Calendar** | Earnings, macro releases (CPI, FOMC, jobs), lobbying deadlines, and PAC filings. |
 
+### Today: this week in Congress trading
+
+The first visit (and every visit to the public demo) opens **Today** in the center stage: the newest disclosed trades in plain sentences, such as *Sen. X sold $50k–$100k NVDA · traded Sep 3, filed Sep 25 (22d)*, each with a **filing ↗** link to the source document. Four cards: latest filings (one row per report, with a count of the other trades in it), filings more than 45 days late, the biggest trades by the low end of the disclosed range, and the most-traded tickers by number of members. The window is by filed date: 7 days, widened to 14 or 30 when fewer than five members filed, and the header says which. Names open the member timeline, tickers open the chart. Open it with **Today** in the nav, key `0`, `#week`, or the command codes `WEEK` and `LEAD` (leaderboards). API: `/api/congress/feed` (pure `buildFeed` in `server/feed.mjs`; sentences in `shared/sentences.mjs`).
+
 ### Workflow features
 
 - **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `ALRT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), or `DES` (card). With nothing typed, it lists where you've been. `Alt+←` goes back.
@@ -37,6 +41,7 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 | Key | Action |
 | --- | --- |
+| `0` | Today: this week in Congress trading |
 | `1`–`6` | Switch sections |
 | `⌘K` / `Ctrl+K` / `:` | Command line |
 | `Alt+←` | Back |
@@ -146,6 +151,7 @@ server/        Node HTTP API on :8787, no framework
   index.mjs    routes
   congress.mjs, roster.mjs        votes, bills, members, committees
   timeline.mjs, alerts.mjs        member timeline index, alerts
+  feed.mjs                        landing feed (this week in Congress trading)
   positions.mjs, corporate.mjs    PTRs, Form 4, 13F, FINRA, LDA, FEC
   contracts.mjs                   USAspending contract feed, contractor board, DoD daily index
   chart.mjs, globals.mjs, instruments.mjs, supply.mjs, macro.mjs   market data

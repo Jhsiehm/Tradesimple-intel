@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchJson, fetchJsonRetry } from "./http.mjs";
+import { fetchJson, fetchJsonRetry, usaspendingGate } from "./http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
 import { roster } from "./roster.mjs";
 
@@ -405,7 +405,7 @@ export async function contractsFor(db, ticker, { cachedOnly = false } = {}) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  }, { timeoutMs: 45000, retries: 2 }).catch((err) => { failures.push(err.message); return null; });
+  }, { timeoutMs: 45000, retries: 2, gate: usaspendingGate }).catch((err) => { failures.push(err.message); return null; });
   const [top, overTime, revenue] = await Promise.all([
     usa("spending_by_award", { filters, fields: ["Award ID", "Recipient Name", "Award Amount", "Description", "Start Date", "Awarding Agency", "Awarding Sub Agency", "generated_internal_id"], limit: 25, page: 1, sort: "Award Amount", order: "desc" }),
     usa("spending_over_time", { group: "fiscal_year", filters }),

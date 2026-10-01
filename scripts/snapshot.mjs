@@ -2,7 +2,8 @@
 /**
  * Freeze a running API into static JSON for the zero-key demo.
  *   node server/index.mjs &   # with your keys in .env.local
- *   node scripts/snapshot.mjs [--base http://127.0.0.1:8787] [--members 30]
+ *   node scripts/snapshot.mjs [--base http://127.0.0.1:8787] [--members 40]
+ * Members: the top N traders plus everyone named on the landing feed, so every feed name opens a timeline.
  * Writes demo/snapshot/*.json and demo/snapshot/manifest.json. Aborts if any .env.local value appears in a response.
  */
 import fs from "node:fs";
@@ -16,7 +17,7 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 const BASE = arg("base", "http://127.0.0.1:8787");
-const MEMBERS = Number(arg("members", 30));
+const MEMBERS = Number(arg("members", 40));
 const OUT = path.join(root, "demo", "snapshot");
 
 const secrets = (() => {
@@ -66,7 +67,8 @@ const fixed = [
   "/api/markets/positions", "/api/markets/supply", "/api/markets/board", "/api/markets/globals",
   "/api/news", "/api/strait/theaters", "/api/earth/imagery", "/api/earth/lanes",
   "/api/macro/strip", "/api/fx/board", "/api/crypto/board", "/api/calendar/macro?back=0&ahead=14",
-  "/api/calendar/earnings", "/api/calendar/lobbying", "/api/calendar/pacs", "/api/alerts?late=all"
+  "/api/calendar/earnings", "/api/calendar/lobbying", "/api/calendar/pacs", "/api/alerts?late=all",
+  "/api/congress/feed"
 ];
 
 console.log(`snapshot from ${BASE}`);
@@ -91,7 +93,10 @@ await pool(roster, 4, (m) => grab(`/api/congress/member/${m.bioguide}?chamber=${
 const trades = store.get("/api/markets/politicians")?.items || [];
 const counts = new Map();
 for (const t of trades) if (t.bioguide) counts.set(t.bioguide, (counts.get(t.bioguide) || 0) + 1);
-const members = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, MEMBERS);
+const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, MEMBERS);
+const feed = store.get("/api/congress/feed") || {};
+const featured = [feed.latest, feed.late, feed.biggest].flatMap((list) => (list || []).slice(0, 15)).map((t) => t.bioguide).filter(Boolean);
+const members = [...top, ...[...new Set(featured)].filter((id) => !top.some(([t]) => t === id)).map((id) => [id, counts.get(id) || 0])];
 await pool(members, 2, async ([id]) => {
   await grab(`/api/congress/member/${id}?chamber=${seatOf.get(id) || "house"}`);
   await grab(`/api/congress/member/${id}/trades`);
