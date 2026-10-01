@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchJson } from "./http.mjs";
+import { fetchJson, fetchJsonRetry } from "./http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
 import { roster } from "./roster.mjs";
 
@@ -389,10 +389,10 @@ export async function pacFor(db, symbol) {
 
 /* ---------- Federal contracts (USAspending) ---------- */
 
-export async function contractsFor(db, ticker) {
+export async function contractsFor(db, ticker, { cachedOnly = false } = {}) {
   const key = `usa:hist:v2:${ticker.symbol}`;
   const hit = readCache(db, key);
-  if (hit) return hit;
+  if (hit || cachedOnly) return hit;
   const ueis = [...new Set((ticker.contractParents || []).map((p) => p.uei).filter(Boolean))];
   if (!ueis.length) {
     return { ok: true, source: "USAspending.gov", asOf: new Date().toISOString(), note: `${ticker.symbol} has no USAspending parent recipient in data/tickers.json.`, awards: [], byYear: [], parents: [] };
@@ -400,20 +400,23 @@ export async function contractsFor(db, ticker) {
   const end = new Date().toISOString().slice(0, 10);
   const start = new Date(Date.now() - 5 * 365 * DAY).toISOString().slice(0, 10);
   const filters = { recipient_search_text: ueis, award_type_codes: ["A", "B", "C", "D"], time_period: [{ start_date: start, end_date: end }] };
+  const failures = [];
+  const usa = (pathname, body) => fetchJsonRetry(`https://api.usaspending.gov/api/v2/search/${pathname}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }, { timeoutMs: 45000, retries: 2 }).catch((err) => { failures.push(err.message); return null; });
   const [top, overTime, revenue] = await Promise.all([
-    fetchJson("https://api.usaspending.gov/api/v2/search/spending_by_award/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filters, fields: ["Award ID", "Recipient Name", "Award Amount", "Description", "Start Date", "Awarding Agency", "Awarding Sub Agency", "generated_internal_id"], limit: 25, page: 1, sort: "Award Amount", order: "desc" })
-    }, 60000).catch(() => ({ results: [] })),
-    fetchJson("https://api.usaspending.gov/api/v2/search/spending_over_time/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "fiscal_year", filters })
-    }, 60000).catch(() => ({ results: [] })),
+    usa("spending_by_award", { filters, fields: ["Award ID", "Recipient Name", "Award Amount", "Description", "Start Date", "Awarding Agency", "Awarding Sub Agency", "generated_internal_id"], limit: 25, page: 1, sort: "Award Amount", order: "desc" }),
+    usa("spending_over_time", { group: "fiscal_year", filters }),
     secRevenue(db, ticker.cik).catch(() => null)
   ]);
-  const awards = (top.results || []).map((a) => ({
+  if (!overTime) {
+    const err = new Error(`USAspending obligations for ${ticker.symbol}: ${failures.join("; ")}`);
+    err.status = 503;
+    throw err;
+  }
+  const awards = (top?.results || []).map((a) => ({
     id: `award:${a.generated_internal_id || a["Award ID"]}`,
     award: a["Award ID"],
     recipient: a["Recipient Name"],
@@ -436,9 +439,10 @@ export async function contractsFor(db, ticker) {
     parents: ticker.contractParents,
     basis: ticker.joinBasis?.contracts || "",
     revenue,
-    dependence: lastFull && revenue?.value ? { fy: lastFull.fy, obligations: lastFull.amount, revenue: revenue.value, revenueFy: revenue.fy, share: lastFull.amount / revenue.value } : null
+    dependence: lastFull && revenue?.value ? { fy: lastFull.fy, obligations: lastFull.amount, revenue: revenue.value, revenueFy: revenue.fy, share: lastFull.amount / revenue.value } : null,
+    ...(top ? {} : { note: `Largest awards unavailable: ${failures.join("; ")}` })
   };
-  writeCache(db, key, result, 12 * HOUR);
+  writeCache(db, key, result, top ? DAY : HOUR);
   return result;
 }
 

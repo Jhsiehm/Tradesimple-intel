@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, when } from "../lib/api";
+import { api, DEMO, when } from "../lib/api";
+import { downloadMemberCard, memberShareUrl, PUBLIC_URL } from "../lib/share";
 
 type Near = { id: string; date: string; title: string; lane: string; laneName: string; link: string; gap: number };
 type Trade = {
@@ -50,6 +51,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   const [avail, setAvail] = useState(0);
   const [tip, setTip] = useState<Tip>(null);
   const [copied, setCopied] = useState(false);
+  const [drawing, setDrawing] = useState("");
   const wrap = useRef<HTMLDivElement | null>(null);
   const [plot, setPlot] = useState<HTMLDivElement | null>(null);
 
@@ -166,8 +168,13 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   };
 
   const share = () => {
-    const url = `${location.origin}${location.pathname}#timeline/${m.bioguide}`;
-    void navigator.clipboard?.writeText(url).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); });
+    void navigator.clipboard?.writeText(memberShareUrl(m.bioguide, m.name)).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); });
+  };
+  const shareImage = () => {
+    setDrawing("Drawing…");
+    downloadMemberCard(res)
+      .then(() => setDrawing(""))
+      .catch((err: Error) => { setDrawing(err.message); window.setTimeout(() => setDrawing(""), 2400); });
   };
 
   return (
@@ -184,7 +191,8 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
             <button key={s} className={span === s ? "on" : ""} onClick={() => setSpan(s)}>{s.toUpperCase()}</button>
           ))}
           <button onClick={() => onFollow(`member:${m.bioguide}`)}>Card</button>
-          <button onClick={share}>{copied ? "Copied" : "Copy link"}</button>
+          <button onClick={share} title={PUBLIC_URL && DEMO ? "Link to this member's share page (with a preview image)" : "Link to this timeline"}>{copied ? "Copied" : "Copy link"}</button>
+          <button onClick={shareImage} disabled={Boolean(drawing)} title="Download a 1200×630 PNG summary card of this timeline">{drawing || "Share image"}</button>
           <button className="tl-close" onClick={onClose} aria-label="Close timeline">×</button>
         </div>
         <p className="tl-stats">

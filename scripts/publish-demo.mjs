@@ -27,7 +27,7 @@ const BRANCH = arg("branch", "gh-pages");
 const OUT = path.join(root, "dist-demo");
 
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { cwd: root, stdio: "inherit", ...opts });
-const git = (args, opts = {}) => execFileSync("git", args, { cwd: root, encoding: "utf8", ...opts }).trim();
+const git = (args, opts = {}) => String(execFileSync("git", args, { cwd: root, encoding: "utf8", ...opts }) ?? "").trim();
 
 if (flag("snapshot")) run(process.execPath, ["scripts/snapshot.mjs", ...(arg("members") ? ["--members", arg("members")] : [])]);
 const manifestFile = path.join(root, "demo", "snapshot", "manifest.json");
