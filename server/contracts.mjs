@@ -18,6 +18,17 @@ function parentIndex(db) {
   return map;
 }
 
+/** Unique list keys. One award has many modifications in a window, so the award id alone repeats. */
+export function keyed(items) {
+  const seen = new Map();
+  return items.map((a) => {
+    const base = `award:${(a.link || "").split("/award/")[1] || a.award}:${a.mod || ""}:${a.date || ""}`;
+    const n = (seen.get(base) || 0) + 1;
+    seen.set(base, n);
+    return { ...a, id: n === 1 ? base : `${base}:${n}` };
+  });
+}
+
 /** "TX-12" → USAspending place-of-performance filter. At-large seats use the whole state. */
 function placeFilter(code) {
   const m = /^([A-Z]{2})(?:-(\d{1,2}|AL))?$/.exec(String(code || "").toUpperCase());
@@ -66,7 +77,7 @@ export async function contractFeed(db, params) {
   filters.time_period = [{ start_date: start.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10) }];
   const key = `usa:feed:v1:${JSON.stringify([filters.recipient_search_text, filters.place_of_performance_locations, days, sort])}`;
   const hit = readCache(db, key);
-  if (hit) return { ...hit, scope };
+  if (hit) return { ...hit, items: keyed(hit.items || []), scope };
   const t0 = Date.now();
   let body;
   try {
@@ -77,16 +88,15 @@ export async function contractFeed(db, params) {
     }, { timeoutMs: 45000, retries: 1, gate: usaspendingGate, priority: true });
   } catch (err) {
     const stale = readStale(db, key);
-    if (stale) return { ...stale.value, scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
+    if (stale) return { ...stale.value, items: keyed(stale.value.items || []), scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
     return { ok: false, source: "USAspending.gov prime contract transactions", asOf: new Date().toISOString(), latency: LATENCY, error: `Contract feed: ${err.message}. Try again, or narrow the window.`, scope, items: [] };
   }
   if (body?.detail) return { ok: false, error: String(body.detail).slice(0, 200), items: [] };
   const parents = parentIndex(db);
-  const items = (body.results || []).map((r) => {
+  const items = keyed((body.results || []).map((r) => {
     const pop = r["Primary Place of Performance"] || {};
     const district = pop.state_code && pop.congressional_code ? `${pop.state_code}-${pop.congressional_code}` : pop.state_code || "";
     return {
-      id: `award:${r.generated_internal_id || r["Award ID"]}:${r.internal_id || ""}`,
       award: r["Award ID"],
       recipient: r["Recipient Name"] || "",
       uei: r["Recipient UEI"] || "",
@@ -102,7 +112,7 @@ export async function contractFeed(db, params) {
       district,
       link: r.generated_internal_id ? `https://www.usaspending.gov/award/${r.generated_internal_id}` : ""
     };
-  });
+  }));
   const result = {
     ok: true,
     source: "USAspending.gov prime contract transactions",

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boardOrder, boardRow, composeBoard } from "../server/contracts.mjs";
+import { boardOrder, boardRow, composeBoard, keyed } from "../server/contracts.mjs";
 import { makeGate, retryable, retryDelay } from "../server/http.mjs";
 
 const t = (symbol, sector = "Industrials") => ({ symbol, name: `${symbol} Inc`, sector, industry: "", contractParents: [{ name: symbol, uei: `UEI${symbol}` }] });
@@ -37,6 +37,17 @@ test("partial board reports progress, ranks by obligations, and names failures",
   assert.match(b.note, /1 contractor failed .*GD/);
   assert.match(b.latency, /90 days/);
   assert.ok(b.source && b.asOf);
+});
+
+test("feed rows get unique keys when one award has several modifications in the window", () => {
+  const link = "https://www.usaspending.gov/award/CONT_AWD_693KA825C00011_6920_-NONE-_-NONE-";
+  const ids = keyed([
+    { award: "693KA825C00011", link, mod: "P00009", date: "2026-09-22" },
+    { award: "693KA825C00011", link, mod: "P00008", date: "2026-09-01" },
+    { award: "693KA825C00011", link, mod: "P00008", date: "2026-09-01" }
+  ]).map((r) => r.id);
+  assert.equal(new Set(ids).size, 3);
+  assert.equal(ids[0], "award:CONT_AWD_693KA825C00011_6920_-NONE-_-NONE-:P00009:2026-09-22");
 });
 
 test("gate caps concurrency, spaces starts, and lets priority jobs jump the queue", async () => {
