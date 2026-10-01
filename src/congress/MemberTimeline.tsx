@@ -47,6 +47,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   const [res, setRes] = useState<TimelineRes | null>(null);
   const [span, setSpan] = useState<Span>("trades");
   const [width, setWidth] = useState(900);
+  const [avail, setAvail] = useState(0);
   const [tip, setTip] = useState<Tip>(null);
   const [copied, setCopied] = useState(false);
   const wrap = useRef<HTMLDivElement | null>(null);
@@ -71,7 +72,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   useEffect(() => {
     if (!plot) return;
     wrap.current = plot;
-    const fit = () => setWidth(Math.max(340, Math.floor(plot.clientWidth)));
+    const fit = () => { setWidth(Math.max(340, Math.floor(plot.clientWidth))); setAvail(Math.floor(plot.clientHeight)); };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(plot);
@@ -105,16 +106,35 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
       months.push({ iso, label });
       cursor.setUTCMonth(m + 1);
     }
-    const slot = new Map<string, number>();
-    const stacked = trades.map((tr) => {
-      const key = `${tr.traded}:${tr.side === "sell" ? "s" : "b"}`;
-      const n = slot.get(key) || 0;
-      slot.set(key, n + 1);
-      return { ...tr, slot: n };
+    const laneRows = Math.max(1, lanes.length);
+    const tradeH = Math.max(TRADE_H, Math.min(320, avail - 6 - AXIS_H - laneRows * LANE_H - VOTE_H - 16));
+    const step = 10;
+    const maxLevel = Math.max(3, Math.floor((tradeH / 2 - 20) / step));
+    const levels = { b: [] as number[], s: [] as number[] };
+    const marks = new Map<string, { id: string; box: [number, number] }[]>();
+    const placed = [...trades].sort((a, b) => t(a.traded) - t(b.traded)).map((tr) => {
+      const side = tr.side === "sell" ? "s" : "b";
+      const cx = x(tr.traded);
+      const row = levels[side];
+      let slot = row.findIndex((last) => cx - last >= 12);
+      if (slot < 0) slot = row.length <= maxLevel ? row.length : row.indexOf(Math.min(...row));
+      row[slot] = cx;
+      const key = `${side}${slot}`;
+      const r = radius(tr.amountLow || 0);
+      marks.set(key, [...(marks.get(key) || []), { id: tr.id, box: [cx - r, cx + r] }]);
+      return { ...tr, slot, key };
+    });
+    const stacked = placed.map((tr) => {
+      const lx = (tr.filed ? x(tr.filed) : x(tr.traded)) + 4;
+      const box: [number, number] = [lx, lx + tr.symbol.length * 6.2 + 6];
+      const taken = marks.get(tr.key) || [];
+      const label = !taken.some((o) => o.id !== tr.id && box[0] < o.box[1] && box[1] > o.box[0]);
+      if (label) taken.push({ id: `${tr.id}:label`, box });
+      return { ...tr, label };
     });
     const preCongress = start < t(CONGRESS_START) ? x(CONGRESS_START) : 0;
-    return { x, trades: stacked, lanes, votes, months, plotW, labelW, narrow: width < 640, preCongress, dense: trades.length > 40 };
-  }, [res, span, width]);
+    return { x, trades: stacked, lanes, laneRows, votes, months, plotW, labelW, narrow: width < 640, preCongress, tradeH, step };
+  }, [res, span, width, avail]);
 
   if (!res) return <div className="board timeline"><p className="stage-loading">Loading timeline…</p></div>;
   if (!res.ok || !res.member || !view) {
@@ -131,10 +151,11 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   const lags = view.trades.map((tr) => tr.lag).filter((v): v is number => v != null).sort((a, b) => a - b);
   const medianLag = lags.length ? lags[Math.floor(lags.length / 2)] : null;
   const missed = view.votes.filter((v) => v.vote === "Not voting").length;
-  const laneTop = AXIS_H + TRADE_H;
-  const voteTop = laneTop + view.lanes.length * LANE_H + 8;
+  const laneTop = AXIS_H + view.tradeH;
+  const voteTop = laneTop + view.laneRows * LANE_H + 8;
   const height = voteTop + VOTE_H + 8;
-  const tradeMid = AXIS_H + TRADE_H / 2;
+  const tradeMid = AXIS_H + view.tradeH / 2;
+  const hasLanes = (res.committees || []).length > 0;
   const cov = res.coverage;
   const px = res.proximity;
 
@@ -168,8 +189,12 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
         </div>
         <p className="tl-stats">
           <b>{view.trades.length}</b> disclosed trades
-          <i>·</i><b className={near.length ? "amber" : ""}>{near.length}</b> within {res.nearDays} days of a hearing on their committees
-          {px && px.dayShare != null ? (
+          {hasLanes ? (
+            <><i>·</i><b className={near.length ? "amber" : ""}>{near.length}</b> within {res.nearDays} days of a hearing on their committees</>
+          ) : (
+            <><i>·</i>no current committee assignments, so no hearing comparison</>
+          )}
+          {hasLanes && px && px.dayShare != null ? (
             <span
               className="tl-baseline"
               title={`Since ${px.from}: ${px.nearTradeDays} of ${px.tradeDays} trading days were within ${res.nearDays} days of a hearing on their committees, against ${pct(px.baseline)} of all calendar days. Higher than the baseline means trades cluster near hearings more than chance; close to it means the committees simply meet often.`}
@@ -219,7 +244,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
           {view.trades.map((tr) => {
             const cx = view.x(tr.traded);
             const up = tr.side !== "sell";
-            const stack = Math.min(tr.slot, 3) * 9;
+            const stack = tr.slot * view.step;
             const cy = up ? tradeMid - 10 - stack : tradeMid + 10 + stack;
             const r = radius(tr.amountLow || 0);
             const fx = tr.filed ? view.x(tr.filed) : cx;
@@ -239,7 +264,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
                 <line x1={cx} x2={fx} y1={cy} y2={cy} className="tl-tail" />
                 <line x1={fx} x2={fx} y1={cy - 3} y2={cy + 3} className="tl-tail" />
                 <path d={up ? `M${cx},${cy - r} L${cx + r},${cy + r * 0.8} L${cx - r},${cy + r * 0.8} Z` : `M${cx},${cy + r} L${cx + r},${cy - r * 0.8} L${cx - r},${cy - r * 0.8} Z`} />
-                {!view.dense || tr.slot === 0 && r >= 5 ? <text x={fx + 4} y={cy + 3} className="tl-sym">{tr.symbol}</text> : null}
+                {tr.label ? <text x={fx + 4} y={cy + 3} className="tl-sym">{tr.symbol}</text> : null}
               </g>
             );
           })}

@@ -24,6 +24,7 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [ships, setShips] = useState<Ship[]>([]);
   const [news, setNews] = useState<Article[]>([]);
+  const [newsSource, setNewsSource] = useState("");
   const [empty, setEmpty] = useState("Loading theater…");
   const [aisNote, setAisNote] = useState("");
 
@@ -41,7 +42,7 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
       return;
     }
     api<{ items: Article[]; source: string }>("/api/strait/news")
-      .then((res) => setNews(res.items || []))
+      .then((res) => { setNews(res.items || []); setNewsSource(res.source || ""); })
       .catch(() => setNews([]));
     const pull = () => {
       api<{ ok: boolean; missing?: string; items: Ship[] }>("/api/strait/ais")
@@ -49,7 +50,7 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
           if (res.missing) {
             setAisNote(`Set ${res.missing} for live ship positions.`);
             setShips([]);
-            setEmpty(`Set ${res.missing} for live ship positions. News is on the status line.`);
+            setEmpty(`Set ${res.missing} for live ship positions. Headlines are under News.`);
           } else {
             setShips(res.items || []);
             setEmpty(res.items?.length ? "" : "No AIS positions in the strait yet.");
@@ -168,11 +169,17 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
         asOf: air ? `${when(air.asOf)} UTC` : "",
         latency: airError || (air ? `${planes.length} aircraft${milOnly ? " (military filter)" : ""} · ${milCount} military here · ${air.milWorld} military worldwide · ${air.latency}` : "Loading aircraft…")
       }
+    : theater?.live && feed === "news"
+    ? {
+        source: newsSource || "Strait headlines",
+        asOf: orderedNews[0] ? when(orderedNews[0].seen) : "",
+        latency: news.length ? `${news.length} headlines · publisher time, usually minutes old` : "No recent strait headlines."
+      }
     : theater?.live
     ? {
-        source: news.length ? "GDELT" : "Taiwan Strait",
-        asOf: orderedNews[0] ? when(orderedNews[0].seen) : "",
-        latency: [aisNote, ...orderedNews.slice(0, 3).map((n) => n.title)].filter(Boolean).join("  ·  ")
+        source: "AISStream",
+        asOf: orderedShips[0] ? when(orderedShips[0].seen) : "",
+        latency: aisNote || `${ships.length} vessels · positions update while the server holds the websocket`
       }
     : {
         source: theater?.name || "Theater",

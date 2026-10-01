@@ -107,7 +107,11 @@ export function App() {
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
-    const onHash = () => setTimelineId(location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null);
+    const onHash = () => {
+      const id = location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null;
+      if (id) { setSection("congress"); setCalendarTab(null); }
+      setTimelineId(id);
+    };
     window.addEventListener("hashchange", onHash);
     return () => { window.clearInterval(timer); window.removeEventListener("hashchange", onHash); };
   }, []);
@@ -292,6 +296,7 @@ export function App() {
     if (!/^[A-Z]\d{6}$/.test(bioguide)) return;
     setCalendarTab(null);
     if (phone) cards.closeAll();
+    setSection("congress");
     setTimelineId(bioguide);
     history.replaceState(null, "", `#timeline/${bioguide}`);
   }
@@ -399,13 +404,6 @@ export function App() {
           <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar}>Calendar</button>
         </nav>
         <div className="tools">
-          {section === "strait" ? (
-            <label className="theater">
-              <select value={theaterId} onChange={(e) => { setTheaterId(e.target.value); setSelectedId(null); }} aria-label="Theater">
-                {strait.theaters.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </label>
-          ) : null}
           <button className="go-btn panels-btn" onClick={() => setCmdOpen(true)} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes">GO <kbd>⌘K</kbd></button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
           <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) setPanelsOpen(false); }} onFollow={follow} />
@@ -475,6 +473,13 @@ export function App() {
                 days={contractDays}
                 onDays={setContractDays}
               />
+            ) : null}
+            {barFor === "strait" ? (
+              <label className="theater">
+                <select value={theaterId} onChange={(e) => { setTheaterId(e.target.value); setSelectedId(null); }} aria-label="Theater">
+                  {strait.theaters.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </label>
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
             {showMap && !calendarTab && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
