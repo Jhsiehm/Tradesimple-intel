@@ -97,6 +97,7 @@ export function MapFrame({
       map.addSource("base", { type: "geojson", data: EMPTY });
       map.addLayer({ id: "base-fill", type: "fill", source: "base", paint: { "fill-color": "#131b22", "fill-opacity": 0.8 } });
       map.addLayer({ id: "base-line", type: "line", source: "base", paint: { "line-color": "#2f3d48", "line-width": 0.6 } });
+      map.addLayer({ id: "base-focus", type: "line", source: "base", filter: ["==", ["get", "vote"], "Focus"], paint: { "line-color": "#f3e2ae", "line-width": 2.2 } });
       map.addSource("marks", { type: "geojson", data: EMPTY });
       map.addLayer({
         id: "marks",
@@ -266,6 +267,8 @@ export function MapFrame({
         "Nay", "#7a3030",
         "Split", "#6a5a28",
         "Present", "#3d4a38",
+        "Focus", "#e2b657",
+        "Site", "#3f7287",
         "#131b22"
       ]);
     } else {

@@ -90,7 +90,7 @@ export function App() {
   const congress = useCongress(chamber, mode, query, section === "congress" ? selectedId : null, party);
   const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party);
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
-  const districts = useDistricts(query, section === "districts" ? selectedId : null);
+  const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster);
   const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil);
 
   const contracts = useContracts(contractScope, contractSort, contractDays, query, section === "contracts" ? selectedId : null, section === "contracts", congress.roster);
@@ -358,6 +358,7 @@ export function App() {
     } else if (hit.kind === "site") {
       setSection("districts");
       setSelectedId(hit.id);
+      rail.show();
     } else if (/^[A-Za-z]\d{6}$/.test(hit.id)) {
       openMember(hit.id, hit.chamber);
     }
@@ -558,6 +559,7 @@ export function App() {
                   dailyTiles={time.dailyLayer?.tiles}
                   flash={newsGlobe ? time.globe.flash : null}
                   onSelect={(id) => {
+                    rail.show();
                     if (section === "congress") openSeat(id);
                     else if (id.startsWith("place:")) setDossier(time.globe.placeModel(id));
                     else setSelectedId(id);

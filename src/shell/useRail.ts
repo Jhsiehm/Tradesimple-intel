@@ -22,6 +22,7 @@ export function useRail() {
   }, [rail]);
 
   const toggle = () => setRail((r) => ({ ...r, open: !r.open }));
+  const show = () => setRail((r) => (r.open ? r : { ...r, open: true }));
   const reset = () => setRail(DEFAULT);
 
   function drag(event: ReactPointerEvent) {
@@ -43,5 +44,5 @@ export function useRail() {
     window.addEventListener("pointerup", up);
   }
 
-  return { rail, toggle, reset, drag, columns: `minmax(0, 1fr) 8px ${rail.open ? rail.w : 0}px` };
+  return { rail, toggle, show, reset, drag, columns: `minmax(0, 1fr) 8px ${rail.open ? rail.w : 0}px` };
 }
