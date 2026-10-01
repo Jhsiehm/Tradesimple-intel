@@ -1,5 +1,11 @@
 # TradeSimple Intel
 
+
+
+
+<img width="324" height="316" alt="image" src="https://github.com/user-attachments/assets/ef494081-e109-4578-b410-b0a5e94b6c5d" />
+
+
 A one-screen research terminal that joins **what Congress is doing** with **what markets are doing**: roll-call votes, bills, committees, and member stock trades next to insider filings, fund holdings, lobbying, PAC money, global markets, news, X, ships, aircraft, and live satellite imagery.
 
 It is a research tool only. It does not connect to a brokerage and never places orders.
