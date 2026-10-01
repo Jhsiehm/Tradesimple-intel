@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { districtCode, ldaMatches, norm, pacsByOrg } from "../scripts/joins-match.mjs";
+import { contractParentMatch, districtCode, ldaMatches, norm, pacsByOrg } from "../scripts/joins-match.mjs";
 import { matchSeats } from "../server/congress.mjs";
 import { coverage } from "../server/positions.mjs";
 
@@ -69,4 +69,14 @@ test("coverage separates 'filed nothing' from 'never scanned'", () => {
   assert.equal(coverage({ items: [] }, "AMD", joined, "Form 4 scan").scanned, false, "a failed or old-format scan cannot vouch for zero");
   assert.match(coverage(scan, "A", { symbol: "A", core: false }, "Form 4 scan").note, /quotes-only/);
   assert.match(coverage(scan, "ZZZZ", undefined, "Form 4 scan").note, /not in data\/tickers\.json/);
+});
+
+test("contractParentMatch: exact parent names, or a division suffix on multi-word names only", () => {
+  assert.equal(contractParentMatch("LOCKHEED MARTIN", "LOCKHEED MARTIN CORPORATION"), true);
+  assert.equal(contractParentMatch("LOCKHEED MARTIN", "LOCKHEED MARTIN SPACE"), true);
+  assert.equal(contractParentMatch("APPLE", "APPLE INC."), true);
+  assert.equal(contractParentMatch("APPLE", "APPLETON MARINE INC"), false);
+  assert.equal(contractParentMatch("APPLE", "APPLE TEN ALABAMA SERVICES"), false);
+  assert.equal(contractParentMatch("APPLE", "APPLE SERVICES"), false);
+  assert.equal(contractParentMatch("GENERAL DYNAMICS", "GENERAL DYNAMICS LAND SYSTEMS"), false);
 });

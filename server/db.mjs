@@ -8,6 +8,7 @@ export function openDb(root) {
   extras = new Map(JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8")).map((row) => [row.symbol, row]));
   const file = process.env.INTEL_CACHE || path.join(root, "data", "cache.sqlite");
   const db = new DatabaseSync(file);
+  db.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;");
   db.exec(`
     CREATE TABLE IF NOT EXISTS cache (
       key TEXT PRIMARY KEY,
@@ -91,7 +92,8 @@ function hydrate(row) {
     index: extras.get(row.symbol)?.index || [],
     sector: extras.get(row.symbol)?.sector || "",
     industry: extras.get(row.symbol)?.industry || "",
-    joinBasis: extras.get(row.symbol)?.joinBasis || null
+    joinBasis: extras.get(row.symbol)?.joinBasis || null,
+    contractParents: extras.get(row.symbol)?.contractParents || []
   };
 }
 

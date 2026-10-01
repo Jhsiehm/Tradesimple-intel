@@ -51,7 +51,8 @@ test("GET /api/tickers exposes join flags and basis", async () => {
   assert.deepEqual(amd.districts, ["CA-17"]);
   assert.equal(amd.joinBasis.auto, true);
   const aapl = body.items.find((t) => t.symbol === "AAPL");
-  assert.equal(aapl.joinBasis, null, "hand-curated rows have no derived basis");
+  assert.equal(aapl.joinBasis?.auto, undefined, "hand-curated rows are not marked derived");
+  assert.match(aapl.joinBasis.contracts, /No USAspending parent/);
 });
 
 test("GET /api/search matches tickers by symbol and name", async () => {

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import type { Earth, EarthSettings, MapFlash, Marker } from "../types";
 
 type Props = {
@@ -177,12 +176,18 @@ export function MapFrame({
     map.setPaintProperty("base-fill", "fill-opacity", imagery ? 0.42 : 0.8);
     map.setPaintProperty("base-line", "line-color", imagery ? "#d8c690" : "#2f3d48");
     map.setPaintProperty("base-line", "line-opacity", imagery ? 0.55 : 1);
-    if (map.getSource("lanes") && earth.lanes) (map.getSource("lanes") as maplibregl.GeoJSONSource).setData(earth.lanes);
-    if (map.getSource("chokepoints") && earth.chokepoints) (map.getSource("chokepoints") as maplibregl.GeoJSONSource).setData(earth.chokepoints);
     ["lanes-minor", "lanes-middle", "lanes-major", "choke-dot", "choke-label"].forEach((id) => {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes ? "visible" : "none");
     });
   }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !earth) return;
+    addEarth(map, earth);
+    if (earth.lanes) (map.getSource("lanes") as maplibregl.GeoJSONSource).setData(earth.lanes);
+    if (earth.chokepoints) (map.getSource("chokepoints") as maplibregl.GeoJSONSource).setData(earth.chokepoints);
+  }, [ready, earth]);
 
   const liveKey = (live || []).map((l) => l.tiles[0]).join("|");
   useEffect(() => {
@@ -202,7 +207,7 @@ export function MapFrame({
         return;
       }
       map.addSource(id, { type: "raster", tiles: layer.tiles, tileSize: 256, maxzoom: layer.maxzoom, attribution: "NASA EOSDIS GIBS · NOAA · JMA" });
-      map.addLayer({ id, type: "raster", source: id, layout: { visibility: settings.base === "live" ? "visible" : "none" }, paint: { "raster-fade-duration": 0 } }, "base-fill");
+      map.addLayer({ id, type: "raster", source: id, layout: { visibility: settings.base === "live" ? "visible" : "none" }, paint: { "raster-fade-duration": 0 } }, "hillshade");
     });
     // Keys stand in for tile arrays rebuilt on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,10 +235,11 @@ export function MapFrame({
     const map = mapRef.current;
     if (!map || !ready || !earth) return;
     addEarth(map, earth);
-    map.setProjection({ type: settings.view === "2d" ? "mercator" : "globe" });
+    const relief = settings.view === "3d";
+    // MapLibre cannot fog terrain on the globe projection, so relief runs on mercator.
+    map.setProjection({ type: settings.view === "globe" ? "globe" : "mercator" });
     if (settings.view === "2d") map.setSky({ "atmosphere-blend": 0 } as unknown as Sky);
     else map.setSky(SKY);
-    const relief = settings.view === "3d";
     map.setTerrain(relief ? { source: "dem", exaggeration: 1.6 } : null);
     map.setLayoutProperty("hillshade", "visibility", relief ? "visible" : "none");
     map.easeTo({

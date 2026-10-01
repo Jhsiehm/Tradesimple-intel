@@ -14,8 +14,14 @@ export type TimelineRes = {
   member?: { bioguide: string; name: string; party: string; state: string; district: string; chamber: string };
   range?: { from: string; to: string };
   trades?: Trade[]; committees?: Lane[]; votes?: Vote[]; nearDays?: number;
+  proximity?: { from: string; trades: number; near: number; share: number | null; tradeDays: number; nearTradeDays: number; dayShare: number | null; baseline: number } | null;
   building?: boolean;
-  coverage?: { meetings: { done: number; total: number }; votes: { done: number; total: number }; builtAt: string | null };
+  coverage?: {
+    trades: { from: string; building: boolean; parsed: number; total: number; paper: number; failed: number; notes: string[] } | null;
+    meetings: { done: number; total: number };
+    votes: { done: number; total: number };
+    builtAt: string | null;
+  };
   sources?: { label: string; source: string; latency: string }[];
   asOf?: string;
 };
@@ -33,6 +39,7 @@ const PAD_R = 18;
 const CONGRESS_START = "2025-01-03";
 
 const t = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+const pct = (v: number) => `${Math.round(v * 100)}%`;
 const radius = (low: number) => (low >= 1_000_000 ? 8 : low >= 250_000 ? 7 : low >= 100_000 ? 6 : low >= 50_000 ? 5 : low >= 15_000 ? 4 : 3);
 
 /** Center-stage board: one member's disclosed trades against their committee hearings and roll calls. */
@@ -129,6 +136,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   const height = voteTop + VOTE_H + 8;
   const tradeMid = AXIS_H + TRADE_H / 2;
   const cov = res.coverage;
+  const px = res.proximity;
 
   const show = (e: React.MouseEvent, lines: string[]) => {
     const box = wrap.current?.getBoundingClientRect();
@@ -161,6 +169,14 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
         <p className="tl-stats">
           <b>{view.trades.length}</b> disclosed trades
           <i>·</i><b className={near.length ? "amber" : ""}>{near.length}</b> within {res.nearDays} days of a hearing on their committees
+          {px && px.dayShare != null ? (
+            <span
+              className="tl-baseline"
+              title={`Since ${px.from}: ${px.nearTradeDays} of ${px.tradeDays} trading days were within ${res.nearDays} days of a hearing on their committees, against ${pct(px.baseline)} of all calendar days. Higher than the baseline means trades cluster near hearings more than chance; close to it means the committees simply meet often.`}
+            >
+              {" "}({pct(px.dayShare)} of trade days vs <b>{pct(px.baseline)}</b> of all days)
+            </span>
+          ) : null}
           <i>·</i>median filing lag <b>{medianLag == null ? "—" : `${medianLag}d`}</b>
           <i>·</i><b>{view.votes.length - missed}</b> roll calls cast, <b>{missed}</b> missed
         </p>
@@ -193,7 +209,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
           {view.narrow ? null : <text x={12} y={tradeMid + 8} className="tl-lane-sub">▲ buy · ▼ sell · tail = filing lag</text>}
           <line x1={view.labelW} x2={width - PAD_R} y1={tradeMid} y2={tradeMid} className="tl-axisline" />
 
-          {near.map((tr) => {
+          {near.length > 60 ? null : near.map((tr) => {
             const li = view.lanes.findIndex((l) => l.id === tr.near!.lane);
             if (li < 0) return null;
             const y2 = laneTop + li * LANE_H + LANE_H / 2;
@@ -292,6 +308,14 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
           {res.building ? "building · " : `as of ${when(cov?.builtAt || res.asOf)} · `}
           {cov?.meetings.done ?? 0}/{cov?.meetings.total || "?"} meetings · {cov?.votes.done ?? 0}/{cov?.votes.total || "?"} roll calls indexed
         </span>
+        {cov?.trades ? (
+          <span title={cov.trades.notes.join(" ")}>
+            <em>DISCLOSURES</em>
+            {cov.trades.building ? "backfilling · " : ""}
+            {cov.trades.parsed}/{cov.trades.total} electronic {m.chamber} reports since {cov.trades.from} parsed
+            {cov.trades.paper ? ` · ${cov.trades.paper} scanned paper reports not parsed` : ""}
+          </span>
+        ) : null}
         <span className="tl-mark">Calendar proximity only; it does not show what a hearing covered. Committees are current assignments.</span>
       </footer>
     </div>

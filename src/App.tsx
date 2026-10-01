@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { CommandBar, type TrailEntry } from "./shell/CommandBar";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
 import { AlertsMenu } from "./shell/AlertsMenu";
@@ -8,7 +9,7 @@ import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
-import { CongressBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
+import { CongressBar, ContractsBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
 import { MODE_BLURB, SECTIONS, utcNow, type MarketView } from "./shell/sections";
 import { useRail } from "./shell/useRail";
 import { usePhone } from "./shell/usePhone";
@@ -26,6 +27,7 @@ import { useNews } from "./news/useNews";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
 import { useDistricts } from "./districts/useDistricts";
 import { useStrait } from "./strait/useStrait";
+import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
 import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section } from "./types";
 
@@ -35,6 +37,9 @@ const CalendarBoard = lazy(() => import("./markets/CalendarBoard").then((m) => (
 const MarketStage = lazy(() => import("./markets/MarketStage").then((m) => ({ default: m.MarketStage })));
 const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) => ({ default: m.MemberTimeline })));
 const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
+const ContractsBoard = lazy(() => import("./contracts/ContractsBoard").then((m) => ({ default: m.ContractsBoard })));
+
+const TRAIL_KEY = "intel:trail:v1";
 
 export function App() {
   const [section, setSection] = useState<Section>("congress");
@@ -58,6 +63,9 @@ export function App() {
   const [theaterId, setTheaterId] = useState("taiwan-strait");
   const [straitFeed, setStraitFeed] = useState<StraitFeed>("ships");
   const [airMil, setAirMil] = useState(false);
+  const [contractScope, setContractScope] = useState<ContractScope>({ kind: "all", value: "" });
+  const [contractSort, setContractSort] = useState<ContractSort>("largest");
+  const [contractDays, setContractDays] = useState(30);
   const [panelsOpen, setPanelsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [calendarTab, setCalendarTab] = useState<CalendarTab | null>(null);
@@ -66,6 +74,13 @@ export function App() {
   const [dossier, setDossier] = useState<DrawerModel | null>(null);
   const [timelineId, setTimelineId] = useState<string | null>(() => location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null);
   const [clock, setClock] = useState(utcNow);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [trail, setTrail] = useState<TrailEntry[]>(() => {
+    try { return JSON.parse(localStorage.getItem(TRAIL_KEY) || "[]"); } catch { return []; }
+  });
+  const trailRef = useRef(trail);
+  trailRef.current = trail;
+  useEffect(() => { localStorage.setItem(TRAIL_KEY, JSON.stringify(trail)); }, [trail]);
 
   const phone = usePhone();
   const rail = useRail();
@@ -78,12 +93,14 @@ export function App() {
   const districts = useDistricts(query, section === "districts" ? selectedId : null);
   const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil);
 
+  const contracts = useContracts(contractScope, contractSort, contractDays, query, section === "contracts" ? selectedId : null, section === "contracts", congress.roster);
+
   const straitView = {
     ...strait,
     items: straitFeed === "air" ? strait.airItems : straitFeed === "news" ? strait.newsItems : strait.items,
     empty: straitFeed === "air" ? strait.airEmpty : straitFeed === "news" ? (strait.newsItems.length ? "" : "No recent strait headlines.") : strait.empty
   };
-  const view = { congress, markets, news, districts, strait: straitView }[section];
+  const view = { congress, markets, contracts, news, districts, strait: straitView }[section];
   const items = view.items;
   const drawer = dossier || view.drawer;
   const ids = useMemo(() => items.map((item) => item.id), [items]);
@@ -108,6 +125,21 @@ export function App() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       const typing = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCmdOpen((v) => !v);
+        return;
+      }
+      if (event.key === ":" && !typing) {
+        event.preventDefault();
+        setCmdOpen(true);
+        return;
+      }
+      if (event.altKey && event.key === "ArrowLeft" && !typing) {
+        event.preventDefault();
+        back();
+        return;
+      }
       if (event.key === "/" && !typing) {
         event.preventDefault();
         document.getElementById("search")?.focus();
@@ -175,7 +207,56 @@ export function App() {
     setDossier(null);
   }
 
-  const follow = (action: string) => route(action, {
+  function trailLabel(action: string) {
+    const [kind, ...rest] = action.split(":");
+    const v = rest.join(":");
+    const who = (id: string) => congress.roster.find((m) => m.bioguide === id)?.name || id;
+    if (kind === "member") return `${who(v)} · card`;
+    if (kind === "timeline") return `${who(v)} · timeline`;
+    if (kind === "contracts") {
+      const [k, val] = v.split(":");
+      return k === "member" ? `Contracts · ${who(val)} district` : k === "all" || !val ? "Contracts · all agencies" : `Contracts · ${val}`;
+    }
+    const label: Record<string, string> = { section: SECTIONS.find((s) => s.id === v)?.label || v, ticker: `${v} dossier`, chart: `${v} chart`, inst: `${v} chart`, pos: `${v} positions`, supply: `${v} supply chain`, bill: `Bill ${v}`, vote: `Roll call ${v}`, committee: `Committee ${v}`, mode: `Congress · ${v}`, view: `Markets · ${v}`, layer: `Markets · ${v}`, calendar: "Calendar", alerts: "Alerts" };
+    return label[kind] || action;
+  }
+
+  function record(action: string, label?: string) {
+    const entry = { action, label: label || trailLabel(action) };
+    setTrail((t) => [entry, ...t.filter((e) => e.action !== action)].slice(0, 12));
+  }
+
+  /** Command-line and trail actions: the dossier link kinds plus section, mode, view, layer, calendar, alerts. */
+  function runAction(action: string) {
+    const [kind, ...rest] = action.split(":");
+    const v = rest.join(":");
+    if (kind === "section") pick(v as Section);
+    else if (kind === "mode") { pick("congress"); setMode(v as CongressMode); }
+    else if (kind === "view") { pick("markets"); setMarketView(v as MarketView); }
+    else if (kind === "layer") { pick("markets"); setLayer(v as MarketLayer); }
+    else if (kind === "calendar") { closeTimeline(); setCalendarTab("earnings"); void openCalendarData(); }
+    else if (kind === "alerts") { setPanelsOpen(false); setAlertsOpen(true); }
+    else routeAction(action);
+  }
+
+  function go(action: string, label?: string) {
+    record(action, label);
+    runAction(action);
+  }
+
+  function back() {
+    const t = trailRef.current;
+    if (t.length < 2) return;
+    setTrail(t.slice(1));
+    runAction(t[1].action);
+  }
+
+  const follow = (action: string) => {
+    if (!/^(news|meeting):/.test(action)) record(action);
+    routeAction(action);
+  };
+
+  const routeAction = (action: string) => route(action, {
     bill: (id) => goCongress("bills", id),
     vote: (id) => goCongress("votes", id, id.startsWith("senate") ? "senate" : "house"),
     member: (id) => openMember(id),
@@ -190,8 +271,22 @@ export function App() {
     },
     pos: (symbol) => void cards.openPositions(symbol),
     supply: openSupply,
-    timeline: openTimeline
+    timeline: openTimeline,
+    contracts: (value) => {
+      const [kind, ...rest] = value.split(":");
+      openContracts(["symbol", "place", "member"].includes(kind) ? { kind: kind as ContractScope["kind"], value: rest.join(":").toUpperCase() } : { kind: "all", value: "" });
+    }
   });
+
+  function openContracts(scope: ContractScope) {
+    closeTimeline();
+    setCalendarTab(null);
+    setSection("contracts");
+    setContractScope(scope);
+    if (scope.kind !== "all") setContractSort("recent");
+    setSelectedId(null);
+    setDossier(null);
+  }
 
   function openTimeline(bioguide: string) {
     if (!/^[A-Z]\d{6}$/.test(bioguide)) return;
@@ -234,6 +329,10 @@ export function App() {
   async function openCalendar() {
     closeTimeline();
     setCalendarTab((open) => (open ? null : "earnings"));
+    await openCalendarData();
+  }
+
+  async function openCalendarData() {
     if (calendar.length) return;
     const res = await api<{ ok: boolean; missing?: string; items: Meeting[] }>("/api/congress/calendar");
     if (res.missing) setCalendarNote(`Set ${res.missing} to load the session calendar.`);
@@ -292,7 +391,7 @@ export function App() {
         </div>
         <nav className="nav">
           {SECTIONS.map((item, index) => (
-            <button key={item.id} aria-current={section === item.id ? "page" : undefined} onClick={() => pick(item.id)}>
+            <button key={item.id} aria-current={section === item.id ? "page" : undefined} onClick={() => go(`section:${item.id}`)}>
               <kbd>{index + 1}</kbd>
               {item.label}
             </button>
@@ -307,6 +406,7 @@ export function App() {
               </select>
             </label>
           ) : null}
+          <button className="go-btn panels-btn" onClick={() => setCmdOpen(true)} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes">GO <kbd>⌘K</kbd></button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
           <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) setPanelsOpen(false); }} onFollow={follow} />
           <PanelsMenu
@@ -366,6 +466,16 @@ export function App() {
                 onRegion={(r) => { setNewsRegion(r); reset(); }}
               />
             ) : null}
+            {barFor === "contracts" ? (
+              <ContractsBar
+                scope={contractScope}
+                onScope={(s) => { setContractScope(s); reset(); }}
+                sort={contractSort}
+                onSort={setContractSort}
+                days={contractDays}
+                onDays={setContractDays}
+              />
+            ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
             {showMap && !calendarTab && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
           </div>
@@ -396,6 +506,8 @@ export function App() {
                 onDossier={setDossier}
                 onFollow={follow}
               />
+            ) : section === "contracts" ? (
+              <ContractsBoard board={contracts.board} dod={contracts.dod} onSymbol={(s) => openContracts({ kind: "symbol", value: s })} />
             ) : section === "news" && !newsGlobe ? (
               <NewsBoard
                 wire={news.wire}
@@ -487,8 +599,8 @@ export function App() {
         <section className={rail.rail.open || phone ? "rail" : "rail hidden"} aria-label="Records" aria-hidden={!rail.rail.open && !phone}>
           <header className="rail-head">
             <div>
-              <h1>{active.label}{section === "congress" ? ` · ${mode}` : ""}</h1>
-              <p>{section === "congress" ? MODE_BLURB[mode] : active.blurb}</p>
+              <h1>{active.label}{section === "congress" ? ` · ${mode}` : section === "contracts" ? ` · ${scopeLabel(contractScope, contracts.feed)}` : ""}</h1>
+              <p>{section === "congress" ? MODE_BLURB[mode] : section === "contracts" ? `${contractSort === "largest" ? "Largest" : "Latest"} actions · last ${contractDays} days · click a row for the award` : active.blurb}</p>
             </div>
             <span className="count">{String(items.length).padStart(2, "0")}</span>
           </header>
@@ -510,8 +622,9 @@ export function App() {
         <span><em>SOURCE</em><strong>{view.status.source}</strong></span>
         <span><em>AS OF</em>{view.status.asOf || "—"}</span>
         <span title={view.status.latency}><em>NOTE</em>{view.status.latency || "—"}</span>
-        <span className="keys"><kbd>1</kbd>–<kbd>5</kbd> sections · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
+        <span className="keys"><kbd>1</kbd>–<kbd>6</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
+      <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
       <div className="scan" aria-hidden="true" />
     </div>

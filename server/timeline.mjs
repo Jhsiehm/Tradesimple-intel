@@ -2,7 +2,7 @@ import { fetchText } from "./http.mjs";
 import { readCache, writeCache } from "./db.mjs";
 import { SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
-import { memberTrades } from "./positions.mjs";
+import { congressTrades } from "./positions.mjs";
 
 const DAY = 24 * 60 * 60 * 1000;
 const CONGRESS = 119;
@@ -257,7 +257,40 @@ export function buildTimeline({ trades, seats, meetings, votes, bioguide, today 
     trades: tradeRows,
     committees: [...lanes.values()].sort((a, b) => b.hearings.length - a.hearings.length),
     votes: cast,
-    nearDays: NEAR_DAYS
+    nearDays: NEAR_DAYS,
+    proximity: proximity(tradeRows, allHearings, today)
+  };
+}
+
+/**
+ * How often trades land near a hearing versus how often any calendar day does. Busy committees put
+ * most days within NEAR_DAYS of a hearing, so the raw count alone overstates the pattern.
+ */
+export function proximity(tradeRows, hearings, today) {
+  const start = dayNum(START);
+  const end = dayNum(today);
+  if (!(end > start)) return null;
+  const covered = new Uint8Array(end - start + 1);
+  for (const h of hearings) {
+    if (/cancel|postpon/i.test(h.status)) continue;
+    const d = dayNum(h.date) - start;
+    for (let i = Math.max(0, d - NEAR_DAYS); i <= Math.min(covered.length - 1, d + NEAR_DAYS); i += 1) covered[i] = 1;
+  }
+  const days = covered.length;
+  const nearDays = covered.reduce((n, v) => n + v, 0);
+  const inRange = tradeRows.filter((t) => t.traded >= START && t.traded <= today);
+  const near = inRange.filter((t) => t.near).length;
+  const tradeDays = new Set(inRange.map((t) => t.traded));
+  const nearTradeDays = new Set(inRange.filter((t) => t.near).map((t) => t.traded));
+  return {
+    from: START,
+    trades: inRange.length,
+    near,
+    share: inRange.length ? near / inRange.length : null,
+    tradeDays: tradeDays.size,
+    nearTradeDays: nearTradeDays.size,
+    dayShare: tradeDays.size ? nearTradeDays.size / tradeDays.size : null,
+    baseline: nearDays / days
   };
 }
 
@@ -266,11 +299,12 @@ export async function memberTimeline(db, bioguide) {
   if (!/^[A-Z]\d{6}$/.test(id)) return { ok: false, error: "Unknown member id" };
   if (!process.env.CONGRESS_API_KEY) return { ok: false, missing: "CONGRESS_API_KEY" };
   if (!state.builtAt && !state.running && !process.env.INTEL_NO_WARM) void buildIndex(db);
-  const [trades, seats, people] = await Promise.all([
-    memberTrades(db, id).catch(() => []),
+  const [board, seats, people] = await Promise.all([
+    congressTrades(db).catch(() => ({ items: [] })),
     memberCommittees(db, id).catch(() => []),
     roster(db).catch(() => ({ items: [] }))
   ]);
+  const trades = (board.items || []).filter((r) => r.bioguide === id);
   const person = people.items.find((p) => p.bioguide === id) || {};
   const chamber = person.chamber === "senate" ? "senate" : "house";
   const body = buildTimeline({ trades, seats, meetings: state.meetings, votes: state.votes[chamber], bioguide: id, today: new Date().toISOString().slice(0, 10) });
@@ -279,8 +313,9 @@ export async function memberTimeline(db, bioguide) {
     ok: true,
     member: { bioguide: id, name: person.name || trades[0]?.person || id, party: person.party || "", state: person.state || "", district: person.district || "", chamber },
     ...body,
-    building: state.running,
+    building: state.running || Boolean(board.building),
     coverage: {
+      trades: board.progress ? { from: board.from, building: Boolean(board.building), ...board.progress[chamber], notes: board.errors || [] } : null,
       meetings: { done: p.meetings.done, total: p.meetings.total },
       votes: { done: state.votes[chamber].length, total: p[chamber].total },
       builtAt: state.builtAt

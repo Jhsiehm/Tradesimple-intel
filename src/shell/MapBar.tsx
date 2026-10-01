@@ -1,6 +1,7 @@
 import { REGIONS } from "../news/newsGlobe";
 import type { Chamber, CongressMode, EarthBase, EarthSettings, EarthView, MarketLayer, NewsDesk, PartyFilter } from "../types";
 import { BASE_TITLE, type MarketView } from "./sections";
+import type { ContractScope, ContractSort } from "../contracts/useContracts";
 
 export function PartyButtons({ party, onParty }: { party: PartyFilter; onParty: (p: PartyFilter) => void }) {
   return (
@@ -116,6 +117,51 @@ export function NewsBar(props: {
 }
 
 export type StraitFeed = "ships" | "news" | "air";
+
+const SCOPE_HINT: Record<ContractScope["kind"], string> = { all: "", symbol: "LMT", place: "TX-12 or TX", member: "G000583" };
+
+export function ContractsBar(props: {
+  scope: ContractScope;
+  onScope: (s: ContractScope) => void;
+  sort: ContractSort;
+  onSort: (s: ContractSort) => void;
+  days: number;
+  onDays: (d: number) => void;
+}) {
+  const { scope } = props;
+  return (
+    <>
+      <span className="seg" title="Scope">
+        {(["all", "symbol", "place", "member"] as ContractScope["kind"][]).map((k) => (
+          <button key={k} aria-pressed={scope.kind === k} onClick={() => props.onScope({ kind: k, value: k === scope.kind ? scope.value : "" })}>
+            {k === "all" ? "All agencies" : k === "symbol" ? "Ticker" : k === "place" ? "District" : "Member"}
+          </button>
+        ))}
+      </span>
+      {scope.kind !== "all" ? (
+        <form
+          className="ct-scope"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const v = String(new FormData(e.currentTarget).get("v") || "").trim().toUpperCase();
+            props.onScope({ kind: scope.kind, value: v });
+          }}
+        >
+          <input key={`${scope.kind}:${scope.value}`} name="v" defaultValue={scope.value} placeholder={SCOPE_HINT[scope.kind]} aria-label="Scope value" spellCheck={false} />
+        </form>
+      ) : null}
+      <span className="seg" title="Order">
+        <button aria-pressed={props.sort === "recent"} onClick={() => props.onSort("recent")}>Recent</button>
+        <button aria-pressed={props.sort === "largest"} onClick={() => props.onSort("largest")}>Largest</button>
+      </span>
+      <span className="seg" title="Window">
+        {[30, 90, 365].map((d) => (
+          <button key={d} aria-pressed={props.days === d} onClick={() => props.onDays(d)}>{d === 365 ? "1Y" : `${d}D`}</button>
+        ))}
+      </span>
+    </>
+  );
+}
 
 export function StraitBar(props: { feed: StraitFeed; onFeed: (f: StraitFeed) => void; mil: boolean; onMil: (m: boolean) => void }) {
   return (

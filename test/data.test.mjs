@@ -37,6 +37,20 @@ test("tickers.json: quotes-only rows carry no joins; derived rows say how they w
   }
 });
 
+test("tickers.json: contract parents are USAspending parent records with a stated basis", () => {
+  for (const t of tickers) {
+    const parents = t.contractParents || [];
+    if (parents.length) assert.ok(t.joinBasis?.contracts, `${t.symbol} has contract parents but no joinBasis.contracts`);
+    for (const p of parents) {
+      assert.match(p.uei, /^[A-Z0-9]{12}$/, `${t.symbol} parent ${p.name} UEI`);
+      assert.ok(p.id && p.name, `${t.symbol} parent record incomplete`);
+    }
+  }
+  const bySymbol = Object.fromEntries(tickers.map((t) => [t.symbol, t]));
+  assert.deepEqual(bySymbol.AAPL.contractParents || [], [], "Apple has no USAspending parent; a fuzzy hit here would be a false join");
+  assert.ok(bySymbol.LMT.contractParents.some((p) => p.name === "LOCKHEED MARTIN CORPORATION"));
+});
+
 test("supplychain.json: every edge cites its basis and every segment input is a listed supplier", () => {
   for (const [symbol, entry] of Object.entries(chain)) {
     if (symbol.startsWith("_")) continue;

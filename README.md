@@ -14,6 +14,7 @@ Every panel shows where its data came from, when it was fetched, and how late th
 | --- | --- |
 | **Congress** | House and Senate roll calls on a floor-seat map or district map, bills by latest action, every member with photo, leadership role, committees, votes, disclosed trades, and PAC money, plus committees with scheduled bills and how members voted on them. |
 | **Markets** | The S&P 500 board (sector heat, breadth, cap weight), **Global** indices and ETFs with an ADR-vs-home-listing premium table, FX, crypto, **Positions** (Congress, Form 4 insiders, 13F funds, FINRA short interest, and who the *last buyer* was), **Supply chain** graphs, and candlestick charts with trades, filings, earnings, and macro events marked. |
+| **Contracts** | Federal contract actions from USAspending, scoped to all agencies, a ticker (through its USAspending parent records), a congressional district (place of performance), or a member (their House district or Senate state), sorted by most recent or largest. The center board ranks S&P 500 contractors by fiscal-year obligations and by share of revenue, with sector filters and a five-year trend. Beside it is the War.gov daily index of DoD awards of $7.5M or more. |
 | **News** | About 45 RSS wires across every region, a Board or a Globe view with headlines pinned to places, and an X column with trending topics and posts from market-moving accounts. |
 | **Districts** | Plants and headquarters for joined companies on the congressional district map. |
 | **Strait** | Taiwan Strait ships (AIS) and news, plus **Air**: live civil and military aircraft for every theater, including a worldwide military view, with flight routes. |
@@ -21,7 +22,8 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 ### Workflow features
 
-- **Member timeline.** Click **Timeline ▸** on any member card, or open `#timeline/<bioguide>` (for example `#timeline/T000278`). It plots the member's disclosed trades against hearings on their committees and the roll calls they cast or missed. Trades within 14 days of a committee hearing are linked to it. **Copy link** shares the view. This shows calendar proximity only, not what a hearing covered. Hearings and votes are indexed from the start of the 119th Congress (Jan 3, 2025). Earlier dates are shaded.
+- **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `ALRT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), or `DES` (card). With nothing typed, it lists where you've been. `Alt+←` goes back.
+- **Member timeline.** Click **Timeline ▸** on any member card, or open `#timeline/<bioguide>` (for example `#timeline/T000278`). It plots the member's disclosed trades against hearings on their committees and the roll calls they cast or missed. Trades within 14 days of a committee hearing are linked to it. The stats line compares that share with a baseline: the share of all days since Jan 3, 2025 that fall within 14 days of a hearing. A member whose committees meet most weeks will show a high count by chance. **Copy link** shares the view. This shows calendar proximity only, not what a hearing covered. Hearings and votes are indexed from the start of the 119th Congress (Jan 3, 2025). Earlier dates are shaded.
 - **Alerts.** The **Alerts** button in the top bar lists new disclosed trades by watched members, Congress trades and Form 4 filings in watched tickers, and lobbying filings for joined watched tickers. Optionally it also lists every trade filed more than 45 days late. Unread alerts are counted. Browser notifications are opt-in. Alerts are checked every 5 minutes while the tab is open.
 - **Phone view.** Below 720 px wide, the terminal is a read-only list and dossier with no map, for people arriving from a shared link. Member timelines still open from `#timeline/…` links.
 - **Pinned panels.** Open **Panels** in the top bar to pin a Watchlist, X pulse, Last buyers, Headlines, Global markets, or a Supply chain card. Pinned cards float over every tab and are saved between sessions. The menu also suggests panels for whatever you're looking at, and has one-click workspaces (Ticker research, Congress money trail, Global macro and arbitrage).
@@ -35,7 +37,9 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 | Key | Action |
 | --- | --- |
-| `1`–`5` | Switch sections |
+| `1`–`6` | Switch sections |
+| `⌘K` / `Ctrl+K` / `:` | Command line |
+| `Alt+←` | Back |
 | `/` | Search tickers, members, districts |
 | `↑` `↓` | Move through the list |
 | `\` | Hide or show the list panel |
@@ -92,7 +96,9 @@ Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free 
 
 | Data | Source | Typical delay |
 | --- | --- | --- |
-| Congressional trades | House Clerk PTR PDFs, Senate eFD | Up to 45 days after the trade (legal filing window) |
+| Congressional trades | House Clerk PTR PDFs, Senate eFD. Every electronic report filed since Jan 3, 2025; scanned paper filings are counted but not parsed. The first full backfill takes a few minutes, and the newest reports appear first. | Up to 45 days after the trade (legal filing window) |
+| Federal contract actions | USAspending.gov transactions API, joined through USAspending parent recipient UEIs in `data/tickers.json` | Civilian agencies within days. DoD actions publish about 90 days after award. |
+| DoD daily awards | War.gov contract announcements RSS (list of days; article text is not machine-readable here) | Same business day, about 5 p.m. ET |
 | Insider trades | SEC EDGAR Form 4 | Within 2 business days |
 | Fund holdings | SEC 13F | Up to 45 days after quarter end |
 | Short interest | FINRA | Twice monthly |
@@ -121,6 +127,7 @@ server/        Node HTTP API on :8787, no framework
   congress.mjs, roster.mjs        votes, bills, members, committees
   timeline.mjs, alerts.mjs        member timeline index, alerts
   positions.mjs, corporate.mjs    PTRs, Form 4, 13F, FINRA, LDA, FEC
+  contracts.mjs                   USAspending contract feed, contractor board, DoD daily index
   chart.mjs, globals.mjs, instruments.mjs, supply.mjs, macro.mjs   market data
   news.mjs     RSS wires, geotagging, X / Bluesky / Truth Social, trends
   air.mjs, strait.mjs, earth.mjs  aircraft, ships, imagery
@@ -130,7 +137,7 @@ src/           React 19 + TypeScript + MapLibre GL (Vite)
   shell/       layout pieces: useCards (floating cards), useRail (list width),
                useMapClock (imagery/news time), PanelsMenu, MapBar (toolbars),
                SearchBox, mapView, follow (dossier link actions), sections
-  congress/ markets/ news/ districts/ strait/   one folder per section: data hook + boards
+  congress/ markets/ contracts/ news/ districts/ strait/   one folder per section: data hook + boards
 data/          tickers.json (join table), places, supply chain, globals, geo
 scripts/       dev runner, S&P 500 rows, derived joins
 ```
@@ -138,7 +145,7 @@ scripts/       dev runner, S&P 500 rows, derived joins
 ### Ground rules the code follows
 
 - **One screen:** top nav, center map or board, one list, one dossier. Extra views are floating cards, not extra rails.
-- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. 25 names are hand-curated and 76 more are derived by `scripts/joins.mjs` from exact matches only: SEC business address to Census 119th district, LDA client names, and FEC connected-organization PACs. Each derived row records its basis, and the dossier shows it. That makes 101 full-join names. The rest of the S&P 500 is quotes only.
+- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. 25 names are hand-curated and 76 more are derived by `scripts/joins.mjs` from exact matches only: SEC business address to Census 119th district, LDA client names, and FEC connected-organization PACs. Each derived row records its basis, and the dossier shows it. That makes 101 full-join names. The rest of the S&P 500 is quotes only. Separately, `scripts/contract-parents.mjs` joins 200 S&P 500 names to USAspending parent recipient records (`contractParents`), accepting only exact parent-name matches or a multi-word name plus a division word like SYSTEMS or SPACE. A name with no parent record, such as Apple, gets none rather than a fuzzy hit like Appleton Marine.
 - **Empty is honest.** A region or feed with no real source stays empty and says why.
 - **Label everything** with its source, as-of time, and real latency.
 
@@ -153,6 +160,7 @@ npm run demo     # zero-key demo from the snapshot; build:demo writes dist-demo/
 npm test         # parser checks against real filings in test/fixtures, join rules, data integrity, API routes (no network)
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
 node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins for the largest quote-only names
+node scripts/contract-parents.mjs [--only LMT,BA]   # join tickers to USAspending parent recipients (no key)
 ```
 
 ---

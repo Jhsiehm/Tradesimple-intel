@@ -8,7 +8,7 @@ import { billDetail, billVote, calendar, committeeDetail, committeeList, compare
 import { fecForCommittees, fecForName, lobbyingForClient } from "./lobby.mjs";
 import { memberTimeline, warmTimeline } from "./timeline.mjs";
 import { alertsFor } from "./alerts.mjs";
-import { awardsForRecipient } from "./contracts.mjs";
+import { contractFeed, contractorBoard, dodAnnouncements } from "./contracts.mjs";
 import { shortInterest } from "./markets.mjs";
 import { congressTrades, insiderTrades, memberTrades, positionsBoard, positionsFor, shortBoard, warmPositions, whaleHoldings } from "./positions.mjs";
 import { newsWire, xPulse, xWire } from "./news.mjs";
@@ -102,8 +102,15 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/fec") {
       return send(res, 200, await fecForName(db, url.searchParams.get("name") || ""));
     }
-    if (url.pathname === "/api/contracts") {
-      return send(res, 200, await awardsForRecipient(db, url.searchParams.get("recipient") || ""));
+    if (url.pathname === "/api/contracts" || url.pathname === "/api/contracts/feed") {
+      const q = url.searchParams;
+      return send(res, 200, await contractFeed(db, { symbol: q.get("symbol") || "", place: q.get("place") || "", member: q.get("member") || "", sort: q.get("sort") || "", days: q.get("days") || "" }));
+    }
+    if (url.pathname === "/api/contracts/board") {
+      return send(res, 200, await contractorBoard(db));
+    }
+    if (url.pathname === "/api/contracts/dod") {
+      return send(res, 200, await dodAnnouncements(db));
     }
     const tickerMatch = url.pathname.match(/^\/api\/tickers\/([A-Za-z.\-]+)$/);
     if (tickerMatch) {
@@ -242,6 +249,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+process.on("unhandledRejection", (err) => console.error("unhandled", err instanceof Error ? err.message : err));
+
 server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
   if (process.env.INTEL_NO_WARM) return;
@@ -256,11 +265,10 @@ async function tickerDossier(symbol) {
   const ticker = tickerBySymbol(db, symbol);
   if (!ticker) return { ok: false, error: "Ticker is not in the join table" };
   const client = ticker.ldaClients[0] || ticker.name;
-  const recipient = ticker.recipients[0] || ticker.name;
   const [lobby, fec, contracts, quote, positions, seats] = await Promise.all([
     lobbyingForClient(db, client).catch((err) => ({ ok: false, error: err.message, filings: [] })),
     fecForCommittees(db, ticker.pacs || []).catch((err) => ({ ok: false, error: err.message, committees: [] })),
-    awardsForRecipient(db, recipient).catch((err) => ({ ok: false, error: err.message, awards: [] })),
+    contractFeed(db, { symbol: ticker.symbol, days: 180 }).then((r) => ({ ...r, awards: r.items || [] })).catch((err) => ({ ok: false, error: err.message, awards: [] })),
     sessionQuote(ticker).catch(() => null),
     positionsFor(db, ticker.symbol).catch(() => null),
     seatsForCodes(db, ticker.districts || []).catch(() => [])

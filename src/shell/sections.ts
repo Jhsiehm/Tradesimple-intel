@@ -3,6 +3,7 @@ import type { CongressMode, EarthBase, Section } from "../types";
 export const SECTIONS: { id: Section; label: string; blurb: string }[] = [
   { id: "congress", label: "Congress", blurb: "Votes, bills, members, committees" },
   { id: "markets", label: "Markets", blurb: "Trades, filings, shorts, holdings" },
+  { id: "contracts", label: "Contracts", blurb: "Federal contract actions · by agency, ticker, district, or member" },
   { id: "news", label: "News", blurb: "Global wires and X" },
   { id: "districts", label: "Districts", blurb: "Plants and headquarters on the map" },
   { id: "strait", label: "Strait", blurb: "Ships, news, and open imagery" }

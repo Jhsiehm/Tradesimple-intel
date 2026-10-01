@@ -390,14 +390,16 @@ export async function pacFor(db, symbol) {
 /* ---------- Federal contracts (USAspending) ---------- */
 
 export async function contractsFor(db, ticker) {
-  const key = `usa:hist:v1:${ticker.symbol}`;
+  const key = `usa:hist:v2:${ticker.symbol}`;
   const hit = readCache(db, key);
   if (hit) return hit;
-  const names = ticker.recipients || [];
-  if (!names.length) return { ok: true, awards: [], byYear: [] };
+  const ueis = [...new Set((ticker.contractParents || []).map((p) => p.uei).filter(Boolean))];
+  if (!ueis.length) {
+    return { ok: true, source: "USAspending.gov", asOf: new Date().toISOString(), note: `${ticker.symbol} has no USAspending parent recipient in data/tickers.json.`, awards: [], byYear: [], parents: [] };
+  }
   const end = new Date().toISOString().slice(0, 10);
   const start = new Date(Date.now() - 5 * 365 * DAY).toISOString().slice(0, 10);
-  const filters = { recipient_search_text: names, award_type_codes: ["A", "B", "C", "D"], time_period: [{ start_date: start, end_date: end }] };
+  const filters = { recipient_search_text: ueis, award_type_codes: ["A", "B", "C", "D"], time_period: [{ start_date: start, end_date: end }] };
   const [top, overTime, revenue] = await Promise.all([
     fetchJson("https://api.usaspending.gov/api/v2/search/spending_by_award/", {
       method: "POST",
@@ -428,9 +430,11 @@ export async function contractsFor(db, ticker) {
     ok: true,
     source: "USAspending.gov prime awards · SEC XBRL revenue",
     asOf: new Date().toISOString(),
-    latency: "Obligations by federal fiscal year (Oct–Sep). Largest 25 prime contract awards started in the last five years. Recipient names from data/tickers.json.",
+    latency: "Obligations by federal fiscal year (Oct–Sep). Largest 25 prime contract awards started in the last five years. DoD actions are published about 90 days after award. Recipients are the USAspending parent UEIs in data/tickers.json.",
     awards,
     byYear,
+    parents: ticker.contractParents,
+    basis: ticker.joinBasis?.contracts || "",
     revenue,
     dependence: lastFull && revenue?.value ? { fy: lastFull.fy, obligations: lastFull.amount, revenue: revenue.value, revenueFy: revenue.fy, share: lastFull.amount / revenue.value } : null
   };

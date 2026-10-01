@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildTimeline, clerkCasts, laneOf } from "../server/timeline.mjs";
+import { buildTimeline, clerkCasts, laneOf, proximity } from "../server/timeline.mjs";
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 
@@ -58,6 +58,22 @@ test("buildTimeline lanes committees, marks own subcommittees, and picks the nea
   assert.equal(near.near.id, "2", "Mar 15 is cancelled, so the Mar 20 hearing (4 days after) is nearest");
   assert.equal(near.near.gap, 4);
   assert.equal(out.range.from, "2025-01-03");
+});
+
+test("proximity compares trade days near a hearing with the share of all calendar days near one", () => {
+  const hearings = [{ date: "2025-01-20", status: "Scheduled" }, { date: "2025-03-01", status: "Cancelled" }];
+  const trades = [
+    { traded: "2025-01-10", near: { id: "h" } },
+    { traded: "2025-01-10", near: { id: "h" } },
+    { traded: "2025-02-20", near: null },
+    { traded: "2024-12-01", near: null }
+  ];
+  const out = proximity(trades, hearings, "2025-02-21");
+  assert.equal(out.trades, 3, "pre-Congress trades are excluded");
+  assert.equal(out.tradeDays, 2);
+  assert.equal(out.nearTradeDays, 1);
+  assert.equal(out.dayShare, 0.5);
+  assert.equal(out.baseline, 29 / 50, "Jan 6–Feb 3 covered out of Jan 3–Feb 21; the cancelled hearing does not count");
 });
 
 test("buildTimeline keeps only roll calls the member was on, decoding casts", () => {

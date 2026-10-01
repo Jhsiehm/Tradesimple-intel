@@ -32,6 +32,22 @@ export function districtCode(state, cd) {
   return /^[A-Z]{2}$/.test(state || "") && /^\d+$/.test(base) ? `${state}-${base.padStart(2, "0")}` : null;
 }
 
+const DIVISION = new Set(["SYSTEMS", "DEFENSE", "AEROSPACE", "SPACE", "AERONAUTICS", "SERVICES", "SOLUTIONS", "TECHNOLOGIES", "TECHNOLOGY", "GOVERNMENT", "FEDERAL", "PUBLIC", "SECTOR", "MISSION", "INTERNATIONAL", "GLOBAL", "ELECTRONIC", "ELECTRONICS"]);
+
+/**
+ * Whether a USAspending parent recipient name belongs to a join token. Exact after norm() always counts.
+ * Multi-word tokens may add division words ("LOCKHEED MARTIN SPACE"); single-word tokens may not,
+ * so "APPLE" never reaches "APPLE TEN ALABAMA SERVICES" or "APPLETON MARINE".
+ */
+export function contractParentMatch(token, parent) {
+  const t = norm(token);
+  const p = norm(parent);
+  if (!t || !p) return false;
+  if (p === t) return true;
+  if (!t.includes(" ") || !p.startsWith(`${t} `)) return false;
+  return p.slice(t.length + 1).split(" ").every((w) => DIVISION.has(w));
+}
+
 /** FEC committee-master lines (pipe-delimited) to a map of normalized connected organization → corporate PAC ids. */
 export function pacsByOrg(lines) {
   const byOrg = new Map();

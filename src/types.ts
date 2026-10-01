@@ -1,4 +1,4 @@
-export type Section = "congress" | "markets" | "news" | "districts" | "strait";
+export type Section = "congress" | "markets" | "contracts" | "news" | "districts" | "strait";
 export type Chamber = "house" | "senate";
 export type MarketLayer = "politicians" | "insiders" | "whales" | "shorts";
 export type CongressMode = "votes" | "bills" | "members" | "committees";

@@ -401,7 +401,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
       note?: string;
       committees?: { name: string; receipts: number | null; disbursements?: number | null; coverageEnd?: string | null }[];
     };
-    contracts?: { awards?: { recipient: string; amount: number; agency: string; description: string }[] };
+    contracts?: { note?: string; error?: string; awards?: { recipient: string; amount: number; agency: string; description: string; date?: string; start?: string }[] };
     quote?: { last: number | null; change: number | null; changePct: number | null; asOf: string } | null;
     positions?: Positions | null;
     seats?: { code: string; members: { bioguide: string; name: string; party: string; district: string }[] }[];
@@ -428,6 +428,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
     links: [
       { label: "Positions", value: `${res.ticker.symbol} · every filer`, action: `pos:${res.ticker.symbol}` },
       { label: "Supply chain", value: `${res.ticker.symbol} · suppliers, customers, co-movement`, action: `supply:${res.ticker.symbol}` },
+      { label: "Contracts", value: `${res.ticker.symbol} · federal contract actions`, action: `contracts:symbol:${res.ticker.symbol}` },
       ...seats.flatMap((seat) => seat.members.length
         ? seat.members.map((member) => ({
             label: seat.code,
@@ -455,8 +456,13 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
             : [res.fec?.note || res.fec?.error || "No FEC data."]
       },
       {
-        title: "Contracts (USASpending)",
-        lines: (res.contracts?.awards || []).slice(0, 4).map((a) => `${money(a.amount)} · ${a.agency} · ${a.description || a.recipient}`)
+        title: "Federal contracts, last 180 days (USAspending)",
+        lines: res.contracts?.awards?.length
+          ? [
+              ...res.contracts.awards.slice(0, 4).map((a) => `${a.date || a.start || ""} · ${money(a.amount)} · ${a.agency} · ${a.description || a.recipient}`),
+              "DoD actions reach USAspending about 90 days after award."
+            ]
+          : [res.contracts?.note || res.contracts?.error || "No contract actions in the window."]
       },
       {
         title: "How this ticker is joined",
