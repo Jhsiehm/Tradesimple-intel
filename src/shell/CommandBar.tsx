@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { matchMembers } from "../../shared/memberMatch.mjs";
 
 export type TrailEntry = { label: string; action: string };
-type Seat = { bioguide: string; name: string; party: string; state: string; district: string; chamber: string };
+type Seat = { bioguide: string; name: string; first?: string; last?: string; nickname?: string; party: string; state: string; district: string; chamber: string };
 type Ticker = { symbol: string; name: string; core?: boolean };
 type Command = { code: string; label: string; hint: string; action: string };
 
@@ -60,9 +61,9 @@ export function commandsFor(text: string, tickers: Ticker[], roster: Seat[]): Co
     for (const f of TICKER_FN) if (!fn || f.code.startsWith(fn)) out.push({ code: `${t.symbol} ${f.code}`, label: `${t.name} · ${f.label}`, hint: t.core === false ? "quotes-only join" : "", action: f.action(t.symbol) });
   }
   if (raw.length >= 3) {
-    const words = raw.replace(/\s+(DES|TL|CTR)$/, "").toLowerCase();
+    const words = raw.replace(/\s+(DES|TL|CTR)$/, "");
     const mfn = /\s(DES|TL|CTR)$/.exec(raw)?.[1] || "";
-    const hits = roster.filter((m) => m.name.toLowerCase().includes(words) || m.bioguide === head).slice(0, 4);
+    const hits = district ? [] : matchMembers(roster, words, 4);
     for (const m of hits) {
       for (const f of MEMBER_FN) {
         if (mfn && f.code !== mfn) continue;

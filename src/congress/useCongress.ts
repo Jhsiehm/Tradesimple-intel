@@ -41,6 +41,7 @@ export type RosterMember = {
   name: string;
   first: string;
   last: string;
+  nickname?: string;
   party: string;
   state: string;
   district: string;

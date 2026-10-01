@@ -7,7 +7,7 @@ const SOURCE = "unitedstates/congress-legislators";
 const LATENCY = "Community-maintained from official records. Changes when a seat or assignment changes, not live.";
 
 export async function roster(db) {
-  const hit = readCache(db, "roster:v3");
+  const hit = readCache(db, "roster:v4");
   if (hit) return hit;
   const raw = await fetchJson(`${BASE}/legislators-current.json`, {}, 30000);
   const items = raw.map((person) => {
@@ -20,6 +20,7 @@ export async function roster(db) {
       name: person.name?.official_full || `${person.name?.first || ""} ${person.name?.last || ""}`.trim(),
       first: person.name?.first || "",
       last: person.name?.last || "",
+      nickname: person.name?.nickname || "",
       party: partyCode(term.party),
       state: term.state || "",
       district: senate ? "" : String(term.district ?? ""),
@@ -41,7 +42,7 @@ export async function roster(db) {
   }).filter((row) => row.bioguide);
   items.sort((a, b) => a.last.localeCompare(b.last));
   const result = { ok: true, source: SOURCE, asOf: new Date().toISOString(), latency: LATENCY, items };
-  writeCache(db, "roster:v3", result, DAY);
+  writeCache(db, "roster:v4", result, DAY);
   return result;
 }
 

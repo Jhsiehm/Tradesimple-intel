@@ -287,7 +287,7 @@ async function search(q) {
     return blob.includes(query.toLowerCase());
   }).slice(0, 6);
   let members = [];
-  if (query.length >= 3) {
+  if (query.length >= 2) {
     try {
       const found = await searchMembers(db, query);
       members = found.items || [];

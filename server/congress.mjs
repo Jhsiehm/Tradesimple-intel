@@ -3,6 +3,7 @@ import { readCache, writeCache } from "./db.mjs";
 import { houseGeoid, ladderFromActions } from "./geo.mjs";
 import { committees, lisMap, memberCommittees, roster } from "./roster.mjs";
 import { memberPacs } from "./corporate.mjs";
+import { matchMembers } from "../shared/memberMatch.mjs";
 
 const BASE = "https://api.congress.gov/v3";
 const TTL = 15 * 60 * 1000;
@@ -662,26 +663,17 @@ const POSTAL_TO_NAME = {
 };
 
 export async function searchMembers(db, q) {
-  const res = await congressGet(db, "/member/congress/119?limit=250", 12 * 60 * 60 * 1000);
-  if (!res.ok) return res;
-  const needle = q.trim().toLowerCase();
-  const members = (res.body.members || [])
-    .filter((m) => {
-      const name = `${m.name || ""} ${m.firstName || ""} ${m.lastName || ""}`.toLowerCase();
-      const dist = `${m.state || ""}-${m.district || ""}`.toLowerCase();
-      return name.includes(needle) || dist === needle;
-    })
-    .slice(0, 8)
-    .map((m) => ({
-      id: m.bioguideId,
-      name: m.name || `${m.firstName || ""} ${m.lastName || ""}`.trim(),
-      state: m.state,
-      district: m.district == null ? "" : String(m.district),
-      chamber: String(m.district) === "undefined" || m.terms?.item?.[0]?.chamber || (m.district == null ? "Senate" : "House"),
-      geoid: houseGeoid(m.state, m.district),
-      party: m.partyName || ""
-    }));
-  return { ok: true, items: members };
+  const res = await roster(db);
+  const items = matchMembers(res.items, q).map((m) => ({
+    id: m.bioguide,
+    name: m.name,
+    state: m.state,
+    district: m.district,
+    chamber: m.chamber,
+    geoid: m.chamber === "house" ? houseGeoid(m.state, m.district) : null,
+    party: m.party
+  }));
+  return { ok: true, source: res.source, asOf: res.asOf, latency: res.latency, items };
 }
 
 function billRow(bill) {

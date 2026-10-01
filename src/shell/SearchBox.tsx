@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
-export type SearchHit = { kind: "ticker" | "site" | "member"; id: string; label: string };
+export type SearchHit = { kind: "ticker" | "site" | "member"; id: string; label: string; chamber?: "house" | "senate" };
 
 type Props = { query: string; onQuery: (value: string) => void; onHit: (hit: SearchHit) => void; resetOn: string };
 
@@ -28,13 +28,19 @@ export function SearchBox({ query, onQuery, onHit, resetOn }: Props) {
     const res = await api<{
       tickers: { symbol: string; name: string }[];
       sites: { id: string; name: string; district: string }[];
-      members: { id: string; name: string; state: string; district: string; geoid: string | null }[];
+      members: { id: string; name: string; state: string; district: string; chamber: "house" | "senate"; party: string; geoid: string | null }[];
     }>(`/api/search?q=${encodeURIComponent(value)}`);
-    setHits([
+    const members = res.members.map((m) => ({
+      kind: "member" as const,
+      id: m.id,
+      chamber: m.chamber,
+      label: `${m.name} · ${m.party}-${m.state}${m.chamber === "house" ? `-${m.district}` : ""} · ${m.chamber === "senate" ? "Senator" : "Rep."}`
+    }));
+    const others = [
       ...res.tickers.map((t) => ({ kind: "ticker" as const, id: t.symbol, label: `${t.symbol} ${t.name}` })),
-      ...res.sites.map((s) => ({ kind: "site" as const, id: s.id, label: `${s.district} ${s.name}` })),
-      ...res.members.map((m) => ({ kind: "member" as const, id: m.id, label: `${m.name} ${m.state}-${m.district || "Sen"}` }))
-    ].slice(0, 8));
+      ...res.sites.map((s) => ({ kind: "site" as const, id: s.id, label: `${s.district} ${s.name}` }))
+    ];
+    setHits([...others.slice(0, Math.max(3, 8 - members.length)), ...members].slice(0, 8));
   }
 
   return (
