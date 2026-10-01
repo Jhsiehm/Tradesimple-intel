@@ -1,8 +1,14 @@
 /**
- * Pure size trimming for the published demo. The local demo/snapshot keeps full responses; the copy pushed to
- * GitHub Pages caps long lists and long strings so the site stays small. Every capped list keeps its newest or
- * largest rows (the API already sorts them) and records what was dropped in `demoTrim`.
+ * Size trimming for the published demo. The local demo/snapshot keeps full responses.
+ *   mode "full" (default): every list and string is kept; non-integer numbers are rounded (4 decimals at or above 1,
+ *     6 significant digits below), which is invisible in the UI. A file that would still exceed FILE_CAP falls back
+ *     to "lite" for that file only.
+ *   mode "lite": also caps long lists and long strings (the newest or largest rows survive; the API already sorts
+ *     them) and records what was dropped in `demoTrim`.
  */
+
+/** GitHub warns on files over 50 MB and rejects them over 100 MB. */
+export const FILE_CAP = 45e6;
 
 /** File-name prefixes (demoFile names) → top-level list caps. Lists inside other routes get NESTED_CAP. */
 const TOP_CAPS = [
@@ -20,6 +26,21 @@ const CAPPED = new Map([["scheduled", 20], ["awards", 25], ["items", 25], ["insi
 
 export function trimText(value, cap = STRING_CAP) {
   return typeof value === "string" && value.length > cap ? `${value.slice(0, cap - 1)}…` : value;
+}
+
+export function roundNumber(n) {
+  if (typeof n !== "number" || !Number.isFinite(n) || Number.isInteger(n)) return n;
+  return Math.abs(n) >= 1 ? Math.round(n * 1e4) / 1e4 : Number(n.toPrecision(6));
+}
+
+function roundDeep(node) {
+  if (Array.isArray(node)) return node.map(roundDeep);
+  if (node && typeof node === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(node)) out[k] = roundDeep(v);
+    return out;
+  }
+  return roundNumber(node);
 }
 
 function trimDeep(node, depth, dropped, key = "") {
@@ -59,9 +80,7 @@ function trimPacs(body) {
   return { ...body, members };
 }
 
-export function trimRoute(file, body) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
-  if (/^geo_/.test(file) || file === "manifest.json") return body;
+function trimLite(file, body) {
   let next = body;
   const dropped = {};
   if (/_timeline\.json$/.test(file)) next = trimTimeline(next);
@@ -82,4 +101,12 @@ export function trimRoute(file, body) {
     next.latency = next.latency ? `${next.latency} ${note}` : note;
   }
   return next;
+}
+
+export function trimRoute(file, body, { mode = "full" } = {}) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  if (/^geo_/.test(file) || file === "manifest.json") return body;
+  const rounded = roundDeep(body);
+  if (mode === "lite") return trimLite(file, rounded);
+  return JSON.stringify(rounded).length > FILE_CAP ? trimLite(file, rounded) : rounded;
 }

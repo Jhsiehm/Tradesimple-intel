@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Per-member share pages for the static demo: m/<slug>/index.html and m/<BIOGUIDE>/index.html, each with
- * Open Graph / Twitter meta and a 1200×630 card.png rendered by resvg (no browser).
+ * Open Graph / Twitter meta pointing at one 1200×630 m/<slug>/card.png rendered by resvg (no browser).
  *   node scripts/member-pages.mjs --out dist-demo --url https://jhsiehm.github.io/Tradesimple-intel/
  * Reads the timelines already in <out>/snapshot. Run after `vite build` (publish:demo does this).
  */
@@ -36,15 +36,15 @@ for (const file of files) {
   if (!s) continue;
   const slug = used.has(s.slug) ? `${s.slug}-${s.bioguide.toLowerCase()}` : s.slug;
   used.set(slug, s.bioguide);
-  const png = renderPng(cardSvg(s, { host: HOST }));
+  const imageUrl = `${URL_BASE}m/${slug}/card.png`;
+  fs.mkdirSync(path.join(OUT, "m", slug), { recursive: true });
+  fs.writeFileSync(path.join(OUT, "m", slug, "card.png"), renderPng(cardSvg(s, { host: HOST })));
   for (const dir of [slug, s.bioguide]) {
     const target = path.join(OUT, "m", dir);
     fs.mkdirSync(target, { recursive: true });
-    const pageUrl = `${URL_BASE}m/${dir}/`;
-    fs.writeFileSync(path.join(target, "card.png"), png);
-    fs.writeFileSync(path.join(target, "index.html"), memberPageHtml(s, { pageUrl, imageUrl: `${pageUrl}card.png`, appPath: "../../" }));
+    fs.writeFileSync(path.join(target, "index.html"), memberPageHtml(s, { pageUrl: `${URL_BASE}m/${dir}/`, imageUrl, appPath: "../../" }));
   }
-  index.push({ bioguide: s.bioguide, name: s.name, slug });
+  index.push({ bioguide: s.bioguide, name: s.name, slug, trades: s.trades });
 }
 fs.writeFileSync(path.join(OUT, "m", "index.json"), JSON.stringify(index));
-console.log(`member pages: ${index.length} members → ${path.relative(root, path.join(OUT, "m"))}/<slug>/ (cards ${1200}×${630})`);
+console.log(`member pages: ${index.length} members (${index.filter((m) => m.trades).length} with trades) → ${path.relative(root, path.join(OUT, "m"))}/<slug>/ (cards ${1200}×${630}, one per member)`);

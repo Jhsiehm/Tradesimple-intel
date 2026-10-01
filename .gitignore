@@ -8,5 +8,6 @@ data/cache.sqlite-*
 .cursor/shots
 *.tsbuildinfo
 demo/snapshot
+demo/snapshot.partial
 dist-demo
 data/bot-state.json
