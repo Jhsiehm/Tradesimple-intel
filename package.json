@@ -11,7 +11,8 @@
     "snapshot": "node scripts/snapshot.mjs",
     "demo": "VITE_DEMO=1 vite",
     "build:demo": "VITE_DEMO=1 vite build",
-    "publish:demo": "node scripts/publish-demo.mjs"
+    "publish:demo": "node scripts/publish-demo.mjs",
+    "bot": "node scripts/bot.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",

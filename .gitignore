@@ -9,3 +9,4 @@ data/cache.sqlite-*
 *.tsbuildinfo
 demo/snapshot
 dist-demo
+data/bot-state.json

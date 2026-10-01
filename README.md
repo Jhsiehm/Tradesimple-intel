@@ -37,6 +37,28 @@ How returns are computed, and what they are not:
 
 The member timeline shows the same figure in its stats line and each trade's return against SPY in its tooltip; the share card adds a *Buys vs S&P 500* stat. API: `/api/congress/leaders`, and `returns` on `/api/congress/member/:id/timeline`.
 
+### Posting bot (Bluesky and X), dry run by default
+
+`npm run bot` finds trade lines **filed since the last run** and picks the notable ones: filed more than 45 days late, $250,001 or more, or traded within 14 days of a hearing on one of the member's committees. It keeps one post per report (noting how many other trades it holds), strongest first, at most 5 per run (`--max`). Each post is factual and links the filing, for example:
+
+```
+Filed 466 days late: Rep. John W. Rose (R-TN-6) sold $250k–$500k GOOGL · traded Jun 3, 2025, filed Sep 12 (466d).
+Traded 1 day before a House Agriculture hearing; calendar proximity only, not evidence of wrongdoing.
+Filing: disclosures-clerk.house.gov/…/20035444.pdf
+```
+
+Posts are shortened step by step to fit Bluesky (300 graphemes, link shown short with a full-URL facet) and X (280, URLs count 23). The member's share card is attached as the image.
+
+```bash
+npm start                                   # the bot reads the running API
+npm run bot                                 # DRY RUN: prints posts, writes card PNGs to /tmp/intel-bot, changes nothing
+npm run bot -- --since-days 7 --max 3       # first-run window (default 3 days) and cap
+npm run bot -- --mark                       # record the shown filings as handled without posting
+npm run bot -- --post [--only bluesky|x]    # actually post; requires keys
+```
+
+Nothing is posted without `--post` **and** keys in `.env.local` (names in `.env.example`): `BSKY_HANDLE` + `BSKY_APP_PASSWORD` (an app password, not your login) for Bluesky via atproto, and/or `X_API_KEY` + `X_API_SECRET` + `X_ACCESS_TOKEN` + `X_ACCESS_SECRET` for X (API v2 tweet with a v1.1 media upload, OAuth 1.0a user context; the X app needs write access). Posted ids and the last filed date live in `data/bot-state.json` (gitignored), so reruns don't duplicate. To run it on a schedule, use cron or launchd, e.g. `*/30 * * * * cd ~/tradesimple-intel && npm run bot -- --post >> /tmp/intel-bot.log 2>&1`. Pure helpers are in `scripts/botlib.mjs` and tested in `test/bot.test.mjs` (including the documented OAuth signature example).
+
 ### Workflow features
 
 - **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `ALRT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), or `DES` (card). With nothing typed, it lists where you've been. `Alt+←` goes back.
@@ -196,6 +218,8 @@ npm run dev      # API and web UI
 npm start        # API only
 npm run build    # production build of the web UI into dist/ (map and boards load on demand)
 npm run snapshot # capture the running API into demo/snapshot/ for demo mode
+npm run publish:demo   # build the static demo with member share pages and push it to gh-pages
+npm run bot      # dry-run the Bluesky/X posting bot (add --post to post)
 npm run demo     # zero-key demo from the snapshot; build:demo writes dist-demo/
 npm test         # parser checks against real filings in test/fixtures, join rules, data integrity, API routes (no network)
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
