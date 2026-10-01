@@ -148,7 +148,7 @@ export function layoutFloor(members: MemberLike[], chamber: "house" | "senate"):
 export function voteFill(vote: string) {
   if (vote === "Yea") return "#2f9a55";
   if (vote === "Nay") return "#c45c54";
-  if (vote === "Present") return "#5d6d58";
+  if (vote === "Present") return "#6f86a3";
   if (vote === "Split") return "#a08a3e";
   return "#1e2831";
 }

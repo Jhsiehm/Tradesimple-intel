@@ -140,6 +140,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   white-space: nowrap;
   text-align: right;
 }
+@media (max-width: 1180px) {
+  .clock { display: none; }
+  .search { width: 120px; }
+  .nav button { padding: 6px 6px; }
+}
 
 .hits, .popover {
   position: absolute;
@@ -341,7 +346,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .swatch.yea { background: #1f6b3a; }
 .swatch.nay { background: #7a3030; }
 .swatch.split { background: #6a5a28; }
-.swatch.present { background: #3d4a38; }
+.swatch.present { background: #6f86a3; }
 .ring { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; border: 1.5px solid; vertical-align: -1px; }
 .ring.dem { border-color: #9eb892; }
 .ring.rep { border-color: #c49a96; }

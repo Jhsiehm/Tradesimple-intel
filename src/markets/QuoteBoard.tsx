@@ -9,6 +9,7 @@ type Quote = {
   sector: string;
   industry: string;
   core: boolean;
+  index?: string[];
   last: number | null;
   change: number | null;
   changePct: number | null;
@@ -52,7 +53,8 @@ export function QuoteBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
     return () => { cancel = true; window.clearInterval(timer); };
   }, []);
 
-  const all = board?.items || [];
+  const universe = useMemo(() => board?.items || [], [board]);
+  const all = useMemo(() => universe.filter((q) => q.index?.includes("SP500")), [universe]);
   const totalCap = useMemo(() => all.reduce((s, q) => s + (q.marketCap || 0), 0) || 1, [all]);
 
   const sectors = useMemo(() => {
@@ -79,7 +81,7 @@ export function QuoteBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    const list = all.filter((r) =>
+    const list = (scope === "all" ? all : universe).filter((r) =>
       (scope === "all" || (scope === "core" ? r.core : hasSymbol(r.symbol)))
       && (sector === "All" || (r.sector || "Other") === sector)
       && (!q || `${r.symbol} ${r.name} ${r.industry}`.toLowerCase().includes(q))
@@ -92,7 +94,7 @@ export function QuoteBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
       if (y == null) return -1;
       return (typeof x === "string" ? x.localeCompare(String(y)) : x - Number(y)) * sort.dir;
     });
-  }, [all, scope, sector, filter, sort, hasSymbol]);
+  }, [all, universe, scope, sector, filter, sort, hasSymbol]);
 
   const head = (key: SortKey, label: string) => (
     <th className={sort.key === key ? "sorted" : undefined}>

@@ -354,7 +354,7 @@ export function App() {
       setSection("districts");
       setSelectedId(hit.id);
     } else if (/^[A-Za-z]\d{6}$/.test(hit.id)) {
-      openMember(hit.id);
+      openMember(hit.id, hit.chamber);
     }
   }
 
@@ -619,8 +619,8 @@ export function App() {
         </section>
       </main>
       <footer className="status">
-        <span><em>SOURCE</em><strong>{view.status.source}</strong></span>
-        <span><em>AS OF</em>{view.status.asOf || "—"}</span>
+        <span title={view.status.source}><em>{rail.rail.open ? "LIST SOURCE" : "LIST (HIDDEN)"}</em><strong>{view.status.source}</strong></span>
+        <span title={view.status.asOf}><em>AS OF</em>{view.status.asOf || "—"}</span>
         <span title={view.status.latency}><em>NOTE</em>{view.status.latency || "—"}</span>
         <span className="keys"><kbd>1</kbd>–<kbd>6</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
