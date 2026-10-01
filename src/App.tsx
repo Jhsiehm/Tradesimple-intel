@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { api } from "./lib/api";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { api, DEMO } from "./lib/api";
+import { DemoChip } from "./shell/DemoChip";
+import { AlertsMenu } from "./shell/AlertsMenu";
 import { Drawer } from "./shell/Drawer";
 import { WidgetLayer } from "./shell/Widgets";
-import { MapFrame } from "./shell/MapFrame";
 import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
@@ -10,26 +11,30 @@ import { SearchBox, type SearchHit } from "./shell/SearchBox";
 import { CongressBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
 import { MODE_BLURB, SECTIONS, utcNow, type MarketView } from "./shell/sections";
 import { useRail } from "./shell/useRail";
+import { usePhone } from "./shell/usePhone";
 import { useCards } from "./shell/useCards";
 import { useMapClock } from "./shell/useMapClock";
 import { mapView } from "./shell/mapView";
 import { route } from "./shell/follow";
 import { useCongress } from "./congress/useCongress";
 import { STATE_NAME_TO_POSTAL } from "./congress/states";
-import { FloorMap } from "./congress/FloorMap";
 import { meetingModel } from "./congress/meeting";
 import type { ChartSpan } from "./markets/CandleChart";
-import { CalendarBoard, type CalendarTab, type Meeting } from "./markets/CalendarBoard";
-import { MarketStage } from "./markets/MarketStage";
+import type { CalendarTab, Meeting } from "./markets/CalendarBoard";
 import { loadDossier, loadPositions, useMarkets } from "./markets/useMarkets";
 import { useNews } from "./news/useNews";
-import { NewsBoard } from "./news/NewsBoard";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
 import { useDistricts } from "./districts/useDistricts";
 import { useStrait } from "./strait/useStrait";
 import { useEarth } from "./lib/useEarth";
 import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section } from "./types";
-import "maplibre-gl/dist/maplibre-gl.css";
+
+const MapFrame = lazy(() => import("./shell/MapFrame").then((m) => ({ default: m.MapFrame })));
+const FloorMap = lazy(() => import("./congress/FloorMap").then((m) => ({ default: m.FloorMap })));
+const CalendarBoard = lazy(() => import("./markets/CalendarBoard").then((m) => ({ default: m.CalendarBoard })));
+const MarketStage = lazy(() => import("./markets/MarketStage").then((m) => ({ default: m.MarketStage })));
+const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) => ({ default: m.MemberTimeline })));
+const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
 
 export function App() {
   const [section, setSection] = useState<Section>("congress");
@@ -54,12 +59,15 @@ export function App() {
   const [straitFeed, setStraitFeed] = useState<StraitFeed>("ships");
   const [airMil, setAirMil] = useState(false);
   const [panelsOpen, setPanelsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [calendarTab, setCalendarTab] = useState<CalendarTab | null>(null);
   const [calendar, setCalendar] = useState<Meeting[]>([]);
   const [calendarNote, setCalendarNote] = useState("");
   const [dossier, setDossier] = useState<DrawerModel | null>(null);
+  const [timelineId, setTimelineId] = useState<string | null>(() => location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null);
   const [clock, setClock] = useState(utcNow);
 
+  const phone = usePhone();
   const rail = useRail();
   const cards = useCards();
   const { earth, settings: earthSettings, update: updateEarth, credit: earthCredit } = useEarth();
@@ -82,7 +90,9 @@ export function App() {
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
-    return () => window.clearInterval(timer);
+    const onHash = () => setTimelineId(location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null);
+    window.addEventListener("hashchange", onHash);
+    return () => { window.clearInterval(timer); window.removeEventListener("hashchange", onHash); };
   }, []);
 
   useEffect(() => {
@@ -110,9 +120,11 @@ export function App() {
       const index = Number(event.key) - 1;
       if (SECTIONS[index]) pick(SECTIONS[index].id);
       if (event.key === "Escape") {
+        closeTimeline();
         closeDossier();
         setCalendarTab(null);
         setPanelsOpen(false);
+        setAlertsOpen(false);
       }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
@@ -137,6 +149,7 @@ export function App() {
   }
 
   function showChart(symbol: string, span: ChartSpan, marks: ChartMark[] = []) {
+    closeTimeline();
     if (marketView !== "chart") setChartFrom(section === "markets" ? marketView : "board");
     setCalendarTab(null);
     setSection("markets");
@@ -147,6 +160,7 @@ export function App() {
   }
 
   function openSupply(symbol: string) {
+    closeTimeline();
     setCalendarTab(null);
     setSection("markets");
     setSupplySymbol(symbol);
@@ -175,8 +189,22 @@ export function App() {
       loadPositions(symbol).then((res) => { if (res?.marks.length) setChartMarks(res.marks); }).catch(() => null);
     },
     pos: (symbol) => void cards.openPositions(symbol),
-    supply: openSupply
+    supply: openSupply,
+    timeline: openTimeline
   });
+
+  function openTimeline(bioguide: string) {
+    if (!/^[A-Z]\d{6}$/.test(bioguide)) return;
+    setCalendarTab(null);
+    if (phone) cards.closeAll();
+    setTimelineId(bioguide);
+    history.replaceState(null, "", `#timeline/${bioguide}`);
+  }
+
+  function closeTimeline() {
+    setTimelineId(null);
+    if (location.hash.startsWith("#timeline/")) history.replaceState(null, "", location.pathname + location.search);
+  }
 
   function openSeat(placeId: string) {
     const place = (state: string) => STATE_NAME_TO_POSTAL[state || ""] || state || "";
@@ -195,6 +223,7 @@ export function App() {
   }
 
   function pick(next: Section) {
+    closeTimeline();
     setCalendarTab(null);
     setSection(next);
     setSelectedId(null);
@@ -203,6 +232,7 @@ export function App() {
   }
 
   async function openCalendar() {
+    closeTimeline();
     setCalendarTab((open) => (open ? null : "earnings"));
     if (calendar.length) return;
     const res = await api<{ ok: boolean; missing?: string; items: Meeting[] }>("/api/congress/calendar");
@@ -253,11 +283,12 @@ export function App() {
   const reset = () => { setSelectedId(null); setDossier(null); };
 
   return (
-    <div className="app">
+    <div className={`app${phone ? " phone" : ""}${phone && timelineId ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
           <strong>TRADESIMPLE</strong>
           <span>INTEL</span>
+          {DEMO ? <DemoChip /> : null}
         </div>
         <nav className="nav">
           {SECTIONS.map((item, index) => (
@@ -277,9 +308,10 @@ export function App() {
             </label>
           ) : null}
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
+          <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) setPanelsOpen(false); }} onFollow={follow} />
           <PanelsMenu
             open={panelsOpen}
-            onOpen={setPanelsOpen}
+            onOpen={(v) => { setPanelsOpen(v); if (v) setAlertsOpen(false); }}
             section={section}
             focusSymbol={focusSymbol}
             fallbackSymbol={chartSymbol}
@@ -297,7 +329,7 @@ export function App() {
           <time className="clock" dateTime={clock}>{clock.slice(11, 19)} UTC</time>
         </div>
       </header>
-      <main className="stage" style={{ gridTemplateColumns: rail.columns }}>
+      <main className="stage" style={phone ? undefined : { gridTemplateColumns: rail.columns }}>
         <div className="map-wrap">
           <div className="map-bar toggle">
             {calendarTab ? <span className="bar-note">Calendar · Earnings, macro, lobbying, and PAC events · rows open in the dossier · <kbd>esc</kbd> closes</span> : null}
@@ -335,10 +367,13 @@ export function App() {
               />
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
-            {showMap && !calendarTab ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
+            {showMap && !calendarTab && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
           </div>
           <div className="map-body">
-            {calendarTab ? (
+            <Suspense fallback={<p className="stage-loading">Loading…</p>}>
+            {phone && !timelineId ? null : timelineId ? (
+              <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} />
+            ) : calendarTab ? (
               <CalendarBoard
                 tab={calendarTab}
                 onTab={setCalendarTab}
@@ -426,7 +461,8 @@ export function App() {
                 {time.domain ? <TimeBar domain={time.domain} value={mapTime} onChange={setMapTime} notes={time.notes} title={time.title} /> : null}
               </>
             )}
-            {barFor === "congress" ? (
+            </Suspense>
+            {barFor === "congress" && !timelineId ? (
               <div className="legend" aria-hidden="true">
                 <span><i className="swatch yea" />Yea</span>
                 <span><i className="swatch nay" />Nay</span>
@@ -448,7 +484,7 @@ export function App() {
         >
           <button className="splitter-tab" aria-label={rail.rail.open ? "Hide list panel" : "Show list panel"} onClick={rail.toggle}>{rail.rail.open ? "▸" : "◂"}</button>
         </div>
-        <section className={rail.rail.open ? "rail" : "rail hidden"} aria-label="Records" aria-hidden={!rail.rail.open}>
+        <section className={rail.rail.open || phone ? "rail" : "rail hidden"} aria-label="Records" aria-hidden={!rail.rail.open && !phone}>
           <header className="rail-head">
             <div>
               <h1>{active.label}{section === "congress" ? ` · ${mode}` : ""}</h1>

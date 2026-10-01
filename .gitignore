@@ -7,3 +7,5 @@ data/cache.sqlite-*
 .cursor/*.log
 .cursor/shots
 *.tsbuildinfo
+demo/snapshot
+dist-demo

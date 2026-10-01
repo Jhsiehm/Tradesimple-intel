@@ -21,6 +21,9 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 ### Workflow features
 
+- **Member timeline.** Click **Timeline ▸** on any member card, or open `#timeline/<bioguide>` (for example `#timeline/T000278`). It plots the member's disclosed trades against hearings on their committees and the roll calls they cast or missed. Trades within 14 days of a committee hearing are linked to it. **Copy link** shares the view. This shows calendar proximity only, not what a hearing covered. Hearings and votes are indexed from the start of the 119th Congress (Jan 3, 2025). Earlier dates are shaded.
+- **Alerts.** The **Alerts** button in the top bar lists new disclosed trades by watched members, Congress trades and Form 4 filings in watched tickers, and lobbying filings for joined watched tickers. Optionally it also lists every trade filed more than 45 days late. Unread alerts are counted. Browser notifications are opt-in. Alerts are checked every 5 minutes while the tab is open.
+- **Phone view.** Below 720 px wide, the terminal is a read-only list and dossier with no map, for people arriving from a shared link. Member timelines still open from `#timeline/…` links.
 - **Pinned panels.** Open **Panels** in the top bar to pin a Watchlist, X pulse, Last buyers, Headlines, Global markets, or a Supply chain card. Pinned cards float over every tab and are saved between sessions. The menu also suggests panels for whatever you're looking at, and has one-click workspaces (Ticker research, Congress money trail, Global macro and arbitrage).
 - **Watchlist.** Star (☆) any ticker on the S&P board or a dossier, and any member on their card. The watchlist card shows quotes and each member's latest disclosed trade.
 - **Resizable layout.** Drag the divider between the map and the list panel. Drag it closed, double-click it, click the ▸ tab, or press `\` to hide the list. Cards resize from any edge and collapse to their title bar with **–**.
@@ -56,6 +59,19 @@ Open **http://127.0.0.1:5173**. `npm run dev` starts both the API server (port 8
 
 The first load of Positions and PAC data parses PDFs and SEC bulk files, which takes about a minute. After that, results are cached in `data/cache.sqlite`.
 
+### Demo mode (no keys)
+
+`npm run demo` serves the UI from a frozen snapshot of the API, with no server and no keys. A **DEMO** chip with the snapshot date stays in the top bar, and every feed keeps the as-of time from when the snapshot was taken.
+
+```bash
+npm run dev                  # in one terminal, with your keys, and let the indexes warm up
+npm run snapshot             # writes demo/snapshot/ (about 30 MB, gitignored)
+npm run demo                 # or: npm run build:demo  → static site in dist-demo/
+VITE_BASE=/Tradesimple-intel/ npm run build:demo   # for GitHub Pages under a repo path
+```
+
+The snapshot covers the top 30 traders (cards, trades, timelines), up to 60 joined tickers (positions, charts, events, supply chains), and the main boards. Anything outside it says it isn't in the snapshot. The script aborts if any value from `.env.local` appears in a response.
+
 ### API keys (all optional)
 
 Keys live only in `.env.local`. The server reads them and they are never sent to the browser. Any panel that needs a missing key says which one.
@@ -64,7 +80,7 @@ Keys live only in `.env.local`. The server reads them and they are never sent to
 | --- | --- | --- |
 | `CONGRESS_API_KEY` | Votes, bills, members, committees, calendar | [api.congress.gov](https://api.congress.gov/sign-up/) |
 | `LDA_API_KEY` | Lobbying filings | [lda.senate.gov](https://lda.senate.gov/api/register/) |
-| `FEC_API_KEY` | Per-ticker PAC receipts (member PAC data uses free bulk files) | [api.open.fec.gov](https://api.open.fec.gov/developers/) |
+| `FEC_API_KEY` | Per-ticker corporate PAC receipts and spending for the current cycle, for PACs joined in `data/tickers.json` (member PAC data uses free bulk files) | [api.open.fec.gov](https://api.open.fec.gov/developers/) |
 | `AISSTREAM_API_KEY` | Live ship positions | [aisstream.io](https://aisstream.io) |
 | `X_BEARER_TOKEN` | Real X posts. Without it, the X column shows the same accounts' posts on Bluesky plus Truth Social. | [developer.x.com](https://developer.x.com) |
 
@@ -82,6 +98,7 @@ Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free 
 | Short interest | FINRA | Twice monthly |
 | Lobbying, PACs | LDA.gov, FEC bulk files | Quarterly and monthly filings |
 | Votes, bills, committees | Congress.gov API, unitedstates/congress-legislators | Minutes to hours |
+| Timeline index (hearings, per-member roll calls) | Congress.gov committee meetings, House Clerk EVS XML, Senate LIS XML | Rebuilt every 6 hours |
 | US equities | Nasdaq screener | About 15 min delayed |
 | Global indices, ETFs, ADRs, FX, charts | Yahoo Finance chart API | 15–20 min delayed; some exchanges end of day |
 | Crypto | Yahoo Finance, CoinGecko | Minutes |
@@ -102,6 +119,7 @@ Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free 
 server/        Node HTTP API on :8787, no framework
   index.mjs    routes
   congress.mjs, roster.mjs        votes, bills, members, committees
+  timeline.mjs, alerts.mjs        member timeline index, alerts
   positions.mjs, corporate.mjs    PTRs, Form 4, 13F, FINRA, LDA, FEC
   chart.mjs, globals.mjs, instruments.mjs, supply.mjs, macro.mjs   market data
   news.mjs     RSS wires, geotagging, X / Bluesky / Truth Social, trends
@@ -129,7 +147,9 @@ scripts/       dev runner, S&P 500 rows, derived joins
 ```bash
 npm run dev      # API and web UI
 npm start        # API only
-npm run build    # production build of the web UI into dist/
+npm run build    # production build of the web UI into dist/ (map and boards load on demand)
+npm run snapshot # capture the running API into demo/snapshot/ for demo mode
+npm run demo     # zero-key demo from the snapshot; build:demo writes dist-demo/
 npm test         # parser checks against real filings in test/fixtures, join rules, data integrity, API routes (no network)
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
 node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins for the largest quote-only names

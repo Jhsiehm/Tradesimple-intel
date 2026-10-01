@@ -7,7 +7,10 @@
     "dev": "node scripts/dev.mjs",
     "start": "node server/index.mjs",
     "build": "vite build",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "snapshot": "node scripts/snapshot.mjs",
+    "demo": "VITE_DEMO=1 vite",
+    "build:demo": "VITE_DEMO=1 vite build"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",

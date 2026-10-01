@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { Earth, EarthSettings, MapFlash, Marker } from "../types";
 
 type Props = {

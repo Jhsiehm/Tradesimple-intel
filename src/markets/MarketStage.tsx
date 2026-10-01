@@ -1,13 +1,16 @@
+import { lazy, Suspense } from "react";
 import type { MarketView } from "../shell/sections";
 import type { ChartMark, DrawerModel } from "../types";
-import { CandleChart, type ChartSpan } from "./CandleChart";
+import type { ChartSpan } from "./CandleChart";
 import { econModel } from "./CalendarBoard";
-import { CryptoBoard } from "./CryptoBoard";
-import { FxBoard } from "./FxBoard";
 import { GlobalBoard } from "./GlobalBoard";
-import { PositionsBoard } from "./PositionsBoard";
-import { QuoteBoard } from "./QuoteBoard";
 import { SupplyBoard } from "./SupplyBoard";
+
+const CandleChart = lazy(() => import("./CandleChart").then((m) => ({ default: m.CandleChart })));
+const CryptoBoard = lazy(() => import("./CryptoBoard").then((m) => ({ default: m.CryptoBoard })));
+const FxBoard = lazy(() => import("./FxBoard").then((m) => ({ default: m.FxBoard })));
+const PositionsBoard = lazy(() => import("./PositionsBoard").then((m) => ({ default: m.PositionsBoard })));
+const QuoteBoard = lazy(() => import("./QuoteBoard").then((m) => ({ default: m.QuoteBoard })));
 
 type Props = {
   view: MarketView;
@@ -23,7 +26,15 @@ type Props = {
 };
 
 /** Center pane for the Markets section. */
-export function MarketStage({ view, chart, supplySymbol, onSupplySymbol, showChart, openPositions, openMember, pinSymbol, onDossier, onFollow }: Props) {
+export function MarketStage(props: Props) {
+  return (
+    <Suspense fallback={<p className="stage-loading">Loading board…</p>}>
+      <Board {...props} />
+    </Suspense>
+  );
+}
+
+function Board({ view, chart, supplySymbol, onSupplySymbol, showChart, openPositions, openMember, pinSymbol, onDossier, onFollow }: Props) {
   if (view === "chart") return <CandleChart symbol={chart.symbol} span={chart.span} onSpan={chart.onSpan} onBack={chart.onBack} marks={chart.marks} />;
   if (view === "positions") return <PositionsBoard onOpen={openPositions} onMember={openMember} />;
   if (view === "globals") return <GlobalBoard onOpen={(symbol) => showChart(symbol, "6mo")} />;

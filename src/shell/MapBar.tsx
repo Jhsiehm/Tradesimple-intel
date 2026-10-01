@@ -38,7 +38,7 @@ export function CongressBar(props: {
           </button>
         ))}
       </span>
-      <span className="seg">
+      <span className="seg center-only">
         <button aria-pressed={props.voteView === "floor"} onClick={() => props.onVoteView("floor")}>Floor</button>
         <button aria-pressed={props.voteView === "map"} onClick={() => props.onVoteView("map")}>Map</button>
       </span>
@@ -68,7 +68,7 @@ export function MarketsBar(props: {
 }) {
   return (
     <>
-      <span className="seg">
+      <span className="seg center-only">
         {MARKET_VIEWS.map(([v, label]) => (
           <button key={v} aria-pressed={props.view === v} onClick={() => props.onView(v)}>{label}</button>
         ))}
@@ -95,7 +95,7 @@ export function NewsBar(props: {
 }) {
   return (
     <>
-      <span className="seg">
+      <span className="seg center-only">
         <button aria-pressed={props.view === "board"} onClick={() => props.onView("board")}>Board</button>
         <button aria-pressed={props.view === "globe"} onClick={() => props.onView("globe")}>Globe</button>
       </span>

@@ -395,7 +395,12 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
     ok: boolean;
     ticker?: { symbol: string; name: string; districts: string[]; ldaClients?: string[]; pacs?: string[]; recipients?: string[]; joinBasis?: JoinBasis | null; core?: boolean };
     lobby?: { missing?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
-    fec?: { missing?: string; committees?: { name: string; receipts: number | null }[] };
+    fec?: {
+      missing?: string;
+      error?: string;
+      note?: string;
+      committees?: { name: string; receipts: number | null; disbursements?: number | null; coverageEnd?: string | null }[];
+    };
     contracts?: { awards?: { recipient: string; amount: number; agency: string; description: string }[] };
     quote?: { last: number | null; change: number | null; changePct: number | null; asOf: string } | null;
     positions?: Positions | null;
@@ -442,7 +447,12 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
         title: "PAC receipts (FEC)",
         lines: res.fec?.missing
           ? [`Set ${res.fec.missing}. This is separate from lobbying spend.`]
-          : (res.fec?.committees || []).slice(0, 4).map((c) => `${c.name} · ${money(c.receipts)}`)
+          : res.fec?.committees?.length
+            ? [
+                ...res.fec.committees.slice(0, 4).map((c) => `${c.name} · raised ${money(c.receipts)} · spent ${money(c.disbursements)}${c.coverageEnd ? ` · through ${c.coverageEnd}` : ""}`),
+                res.fec.note || ""
+              ].filter(Boolean)
+            : [res.fec?.note || res.fec?.error || "No FEC data."]
       },
       {
         title: "Contracts (USASpending)",

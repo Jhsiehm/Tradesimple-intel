@@ -216,6 +216,7 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
           <p>{member.served}{member.since ? ` · since ${member.since.slice(0, 4)}` : ""}{member.termEnds ? ` · term ends ${member.termEnds}` : ""}</p>
           {member.stateRank || member.senateClass ? <p>{member.stateRank ? `${member.stateRank[0].toUpperCase()}${member.stateRank.slice(1)} senator` : ""}{member.senateClass ? ` · class ${member.senateClass}` : ""}</p> : null}
           <p className="member-links">
+            <button className="member-timeline" onClick={() => onFollow(`timeline:${bioguide}`)}>Timeline ▸</button>
             <a href={member.url} target="_blank" rel="noreferrer">Official site</a>
             <a href={`https://bioguide.congress.gov/search/bio/${member.bioguide}`} target="_blank" rel="noreferrer">Bioguide</a>
             {member.contact ? <a href={member.contact} target="_blank" rel="noreferrer">Contact</a> : null}

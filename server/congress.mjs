@@ -6,9 +6,9 @@ import { memberPacs } from "./corporate.mjs";
 
 const BASE = "https://api.congress.gov/v3";
 const TTL = 15 * 60 * 1000;
-const SESSION = new Date().getUTCFullYear() % 2 === 1 ? 1 : 2;
+export const SESSION = new Date().getUTCFullYear() % 2 === 1 ? 1 : 2;
 const SENATE_MENU = `https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_119_${SESSION}.xml`;
-const SENATE_VOTE = (congress, session, roll) => {
+export const SENATE_VOTE = (congress, session, roll) => {
   const padded = String(roll).padStart(5, "0");
   return `https://www.senate.gov/legislative/LIS/roll_call_votes/vote${congress}${session}/vote_${congress}_${session}_${padded}.xml`;
 };
@@ -21,7 +21,7 @@ function missing() {
   return { ok: false, missing: "CONGRESS_API_KEY", items: [] };
 }
 
-async function congressGet(db, path, ttl = TTL) {
+export async function congressGet(db, path, ttl = TTL) {
   const apiKey = key();
   if (!apiKey) return missing();
   const cacheKey = `congress:${path}`;
@@ -486,16 +486,16 @@ async function senateVoteDetail(db, congress, session, roll) {
   };
 }
 
-function xmlTag(xml, tag) {
+export function xmlTag(xml, tag) {
   const m = String(xml || "").match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
   return m ? m[1].trim() : "";
 }
 
-function cleanText(value) {
+export function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function senateMenuDate(value, year) {
+export function senateMenuDate(value, year) {
   const raw = cleanText(value);
   const m = raw.match(/^(\d{1,2})-([A-Za-z]{3})$/);
   if (!m) return raw;
@@ -739,7 +739,7 @@ function memberName(m) {
   return [mem.firstName, mem.lastName].filter(Boolean).join(" ") || mem.directOrderName || "Member";
 }
 
-function normalizeVote(value) {
+export function normalizeVote(value) {
   const v = String(value || "").toLowerCase();
   if (v.startsWith("yea") || v.startsWith("aye") || v === "yes") return "Yea";
   if (v.startsWith("nay") || v === "no") return "Nay";

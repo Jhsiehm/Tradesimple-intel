@@ -1,5 +1,5 @@
 /** Dossier and card links carry actions like `bill:hr1-119`, `member:A000001`, `supply:TSM`. */
-export type ActionKind = "bill" | "vote" | "member" | "news" | "committee" | "meeting" | "ticker" | "inst" | "chart" | "pos" | "supply";
+export type ActionKind = "bill" | "vote" | "member" | "news" | "committee" | "meeting" | "ticker" | "inst" | "chart" | "pos" | "supply" | "timeline";
 
 export type Routes = Record<ActionKind, (value: string) => void>;
 

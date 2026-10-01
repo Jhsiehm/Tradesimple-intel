@@ -75,3 +75,45 @@ export async function fecForName(db, name) {
   writeCache(db, cacheKey, result, TTL);
   return result;
 }
+
+/** Receipts this cycle for the PAC ids joined in data/tickers.json. No name search, so no guessed committees. */
+export async function fecForCommittees(db, ids) {
+  const apiKey = process.env.FEC_API_KEY || "";
+  if (!apiKey) return { ok: false, missing: "FEC_API_KEY", committees: [] };
+  const year = new Date().getUTCFullYear();
+  const cycle = year % 2 ? year + 1 : year;
+  if (!ids.length) return { ok: true, source: "FEC", cycle, note: "No corporate PAC is joined to this ticker.", committees: [] };
+  const cacheKey = `fec:cmte:v1:${cycle}:${ids.join(",")}`;
+  const hit = readCache(db, cacheKey);
+  if (hit) return hit;
+  const committees = [];
+  let failed = false;
+  for (const id of ids) {
+    const totals = new URL(`https://api.open.fec.gov/v1/committee/${id}/totals/`);
+    totals.searchParams.set("api_key", apiKey);
+    totals.searchParams.set("cycle", String(cycle));
+    const info = new URL(`https://api.open.fec.gov/v1/committee/${id}/`);
+    info.searchParams.set("api_key", apiKey);
+    const slow = (url) => fetchJson(url, {}, 30000).catch(() => fetchJson(url, {}, 30000)).catch(() => null);
+    const [body, meta] = await Promise.all([slow(totals), slow(info)]);
+    if (!body) failed = true;
+    const row = body?.results?.[0];
+    committees.push({
+      id,
+      name: meta?.results?.[0]?.name || id,
+      receipts: row?.receipts ?? null,
+      disbursements: row?.disbursements ?? null,
+      coverageEnd: row?.coverage_end_date ? String(row.coverage_end_date).slice(0, 10) : null
+    });
+  }
+  const result = {
+    ok: true,
+    source: "FEC (openFEC committee totals)",
+    asOf: new Date().toISOString(),
+    cycle,
+    note: `${cycle - 1}–${cycle} cycle totals through each committee's latest report. Separate from LDA lobbying spend.`,
+    committees
+  };
+  if (!failed) writeCache(db, cacheKey, result, TTL);
+  return result;
+}

@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { loadEnv } from "./env.mjs";
 import { listTickers, openDb, tickerBySymbol } from "./db.mjs";
 import { billDetail, billVote, calendar, committeeDetail, committeeList, compareMembers, listBills, listVotes, memberProfile, memberRoster, searchMembers, seatsForCodes, voteDetail } from "./congress.mjs";
-import { fecForName, lobbyingForClient } from "./lobby.mjs";
+import { fecForCommittees, fecForName, lobbyingForClient } from "./lobby.mjs";
+import { memberTimeline, warmTimeline } from "./timeline.mjs";
+import { alertsFor } from "./alerts.mjs";
 import { awardsForRecipient } from "./contracts.mjs";
 import { shortInterest } from "./markets.mjs";
 import { congressTrades, insiderTrades, memberTrades, positionsBoard, positionsFor, shortBoard, warmPositions, whaleHoldings } from "./positions.mjs";
@@ -84,6 +86,10 @@ const server = http.createServer(async (req, res) => {
     const tradesMatch = url.pathname.match(/^\/api\/congress\/member\/([A-Za-z]\d{6})\/trades$/);
     if (tradesMatch) {
       return send(res, 200, { ok: true, items: await memberTrades(db, tradesMatch[1].toUpperCase()) });
+    }
+    const timelineMatch = url.pathname.match(/^\/api\/congress\/member\/([A-Za-z]\d{6})\/timeline$/);
+    if (timelineMatch) {
+      return send(res, 200, await memberTimeline(db, timelineMatch[1]));
     }
     const memberMatch = url.pathname.match(/^\/api\/congress\/member\/([A-Za-z]\d{6})$/);
     if (memberMatch) {
@@ -177,6 +183,9 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/calendar/earnings") {
       return send(res, 200, await earningsCalendar(db));
     }
+    if (url.pathname === "/api/alerts") {
+      return send(res, 200, await alertsFor(db, url.searchParams));
+    }
     if (url.pathname === "/api/calendar/lobbying") {
       return send(res, 200, await lobbyingBoard(db));
     }
@@ -237,6 +246,7 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
   if (process.env.INTEL_NO_WARM) return;
   warmPositions(db);
+  warmTimeline(db);
   setTimeout(() => {
     warmCorporate(db).then(() => warmMacro(db)).then((n) => console.log(`macro warm: ${n} days fetched`)).catch((err) => console.error("warm", err.message));
   }, 5000);
@@ -249,7 +259,7 @@ async function tickerDossier(symbol) {
   const recipient = ticker.recipients[0] || ticker.name;
   const [lobby, fec, contracts, quote, positions, seats] = await Promise.all([
     lobbyingForClient(db, client).catch((err) => ({ ok: false, error: err.message, filings: [] })),
-    fecForName(db, ticker.name).catch((err) => ({ ok: false, error: err.message, committees: [] })),
+    fecForCommittees(db, ticker.pacs || []).catch((err) => ({ ok: false, error: err.message, committees: [] })),
     awardsForRecipient(db, recipient).catch((err) => ({ ok: false, error: err.message, awards: [] })),
     sessionQuote(ticker).catch(() => null),
     positionsFor(db, ticker.symbol).catch(() => null),
