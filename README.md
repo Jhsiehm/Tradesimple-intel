@@ -24,6 +24,19 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 The first visit (and every visit to the public demo) opens **Today** in the center stage: the newest disclosed trades in plain sentences, such as *Sen. X sold $50k–$100k NVDA · traded Sep 3, filed Sep 25 (22d)*, each with a **filing ↗** link to the source document. Four cards: latest filings (one row per report, with a count of the other trades in it), filings more than 45 days late, the biggest trades by the low end of the disclosed range, and the most-traded tickers by number of members. The window is by filed date: 7 days, widened to 14 or 30 when fewer than five members filed, and the header says which. Names open the member timeline, tickers open the chart. Open it with **Today** in the nav, key `0`, `#week`, or the command codes `WEEK` and `LEAD` (leaderboards). API: `/api/congress/feed` (pure `buildFeed` in `server/feed.mjs`; sentences in `shared/sentences.mjs`).
 
+### Leaderboards and returns against the S&P 500
+
+**Today → Leaderboards** (`#leaders`, command `LEAD`) ranks members four ways: disclosed buys against the S&P 500 (highest and lowest, minimum 10 priced buys), most active traders, late filers (reports with a trade filed more than 45 days after it, plus the longest lag with a link to that filing), and most-traded tickers since Jan 3, 2025.
+
+How returns are computed, and what they are not:
+
+- **Buys only.** Each disclosed buy of a joined ticker (`data/tickers.json`) is priced from the Yahoo Finance daily **adjusted** close on the trade date (or the next trading day, within 5 days) to the latest close. SPY over the same days is the S&P 500. Excess = stock return − SPY return, in percentage points. 30-day and 90-day figures use only buys at least that old. Sells are not scored.
+- **Equal-weighted, not a portfolio.** Disclosures give ranges, not amounts or exit dates, so the headline averages every buy equally. A second figure weights each buy by its **range midpoint**. Neither is the member's actual return: we don't know position sizes, when they sold, or what they hold outside these reports. The UI and share card say *Disclosed buys, equal-weighted, not their actual portfolio*.
+- **Coverage.** Up to the 300 most-bought joined tickers plus SPY. Unjoined symbols, options, bonds, and funds outside the join table are not priced; the board shows priced/total buys per member.
+- **Fetching.** `server/returns.mjs` warms in the background 20 s after boot and every 12 h, one Yahoo request at a time about 450 ms apart, with daily closes cached in SQLite for 20 h (stale copies are kept if Yahoo fails). Results appear progressively while pricing runs. Pure functions (`tradeReturn`, `buyReturns`, `memberStats`, `buildLeaders`) are tested in `test/returns.test.mjs`.
+
+The member timeline shows the same figure in its stats line and each trade's return against SPY in its tooltip; the share card adds a *Buys vs S&P 500* stat. API: `/api/congress/leaders`, and `returns` on `/api/congress/member/:id/timeline`.
+
 ### Workflow features
 
 - **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `ALRT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), or `DES` (card). With nothing typed, it lists where you've been. `Alt+←` goes back.
@@ -152,6 +165,7 @@ server/        Node HTTP API on :8787, no framework
   congress.mjs, roster.mjs        votes, bills, members, committees
   timeline.mjs, alerts.mjs        member timeline index, alerts
   feed.mjs                        landing feed (this week in Congress trading)
+  returns.mjs                     buy returns vs SPY, member stats, leaderboards
   positions.mjs, corporate.mjs    PTRs, Form 4, 13F, FINRA, LDA, FEC
   contracts.mjs                   USAspending contract feed, contractor board, DoD daily index
   chart.mjs, globals.mjs, instruments.mjs, supply.mjs, macro.mjs   market data

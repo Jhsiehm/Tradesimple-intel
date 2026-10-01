@@ -1601,7 +1601,11 @@ body.dragging .map-body, body.dragging .widgets { pointer-events: none; }
 .ct-error { margin: 4px 0 0; color: var(--nay); font-size: 11px; line-height: 1.4; }
 @container (max-width: 1180px) { .board.contracts .ct-sector { display: none; } }
 @container (max-width: 1040px) { .board.contracts .ct-trend { display: none; } }
-@container (max-width: 900px) { .ct-grid { grid-template-columns: minmax(0, 1fr); } .ct-dod { display: none; } }
+@container (max-width: 900px) {
+  .ct-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 32%); }
+  .ct-dod { border-left: 0; border-top: 1px solid var(--line); padding: 8px 0 0; }
+  .ct-dod ul { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 14px; }
+}
 @media (max-width: 1180px) { .go-btn kbd { display: none; } }
 @media (max-width: 1080px) { .go-btn { display: none; } }
 
@@ -1634,3 +1638,22 @@ button.link.sym { color: var(--amber); text-decoration-color: rgba(232, 163, 61,
 .today-card table { width: 100%; }
 .app.phone .today-grid { grid-template-columns: minmax(0, 1fr); }
 .app.phone .board.today { padding: 10px; }
+.leaders-meta { display: grid; gap: 4px; padding: 10px 0 2px; }
+.leaders-meta p { margin: 0; color: var(--dim); font-size: 11px; line-height: 1.45; }
+.leaders-meta em { font-style: normal; color: var(--faint); letter-spacing: 0.1em; font-size: 10px; margin: 0 8px 0 12px; }
+.leaders-meta em:first-child { margin-left: 0; }
+.amber { color: var(--amber); }
+.today-card.wide { grid-column: 1 / -1; }
+.today-card h3 .scope.inline { float: right; display: inline-flex; gap: 1px; border: 1px solid var(--line); padding: 2px; }
+.today-card h3 .scope.inline button { padding: 2px 8px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: none; color: var(--dim); }
+.today-card h3 .scope.inline button.on { color: var(--amber); background: rgba(232, 163, 61, 0.1); }
+.today-card td small { color: var(--faint); }
+.today-card td a { color: var(--amber); text-decoration: none; }
+.today-card .board-name { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.board.today .today-card td.board-name { color: inherit; letter-spacing: 0; }
+.tl-ret { color: var(--dim); }
+.tl-stats b.up { color: var(--yea); }
+.tl-stats b.down { color: var(--nay); }
+.board.today .board-scroll { overflow-x: hidden; }
+.today-card { overflow-x: auto; }
+.today-card .board-name { max-width: 200px; }

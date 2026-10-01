@@ -6,7 +6,10 @@ type Near = { id: string; date: string; title: string; lane: string; laneName: s
 type Trade = {
   id: string; symbol: string; asset: string; side: string; type: string; owner: string;
   amount: string; amountLow: number; traded: string; filed: string; lag: number | null; link: string; near: Near | null;
+  ret?: { entry: string; since: Leg; d30: Leg | null; d90: Leg | null };
 };
+type Leg = { ret: number; spy: number; excess: number; days: number; to: string };
+type Returns = { buys: number; priced: number; excessSince: number | null; excess30: number | null; n30: number; excess90: number | null; n90: number; hitRate: number | null; excessMid: number | null; basis: string; lastClose: string | null; building?: boolean };
 type Hearing = { id: string; date: string; title: string; type: string; status: string; link: string; mine: boolean };
 type Lane = { id: string; name: string; title: string; subs: { id: string; name: string; title: string }[]; hearings: Hearing[] };
 type Vote = { id: string; date: string; question: string; result: string; bill: string; vote: string };
@@ -17,6 +20,7 @@ export type TimelineRes = {
   trades?: Trade[]; committees?: Lane[]; votes?: Vote[]; nearDays?: number;
   proximity?: { from: string; trades: number; near: number; share: number | null; tradeDays: number; nearTradeDays: number; dayShare: number | null; baseline: number } | null;
   building?: boolean;
+  returns?: Returns | null;
   coverage?: {
     trades: { from: string; building: boolean; parsed: number; total: number; paper: number; failed: number; notes: string[] } | null;
     meetings: { done: number; total: number };
@@ -41,6 +45,8 @@ const CONGRESS_START = "2025-01-03";
 
 const t = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+const pts = (v: number | null | undefined) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}`);
+const signedPct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`;
 const radius = (low: number) => (low >= 1_000_000 ? 8 : low >= 250_000 ? 7 : low >= 100_000 ? 6 : low >= 50_000 ? 5 : low >= 15_000 ? 4 : 3);
 
 /** Center-stage board: one member's disclosed trades against their committee hearings and roll calls. */
@@ -212,6 +218,11 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
           ) : null}
           <i>·</i>median filing lag <b>{medianLag == null ? "—" : `${medianLag}d`}</b>
           <i>·</i><b>{view.votes.length - missed}</b> roll calls cast, <b>{missed}</b> missed
+          {res.returns && res.returns.excessSince != null ? (
+            <span className="tl-ret" title={`${res.returns.basis} 30 days after: ${pts(res.returns.excess30)} pts (${res.returns.n30} buys). 90 days after: ${pts(res.returns.excess90)} pts (${res.returns.n90} buys). Weighted by range midpoint: ${pts(res.returns.excessMid)} pts. Closes through ${res.returns.lastClose || "—"}.`}>
+              <i>·</i>disclosed buys vs S&amp;P 500 <b className={res.returns.excessSince >= 0 ? "up" : "down"}>{pts(res.returns.excessSince)} pts</b> avg since trade ({res.returns.priced} of {res.returns.buys} priced · beat SPY {pct(res.returns.hitRate ?? 0)}) · equal-weighted, not their portfolio
+            </span>
+          ) : null}
         </p>
       </header>
       <div className="tl-plot" ref={setPlot} onMouseLeave={() => setTip(null)}>
@@ -265,6 +276,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
                   `${tr.amount}`,
                   `Traded ${tr.traded} · filed ${tr.filed || "—"}${tr.lag != null ? ` (${tr.lag}d)` : ""}`,
                   tr.near ? `${Math.abs(tr.near.gap)}d ${tr.near.gap >= 0 ? "before" : "after"} ${tr.near.laneName} meeting: ${tr.near.title.slice(0, 90)}` : "No hearing on their committees within the window",
+                  ...(tr.ret ? [`Since ${tr.ret.entry}: ${tr.symbol} ${signedPct(tr.ret.since.ret)} vs SPY ${signedPct(tr.ret.since.spy)} (${pts(tr.ret.since.excess)} pts)${tr.ret.d90 ? ` · 90d ${pts(tr.ret.d90.excess)} pts` : ""}`] : []),
                   "Click: open the original filing"
                 ])}
                 onClick={() => tr.link ? window.open(tr.link, "_blank", "noopener") : onFollow(`pos:${tr.symbol}`)}

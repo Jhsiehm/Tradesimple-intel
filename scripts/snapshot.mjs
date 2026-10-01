@@ -68,7 +68,7 @@ const fixed = [
   "/api/news", "/api/strait/theaters", "/api/earth/imagery", "/api/earth/lanes",
   "/api/macro/strip", "/api/fx/board", "/api/crypto/board", "/api/calendar/macro?back=0&ahead=14",
   "/api/calendar/earnings", "/api/calendar/lobbying", "/api/calendar/pacs", "/api/alerts?late=all",
-  "/api/congress/feed"
+  "/api/congress/feed", "/api/congress/leaders"
 ];
 
 console.log(`snapshot from ${BASE}`);
@@ -95,7 +95,8 @@ const counts = new Map();
 for (const t of trades) if (t.bioguide) counts.set(t.bioguide, (counts.get(t.bioguide) || 0) + 1);
 const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, MEMBERS);
 const feed = store.get("/api/congress/feed") || {};
-const featured = [feed.latest, feed.late, feed.biggest].flatMap((list) => (list || []).slice(0, 15)).map((t) => t.bioguide).filter(Boolean);
+const lead = store.get("/api/congress/leaders") || {};
+const featured = [feed.latest, feed.late, feed.biggest, lead.excessTop, lead.excessBottom, lead.late].flatMap((list) => (list || []).slice(0, 15)).map((t) => t.bioguide).filter(Boolean);
 const members = [...top, ...[...new Set(featured)].filter((id) => !top.some(([t]) => t === id)).map((id) => [id, counts.get(id) || 0])];
 await pool(members, 2, async ([id]) => {
   await grab(`/api/congress/member/${id}?chamber=${seatOf.get(id) || "house"}`);

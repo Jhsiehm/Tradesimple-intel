@@ -3,6 +3,7 @@ import { readCache, writeCache } from "./db.mjs";
 import { SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
 import { congressTrades } from "./positions.mjs";
+import { memberReturns } from "./returns.mjs";
 
 const DAY = 24 * 60 * 60 * 1000;
 const CONGRESS = 119;
@@ -308,11 +309,17 @@ export async function memberTimeline(db, bioguide) {
   const person = people.items.find((p) => p.bioguide === id) || {};
   const chamber = person.chamber === "senate" ? "senate" : "house";
   const body = buildTimeline({ trades, seats, meetings: state.meetings, votes: state.votes[chamber], bioguide: id, today: new Date().toISOString().slice(0, 10) });
+  const rets = memberReturns(id);
+  body.trades = body.trades.map((t) => {
+    const r = rets.byTrade.get(t.id);
+    return r ? { ...t, ret: { entry: r.entry, since: r.since, d30: r.d30, d90: r.d90 } } : t;
+  });
   const p = state.progress;
   return {
     ok: true,
     member: { bioguide: id, name: person.name || trades[0]?.person || id, party: person.party || "", state: person.state || "", district: person.district || "", chamber },
     ...body,
+    returns: rets.stats,
     building: state.running || Boolean(board.building),
     coverage: {
       trades: board.progress ? { from: board.from, building: Boolean(board.building), ...board.progress[chamber], notes: board.errors || [] } : null,
@@ -324,7 +331,8 @@ export async function memberTimeline(db, bioguide) {
       { label: "Trades", source: "House Clerk PTR PDFs / Senate eFD", latency: "Trade date as disclosed; filed up to 45 days later by law." },
       { label: "Committees", source: "unitedstates/congress-legislators (current assignments)", latency: "Current roster only; past assignments are not shown." },
       { label: "Hearings", source: "Congress.gov committee-meeting API", latency: "As posted by committee clerks; refreshed every 6 h." },
-      { label: "Votes", source: chamber === "senate" ? "Senate.gov LIS roll call XML" : "House Clerk EVS roll call XML", latency: "Roll calls of the 119th Congress; refreshed every 6 h." }
+      { label: "Votes", source: chamber === "senate" ? "Senate.gov LIS roll call XML" : "House Clerk EVS roll call XML", latency: "Roll calls of the 119th Congress; refreshed every 6 h." },
+      { label: "Returns", source: `Yahoo Finance daily adjusted closes vs SPY${rets.stats?.lastClose ? ` through ${rets.stats.lastClose}` : ""}`, latency: "Disclosed buys of joined tickers only, equal-weighted, not their actual portfolio. Refreshed every 12 h." }
     ],
     asOf: state.builtAt || new Date().toISOString()
   };
