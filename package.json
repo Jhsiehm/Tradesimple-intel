@@ -13,7 +13,8 @@
     "demo": "VITE_DEMO=1 vite",
     "build:demo": "VITE_DEMO=1 vite build",
     "publish:demo": "node scripts/publish-demo.mjs",
-    "bot": "node scripts/bot.mjs"
+    "bot": "node scripts/bot.mjs",
+    "warm": "node scripts/warm.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",
