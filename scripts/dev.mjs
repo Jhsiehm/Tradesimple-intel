@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const server = spawn(process.execPath, ["server/index.mjs"], {
+const hot = process.argv.includes("--hot");
+const server = spawn(process.execPath, [...(hot ? ["--watch"] : []), "server/index.mjs"], {
   cwd: root,
   stdio: "inherit",
   env: process.env

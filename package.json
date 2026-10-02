@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:hot": "node scripts/dev.mjs --hot",
     "start": "node server/index.mjs",
     "build": "vite build",
     "test": "node --test \"test/*.test.mjs\"",
