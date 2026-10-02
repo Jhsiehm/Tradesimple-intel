@@ -32,7 +32,7 @@ export type TimelineRes = {
 };
 
 type Span = "trades" | "all" | "1y" | "6m" | "90d";
-type Tip = { x: number; y: number; lines: string[] } | null;
+type Tip = { x: number; y: number; up: boolean; lines: string[] } | null;
 
 const DAY = 86_400_000;
 const LABEL_W = 196;
@@ -168,9 +168,13 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
   const px = res.proximity;
 
   const show = (e: React.MouseEvent, lines: string[]) => {
-    const box = wrap.current?.getBoundingClientRect();
-    if (!box) return;
-    setTip({ x: e.clientX - box.left, y: e.clientY - box.top, lines });
+    const el = wrap.current;
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const x = e.clientX - box.left;
+    const y = e.clientY - box.top;
+    const left = Math.max(0, Math.min(x + 14, el.clientWidth - 296)) + el.scrollLeft;
+    setTip({ x: left, y: y + el.scrollTop, up: y > el.clientHeight / 2, lines });
   };
 
   const share = () => {
@@ -339,7 +343,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
           })}
         </svg>
         {tip ? (
-          <div className="tl-tip" style={{ left: Math.min(tip.x + 14, width - 300), top: tip.y + 14 }}>
+          <div className="tl-tip" style={tip.up ? { left: tip.x, top: tip.y - 14, transform: "translateY(-100%)" } : { left: tip.x, top: tip.y + 14 }}>
             {tip.lines.map((line, i) => <p key={i} className={i === 0 ? "h" : i === tip.lines.length - 1 ? "hint" : ""}>{line}</p>)}
           </div>
         ) : null}
