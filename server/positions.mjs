@@ -431,7 +431,7 @@ const FORM4_CODES = {
 
 export function insiderTrades(db) {
   return once("insider-trades", async () => {
-    const key = `pos:insiders:v2:${coreKey(db)}`;
+    const key = `pos:insiders:v3:${coreKey(db)}`;
     const hit = readCache(db, key);
     if (hit) return hit;
     const tickers = listCore(db).filter((t) => t.cik);
@@ -452,7 +452,7 @@ export function insiderTrades(db) {
           if (!parsed) continue;
           parsed.lines.forEach((line, i) => {
             rows.push({
-              id: `f4-${pick.accession}-${i}`,
+              id: `f4-${ticker.symbol}-${pick.accession}-${i}`,
               symbol: ticker.symbol,
               person: parsed.owner,
               title: parsed.title,
