@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, recent, when } from "../lib/api";
 import type { Chamber, CongressMode, DrawerModel, ListItem, PartyFilter, StatusLine } from "../types";
-import { STATE_NAME_TO_POSTAL } from "./states";
+import { houseVoteMap, senateVoteMap } from "./voteMap";
 
 type Bill = {
   id: string;
@@ -11,7 +11,25 @@ type Bill = {
   updated: string;
   latest: string;
   stage: string;
+  votes?: number;
+  lastVote?: string;
 };
+
+export type BillRoll = {
+  id: string;
+  chamber: Chamber;
+  congress: number;
+  session: number;
+  roll: number;
+  date: string;
+  question: string;
+  result: string;
+  yea: number | null;
+  nay: number | null;
+  final: boolean;
+};
+
+type BillInfo = { title: string; latest: string; stage: string; updated: string; ladder: { stages: { name: string; reached: boolean }[]; actions: { date: string; text: string }[] } };
 
 type VoteRow = {
   id: string;
@@ -97,6 +115,7 @@ type CommitteeDetail = {
 };
 
 type VoteDetail = {
+  id?: string;
   question: string;
   result: string;
   date: string;
@@ -115,6 +134,11 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
   const [districts, setDistricts] = useState<GeoJSON.FeatureCollection | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [voteCaption, setVoteCaption] = useState("");
+  const [voteSource, setVoteSource] = useState<{ source: string; asOf: string; label: string } | null>(null);
+  const [billInfo, setBillInfo] = useState<BillInfo | null>(null);
+  const [rolls, setRolls] = useState<BillRoll[] | null>(null);
+  const [rollPick, setRollPick] = useState<string | null>(null);
+  const [billVote, setBillVote] = useState<VoteDetail | null>(null);
   const [drawer, setDrawer] = useState<DrawerModel | null>(null);
   const [status, setStatus] = useState<StatusLine>({ source: "Congress.gov", asOf: "" });
   const [rosterStatus, setRosterStatus] = useState<StatusLine>({ source: "unitedstates/congress-legislators", asOf: "" });
@@ -179,75 +203,76 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
   useEffect(() => {
     if (pinnedVote || !latestVote) return;
     let cancel = false;
-    api<{ ok: boolean; vote?: VoteDetail }>(`/api/congress/votes/${chamber}/${latestVote.congress}/${latestVote.session}/${latestVote.roll}`)
+    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${chamber}/${latestVote.congress}/${latestVote.session}/${latestVote.roll}`)
       .then((res) => {
         if (cancel || !res.vote) return;
         setPositions(res.vote.positions);
         setVoteCaption(`Latest roll call · ${res.vote.question || res.vote.bill} · ${res.vote.result}`);
+        setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `Latest ${chamber} roll ${latestVote.roll}` });
       })
       .catch(() => null);
     return () => { cancel = true; };
   }, [pinnedVote, latestVote, chamber]);
 
   useEffect(() => {
+    setBillInfo(null);
+    setRolls(null);
+    setRollPick(null);
+    setBillVote(null);
     if (!selectedId || mode !== "bills") return;
-    const billReq = api<{ ok: boolean; bill?: { title: string; latest: string; stage: string; updated: string; ladder: { stages: { name: string; reached: boolean }[]; actions: { date: string; text: string }[] } }; missing?: string }>(
-      `/api/congress/bills/${selectedId}`
-    );
-    const voteReq = api<{
-      ok: boolean;
-      note?: string;
-      vote?: (VoteDetail & { id?: string }) | null;
-    }>(`/api/congress/bills/${selectedId}/vote?chamber=${chamber}`);
-    Promise.all([billReq, voteReq]).then(([res, voteRes]) => {
-      if (res.bill) {
-        setDrawer({
-          title: res.bill.title,
-          meta: res.bill.stage,
-          stages: res.bill.ladder.stages,
-          rows: [
-            { label: "Updated", value: when(res.bill.updated) },
-            { label: "Latest", value: res.bill.latest || "—" },
-            ...(voteRes.vote ? [
-              { label: "Result", value: voteRes.vote.result || "—" },
-              { label: "Yea", value: String(voteRes.vote.totals.Yea || 0) },
-              { label: "Nay", value: String(voteRes.vote.totals.Nay || 0) },
-              { label: "Present", value: String(voteRes.vote.totals.Present || 0) },
-              { label: "Not voting", value: String(voteRes.vote.totals["Not voting"] || 0) }
-            ] : [])
-          ],
-          links: voteRes.vote?.id
-            ? [{ label: "Roll call", value: voteRes.vote.question || voteRes.vote.result || "Vote", action: `vote:${voteRes.vote.id}` }]
-            : [],
-          tables: voteRes.vote?.positions?.length ? [castTable(voteRes.vote.positions, party)] : [],
-          blocks: [
-            ...(voteRes.vote?.positions?.length ? [{ title: "How they voted", lines: partySplit(voteRes.vote.positions) }] : []),
-            {
-              title: "Actions",
-              lines: [...res.bill.ladder.actions]
-                .sort((a, b) => recent(b.date) - recent(a.date))
-                .map((a) => `${a.date || ""} ${a.text}`.trim())
-            }
-          ]
-        });
-      }
-      if (!voteRes.vote) {
+    let cancel = false;
+    api<{ ok: boolean; bill?: BillInfo }>(`/api/congress/bills/${selectedId}`)
+      .then((res) => { if (!cancel && res.bill) setBillInfo(res.bill); })
+      .catch(() => null);
+    api<{ ok: boolean; items?: BillRoll[] }>(`/api/congress/bills/${selectedId}/votes`)
+      .then((res) => { if (!cancel) setRolls(res.items || []); })
+      .catch(() => { if (!cancel) setRolls([]); });
+    return () => { cancel = true; };
+  }, [selectedId, mode]);
+
+  /** The roll call on the map: the user's pick in this chamber, else this chamber's final passage, else its latest. */
+  const rollId = useMemo(() => {
+    if (mode !== "bills" || !rolls) return null;
+    const mine = rolls.filter((r) => r.chamber === chamber);
+    if (rollPick && mine.some((r) => r.id === rollPick)) return rollPick;
+    return (mine.find((r) => r.final) || mine[0])?.id || null;
+  }, [mode, rolls, rollPick, chamber]);
+
+  useEffect(() => {
+    if (mode !== "bills" || !selectedId || !rolls) return;
+    const roll = rolls.find((r) => r.id === rollId);
+    if (!roll) {
+      const other = rolls.filter((r) => r.chamber !== chamber).length;
+      setBillVote(null);
+      setPositions([]);
+      setVoteSource(null);
+      setVoteCaption(other ? `No ${chamber} roll call on this bill · ${other} in the ${chamber === "house" ? "Senate" : "House"}` : "No recorded roll call on this bill");
+      setStatus({ source: "Congress.gov bill actions · House Clerk · Senate.gov LIS", asOf: "", latency: other ? `Pick a ${chamber === "house" ? "Senate" : "House"} roll call above the map.` : "Voice votes and unanimous consent leave no roll call to map." });
+      return;
+    }
+    let cancel = false;
+    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${roll.chamber}/${roll.congress}/${roll.session}/${roll.roll}`)
+      .then((res) => {
+        if (cancel || !res.vote) return;
+        if (!res.vote.question || /^roll call$/i.test(res.vote.question)) res.vote.question = roll.question;
+        setBillVote(res.vote);
+        setPositions(res.vote.positions);
+        setVoteCaption(`${res.vote.question} · ${res.vote.result || roll.result}`);
+        setVoteSource({ source: res.source || "", asOf: res.vote.date || roll.date, label: `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll}${roll.final ? " · final passage" : ""}` });
         setStatus({
-          source: "Congress.gov",
-          asOf: "",
-          latency: voteRes.note || "No recorded roll call for this chamber. Floor shows the latest roll call."
+          source: res.source || "Congress.gov roll call",
+          asOf: when(res.vote.date || roll.date),
+          latency: `${res.vote.totals.Yea || 0} yea · ${res.vote.totals.Nay || 0} nay · official roll call, posted within hours of the vote · click a ${roll.chamber === "house" ? "district" : "state"} for its members`
         });
-        return;
-      }
-      setPositions(voteRes.vote.positions);
-      setVoteCaption(`${voteRes.vote.question || voteRes.vote.bill} · ${voteRes.vote.result}`);
-      setStatus({
-        source: "Congress.gov roll call",
-        asOf: when(voteRes.vote.date),
-        latency: `${voteRes.vote.totals.Yea || 0} yea · ${voteRes.vote.totals.Nay || 0} nay · click a seat for one member`
-      });
-    }).catch(() => null);
-  }, [selectedId, mode, chamber, party]);
+      })
+      .catch(() => null);
+    return () => { cancel = true; };
+  }, [mode, selectedId, rolls, rollId, chamber]);
+
+  useEffect(() => {
+    if (mode !== "bills" || !selectedId || !billInfo) return;
+    setDrawer(billModel(billInfo, rolls, rollId, billVote, party));
+  }, [mode, selectedId, billInfo, rolls, rollId, billVote, party, chamber]);
 
   useEffect(() => {
     if (!selectedId || mode !== "votes") return;
@@ -258,6 +283,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         if (!res.vote) return;
         setPositions(res.vote.positions);
         setVoteCaption(`${res.vote.question || res.vote.bill} · ${res.vote.result}`);
+        setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `${chamber === "house" ? "House" : "Senate"} roll ${vote.roll}` });
         setDrawer({
           title: res.vote.question || `Roll ${vote.roll}`,
           meta: res.vote.result,
@@ -333,7 +359,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         .map((b) => ({
           id: b.id,
           title: `${b.type} ${b.number}`,
-          meta: `${when(b.updated)} · ${b.stage} · ${b.title}`
+          meta: `${when(b.updated)} · ${b.votes ? `${b.votes} roll call${b.votes > 1 ? "s" : ""} · ` : ""}${b.stage} · ${b.title}`
         }));
     }
     return [...votes]
@@ -353,51 +379,72 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
       }));
   }, [bills, votes, roster, committees, mode, query, chamber, party]);
 
-  const shown = useMemo(
-    () => (party === "all" ? positions : positions.filter((p) => (p.party || "I") === party)),
-    [positions, party]
-  );
-
-  const geojson = useMemo(() => {
-    if (chamber === "senate") {
-      if (!states) return undefined;
-      const byState = new Map<string, string>();
-      for (const p of shown) {
-        const prev = byState.get(p.state);
-        if (!prev) byState.set(p.state, p.vote);
-        else if (prev !== p.vote) byState.set(p.state, "Split");
-      }
-      return {
-        ...states,
-        features: states.features.map((f) => {
-          const postal = STATE_NAME_TO_POSTAL[String(f.properties?.name || "")] || "";
-          return {
-            ...f,
-            properties: { ...f.properties, id: postal, vote: byState.get(postal) || "" }
-          };
-        })
-      };
-    }
-    if (!districts) return undefined;
-    const byGeoid = new Map(shown.filter((p) => p.geoid).map((p) => [p.geoid, p.vote]));
-    return {
-      ...districts,
-      features: districts.features.map((f) => ({
-        ...f,
-        properties: {
-          ...f.properties,
-          id: f.properties?.GEOID,
-          vote: byGeoid.get(String(f.properties?.GEOID || "")) || ""
-        }
-      }))
-    };
-  }, [chamber, states, districts, shown]);
+  const voteMap = useMemo(() => {
+    if (chamber === "senate") return states ? senateVoteMap(states, positions, party) : null;
+    return districts ? houseVoteMap(districts, positions, party) : null;
+  }, [chamber, states, districts, positions, party]);
 
   const view = mode === "members" || mode === "committees"
     ? { ...rosterStatus, latency: mode === "committees" ? "Committee rosters are current assignments. Click a committee for members, bills, and meetings." : rosterStatus.latency }
     : status;
 
-  return { items, empty, drawer, setDrawer, status: view, geojson, positions, voteCaption, roster, committeeFocus };
+  return {
+    items,
+    empty,
+    drawer,
+    setDrawer,
+    status: view,
+    geojson: voteMap?.geojson,
+    mapCounts: voteMap?.counts || {},
+    positions,
+    voteCaption,
+    voteSource,
+    rolls: rolls || [],
+    rollId,
+    pickRoll: setRollPick,
+    roster,
+    committeeFocus
+  };
+}
+
+function billModel(bill: BillInfo, rolls: BillRoll[] | null, rollId: string | null, vote: VoteDetail | null, party: PartyFilter): DrawerModel {
+  const roll = rolls?.find((r) => r.id === rollId) || null;
+  const live = vote && roll && vote.id === roll.id ? vote : null;
+  return {
+    title: bill.title,
+    meta: bill.stage,
+    stages: bill.ladder.stages,
+    rows: [
+      { label: "Updated", value: when(bill.updated) },
+      { label: "Latest", value: bill.latest || "—" },
+      { label: "Roll call", value: roll ? `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll} · ${roll.date}${roll.final ? " · final passage" : ""}` : rolls ? "None recorded in this chamber" : "Loading…" },
+      ...(live ? [
+        { label: "Question", value: live.question || roll?.question || "—" },
+        { label: "Result", value: live.result || "—" },
+        { label: "Tally", value: `${live.totals.Yea || 0} yea · ${live.totals.Nay || 0} nay · ${live.totals.Present || 0} present · ${live.totals["Not voting"] || 0} not voting` }
+      ] : [])
+    ],
+    tables: [
+      ...(rolls?.length ? [{
+        title: "Roll calls on this bill",
+        note: "Click one to map it. Final passage is the default in each chamber.",
+        cols: ["", "Chamber", "Date", "Question", "Result", "Yea–Nay"],
+        rows: rolls.map((r) => ({
+          cells: [r.id === rollId ? "▸" : r.final ? "final" : "", r.chamber === "house" ? "House" : "Senate", r.date, r.question, r.result || "—", r.yea == null ? "—" : `${r.yea}–${r.nay}`],
+          action: `roll:${r.id}`,
+          tone: r.id === rollId ? "up" as const : "" as const
+        }))
+      }] : []),
+      ...(live?.positions.length ? [castTable(live.positions, party)] : [])
+    ],
+    blocks: [
+      ...(live?.positions.length ? [{ title: "How they voted", lines: partySplit(live.positions) }] : []),
+      {
+        title: "Actions",
+        lines: [...bill.ladder.actions].sort((a, b) => recent(b.date) - recent(a.date)).map((a) => `${a.date || ""} ${a.text}`.trim())
+      }
+    ]
+  };
 }
 
 function partyTone(party: string) {

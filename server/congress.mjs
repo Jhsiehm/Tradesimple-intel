@@ -362,6 +362,8 @@ async function pool(items, size, fn) {
 
 export async function voteDetail(db, chamber, congress, session, roll) {
   if (chamber === "senate") return senateVoteDetail(db, congress, session, roll);
+  const clerk = Number(congress) === 119 ? readCache(db, `tl:vote:house:${session}:${roll}`) : null;
+  if (clerk?.casts && Object.keys(clerk.casts).length) return houseFromClerk(db, clerk, congress, session, roll);
   const res = await congressGet(db, `/house-vote/${congress}/${session}/${roll}`);
   if (!res.ok) return res;
   const root = res.body.houseRollCallVote || res.body.vote || res.body;
@@ -402,6 +404,41 @@ export async function voteDetail(db, chamber, congress, session, roll) {
       bill: [root.legislationType, root.legislationNumber].filter(Boolean).join(" "),
       date: root.startDate || "",
       totals,
+      positions
+    }
+  };
+}
+
+const UNCAST = { Y: "Yea", N: "Nay", P: "Present", "-": "Not voting" };
+
+/** House roll call from the indexed Clerk EVS casts, seated through the Congress.gov 119th member list. */
+async function houseFromClerk(db, row, congress, session, roll) {
+  const directory = await memberIndex(db);
+  const positions = Object.entries(row.casts).map(([bioguide, cast]) => {
+    const known = directory.get(bioguide) || {};
+    const [last, first] = String(known.name || "").split(", ");
+    return {
+      name: first ? `${first} ${last}` : known.name || bioguide,
+      state: known.state || "",
+      district: known.district || "",
+      vote: UNCAST[cast] || "Not voting",
+      party: normalizeParty(known.party || ""),
+      geoid: houseGeoid(known.state, known.district),
+      bioguide
+    };
+  });
+  return {
+    ok: true,
+    source: "House Clerk EVS roll call XML",
+    asOf: row.date || new Date().toISOString(),
+    vote: {
+      id: `house-${congress}-${session}-${roll}`,
+      chamber: "house",
+      question: row.question || "",
+      result: row.result || "",
+      bill: row.bill || "",
+      date: row.date || "",
+      totals: countVotes(positions),
       positions
     }
   };

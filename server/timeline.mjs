@@ -184,6 +184,15 @@ export async function buildIndex(db) {
   }
 }
 
+/** Indexed roll calls for one chamber, oldest first; each carries `casts` keyed by bioguide. */
+export function indexedVotes(chamber) {
+  return state.votes[chamber] || [];
+}
+
+export function indexStatus() {
+  return { builtAt: state.builtAt, running: state.running, house: state.votes.house.length, senate: state.votes.senate.length };
+}
+
 function gaps() {
   const p = state.progress;
   return p.house.total - state.votes.house.length + p.senate.total - state.votes.senate.length + p.meetings.total - p.meetings.done;
