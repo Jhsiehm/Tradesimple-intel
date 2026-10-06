@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, DEMO, when } from "../lib/api";
 import { downloadMemberCard, memberShareUrl, PUBLIC_URL } from "../lib/share";
+import type { StatusLine } from "../types";
 
 type Near = { id: string; date: string; title: string; lane: string; laneName: string; link: string; gap: number };
 type Trade = {
@@ -50,7 +51,7 @@ const signedPct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toF
 const radius = (low: number) => (low >= 1_000_000 ? 8 : low >= 250_000 ? 7 : low >= 100_000 ? 6 : low >= 50_000 ? 5 : low >= 15_000 ? 4 : 3);
 
 /** Center-stage board: one member's disclosed trades against their committee hearings and roll calls. */
-export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: string; onClose: () => void; onFollow: (action: string) => void }) {
+export function MemberTimeline({ bioguide, onClose, onFollow, onStatus }: { bioguide: string; onClose: () => void; onFollow: (action: string) => void; onStatus?: (status: StatusLine) => void }) {
   const [res, setRes] = useState<TimelineRes | null>(null);
   const [span, setSpan] = useState<Span>("trades");
   const [width, setWidth] = useState(900);
@@ -76,6 +77,16 @@ export function MemberTimeline({ bioguide, onClose, onFollow }: { bioguide: stri
     void load();
     return () => { cancel = true; window.clearTimeout(timer); };
   }, [bioguide]);
+
+  useEffect(() => {
+    if (!onStatus) return;
+    const trades = res?.sources?.find((s) => s.label === "Trades");
+    onStatus({
+      source: trades?.source || "House Clerk PTR PDFs / Senate eFD",
+      asOf: res?.asOf ? when(res.asOf) : "",
+      latency: trades?.latency || "Trade date as disclosed; filed up to 45 days later by law."
+    });
+  }, [res, onStatus]);
 
   useEffect(() => {
     if (!plot) return;

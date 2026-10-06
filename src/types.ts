@@ -30,6 +30,15 @@ export type StatusLine = {
   latency?: string;
 };
 
+/** Right-hand list while Today or Leaderboards own the center. */
+export type StageList = {
+  title: string;
+  blurb: string;
+  empty: string;
+  status: StatusLine;
+  items: (ListItem & { action?: string })[];
+};
+
 export type Marker = {
   id: string;
   lon: number;

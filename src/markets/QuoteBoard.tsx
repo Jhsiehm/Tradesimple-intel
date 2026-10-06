@@ -30,7 +30,7 @@ type Board = {
 type SortKey = "symbol" | "name" | "sector" | "last" | "changePct" | "volume" | "marketCap" | "weight";
 const POLL = 60 * 1000;
 
-export function QuoteBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
+export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void; onMap?: () => void }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [sector, setSector] = useState("All");
@@ -115,6 +115,7 @@ export function QuoteBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
             <button aria-pressed={scope === "core"} onClick={() => setScope("core")}>Curated joins</button>
             <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}>★ Watchlist</button>
           </span>
+          {onMap ? <button className="go-btn" onClick={onMap} title="Every constituent's SEC business address on the district map, with counts per district">HQ map</button> : null}
           <input className="board-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter symbol, name, industry" aria-label="Filter" />
         </div>
         <p className="breadth">

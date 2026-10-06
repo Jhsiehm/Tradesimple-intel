@@ -2,6 +2,17 @@ import { REGIONS } from "../news/newsGlobe";
 import type { Chamber, CongressMode, EarthBase, EarthSettings, EarthView, MarketLayer, NewsDesk, PartyFilter } from "../types";
 import { BASE_TITLE, type MarketView } from "./sections";
 import type { ContractScope, ContractSort } from "../contracts/useContracts";
+import type { BillRoll } from "../congress/useCongress";
+import type { DistrictLayer } from "../districts/useDistricts";
+
+export function DistrictsBar({ layer, onLayer }: { layer: DistrictLayer; onLayer: (l: DistrictLayer) => void }) {
+  return (
+    <span className="seg" title="What the list and map show">
+      <button aria-pressed={layer === "sites"} onClick={() => onLayer("sites")}>Sites</button>
+      <button aria-pressed={layer === "hq"} onClick={() => onLayer("hq")}>S&amp;P 500 HQ</button>
+    </span>
+  );
+}
 
 export function PartyButtons({ party, onParty }: { party: PartyFilter; onParty: (p: PartyFilter) => void }) {
   return (
@@ -25,7 +36,11 @@ export function CongressBar(props: {
   party: PartyFilter;
   onParty: (p: PartyFilter) => void;
   caption: string;
+  rolls?: BillRoll[];
+  rollId?: string | null;
+  onRoll?: (id: string) => void;
 }) {
+  const rolls = props.mode === "bills" ? props.rolls || [] : [];
   return (
     <>
       <span className="seg">
@@ -44,6 +59,18 @@ export function CongressBar(props: {
         <button aria-pressed={props.voteView === "map"} onClick={() => props.onVoteView("map")}>Map</button>
       </span>
       <PartyButtons party={props.party} onParty={props.onParty} />
+      {rolls.length ? (
+        <label className="theater roll-pick" title="Roll calls on this bill. Final passage is the default in each chamber.">
+          <select value={props.rollId || ""} onChange={(e) => props.onRoll?.(e.target.value)} aria-label="Roll call">
+            {props.rollId ? null : <option value="">No {props.chamber} roll call · pick one</option>}
+            {rolls.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.chamber === "house" ? "House" : "Senate"} {r.date} · {r.question.slice(0, 60)}{r.result ? ` · ${r.result}` : ""}{r.final ? " · FINAL" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       {props.voteView === "map" ? <span className="bar-note" title={props.caption}>{props.caption}</span> : null}
     </>
   );

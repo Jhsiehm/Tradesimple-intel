@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { api, when } from "../lib/api";
 import { amountShort, dayLabel, honorific, partyTag, verbOf } from "../../shared/sentences.mjs";
+import type { StageList } from "../types";
 
 const LeadersBoard = lazy(() => import("./LeadersBoard").then((m) => ({ default: m.LeadersBoard })));
 
@@ -48,8 +49,33 @@ export function TradeLine({ t, refYear, onFollow }: { t: FeedRow; refYear: numbe
   );
 }
 
+const WEEK_BLURB = "Newest disclosed trades in this window.";
+
+function weekList(res: FeedRes | null, refYear: number): StageList {
+  const status = {
+    source: res?.source || "House Clerk · Senate eFD",
+    asOf: res?.asOf ? when(res.asOf) : "",
+    latency: res?.latency || "Filed up to 45 days after the trade."
+  };
+  if (!res) return { title: "Today", blurb: WEEK_BLURB, empty: "Loading this week's filings…", items: [], status };
+  if (!res.ok) return { title: "Today", blurb: WEEK_BLURB, empty: res.error || "No disclosures loaded yet.", items: [], status };
+  return {
+    title: "Today",
+    blurb: WEEK_BLURB,
+    empty: "No filings in this window.",
+    status,
+    items: (res.latest || []).map((t) => ({
+      id: t.id,
+      title: `${honorific(t)} ${t.person} ${verbOf(t)} ${amountShort(t.amount)} ${t.symbol || t.asset}`.replace(/\s+/g, " ").trim(),
+      meta: `traded ${dayLabel(t.traded, refYear)}, filed ${dayLabel(t.filed, refYear)}${t.lag != null ? ` (${t.lag}d)` : ""}`,
+      tone: t.side === "buy" ? "up" : t.side === "sell" ? "down" : "",
+      action: t.bioguide ? `timeline:${t.bioguide}` : undefined
+    }))
+  };
+}
+
 /** Center-stage landing view: what Congress disclosed this week, in sentences, plus leaderboards. */
-export function TodayBoard({ tab, onTab, onFollow, onClose }: { tab: TodayTab; onTab: (t: TodayTab) => void; onFollow: (action: string) => void; onClose: () => void }) {
+export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: TodayTab; onTab: (t: TodayTab) => void; onFollow: (action: string) => void; onClose: () => void; onList?: (list: StageList) => void }) {
   const [res, setRes] = useState<FeedRes | null>(null);
 
   useEffect(() => {
@@ -64,6 +90,11 @@ export function TodayBoard({ tab, onTab, onFollow, onClose }: { tab: TodayTab; o
   }, [tab]);
 
   const refYear = Number((res?.window?.to || new Date().toISOString()).slice(0, 4));
+
+  useEffect(() => {
+    if (tab !== "week") return;
+    onList?.(weekList(res, refYear));
+  }, [tab, res, refYear, onList]);
   const w = res?.window;
 
   return (
@@ -79,7 +110,7 @@ export function TodayBoard({ tab, onTab, onFollow, onClose }: { tab: TodayTab; o
         </div>
         {tab === "week" ? (
           <>
-            <p className="today-explain">Members of Congress must report each stock trade within {LATE} days. These are the newest reports, in plain words. Click a name for their timeline, a ticker for its chart, or <i>filing ↗</i> for the source document.</p>
+            <p className="today-explain">Newest stock trades members of Congress filed, each due within {LATE} days of the trade.</p>
             <p>
               <em>SOURCE</em>{res?.source || "House Clerk · Senate eFD"}
               <em>AS OF</em>{res?.asOf ? when(res.asOf) : "—"}
@@ -90,7 +121,7 @@ export function TodayBoard({ tab, onTab, onFollow, onClose }: { tab: TodayTab; o
         ) : null}
       </header>
       {tab === "leaders" ? (
-        <Suspense fallback={<p className="stage-loading">Loading…</p>}><LeadersBoard onFollow={onFollow} /></Suspense>
+        <Suspense fallback={<p className="stage-loading">Loading…</p>}><LeadersBoard onFollow={onFollow} onList={onList} /></Suspense>
       ) : !res ? (
         <p className="stage-loading">Loading this week's filings…</p>
       ) : !res.ok ? (

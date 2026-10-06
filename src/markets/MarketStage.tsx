@@ -41,5 +41,5 @@ function Board({ view, chart, supplySymbol, onSupplySymbol, showChart, openPosit
   if (view === "supply") return <SupplyBoard symbol={supplySymbol} onSymbol={onSupplySymbol} onOpen={onFollow} />;
   if (view === "fx") return <FxBoard onOpen={(symbol) => showChart(symbol, "5m")} onEvent={(e) => onDossier(econModel(e))} />;
   if (view === "crypto") return <CryptoBoard onOpen={(symbol) => showChart(symbol, "5m")} />;
-  return <QuoteBoard onOpen={(symbol) => { showChart(symbol, "5m"); pinSymbol(symbol); }} />;
+  return <QuoteBoard onOpen={(symbol) => { showChart(symbol, "5m"); pinSymbol(symbol); }} onMap={() => onFollow("hq:")} />;
 }

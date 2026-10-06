@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { Earth, EarthSettings, MapFlash, Marker } from "../types";
+import { VOTE_FILL } from "../congress/voteMap";
+
+const MAP_FILL: Record<string, string> = { ...VOTE_FILL, Focus: "#e2b657", Site: "#3f7287", HQ1: "#2c4f60", HQ2: "#3f7287", HQ3: "#5f9bb0", State: "#26333f" };
 
 type Props = {
   geojson?: GeoJSON.FeatureCollection;
@@ -16,6 +19,8 @@ type Props = {
   live?: { key: string; tiles: string[]; maxzoom: number }[];
   dailyTiles?: string[];
   flash?: MapFlash | null;
+  /** Shipping lanes only belong on ocean views; district and vote maps hide them. */
+  lanes?: boolean;
 };
 
 type Sky = Parameters<maplibregl.Map["setSky"]>[0];
@@ -55,7 +60,8 @@ export function MapFrame({
   onSelect,
   live,
   dailyTiles,
-  flash
+  flash,
+  lanes = true
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -178,9 +184,9 @@ export function MapFrame({
     map.setPaintProperty("base-line", "line-color", imagery ? "#d8c690" : "#2f3d48");
     map.setPaintProperty("base-line", "line-opacity", imagery ? 0.55 : 1);
     ["lanes-minor", "lanes-middle", "lanes-major", "choke-dot", "choke-label"].forEach((id) => {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes ? "visible" : "none");
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes && lanes ? "visible" : "none");
     });
-  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length]);
+  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -246,9 +252,11 @@ export function MapFrame({
     map.easeTo({
       pitch: relief ? 58 : 0,
       bearing: relief ? map.getBearing() : 0,
-      zoom: settings.view === "globe" && map.getZoom() > 3 ? 2.2 : map.getZoom(),
+      zoom: settings.view === "globe" ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
       duration: 700
     });
+    // Leaving the globe restores the section's own zoom; later zoom changes ease separately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, earth, settings.view]);
 
   useEffect(() => {
@@ -263,14 +271,9 @@ export function MapFrame({
       map.setPaintProperty("base-fill", "fill-color", [
         "match",
         ["get", colorProp],
-        "Yea", "#1f6b3a",
-        "Nay", "#7a3030",
-        "Split", "#6a5a28",
-        "Present", "#3d4a38",
-        "Focus", "#e2b657",
-        "Site", "#3f7287",
+        ...Object.entries(MAP_FILL).flat(),
         "#131b22"
-      ]);
+      ] as unknown as maplibregl.ExpressionSpecification);
     } else {
       map.setPaintProperty("base-fill", "fill-color", [
         "case",

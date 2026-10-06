@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, when } from "../lib/api";
+import type { StageList } from "../types";
 
 type Seat = { bioguide: string; person: string; party: string; state: string; chamber: string };
 type Scored = Seat & {
@@ -33,8 +34,10 @@ function Who({ m, onFollow }: { m: Seat; onFollow: (a: string) => void }) {
   );
 }
 
+const LEAD_BLURB = "Disclosed buys versus the S&P 500.";
+
 /** Leaderboards: disclosed buys vs the S&P 500, most active traders, late filers, most-traded tickers. */
-export function LeadersBoard({ onFollow }: { onFollow: (action: string) => void }) {
+export function LeadersBoard({ onFollow, onList }: { onFollow: (action: string) => void; onList?: (list: StageList) => void }) {
   const [res, setRes] = useState<LeadersRes | null>(null);
   const [side, setSide] = useState<"top" | "bottom">("top");
 
@@ -48,6 +51,33 @@ export function LeadersBoard({ onFollow }: { onFollow: (action: string) => void 
     return () => { cancel = true; window.clearTimeout(timer); };
   }, []);
 
+  useEffect(() => {
+    if (!onList) return;
+    const status = { source: res?.source || "House Clerk · Senate eFD", asOf: res?.asOf ? when(res.asOf) : "", latency: res?.latency || "Disclosed buys of joined tickers, equal-weighted." };
+    if (!res) {
+      onList({ title: "Leaderboards", blurb: LEAD_BLURB, empty: "Loading leaderboards…", items: [], status });
+      return;
+    }
+    if (!res.ok) {
+      onList({ title: "Leaderboards", blurb: LEAD_BLURB, empty: res.error || "No disclosures loaded yet.", items: [], status });
+      return;
+    }
+    const rows = side === "top" ? res.excessTop || [] : res.excessBottom || [];
+    onList({
+      title: "Leaderboards",
+      blurb: LEAD_BLURB,
+      empty: "No members with enough priced buys yet.",
+      status,
+      items: rows.map((m) => ({
+        id: m.bioguide,
+        title: m.person,
+        meta: `${m.party || "—"}-${m.state || "—"} · ${m.priced} priced buys`,
+        tone: m.excessSince == null ? "" : m.excessSince >= 0 ? "up" : "down",
+        action: `timeline:${m.bioguide}`
+      }))
+    });
+  }, [res, side, onList]);
+
   if (!res) return <p className="stage-loading">Loading leaderboards…</p>;
   if (!res.ok) return <p className="stage-loading">{res.error || "No disclosures loaded yet."}</p>;
   const p = res.progress;
@@ -56,7 +86,7 @@ export function LeadersBoard({ onFollow }: { onFollow: (action: string) => void 
   return (
     <div className="board-scroll">
       <div className="leaders-meta">
-        <p className="today-explain"><b className="amber">Disclosed buys, equal-weighted, not their actual portfolio.</b> {res.basis?.replace(/^Disclosed buys, equal-weighted, not their actual portfolio\.\s*/, "")}</p>
+        <p className="today-explain" title={res.basis}>Disclosed buys, equal-weighted, not their actual portfolio.</p>
         <p>
           <em>SOURCE</em>{res.source}
           <em>AS OF</em>{res.asOf ? when(res.asOf) : "—"}

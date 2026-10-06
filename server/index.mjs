@@ -4,7 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv } from "./env.mjs";
 import { listTickers, openDb, tickerBySymbol } from "./db.mjs";
-import { billDetail, billVote, calendar, committeeDetail, committeeList, compareMembers, listBills, listVotes, memberProfile, memberRoster, searchMembers, seatsForCodes, voteDetail } from "./congress.mjs";
+import { billsWithVotes, billRolls } from "./votemap.mjs";
+import { hqAll, hqFor } from "./hq.mjs";
+import { billDetail, billVote, calendar, committeeDetail, committeeList, compareMembers, listVotes, memberProfile, memberRoster, searchMembers, seatsForCodes, voteDetail } from "./congress.mjs";
 import { fecForCommittees, fecForName, lobbyingForClient } from "./lobby.mjs";
 import { memberTimeline, warmTimeline } from "./timeline.mjs";
 import { alertsFor } from "./alerts.mjs";
@@ -42,12 +44,23 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/tickers") {
       return send(res, 200, { ok: true, items: listTickers(db) });
     }
+    if (url.pathname === "/api/hq") {
+      return send(res, 200, hqAll(db));
+    }
+    const hqMatch = url.pathname.match(/^\/api\/hq\/([A-Za-z.\-]+)$/);
+    if (hqMatch) {
+      return send(res, 200, await hqFor(db, hqMatch[1].toUpperCase()));
+    }
     if (url.pathname === "/api/sites") {
       const sites = JSON.parse(fs.readFileSync(path.join(root, "data", "sites.json"), "utf8"));
       return send(res, 200, { ok: true, source: "Curated district registry", asOf: null, items: sites });
     }
     if (url.pathname === "/api/congress/bills") {
-      return send(res, 200, await listBills(db));
+      return send(res, 200, await billsWithVotes(db));
+    }
+    const billRollsMatch = url.pathname.match(/^\/api\/congress\/bills\/([^/]+)\/votes$/);
+    if (billRollsMatch) {
+      return send(res, 200, await billRolls(db, decodeURIComponent(billRollsMatch[1])));
     }
     const billVoteMatch = url.pathname.match(/^\/api\/congress\/bills\/([^/]+)\/vote$/);
     if (billVoteMatch) {
@@ -278,15 +291,16 @@ async function tickerDossier(symbol) {
   const ticker = tickerBySymbol(db, symbol);
   if (!ticker) return { ok: false, error: "Ticker is not in the join table" };
   const client = ticker.ldaClients[0] || ticker.name;
-  const [lobby, fec, contracts, quote, positions, seats] = await Promise.all([
+  const [lobby, fec, contracts, quote, positions, seats, hq] = await Promise.all([
     lobbyingForClient(db, client).catch((err) => ({ ok: false, error: err.message, filings: [] })),
     fecForCommittees(db, ticker.pacs || []).catch((err) => ({ ok: false, error: err.message, committees: [] })),
     contractFeed(db, { symbol: ticker.symbol, days: 180 }).then((r) => ({ ...r, awards: r.items || [] })).catch((err) => ({ ok: false, error: err.message, awards: [] })),
     sessionQuote(ticker).catch(() => null),
     positionsFor(db, ticker.symbol).catch(() => null),
-    seatsForCodes(db, ticker.districts || []).catch(() => [])
+    seatsForCodes(db, ticker.districts || []).catch(() => []),
+    hqFor(db, ticker.symbol).then((r) => r.item || null).catch(() => null)
   ]);
-  return { ok: true, ticker, lobby, fec, contracts, quote, positions, seats };
+  return { ok: true, ticker, lobby, fec, contracts, quote, positions, seats, hq };
 }
 
 async function search(q) {

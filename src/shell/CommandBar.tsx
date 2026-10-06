@@ -36,7 +36,8 @@ const TICKER_FN: { code: string; label: string; action: (s: string) => string }[
   { code: "GP", label: "chart with trades and filings", action: (s) => `chart:${s}` },
   { code: "POS", label: "positions · every filer", action: (s) => `pos:${s}` },
   { code: "CTR", label: "federal contract actions", action: (s) => `contracts:symbol:${s}` },
-  { code: "SPLC", label: "supply chain", action: (s) => `supply:${s}` }
+  { code: "SPLC", label: "supply chain", action: (s) => `supply:${s}` },
+  { code: "HQ", label: "headquarters district on the map", action: (s) => `hq:${s}` }
 ];
 const MEMBER_FN: { code: string; label: string; action: (id: string) => string }[] = [
   { code: "DES", label: "member card", action: (id) => `member:${id}` },

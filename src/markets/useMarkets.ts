@@ -142,7 +142,8 @@ function rowModel(layer: MarketLayer, row: Row, latency?: string): DrawerModel {
   const symbol = String(row.symbol || "");
   const common = [
     ...(symbol ? [{ label: "Positions", value: `${symbol} · every filer`, action: `pos:${symbol}` }] : []),
-    ...(symbol && row.inJoin !== false ? [{ label: "Chart", value: `${symbol} with this filing marked`, action: `chart:${symbol}` }] : [])
+    ...(symbol && row.inJoin !== false ? [{ label: "Chart", value: `${symbol} with this filing marked`, action: `chart:${symbol}` }] : []),
+    ...(symbol && row.inJoin !== false ? [{ label: "HQ", value: `${symbol} headquarters district on the map`, action: `hq:${symbol}` }] : [])
   ];
   if (layer === "politicians") {
     return {
@@ -405,17 +406,20 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
     quote?: { last: number | null; change: number | null; changePct: number | null; asOf: string } | null;
     positions?: Positions | null;
     seats?: { code: string; members: { bioguide: string; name: string; party: string; district: string }[] }[];
+    hq?: { city: string; state: string; district: string | null; foreign: boolean; country?: string; note: string } | null;
   }>(`/api/tickers/${symbol}`);
   if (!res.ok || !res.ticker) return null;
   const last = res.quote?.last;
   const change = res.quote?.change;
   const seats = res.seats || [];
   const pos = res.positions;
+  const hq = res.hq;
+  const hqPlace = hq ? (hq.foreign ? `${hq.city}, ${hq.country || hq.state} · outside the US` : `${hq.city}, ${hq.state}${hq.district ? ` · ${hq.district}` : ""}`) : "";
   return {
     title: `${res.ticker.symbol} ${res.ticker.name}`,
     meta: res.ticker.districts.join(", "),
     watch: res.ticker.symbol,
-    source: "Nasdaq quote · House Clerk / Senate eFD · SEC Form 4 · LDA.gov · FEC · USAspending · join table data/tickers.json",
+    source: "Nasdaq quote · House Clerk / Senate eFD · SEC Form 4 · LDA.gov · FEC · USAspending · SEC EDGAR business address · join table data/tickers.json",
     rows: [
       {
         label: "Last",
@@ -423,9 +427,11 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
       },
       { label: "As of", value: when(res.quote?.asOf) },
       { label: "Congress", value: pos ? `${new Set(pos.congress.map((r) => r.bioguide || r.person)).size} members · ${pos.congress.length} lines` : "—" },
-      { label: "Insiders", value: !pos ? "—" : notScanned(pos, "insiders") ? `Not scanned · ${notScanned(pos, "insiders")}` : `${pos.insiders.length} Form 4 lines` }
+      { label: "Insiders", value: !pos ? "—" : notScanned(pos, "insiders") ? `Not scanned · ${notScanned(pos, "insiders")}` : `${pos.insiders.length} Form 4 lines` },
+      ...(hq ? [{ label: "HQ", value: hq.district || hq.foreign ? hqPlace : `${hqPlace} · ${hq.note}` }] : [])
     ],
     links: [
+      ...(hq && !hq.foreign ? [{ label: "HQ", value: hq.district ? `${hq.district} · district, representative, senators on the map` : `${hq.state} · senators`, action: `hq:${res.ticker.symbol}` }] : []),
       { label: "Positions", value: `${res.ticker.symbol} · every filer`, action: `pos:${res.ticker.symbol}` },
       { label: "Supply chain", value: `${res.ticker.symbol} · suppliers, customers, co-movement`, action: `supply:${res.ticker.symbol}` },
       { label: "Contracts", value: `${res.ticker.symbol} · federal contract actions`, action: `contracts:symbol:${res.ticker.symbol}` },
