@@ -96,6 +96,13 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
   return out;
 }
 
+/** Keeps watchlist rows ahead of unwatched late filings when trimming, so a late-filing batch cannot push them out. */
+export function capAlerts(items, cap) {
+  const watched = items.filter((a) => a.kind !== "late-filing").slice(0, cap);
+  const keep = new Set([...watched, ...items.filter((a) => a.kind === "late-filing").slice(0, cap - watched.length)]);
+  return items.filter((a) => keep.has(a));
+}
+
 export async function alertsFor(db, params) {
   const symbols = String(params.get("symbols") || "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z.\-]{1,8}$/.test(s)).slice(0, 100);
   const members = String(params.get("members") || "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]\d{6}$/.test(s)).slice(0, 100);
@@ -110,7 +117,7 @@ export async function alertsFor(db, params) {
   return {
     ok: true,
     asOf: new Date().toISOString(),
-    items: items.slice(0, 200),
+    items: capAlerts(items, 200),
     sources: [
       { label: "Congress trades", source: trades.source || "House Clerk PTRs · Senate eFD", asOf: trades.asOf, latency: "Filed up to 45 days after the trade; alert date is the filed date." },
       { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade." },

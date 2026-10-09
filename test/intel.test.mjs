@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
 import { buildLinks, centroidOf, memberAnchor, proximityPhrase, seatCode } from "../server/intel.mjs";
-import { buildAlerts } from "../server/alerts.mjs";
+import { buildAlerts, capAlerts } from "../server/alerts.mjs";
 
 test("bucketDays counts per kind per day and drops out-of-range or undated events", () => {
   const out = bucketDays([
@@ -210,4 +210,11 @@ test("proximityPhrase counts the same in-window trades as proximity() and names 
   assert.equal(proximityPhrase(trades, { trades: 32, near: 0, baseline: 0 }), "32 trades, no committee hearings on file to compare");
   assert.equal(proximityPhrase(trades, { trades: 32, near: 10, baseline: 0.5 }), "10 of 32 trades within 14 days of a hearing (50% of all days are)");
   assert.equal(proximityPhrase([], null), "no disclosed trades since 2025-01-03");
+});
+
+test("capAlerts keeps watched rows when newer late filings would fill the cap, in date order", () => {
+  const late = Array.from({ length: 5 }, (_, i) => ({ id: `late:${i}`, kind: "late-filing", date: "2026-08-05" }));
+  const watched = { id: "trade:1", kind: "member-trade", date: "2026-07-01" };
+  const out = capAlerts([...late, watched], 3);
+  assert.deepEqual(out.map((a) => a.id), ["late:0", "late:1", "trade:1"]);
 });
