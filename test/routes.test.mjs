@@ -46,7 +46,7 @@ export const SMOKE = [
   ["/api/backtest?spec=%7B%22source%22%3A%22congress%22%7D", 503, "building,description,error,missing,ok,spec"],
   ["/api/backtest?spec=nope", 400, "error,missing,ok"],
   ["/api/backtest/replicate", 400, "error,missing,ok"],
-  ["/api/ask", 200, "configured,limits,missing,model,models,notice,ok,provider,small,strong,tools"],
+  ["/api/ask", 200, "configured,limits,missing,model,models,notice,ok,provider,small,spend,strong,tools"],
   ["/api/tasks", 200, "asOf,budget,items,latency,ok,scheduler,source"],
   ["/api/tasks/runs/rn_none", 404, "error,missing,ok"],
   ["/api/tasks/tk_none/run", 405, "error,missing,ok"],

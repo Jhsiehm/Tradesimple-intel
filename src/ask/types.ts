@@ -4,6 +4,9 @@ import type { BtRun } from "../backtest/types";
 import type { Clarify } from "../../shared/backtestAsk.mjs";
 import type { Miscited } from "../../shared/citations.mjs";
 import type { Revision } from "../../shared/revise.mjs";
+import type { Reused } from "../../shared/answerCache.mjs";
+import type { SlotMissing } from "../../shared/slots.mjs";
+import type { Spend } from "../../shared/spend.mjs";
 import type { Theory } from "../../shared/relations.mjs";
 
 /** What the server streams from POST /api/ask, and what a chat keeps. */
@@ -70,6 +73,10 @@ export type Done = {
   clarify: boolean;
   prefs: { set?: Record<string, unknown>; clear?: boolean } | null;
   revision?: Revision | null;
+  /** Figures the model wrote as slots and the app filled; `missing` ones show as "[missing]". */
+  slots?: { count: number; missing: SlotMissing[] };
+  /** Set when the answer is a stored one replayed because its data had not changed. */
+  reused?: Reused | null;
 };
 
 export type ClarifyAsk = { questions: Clarify[]; spec: BacktestSpec; from: Record<string, string>; sentence: string; sources: string[]; note: string };
@@ -106,4 +113,6 @@ export type AskStatus = {
   missing: string[];
   notice: string;
   tools: string[];
+  /** This month's Ask spend against ASK_MONTHLY_BUDGET_USD; null when the server keeps no ledger. */
+  spend?: Spend | null;
 };

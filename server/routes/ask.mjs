@@ -8,9 +8,12 @@ import { createProvider } from "../ai/providers.mjs";
 import { runAsk } from "../ai/run.mjs";
 import { TOOLS, callRoute, labelOf, runTool, toolDefs } from "../ai/tools.mjs";
 import { askLog } from "../ai/log.mjs";
+import { metered, spendState } from "../ai/spend.mjs";
+import { cacheTtlMs, findAnswer, keepAnswer, recordingExecutor, sameData, sha } from "../ai/answerCache.mjs";
+import { answerIdentity, noReuseReason, replayEvents } from "../../shared/answerCache.mjs";
 import { scheduleReply } from "./tasks.mjs";
 
-export function askStatus(env = process.env) {
+export function askStatus(env = process.env, db = null, at = Date.now()) {
   const cfg = askConfig(env);
   const models = cfg.configured ? modelOptions(cfg) : [];
   return {
@@ -24,6 +27,7 @@ export function askStatus(env = process.env) {
     missing: cfg.missing,
     notice: cfg.configured ? "" : cfg.error || NOT_CONFIGURED,
     tools: TOOLS.map((t) => t.name),
+    spend: cfg.configured ? spendState(db, env, at, cfg.provider) : null,
     limits: { toolCalls: ASK_LIMITS.toolCalls, totalSeconds: ASK_LIMITS.totalMs / 1000, tokenBudget: ASK_LIMITS.tokenBudget, perIp: ASK_LIMITS.perIp, perIpMinutes: ASK_LIMITS.perIpWindowMs / 60_000 }
   };
 }
@@ -35,11 +39,17 @@ const clientOf = (req, env) => {
 
 const runToolTraced = (db, name, args, hooks) => runTool(db, name, args, callRoute, hooks?.onRoute || null);
 
-/** Everything the handler touches is injectable: env, the provider factory, the clock, the limiter, the log. */
+/**
+ * Everything the handler touches is injectable: env, the provider factory, the clock, the limiter, the log.
+ * Spend: every model call is metered into the month's ledger; from 80% of ASK_MONTHLY_BUDGET_USD a `budget` note goes
+ * out, at 100% every question runs on the cheap model (or is refused with ASK_BUDGET_HARD_STOP), and `spend` closes
+ * each stream. Reuse: the same question and chat within ASK_ANSWER_CACHE_MIN replays the stored answer when its tool
+ * calls return the same data again (`done.reused`); `fresh: true` in the body skips that.
+ */
 export function makeAskHandler({ env = process.env, makeProvider = (cfg) => createProvider(cfg, askKey(cfg, env)), now = Date.now, limiter = makeLimiter({ max: ASK_LIMITS.perIp, windowMs: ASK_LIMITS.perIpWindowMs }), log = askLog, execute = runToolTraced } = {}) {
   let running = 0;
   return async ({ req, res, db }) => {
-    if (!req || req.method !== "POST") return askStatus(env);
+    if (!req || req.method !== "POST") return askStatus(env, db, now());
     const cfg = askConfig(env);
     if (!cfg.configured) return reply(503, { ok: false, error: cfg.error || NOT_CONFIGURED, missing: cfg.missing.join(","), notConfigured: true });
     const body = await readJson(req, 32 * 1024);
@@ -52,16 +62,43 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     if (!slot.ok) return reply(429, { ok: false, error: `Ask is limited to ${ASK_LIMITS.perIp} questions per ${ASK_LIMITS.perIpWindowMs / 60_000} minutes. Try again in ${Math.ceil(slot.retryMs / 60_000)} min.`, missing: "", retryMs: slot.retryMs });
     if (running >= ASK_LIMITS.concurrent) return reply(429, { ok: false, error: "Ask is answering other questions. Try again in a moment.", missing: "" });
 
-    const route = routeModel(asked.model, cfg);
+    const spend = spendState(db, env, now(), cfg.provider);
+    if (spend?.level === "stop") {
+      limiter.refund?.(client);
+      return reply(402, { ok: false, error: spend.note, missing: "", spend });
+    }
+    const over = spend?.level === "over" && Boolean(spend.cheap);
+    const route = over ? { model: spend.cheap, auto: false, pinned: false } : routeModel(asked.model, cfg);
     const model = route.model;
-    const strong = route.auto && cfg.strong ? { model: cfg.strong, provider: cfg.strong === model ? null : makeProvider({ ...cfg, model: cfg.strong }) } : null;
+    const askId = `a${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const meter = (p) => metered(p, { db, kind: "ask", askId, now });
+    const strong = route.auto && cfg.strong ? { model: cfg.strong, provider: cfg.strong === model ? null : meter(makeProvider({ ...cfg, model: cfg.strong })) } : null;
+    const ttl = cacheTtlMs(env);
+    const key = ttl ? sha(answerIdentity(asked, { model, pinned: route.pinned })) : "";
+    const fresh = body.value?.fresh === true;
+    const exec = (name, args, hooks) => execute(db, name, args, hooks);
     running += 1;
     const ctl = new AbortController();
     res.on("close", () => ctl.abort());
     res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     const emit = (event) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify(event)}\n\n`); };
-    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, auto: route.auto, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached) });
+    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, auto: route.auto, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached), budget: spend?.level || "", fresh });
     try {
+      const hit = key && !fresh ? findAnswer(db, key, now(), ttl) : null;
+      if (hit) {
+        emit({ type: "step_progress", phase: "fetching" });
+        if (await sameData(hit.calls, exec)) {
+          for (const e of replayEvents(hit.events, { at: hit.at, model: hit.model })) emit(e);
+          if (spend) emit({ type: "spend", spend });
+          limiter.refund?.(client);
+          log({ event: "reused", at: hit.at, model: hit.model, calls: hit.calls.length });
+          return undefined;
+        }
+        log({ event: "reuse_skipped", reason: "data changed" });
+      }
+      if (spend?.note) emit({ type: "budget", level: spend.level, note: spend.note, ...(over ? { model } : {}) });
+      const events = [];
+      const rec = recordingExecutor(exec);
       const out = await runAsk({
         question: asked.question,
         history: asked.history,
@@ -73,18 +110,23 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         answers: asked.answers,
         acceptDefaults: asked.acceptDefaults,
         model,
-        provider: makeProvider({ ...cfg, model }),
+        provider: meter(makeProvider({ ...cfg, model })),
         auto: route.auto,
         strong,
         tools: toolDefs(),
-        execute: (name, args, hooks) => execute(db, name, args, hooks),
+        execute: rec.run,
         labelOf,
-        emit,
+        emit: (e) => { events.push(e); emit(e); },
         signal: ctl.signal,
         log,
         now
       });
       if (out?.modelCalled === false) limiter.refund?.(client);
+      else if (key && !ctl.signal.aborted && !noReuseReason(events, rec.calls)) {
+        keepAnswer(db, key, { at: now(), model: events.findLast((e) => e.type === "done")?.model || model, events, calls: rec.calls });
+      }
+      const after = spendState(db, env, now(), cfg.provider);
+      if (after) emit({ type: "spend", spend: after });
     } catch (err) {
       emit({ type: "error", code: "internal", error: err?.message || "Ask failed." });
     } finally {

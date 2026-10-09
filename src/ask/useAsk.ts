@@ -11,7 +11,8 @@ import { AUTO } from "../../shared/modelRoute.mjs";
 import type { AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn } from "./types";
 
 export type AskApi = ReturnType<typeof useAsk>;
-type RunOpts = { answers?: Record<string, unknown>; acceptDefaults?: boolean; turnId?: string };
+/** `fresh`: skip a reusable stored answer (the "Re-ask" button). */
+type RunOpts = { answers?: Record<string, unknown>; acceptDefaults?: boolean; turnId?: string; fresh?: boolean };
 
 const OFF: AskStatus = { ok: false, configured: false, provider: "", model: "", missing: [], notice: "The API did not answer.", tools: [] };
 
@@ -116,7 +117,8 @@ export function useAsk() {
       prior: bt?.spec || null,
       priors: bts.map((b) => b.spec),
       answers: opts.answers || {},
-      acceptDefaults: Boolean(opts.acceptDefaults)
+      acceptDefaults: Boolean(opts.acceptDefaults),
+      fresh: Boolean(opts.fresh)
     });
     /** Answer text seen so far: a restart before any token resends the question once; after that it would answer twice. */
     const seen = { tokens: 0, done: false, resent: false };
@@ -197,6 +199,15 @@ export function useAsk() {
           case "revise":
             patch((t) => ({ ...t, revising: e.state === "start" ? String(e.note || "Checking figures…") : "" }));
             break;
+          case "budget":
+            patch((t) => ({ ...t, model: typeof e.model === "string" ? e.model : t.model, notes: [...t.notes, String(e.note || "")] }));
+            break;
+          case "spend": {
+            const spend = e.spend as AskStatus["spend"];
+            if (statusRef.current) statusRef.current = { ...statusRef.current, spend };
+            setStatus((st) => (st ? { ...st, spend } : st));
+            break;
+          }
           case "clarify":
             patch((t) => ({ ...t, clarify: e as unknown as ClarifyAsk }));
             break;

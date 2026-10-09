@@ -4,7 +4,7 @@ import { sseEvents } from "./sse.mjs";
  * Provider adapters. Each one is `{ name, model, chat(messages, tools, opts) }` where `chat` is an async generator of
  *   { type: "text", delta }
  *   { type: "tool_call", id, name, args }       args is an object ({} when the model sent none, null when it was not JSON)
- *   { type: "usage", input, output }            tokens, when the provider reports them
+ *   { type: "usage", input, output, cost? }     tokens, when the provider reports them; cost in USD (OpenRouter)
  *   { type: "end", reason }                     "stop" | "tool_calls" | "length"
  * Messages are neutral: { role: "system"|"user"|"assistant"|"tool", content, toolCalls?, toolCallId?, name? } and
  * tools are { name, description, parameters }. The key stays in a header and is scrubbed from any error text.
@@ -78,6 +78,7 @@ export function openaiProvider({ baseUrl, key, model, name = "openai", usage = t
       if (tools?.length) payload.tools = tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
       if (tools?.length && noTools) payload.tool_choice = "none";
       if (usage) payload.stream_options = { include_usage: true };
+      if (usage && name === "openrouter") payload.usage = { include: true };
       const res = await post(fetchFn, `${baseUrl}/chat/completions`, { authorization: `Bearer ${key}` }, payload, signal, key, who);
       const calls = new Map();
       let reason = "stop";
@@ -86,7 +87,7 @@ export function openaiProvider({ baseUrl, key, model, name = "openai", usage = t
         let j;
         try { j = JSON.parse(ev.data); } catch { continue; }
         if (j.error) throw new ProviderError(`${who} stream error: ${scrub(j.error.message || JSON.stringify(j.error), key).slice(0, 200)}`, 0);
-        if (j.usage) yield { type: "usage", input: j.usage.prompt_tokens || 0, output: j.usage.completion_tokens || 0 };
+        if (j.usage) yield { type: "usage", input: j.usage.prompt_tokens || 0, output: j.usage.completion_tokens || 0, ...(typeof j.usage.cost === "number" ? { cost: j.usage.cost } : {}) };
         const choice = j.choices?.[0];
         if (!choice) continue;
         const d = choice.delta || {};

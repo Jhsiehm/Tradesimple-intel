@@ -9,6 +9,7 @@ import { miscitedNote } from "../../shared/citations.mjs";
 import { Answer, Chip, ToolTable } from "../ask/Answer";
 import { AnswerMeta } from "../ask/AnswerMeta";
 import { ModelPick } from "../ask/ModelPick";
+import { ReuseNote, SpendLine } from "../ask/Spend";
 import { BacktestCard } from "../ask/BacktestCard";
 import { Clarify } from "../ask/Clarify";
 import { ScheduleControl } from "../tasks/ScheduleControl";
@@ -130,6 +131,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
               <small title={ask.model}>
                 {DEMO ? "needs the local server" : ask.model === "auto" ? "Auto" : ask.model || status?.notice || "…"}
                 {ask.small ? <span className="ask-small" title="A small model may skip tools or numbers. Pick a larger one, or set ASK_MODEL.">small model</span> : null}
+                <SpendLine status={status} />
               </small>
             </div>
             <div className="ask-sizes" role="group" aria-label="Sheet size">
@@ -235,6 +237,7 @@ function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: bo
         {turn.text ? <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} /> : null}
         {done?.greeting ? <div className="ask-examples">{prompts.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div> : null}
         <AnswerMeta turn={turn} />
+        <ReuseNote turn={turn} busy={busy} onReask={() => void ask.run(turn.question, { turnId: turn.id, fresh: true })} />
         {done?.table ? <ToolTable table={done.table} steps={turn.steps} onChip={chip} /> : null}
         {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} cite={<Chip id={b.id} steps={byId} onChip={chip} />} />)}
         <ScheduleControl turn={turn} />

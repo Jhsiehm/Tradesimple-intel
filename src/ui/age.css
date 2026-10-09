@@ -1,8 +1,0 @@
-.age-line { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 10.5px; color: var(--dim); cursor: help; }
-.age-tier { padding: 0 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; border: 1px solid currentColor; }
-.age-fresh .age-tier { color: var(--green); }
-.age-recent .age-tier { color: var(--cyan); }
-.age-stale .age-tier { color: var(--amber); }
-.age-old .age-tier { color: var(--faint); }
-.age-old { color: var(--faint); }
-.age-down { color: var(--faint); font-style: italic; }

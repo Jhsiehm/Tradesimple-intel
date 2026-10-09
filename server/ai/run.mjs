@@ -10,6 +10,7 @@ import { WORLD_NOTE, worldRegions, worldTail } from "../../shared/worldMarkets.m
 import { COVERAGE_NOTE, WEB_CAPS, WEB_CAVEAT, WEB_NOTE, splitWebResults, wantsWeb, webCallLabel, webQuery, webTail } from "../../shared/webAsk.mjs";
 import { followUpOutcome, handOffNote } from "../../shared/followUpReply.mjs";
 import { heavyReason } from "../../shared/modelRoute.mjs";
+import { SLOT_NOTE, renderSlots, slotEvidence, slotStream } from "../../shared/slots.mjs";
 import { revisePass } from "./revise.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
@@ -41,11 +42,18 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  * `model { model, auto, reason }` says which model answers. A flagged answer gets one revision pass (server/ai/revise.mjs):
  *   revise        { state: "start", note } / { state: "end" }    the answer is being checked; done.answer replaces it
  *   done.revision { status, reason, fixed, changes, removed, added, model } or null
+ * The model may write figures as slots (`{{t1.stats.excess|spct}}`, `{{table t1.rows cols=…}}`, shared/slots.mjs): tokens
+ * stream with slots filled from the tool results, `done.answer` is filled, and `done.slots { count, missing }` lists the
+ * ones that did not resolve (shown as "[missing]"). Filled values count as their ref's for the grounding checks.
  */
 export async function runAsk({ question, history = [], context = null, attached = null, model = "", auto = false, strong = null, prefs = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
   const t0 = now();
   const evidence = [];
   const bodies = new Map();
+  const raws = new Map();
+  const slotSrc = { evidence, bodies, raws };
+  const fill = (t) => renderSlots(t, slotSrc);
+  let filled = null;
   let theory = null;
 
   const quick = (answer, extra = {}) => {
@@ -99,7 +107,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   if (auto && heavy && strong) { provider = strongProvider; model = strong.model; }
   const reviser = auto && strong ? { provider: strongProvider, model: strong.model } : { provider, model };
   if (auto) emit({ type: "model", model, auto, reason: strong ? heavy : "" });
-  const system = [systemPrompt(today), COVERAGE_NOTE, contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
+  const system = [systemPrompt(today), SLOT_NOTE, COVERAGE_NOTE, contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
   if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
@@ -149,24 +157,32 @@ export async function runAsk({ question, history = [], context = null, attached 
     const onAbort = () => ctl.abort();
     signal?.addEventListener("abort", onAbort);
     let text = "";
+    let shown = "";
+    const live = slotStream((slot) => fill(slot).text);
     const pending = [];
     const citedNow = new Set();
     let usage = null;
+    const show = (delta) => {
+      if (!delta) return;
+      shown += delta;
+      emit({ type: "token", delta });
+      for (const m of shown.matchAll(REF)) {
+        for (const id of m[1].split(/\s*,\s*/)) {
+          const e = evidence.find((x) => x.id === id);
+          if (e && !citedNow.has(id)) { citedNow.add(id); emit({ type: "citation", id, tool: e.tool, label: e.label, source: e.source, asOf: e.asOf, ok: e.ok }); }
+        }
+      }
+    };
     try {
       for await (const ev of provider.chat(messages, tools, { signal: ctl.signal, maxTokens: limits.maxOutputTokens, noTools: last && round > 0 })) {
         if (ev.type === "text") {
           if (!text) emit({ type: "step_progress", phase: "writing" });
           text += ev.delta;
-          emit({ type: "token", delta: ev.delta });
-          for (const m of text.matchAll(REF)) {
-            for (const id of m[1].split(/\s*,\s*/)) {
-              const e = evidence.find((x) => x.id === id);
-              if (e && !citedNow.has(id)) { citedNow.add(id); emit({ type: "citation", id, tool: e.tool, label: e.label, source: e.source, asOf: e.asOf, ok: e.ok }); }
-            }
-          }
+          show(live.push(ev.delta));
         } else if (ev.type === "tool_call") pending.push(ev);
         else if (ev.type === "usage") usage = ev;
       }
+      show(live.flush());
     } catch (err) {
       if (abort()) return;
       const timedOut = ctl.signal.aborted;
@@ -180,7 +196,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     spent += usage ? usage.input + usage.output : estimate(messages) + Math.ceil(text.length / 4);
 
     if (!pending.length || (last && round > 0)) {
-      const why = !retried && !last && round < limits.rounds ? retryReason(question, text, evidence) : "";
+      const why = !retried && !last && round < limits.rounds ? retryReason(question, fill(text).text, evidence) : "";
       if (why) {
         retried = true;
         messages.push({ role: "assistant", content: text || "(no answer)" }, { role: "user", content: why });
@@ -245,6 +261,7 @@ export async function runAsk({ question, history = [], context = null, attached 
       const ev = evidenceOf(id, call.name, call.args, body, { ms, label, raw, requests });
       evidence.push(ev);
       bodies.set(id, body);
+      if (!WEB.has(call.name)) raws.set(id, raw);
       if (call.name === "propose_theory" && ev.ok && raw?.theory) theory = raw.theory;
       if (call.name === "run_backtest") backtests.push({ ...(bt || { id, spec: raw?.spec || call.args?.spec, from: {}, diff: [], prior: null, using: raw?.description || "", note: "" }), ok: ev.ok, open: ev.open, stats: raw?.stats || null, counts: raw?.counts || null, description: raw?.description || "" });
       log({ event: "tool", id, tool: call.name, args: call.args, ok: ev.ok, ms, rows: ev.rows, source: ev.source });
@@ -264,13 +281,16 @@ export async function runAsk({ question, history = [], context = null, attached 
     for (const { job, content } of results) messages.push({ role: "tool", toolCallId: job.call.id, name: job.call.name, content });
   }
 
+  filled = fill(answer);
+  answer = filled.text;
   if (!answer.trim()) {
     answer = "I ran out of room before I could write an answer. The tool results are listed in the steps above.";
     emit({ type: "token", delta: answer });
   }
   const checkAnswer = (a) => {
     const { cited, unknown } = citationRefs(a, evidence);
-    const grounding = { ...groundingCheck(a, evidence), ...citationCheck(a, evidence), scope: scopeCheck(a, evidence) };
+    const pool = slotEvidence(evidence, filled.used);
+    const grounding = { ...groundingCheck(a, pool), ...citationCheck(a, pool), scope: scopeCheck(a, evidence) };
     return { cited, unknown, grounding, uncited: evidence.length > 0 && cited.length === 0 && a.length > 0 };
   };
   const revised = await revisePass({ question, answer, evidence, bodies, check: checkAnswer, provider: reviser.provider, model: reviser.model, limits, spent, msLeft: timeLeft, signal, emit, log });
@@ -278,6 +298,11 @@ export async function runAsk({ question, history = [], context = null, attached 
   if (revised) {
     answer = revised.answer;
     spent += revised.spent;
+    if (revised.answer.includes("{{")) {
+      const again = fill(revised.answer);
+      answer = again.text;
+      filled = { ...again, count: filled.count + again.count, missing: [...filled.missing, ...again.missing], used: new Map([...filled.used, ...again.used]) };
+    }
   }
   const snap = evidence.find((e) => e.tool === "market_snapshot");
   const world = evidence.find((e) => e.tool === "world_markets");
@@ -316,6 +341,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     backtests: backtests.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1))),
     clarify: false,
     prefs: null,
-    revision: revised?.revision || null
+    revision: revised?.revision || null,
+    slots: { count: filled.count, missing: filled.missing }
   });
 }

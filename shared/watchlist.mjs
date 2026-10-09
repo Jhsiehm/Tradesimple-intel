@@ -417,8 +417,6 @@ export function watchAlertRows(events, since = "", { news = false } = {}) {
       id: e.id,
       kind,
       date,
-      eventAt: e.eventAt || "",
-      filedAt: e.publishedAt || "",
       title: `${{ "8-k": "8-K", stake: e.activist ? "13D" : "13G", whale: "13F", contract: "Contract", news: "News" }[kind]} · ${e.symbol} · ${e.title}`,
       detail: [e.detail, e.eventAt ? `event ${String(e.eventAt).slice(0, 10)}` : "", e.lag != null ? `disclosed ${e.lag}d later` : ""].filter(Boolean).join(" · "),
       link: e.link,
