@@ -2,6 +2,7 @@
  * Relationship map: node ids, data categories, expansion caps, and the canvas graph reducer. Pure; the server
  * builds expansions with these ids and the browser merges them. Data edges and your theories never share a list.
  */
+import { NEAR_DAYS, dayNum } from "./intel.mjs";
 
 /** Node types. `note` is a node you added yourself; it never comes from a feed. */
 export const NODE_TYPES = ["member", "ticker", "company", "committee", "hearing", "vote", "agency", "pac", "firm", "insider", "district", "note"];
@@ -91,6 +92,63 @@ export function groupBy(rows, keyOf, { amount = () => 0, date = () => "" } = {})
   return [...groups.values()].sort((a, b) => b.n - a.n || Math.abs(b.amount) - Math.abs(a.amount) || a.key.localeCompare(b.key));
 }
 
+const PATH_CAP = 4;
+
+function closestDated(list, traded, nearDays) {
+  const d = dayNum(traded);
+  if (!Number.isFinite(d)) return null;
+  let best = null;
+  for (const item of list) {
+    const gap = dayNum(item.date) - d;
+    if (!Number.isFinite(gap) || Math.abs(gap) > nearDays) continue;
+    if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { item, gap };
+  }
+  return best;
+}
+
+/** Short mark for a filing lag, in days. Empty when the report has no filed date. */
+export function lagMark(lag) {
+  const n = Number(lag);
+  return Number.isFinite(n) ? `${n}d` : "";
+}
+
+/** One sentence for the latest trade: what was done, when, and when the public learned it. */
+export function tradeLabel(trade) {
+  const side = trade.side === "buy" ? "Bought" : trade.side === "sell" ? "Sold" : "Traded";
+  const amount = trade.amount ? ` ${trade.amount}` : "";
+  const filed = trade.filed ? `filed ${String(trade.filed).slice(0, 10)}` : "filed date not on the report";
+  const mark = lagMark(trade.lag);
+  return `${side}${amount} · traded ${String(trade.traded).slice(0, 10)} · ${filed}${mark ? ` · ${mark} later` : ""}`;
+}
+
+/** Calendar distance from a trade to a hearing or contract. The caller already applied the 14-day cap. */
+export function gapLabel(gap, symbol, traded, tail = "calendar only") {
+  const when = gap === 0 ? "the same day as" : `${Math.abs(gap)}d ${gap > 0 ? "after" : "before"}`;
+  return `${when} the ${symbol} trade on ${String(traded).slice(0, 10)} · ${tail}`;
+}
+
+/**
+ * Arrival picture for one member or ticker. Neighbors collapse to their latest trade. A hearing or contract
+ * is attached only when it falls within `nearDays` of that trade. Hearings passed in must already be limited
+ * to the committees that member sits on. At most `cap` neighbors, most recent first.
+ */
+export function disclosurePath(trades, hearings = [], contracts = [], { nearDays = NEAR_DAYS, cap = PATH_CAP } = {}) {
+  const latest = new Map();
+  for (const trade of trades) {
+    if (!trade?.neighbor || !trade.traded) continue;
+    const cur = latest.get(trade.neighbor);
+    if (!cur || String(trade.traded) > String(cur.traded)) latest.set(trade.neighbor, trade);
+  }
+  const picked = [...latest.values()].sort((a, b) => String(b.traded).localeCompare(String(a.traded))).slice(0, cap);
+  const rows = picked.map((trade) => {
+    const mine = hearings.filter((h) => !h.member || h.member === trade.member);
+    const hearing = closestDated(mine, trade.traded, nearDays);
+    const contract = closestDated(contracts.filter((c) => c.symbol && c.symbol === trade.symbol), trade.traded, nearDays);
+    return { trade, hearing, contract };
+  });
+  return { rows, more: Math.max(0, latest.size - picked.length) };
+}
+
 /** One key per relationship, whichever side it was expanded from. */
 export function edgeKey(cat, a, b) {
   return a < b ? `${cat}::${a}::${b}` : `${cat}::${b}::${a}`;
@@ -137,7 +195,8 @@ export function mergeExpansion(graph, exp, place = () => ({ x: 0, y: 0 })) {
     const id = edgeKey(edge.cat, edge.from, edge.to);
     const cur = edges.get(id);
     if (cur) {
-      edges.set(id, { ...cur, n: Math.max(cur.n || 0, edge.n || 0), amount: Math.abs(edge.amount || 0) > Math.abs(cur.amount || 0) ? edge.amount : cur.amount, last: (edge.last || "") > (cur.last || "") ? edge.last : cur.last });
+      const marked = !cur.mark && edge.mark ? { ...cur, label: edge.label, mark: edge.mark, link: edge.link || cur.link, latency: edge.latency || cur.latency } : cur;
+      edges.set(id, { ...marked, n: Math.max(marked.n || 0, edge.n || 0), amount: Math.abs(edge.amount || 0) > Math.abs(marked.amount || 0) ? edge.amount : marked.amount, last: (edge.last || "") > (marked.last || "") ? edge.last : marked.last });
       continue;
     }
     if (edges.size >= MAX_EDGES) { dropped += 1; continue; }

@@ -31,6 +31,8 @@ export type RelEdge = {
   source: string;
   asOf: string;
   latency: string;
+  /** Short text drawn on the line, such as a filing lag. */
+  mark?: string;
 };
 
 export type Endpoint = { id: string; type: string; label: string };
@@ -85,6 +87,22 @@ export function clampLimit(raw: unknown, fallback?: number): number;
 export function clampOffset(raw: unknown): number;
 export function page<T>(list: T[], offset?: number, limit?: number): { items: T[]; total: number; offset: number; limit: number; more: boolean };
 export function groupBy<T>(rows: T[], keyOf: (row: T) => string, opts?: { amount?: (row: T) => number; date?: (row: T) => string }): { key: string; n: number; amount: number; last: string; rows: T[] }[];
+export function lagMark(lag: unknown): string;
+export function tradeLabel(trade: { side?: string; amount?: string; traded: string; filed?: string; lag?: number | null }): string;
+export function gapLabel(gap: number, symbol: string, traded: string, tail?: string): string;
+export function disclosurePath(
+  trades: { neighbor: string; traded: string; member?: string; symbol?: string; side?: string; amount?: string; filed?: string; lag?: number | null; link?: string; node?: NodeRef }[],
+  hearings?: { member?: string; date: string; id?: string; title?: string; link?: string; sub?: string }[],
+  contracts?: { symbol?: string; date: string; id?: string; label?: string; sub?: string; link?: string; amount?: number }[],
+  opts?: { nearDays?: number; cap?: number }
+): {
+  rows: {
+    trade: { neighbor: string; traded: string; member?: string; symbol?: string; side?: string; amount?: string; filed?: string; lag?: number | null; link?: string; node?: NodeRef };
+    hearing: { item: { member?: string; date: string; id?: string; title?: string; link?: string; sub?: string }; gap: number } | null;
+    contract: { item: { symbol?: string; date: string; id?: string; label?: string; sub?: string; link?: string; amount?: number }; gap: number } | null;
+  }[];
+  more: number;
+};
 export function edgeKey(cat: string, a: string, b: string): string;
 export function mergeExpansion(graph: Graph, exp: Pick<Expansion, "node" | "nodes" | "edges">, place?: (node: NodeRef, parentId: string | null) => { x: number; y: number }): { graph: Graph; added: string[]; dropped: number };
 export function removeNode(graph: Graph, id: string): Graph;

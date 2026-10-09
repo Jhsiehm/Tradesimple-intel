@@ -64,6 +64,7 @@ export const MANIFEST = [
   { id: "intel.case", path: "/api/intel/case/:kind(member|ticker|district)/:id([A-Za-z0-9.\\-]+)" },
   { id: "relations.node", path: "/api/relations/node" },
   { id: "relations.expand", path: "/api/relations/expand" },
+  { id: "relations.path", path: "/api/relations/path" },
   { id: "calendar.lobbying", path: "/api/calendar/lobbying", warm: "board", snapshot: true },
   { id: "calendar.pacs", path: "/api/calendar/pacs", warm: "board", snapshot: true },
   { id: "markets.events", path: "/api/markets/events", samples: ["/api/markets/events?symbol=SPY"], warm: "board" },

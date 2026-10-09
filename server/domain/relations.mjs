@@ -6,7 +6,7 @@ import { committees, memberCommittees, roster } from "../roster.mjs";
 import { indexStatus, indexedMeetings, indexedVotes, laneOf } from "../timeline.mjs";
 import { HQ_LATENCY, HQ_SOURCE, hqAll } from "../hq.mjs";
 import { listTickers, tickerBySymbol } from "../lib/db.mjs";
-import { CATEGORIES, categoriesFor, clampLimit, clampOffset, groupBy, nodeId, page, parseNode } from "../../shared/relations.mjs";
+import { CATEGORIES, categoriesFor, clampLimit, clampOffset, disclosurePath, gapLabel, groupBy, lagMark, nodeId, page, parseNode, tradeLabel } from "../../shared/relations.mjs";
 
 const CHAIN = JSON.parse(readFileSync(new URL("../../data/supplychain.json", import.meta.url), "utf8"));
 const FROM = "2025-01-03";
@@ -404,6 +404,153 @@ export async function expand(db, params) {
     nodes: p.items.map((r) => r.node),
     edges: p.items.map((r) => r.edge),
     ...(built.note ? { note: built.note } : {})
+  };
+}
+
+const HEARING_LATENCY = "Calendar distance only, within 14 days of the latest trade, on committees they sit on today. Says nothing about what was discussed.";
+
+/**
+ * The picture a member or ticker opens with. Up to four neighbors, each from its latest trade, with the filing
+ * lag on the line. A hearing or same-ticker contract is added only when it falls within 14 days of that trade.
+ */
+export async function disclosureExpansion(db, params) {
+  const id = String(params.get("node") || "");
+  const parsed = parseNode(id);
+  if (!parsed || (parsed.type !== "member" && parsed.type !== "ticker")) return { ok: false, status: 400, error: "A path starts from a member or a ticker" };
+  const origin = await describe(db, id);
+  if (!origin) return { ok: false, status: 404, error: "Nothing on file for that node" };
+  const res = await congressTrades(db).catch(() => ({ items: [] }));
+  const src = { source: res.source || "House Clerk PTR · Senate eFD", asOf: res.asOf || "", latency: "Trade date as disclosed; the public learned it on the filed date, up to 45 days later." };
+  const who = await people(db);
+  const items = (res.items || []).filter((t) => t.traded >= FROM && t.symbol && (parsed.type === "member" ? t.bioguide === parsed.key : t.symbol === parsed.key));
+  let unjoined = 0;
+  const trades = [];
+  for (const t of items) {
+    if (parsed.type === "member") {
+      const node = tickerRef(db, t.symbol, t.asset);
+      if (node.type !== "ticker") { unjoined += 1; continue; }
+      trades.push({ neighbor: node.id, member: t.bioguide, symbol: t.symbol, side: t.side, amount: t.amount, traded: t.traded, filed: t.filed, lag: t.lag, link: t.link, node });
+    } else {
+      const m = who.get(t.bioguide);
+      if (!m) continue;
+      const node = memberRef(m);
+      trades.push({ neighbor: node.id, member: t.bioguide, symbol: parsed.key, side: t.side, amount: t.amount, traded: t.traded, filed: t.filed, lag: t.lag, link: t.link, node });
+    }
+  }
+  const prelim = disclosurePath(trades, [], []);
+  const members = [...new Set(prelim.rows.map((r) => r.trade.member).filter(Boolean))];
+  const idx = indexStatus();
+  const hearings = [];
+  for (const bio of members) {
+    const seats = await memberCommittees(db, bio).catch(() => []);
+    const lanes = new Set(seats.map((s) => laneOf(s.id)));
+    for (const m of indexedMeetings()) {
+      if (/cancel|postpon/i.test(m.status || "") || !m.date) continue;
+      if (!m.codes?.some((c) => lanes.has(laneOf(c)))) continue;
+      hearings.push({
+        member: bio,
+        date: m.date,
+        id: nodeId("hearing", keyText(m.id)),
+        title: m.title,
+        link: m.link,
+        sub: `${String(m.date).slice(0, 10)} · ${m.chamber === "senate" ? "Senate" : "House"}`
+      });
+    }
+  }
+  let contracts = [];
+  let slow = false;
+  if (parsed.type === "ticker") {
+    const empty = { ok: false, items: [] };
+    const feed = await within(contractFeed(db, { symbol: parsed.key, days: 365, sort: "recent" }), process.env.INTEL_TEST ? 200 : CONTRACT_WAIT, empty);
+    slow = Boolean(feed.slow);
+    contracts = (feed.items || []).filter((c) => c.symbol === parsed.key && c.date).map((c) => ({
+      symbol: c.symbol,
+      date: c.date,
+      id: nodeId("agency", keyText(c.agency)),
+      label: String(c.agency || "").replace(/^Department of (the )?/, ""),
+      sub: "Federal agency",
+      amount: c.amount,
+      link: c.link
+    }));
+  }
+  const { rows, more } = disclosurePath(trades, hearings, contracts);
+  const nodes = [];
+  const edges = [];
+  const seenN = new Set();
+  const seenE = new Set();
+  const addNode = (node) => {
+    if (!node?.id || node.id === origin.id || seenN.has(node.id)) return;
+    seenN.add(node.id);
+    nodes.push(node);
+  };
+  const addEdge = (edge) => {
+    const key = `${edge.cat}:${edge.from}:${edge.to}`;
+    if (seenE.has(key)) return;
+    seenE.add(key);
+    edges.push(edge);
+  };
+  for (const row of rows) {
+    const t = row.trade;
+    addNode(t.node);
+    const from = parsed.type === "member" ? origin.id : t.node.id;
+    const to = parsed.type === "member" ? t.node.id : origin.id;
+    addEdge({ from, to, cat: "trade", label: tradeLabel(t), n: 1, last: String(t.traded).slice(0, 10), link: t.link || "", mark: lagMark(t.lag), ...src });
+    if (row.hearing?.item?.id) {
+      const h = row.hearing.item;
+      addNode({ id: h.id, type: "hearing", label: h.title || "Hearing", sub: h.sub || String(h.date).slice(0, 10) });
+      addEdge({
+        from: t.member ? nodeId("member", t.member) : origin.id,
+        to: h.id,
+        cat: "hearing",
+        label: gapLabel(row.hearing.gap, t.symbol, t.traded),
+        n: 1,
+        last: String(h.date).slice(0, 10),
+        link: h.link || "",
+        mark: `${Math.abs(row.hearing.gap)}d`,
+        source: "Congress.gov committee-meeting API",
+        asOf: idx.builtAt || "",
+        latency: HEARING_LATENCY
+      });
+    }
+    if (row.contract?.item?.id && parsed.type === "ticker") {
+      const c = row.contract.item;
+      addNode({ id: c.id, type: "agency", label: c.label || "Agency", sub: c.sub || "Federal agency" });
+      addEdge({
+        from: origin.id,
+        to: c.id,
+        cat: "contract",
+        label: `${gapLabel(row.contract.gap, t.symbol, t.traded, "same ticker in data/tickers.json")} · ${usd(c.amount)}`,
+        n: 1,
+        amount: c.amount,
+        last: String(c.date).slice(0, 10),
+        link: c.link || "",
+        mark: `${Math.abs(row.contract.gap)}d`,
+        source: "USAspending.gov prime contract transactions",
+        asOf: "",
+        latency: "Same ticker, joined in data/tickers.json, and within 14 days of the latest trade."
+      });
+    }
+  }
+  const notes = [];
+  if (!trades.length) notes.push(unjoined ? "Those trades use symbols that are not in data/tickers.json, so they stay off this picture." : "No Congress trades on file since Jan 3, 2025.");
+  else if (unjoined) notes.push(`${unjoined} trade${unjoined === 1 ? "" : "s"} use a symbol that is not in data/tickers.json and stay off this picture.`);
+  if (more) notes.push(`${more} older name${more === 1 ? "" : "s"} stay under Trades.`);
+  if (slow) notes.push("USAspending is still answering; a contract within 14 days is not on this picture yet.");
+  return {
+    ok: true,
+    node: origin,
+    category: "trade",
+    label: "Disclosure",
+    source: src.source,
+    asOf: src.asOf,
+    latency: src.latency,
+    total: rows.length,
+    offset: 0,
+    limit: rows.length,
+    more: more > 0,
+    nodes,
+    edges,
+    note: notes.join(" ")
   };
 }
 

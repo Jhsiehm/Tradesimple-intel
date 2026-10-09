@@ -136,7 +136,7 @@ export function App() {
   const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil, section === "strait");
   const boardOn = section === "map" && !today && !timelineId && !calendarTab;
   const recordsOn = !today && !timelineId && !calendarTab && (section === "districts" || (section === "congress" && voteView === "map" && mapLayer !== "filings"));
-  const intelOn = boardOn || recordsOn;
+  const intelOn = recordsOn;
   const intel = useIntelScope(intelScope, intelOn);
   const board = useRelations(intelScope, section === "map" ? selectedId : null, boardOn);
 
@@ -313,7 +313,7 @@ export function App() {
   };
 
   const routeAction = (action: string) => {
-    const patch = viewFor(action, { intelOn });
+    const patch = viewFor(action, { intelOn: intelOn || boardOn });
     if (patch) apply(patch);
     else route(action, {
       roll: (id) => {
@@ -604,7 +604,7 @@ export function App() {
             {barFor === "strait" ? <StraitPicture live={earthSettings.base === "live"} onLive={(live) => updateEarth({ base: live ? "live" : "dark", view: "2d" })} /> : null}
             {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
             {look.data && look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
-            {barFor === "map" ? <span className="bar-note">Click a node for relationships from the feeds · Theory (T) draws your own · hover a line for its source and lag</span> : null}
+            {barFor === "map" ? <span className="bar-note">Each line is the latest trade and how many days later it was filed. A hearing is within 14 days, calendar only. T draws your own.</span> : null}
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
@@ -742,7 +742,6 @@ export function App() {
               onKinds={setArcKinds}
               arcs={arcs}
               mapArcs={look.arcs}
-              board={section === "map"}
               onMapArcs={nav.setArcs}
               onClearScope={() => setIntelScope(ALL_SCOPE)}
               collapsed={scrubMin}

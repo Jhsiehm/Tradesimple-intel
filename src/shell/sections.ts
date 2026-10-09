@@ -7,7 +7,7 @@ export const SECTIONS: { id: Section; label: string; blurb: string }[] = [
   { id: "news", label: "News", blurb: "Global wires and X" },
   { id: "districts", label: "Districts", blurb: "Plants and headquarters on the map" },
   { id: "strait", label: "Strait", blurb: "Ships, news, and open imagery" },
-  { id: "map", label: "Map", blurb: "Records in a window · draw a line between two of them" }
+  { id: "map", label: "Map", blurb: "Latest trade, the filing lag, and a hearing within 14 days" }
 ];
 
 export const MODE_BLURB: Record<CongressMode, string> = {

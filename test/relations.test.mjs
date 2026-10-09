@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CAP, CATEGORIES, CATEGORY_IDS, DEFAULT_EXPAND, EMPTY_GRAPH, MAX_NODES, NODE_TYPES, addNote, categoriesFor, clampLimit, clampOffset, commit,
-  counts, dropTheory, edgeKey, groupBy, history, mergeExpansion, moveNodes, neighborhood, page, parseNode, putTheory, redo, removeNode, undo
+  counts, disclosurePath, dropTheory, edgeKey, gapLabel, groupBy, history, lagMark, mergeExpansion, moveNodes, neighborhood, page, parseNode, putTheory, redo, removeNode, tradeLabel, undo
 } from "../shared/relations.mjs";
 import { MAX_THEORIES, cleanDoc, decodeShare, encodeShare, mergeDocs, migrate, parseDoc, serialize } from "../shared/theories.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK, contrast } from "../src/relations/palette.ts";
 import { ICON_NAMES } from "../src/ui/icons/names.ts";
 import { fan } from "../src/relations/layout.ts";
-import { expand, nodeInfo } from "../server/domain/relations.mjs";
+import { disclosureExpansion, expand, nodeInfo } from "../server/domain/relations.mjs";
 
 const src = { source: "S", asOf: "2026-10-01T00:00:00Z", latency: "L" };
 const exp = (origin, pairs) => ({
@@ -173,10 +173,49 @@ test("fan aims new nodes into the widest empty angle and keeps clear of nodes al
   }
 });
 
+test("disclosure path keeps the latest trade per name and only what sits within 14 days", () => {
+  const nvda = { neighbor: "ticker:NVDA", member: "P000197", symbol: "NVDA", side: "sell", amount: "$1,001 - $15,000", traded: "2026-09-03", filed: "2026-09-25", lag: 22, node: { id: "ticker:NVDA", type: "ticker", label: "NVDA" } };
+  const older = { ...nvda, traded: "2026-01-02", filed: "2026-01-20", lag: 18 };
+  const aapl = { neighbor: "ticker:AAPL", member: "P000197", symbol: "AAPL", side: "buy", amount: "$1,001 - $15,000", traded: "2026-08-01", filed: "2026-08-01", lag: 0, node: { id: "ticker:AAPL", type: "ticker", label: "AAPL" } };
+  const hearings = [
+    { member: "P000197", date: "2026-09-10", id: "hearing:near", title: "Chips" },
+    { member: "P000197", date: "2026-06-01", id: "hearing:far", title: "Old" },
+    { member: "OTHER", date: "2026-09-04", id: "hearing:else", title: "Not theirs" }
+  ];
+  const { rows, more } = disclosurePath([older, nvda, aapl], hearings, [{ symbol: "NVDA", date: "2026-09-20", id: "agency:DOD", label: "Defense" }]);
+  assert.equal(more, 0);
+  assert.deepEqual(rows.map((r) => r.trade.symbol), ["NVDA", "AAPL"]);
+  assert.equal(rows[0].trade.traded, "2026-09-03", "the later NVDA trade is the one on the line");
+  assert.equal(rows[0].hearing.item.id, "hearing:near");
+  assert.equal(rows[0].hearing.gap, 7);
+  assert.equal(rows[0].contract, null, "17 days is outside the 14-day rule");
+  assert.equal(rows[1].hearing, null);
+  assert.equal(lagMark(22), "22d");
+  assert.match(tradeLabel(rows[0].trade), /Sold \$1,001 - \$15,000 · traded 2026-09-03 · filed 2026-09-25 · 22d later/);
+  assert.match(gapLabel(-3, "NVDA", "2026-09-03"), /3d before/);
+  const many = Array.from({ length: 5 }, (_, i) => ({ neighbor: `ticker:T${i}`, member: "P000197", symbol: `T${i}`, traded: `2026-09-0${i + 1}` }));
+  assert.equal(disclosurePath(many).more, 1);
+});
+
+test("a filing lag replaces a count-only label on the same pair", () => {
+  const first = mergeExpansion(EMPTY_GRAPH, exp("member:P000197", [["ticker:NVDA", "trade", 2]])).graph;
+  const marked = {
+    node: { id: "member:P000197", type: "member", label: "Pelosi" },
+    nodes: [{ id: "ticker:NVDA", type: "ticker", label: "NVDA" }],
+    edges: [{ from: "member:P000197", to: "ticker:NVDA", cat: "trade", label: "Sold · traded 2026-09-03 · filed 2026-09-25 · 22d later", n: 1, mark: "22d", ...src }]
+  };
+  const next = mergeExpansion(first, marked).graph;
+  const edge = next.edges.find((e) => e.id === edgeKey("trade", "member:P000197", "ticker:NVDA"));
+  assert.equal(edge.mark, "22d");
+  assert.match(edge.label, /22d later/);
+  assert.equal(edge.n, 2, "the larger count stays");
+});
+
 test("expand and nodeInfo reject bad input before touching any feed", async () => {
   const q = (o) => new URLSearchParams(o);
   assert.equal((await expand(null, q({ node: "member:bad", category: "trade" }))).status, 400);
   assert.equal((await expand(null, q({ node: "member:P000197", category: "supply" }))).status, 400, "members have no supply chain");
   assert.equal((await expand(null, q({ node: "ticker:NVDA", category: "nope" }))).status, 400);
   assert.equal((await nodeInfo(null, q({ id: "x" }))).status, 400);
+  assert.equal((await disclosureExpansion(null, q({ node: "committee:HSAS" }))).status, 400);
 });

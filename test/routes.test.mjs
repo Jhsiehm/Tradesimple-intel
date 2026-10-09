@@ -101,6 +101,7 @@ export const SMOKE = [
   ["/api/intel/case/ticker/AAPL", 200, "asOf,headline,kind,latency,ok,signal,sources,stats,sub,subject"],
   ["/api/relations/node?id=ticker:NVDA", 200, "categories,node,ok"],
   ["/api/relations/expand?node=ticker:NVDA&category=supply", 200, "asOf,category,edges,label,latency,limit,more,node,nodes,offset,ok,source,total"],
+  ["/api/relations/path?node=ticker:NVDA", 200, "asOf,category,edges,label,latency,limit,more,node,nodes,note,offset,ok,source,total"],
   ["/api/relations/expand?node=member:bogus&category=trade", 400, "error,ok"],
   ["/api/calendar/lobbying", 200, "asOf,items,latency,ok,source,totals"],
   ["/api/calendar/pacs", 200, "asOf,cycle,groups,latency,members,ok,rows,source"],

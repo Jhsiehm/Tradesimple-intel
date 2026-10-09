@@ -185,11 +185,33 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
     return next;
   }), []);
 
+  const opened = useRef("");
+  const openPath = useCallback(async (id: string) => {
+    try {
+      const res = await api<Expansion>(`/api/relations/path?node=${encodeURIComponent(id)}`);
+      if (!res?.ok || !res.node) {
+        opened.current = "";
+        setNotice(res?.error || "No disclosure path for that name.");
+        return;
+      }
+      const placed = graphRef.current.nodes.find((n) => n.id === id);
+      const at = placed ? { x: placed.x, y: placed.y } : { x: 0, y: 0 };
+      setH((cur) => commit(cur, mergeExpansion(cur.present, res, placer(cur.present, res, at)).graph));
+      if (!res.edges.length && res.note) setNotice(res.note);
+    } catch (err) {
+      opened.current = "";
+      setNotice((err as Error).message);
+    }
+  }, []);
+
   const seed = scope.kind === "member" ? `member:${scope.id}` : scope.kind === "symbol" ? `ticker:${scope.id}` : "";
   useEffect(() => {
-    if (!on || !seed) return;
-    void addNode(seed);
-  }, [on, seed, addNode]);
+    if (!on || !seed || opened.current === seed) return;
+    const marked = graphRef.current.edges.some((e) => (e.from === seed || e.to === seed) && e.cat === "trade" && e.mark);
+    opened.current = seed;
+    if (marked) return;
+    void openPath(seed);
+  }, [on, seed, openPath]);
 
   const items = useMemo(() => listItems(graph), [graph]);
   /** What each fetch would add, recounted from the canvas so undo, remove, and redo keep "shown" honest. */

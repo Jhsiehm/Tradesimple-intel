@@ -385,6 +385,26 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
         ctx.fillText(text, p.x, p.y + r + 4 / k);
       }
     }
+    if (labels) {
+      ctx.font = `${10 / k}px "IBM Plex Mono", ui-monospace, Menlo, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const e of scene.edges) {
+        if (!e.mark) continue;
+        const on = !focus || (hubId != null && (e.from === hubId || e.to === hubId));
+        if (!on) continue;
+        const a = posOf(scene.byId.get(e.from)!);
+        const b = posOf(scene.byId.get(e.to)!);
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 3 / k;
+        ctx.strokeStyle = PANEL;
+        ctx.strokeText(e.mark, mx, my);
+        ctx.fillStyle = CATEGORY_LOOK[e.cat].color;
+        ctx.fillText(e.mark, mx, my);
+      }
+    }
     ctx.globalAlpha = 1;
     const ms = performance.now() - t0;
     perf.current.n += 1;

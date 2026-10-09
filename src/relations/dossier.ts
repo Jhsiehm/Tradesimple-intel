@@ -143,6 +143,6 @@ export function status(graph: Graph, loaded: Record<string, Loaded>): StatusLine
   return {
     source: graph.nodes.length ? `Relationship map · ${c.data} data links from ${feeds.size} feed${feeds.size === 1 ? "" : "s"}${cats ? ` (${cats})` : ""} · ${c.theories} theor${c.theories === 1 ? "y" : "ies"} of yours, not counted` : "Relationship map",
     asOf: latest ? `${when(latest)} UTC` : "",
-    latency: "Hover a line for its feed, as-of time, and lag. Magenta dashed lines are your theories, saved only in this browser."
+    latency: "The mark on a line is the filing lag, or the days between a trade and a hearing. Hover for the feed and as-of time. Magenta dashed lines are your theories, saved only in this browser."
   };
 }
