@@ -19,8 +19,6 @@ const FORBIDDEN = {
 // Known violations awaiting a fix. Entries may only be removed.
 const ALLOWLIST = new Set([
   "server/contracts.mjs -> scripts/joins-match.mjs",
-  "scripts/snapshot.mjs -> src/lib/demoPath.js",
-  "scripts/publish-demo.mjs -> src/lib/demoPath.js",
 ]);
 
 // Files already over the line budget. This set may only shrink.

@@ -1,4 +1,4 @@
-import { demoFile } from "./demoPath.js";
+import { demoFile } from "../../shared/demoPath.mjs";
 
 /** Zero-key demo: `npm run demo` / `npm run build:demo` read frozen responses from demo/snapshot instead of the API. */
 export const DEMO = import.meta.env.VITE_DEMO === "1";
