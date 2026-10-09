@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { WATCH_SOURCES, ageLabel, type WatchEvent, type WatchSourceKey } from "../../shared/watchlist.mjs";
 import { when } from "../lib/api";
+import { AgeLine } from "../ui/AgeLine";
 import { Lag } from "../ui/Lag";
 import { Icon } from "../ui/icons/Icon";
 import { useTickerActivity, type WatchSection } from "./useWatchActivity";
@@ -11,6 +12,8 @@ const SHORT = Object.fromEntries(WATCH_SOURCES.map((s) => [s.key, s.short])) as 
 const STATUS: Record<WatchSection["status"], string> = { ok: "", empty: "none in window", loading: "loading…", error: "unavailable", "not-configured": "not configured", "not-covered": "not covered" };
 
 const day = (iso: string) => String(iso || "").slice(0, 10);
+/** Alert kind of each source, for the trade-age words and tiers (shared/tradeAge.mjs). */
+const AGE_KIND: Record<WatchSourceKey, string> = { congress: "symbol-trade", insiders: "form4", whales: "whale", stakes: "stake", contracts: "contract", lobbying: "lobbying", filings: "8-k", news: "news" };
 
 function Times({ e }: { e: WatchEvent }) {
   if (e.source === "news") return <small className="watch-when">published {when(e.publishedAt)} · {ageLabel(e.publishedAt)} ago</small>;
@@ -51,6 +54,7 @@ function EventRow({ e, onFollow }: { e: WatchEvent; onFollow: (action: string) =
         {e.detail && e.detail !== e.title ? <p className="watch-detail">{e.detail}</p> : null}
         <F4Lines e={e} />
         <Times e={e} />
+        {e.source === "news" ? null : <AgeLine kind={AGE_KIND[e.source]} eventAt={e.eventAt} filedAt={e.publishedAt} />}
       </div>
       {e.link ? <a href={e.link} target="_blank" rel="noopener noreferrer" title={`Open the source (${e.feed})`}><Icon name="external" size={12} /></a> : <span />}
     </li>
