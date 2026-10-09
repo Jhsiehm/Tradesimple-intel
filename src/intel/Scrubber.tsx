@@ -123,7 +123,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
 
   const span = w[1] - w[0] + 1;
   const range = len ? `${dayIso(start + w[0])} → ${dayIso(start + w[1])}` : "—";
-  const preset = PRESETS.find(([, d]) => { const p = presetWindow(len, d); return p[0] === w[0] && p[1] === w[1]; })?.[0];
+  const preset = len ? PRESETS.find(([, d]) => { const p = presetWindow(len, d); return p[0] === w[0] && p[1] === w[1]; })?.[0] : undefined;
   const scoped = scope.kind !== "all";
   const scopeText = data?.ok ? data.scope.label : scoped ? (scope.kind === "member" ? `Member ${scope.id}` : scope.id) : "All Congress";
   const cov = data?.ok ? data.arcs.coverage : null;
