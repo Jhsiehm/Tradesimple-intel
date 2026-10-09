@@ -14,6 +14,7 @@ export function questionSources(q: string): BacktestSource[];
 export function questionHints(q: string, today: string): { fields: Record<string, unknown>; sources: BacktestSource[] };
 export function isFollowUp(q: string, prior: BacktestSpec | null): boolean;
 export function wantsBacktest(q: string): boolean;
+export function asksAboutResult(q: string, prior: BacktestSpec | null): boolean;
 export type SpecPlan = { spec: BacktestSpec; sources: BacktestSource[]; from: Record<string, string>; followUp: boolean; prior: BacktestSpec | null; locked: string[] };
 export function buildSpec(input: { question: string; today: string; prefs?: unknown; prior?: BacktestSpec | null; answers?: Record<string, unknown> }): SpecPlan;
 export type Clarify = { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback: unknown };

@@ -174,6 +174,13 @@ export function isFollowUp(q, prior) {
   return /^(and |now |what if|try|instead|same|rerun|re-run|hold|compare|exclude|excluding|without|include|only|use|switch|change|make it|with |vs\.? |versus|against|drop|just)/.test(s) || /\binstead\b|\bsame (spec|run|backtest)\b/.test(s);
 }
 
+/** A question about the previous run's result ("which of those members did best?"), not a change to it. */
+export function asksAboutResult(q, prior) {
+  if (!prior || wantsBacktest(q) || isFollowUp(q, prior)) return false;
+  const s = lc(q);
+  return /\b(those|these|that|this|them|its) (members?|trades?|results?|runs?|backtests?|numbers?|figures?|signals?|tickers?|names?|filers?|insiders?)\b|\b(the|that|this|your|last) (backtest|run|result|results)\b|\bwhich (of (those|these|them)|members?|trades?|one)\b|\bwhy did\b/.test(s);
+}
+
 export const wantsBacktest = (q) => /\bback-?test|\breplay\b|\bhow would .* (have )?(done|performed)\b|\bwhat if (i|you|we) (had )?(bought|copied|followed)\b/i.test(String(q || ""));
 
 /**

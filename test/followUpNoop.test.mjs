@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildSpec, planFollowUps } from "../shared/backtestAsk.mjs";
+import { asksAboutResult, buildSpec, planFollowUps } from "../shared/backtestAsk.mjs";
 import { followUpOutcome, handOffNote } from "../shared/followUpReply.mjs";
 import { cleanAsk } from "../shared/ask.mjs";
 import { runAsk } from "../server/ai/run.mjs";
@@ -92,4 +92,25 @@ test("reload from a saved chat: a follow-up with no spec change goes to the mode
   assert.deepEqual(done.cited, ["t1"]);
   assert.deepEqual(done.backtests[0].diff, []);
   assert.doesNotMatch(done.answer, /Nothing to re-run/);
+});
+
+test("a question about one previous run re-runs it unchanged, so the answer's figures cite this turn", async () => {
+  const jpm = buildSpec({ question: "Backtest Congress buys of JPM since 2020, hold 30 days, vs SPY", today: TODAY }).spec;
+  const q = "Which of those members had the best average excess?";
+  assert.equal(asksAboutResult(q, jpm), true);
+  const p = scripted([{ type: "text", delta: "The run had 12 trades [t1] returning 1.23% [t1]." }]);
+  const { ran, done } = await ask(cleanAsk({ question: q, prior: jpm, priors: [jpm] }), p);
+  assert.deepEqual(ran, [jpm]);
+  assert.match(p.seen[0][0].content, /previous turn ran 1 backtest: .*re-ran it unchanged .* t1/s);
+  assert.deepEqual(done.cited, ["t1"]);
+  assert.deepEqual(done.grounding.miscited, []);
+});
+
+test("asksAboutResult: needs a previous run, and leaves new backtests and spec changes to their own paths", () => {
+  const prior = ALL[0];
+  assert.equal(asksAboutResult("Which of those members had the best average excess?", null), false);
+  assert.equal(asksAboutResult("why did that run lose money?", prior), true);
+  assert.equal(asksAboutResult("Backtest insider buys since 2025", prior), false);
+  assert.equal(asksAboutResult("hold 60 days instead", prior), false);
+  assert.equal(asksAboutResult("What did Nancy Pelosi file most recently?", prior), false);
 });

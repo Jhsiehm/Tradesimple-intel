@@ -1,6 +1,6 @@
 import { ASK_LIMITS, caveatsFor, citationRefs, evidenceOf, groundingCheck, systemPrompt, toolMessage, trimForModel } from "../../shared/ask.mjs";
 import { attachedNote, contextNote, fallbackTable, figureCount, greetingText, isGreeting, retryReason } from "../../shared/agent.mjs";
-import { buildSpec, clarifyQuestions, describeValue, followUpsNote, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planFollowUps, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
+import { asksAboutResult, buildSpec, clarifyQuestions, describeValue, followUpsNote, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planFollowUps, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
 import { mislabelNote } from "../../shared/countLabels.mjs";
 import { citationCheck, stripRefs } from "../../shared/citations.mjs";
@@ -77,10 +77,13 @@ export async function runAsk({ question, history = [], context = null, attached 
   const planned = follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
   // A follow-up that sets no spec field ("why did contracts do better?") goes to the model; one that changes nothing says which value already matched.
   const outcome = planned ? followUpOutcome(planned) : null;
-  const handOff = Boolean(outcome && !outcome.understood);
+  // So does a question about the last result ("which of those members did best?").
+  const about = !planned && asksAboutResult(question, lastPrior);
+  const handOff = about || Boolean(outcome && !outcome.understood);
   const multi = handOff ? null : planned;
   // A hand-off re-runs the previous specs unchanged, so a "why did X do better" answer has the figures with refs.
-  const reruns = multi ? multi.runs.filter((r) => !r.unchanged) : handOff ? planned.runs : [];
+  const same = (prior) => ({ spec: prior, prior, from: {}, followUp: true, diff: [], notes: [], unchanged: true });
+  const reruns = multi ? multi.runs.filter((r) => !r.unchanged) : about ? priorList.map(same) : handOff ? planned.runs : [];
   if (multi && !reruns.length) return quick(outcome.text);
   for (const note of multi?.notes || []) emit({ type: "plan_note", note });
   const plan = handOff ? null : multi ? (reruns.length === 1 ? reruns[0] : null) : wantsBacktest(question) || follow ? buildSpec({ question, today, prefs, prior: lastPrior, answers }) : null;

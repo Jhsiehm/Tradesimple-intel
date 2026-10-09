@@ -36,7 +36,7 @@ function whyAlready(path, prior) {
 /** What the model is told when a follow-up on several runs set no spec field the app understands. */
 export function handOffNote(priors = [], refs = []) {
   return [
-    `The previous turn ran ${priors.length} backtests: ${priors.map((p) => `${SOURCE_LABEL[p.source] || p.source} ${JSON.stringify(p)}`).join("; ")}.`,
+    `The previous turn ran ${priors.length} backtest${priors.length === 1 ? "" : "s"}: ${priors.map((p) => `${SOURCE_LABEL[p.source] || p.source} ${JSON.stringify(p)}`).join("; ")}.`,
     refs.length ? `The app re-ran ${refs.length > 1 ? "them" : "it"} unchanged so their figures are here as tool results ${refs.join(", ")}; answer from those, citing refs, and do not call run_backtest again for the same spec.` : "",
     "The app did not find a spec change in this follow-up. Answer the follow-up itself. If it does ask to change the runs, call run_backtest once per source with the changed spec and compare each with its previous run. Every figure needs a ref from this turn."
   ].filter(Boolean).join("\n");
