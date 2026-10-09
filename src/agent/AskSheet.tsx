@@ -175,7 +175,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
               </div>
               <p className="ask-note">
                 Default: in-app feeds only — Records (filings, contracts, prices) and Signals (wires, X, satellite status). Answers cite tool steps; unmatched numbers are unverified. Not advice. Say “use in-app and the web” or pick a chip to add open-web search.
-                {status?.web ? (status.web.configured ? ` Web search via ${status.web.note}.` : ` ${status.web.note}`) : ""}
+                {status?.web ? (status.web.configured ? ` Web: ${status.web.note}.` : ` ${status.web.note}`) : ""}
               </p>
               {(ask.session.sourcing || ask.session.style) ? <button type="button" className="link" onClick={ask.resetSession}>Reset to in-app · terminal</button> : null}
             </details>

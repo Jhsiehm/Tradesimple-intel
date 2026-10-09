@@ -43,6 +43,9 @@ test("formatting: percent of a fraction, signed, points, dollars, numbers, dates
   assert.equal(f(0.0834, "spct"), "+8.3%");
   assert.equal(f(-0.05, "spct"), "−5.0%");
   assert.equal(f(3.14, "pp"), "3.1%");
+  assert.equal(f(1.13, "spct", "changePct"), "+1.1%", "a …Pct field is already percent: DAX +1.13% must not read +113%");
+  assert.equal(f(-0.42, "pct:2", "changePct"), "−0.42%");
+  assert.equal(f(0.0834, "spct", "excess"), "+8.3%");
   assert.equal(f(15000, "usd"), "$15,000");
   assert.equal(f(1_234_567, "usd"), "$1.2M");
   assert.equal(f(2.5e9, "usd"), "$2.5B");

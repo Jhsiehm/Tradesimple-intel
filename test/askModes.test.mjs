@@ -15,6 +15,9 @@ test("parseSourcing: platform / web / both from plain words", () => {
   assert.equal(parseSourcing("web only please"), "web");
   assert.equal(parseSourcing("use TradeSimple and the web"), "both");
   assert.equal(parseSourcing("also search the web"), "both");
+  assert.equal(parseSourcing("Use in-app and the web: what did the ECB decide?"), "both", "the phrase the sheet and coverage note suggest");
+  assert.equal(parseSourcing("in-app + web"), "both");
+  assert.equal(parseSourcing("use the in-app feeds and the open web"), "both");
   assert.equal(parseSourcing("what did Pelosi file?"), "");
 });
 

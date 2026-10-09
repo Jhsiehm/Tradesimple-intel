@@ -114,14 +114,18 @@ export function formatValue(value, fmt = "auto", key = "") {
   if (value === null) return { ok: false, text: MISSING, reason: "the tool returned null" };
   if (typeof value === "object") return { ok: false, text: MISSING, reason: Array.isArray(value) ? "a list, not one value (add .length or an index)" : "an object, not one value" };
   const num = typeof value === "number" ? value : typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : NaN;
-  const name = name0 === "auto" ? autoFormat(key, Number.isFinite(num) && typeof value === "string" ? num : value) : name0;
+  const asked = name0 === "auto" ? autoFormat(key, Number.isFinite(num) && typeof value === "string" ? num : value) : name0;
+  // A field named …Pct / …Percent is already in percent units (changePct 1.13 is 1.13%), whatever format was asked.
+  const percentUnits = ["pct", "percent"].includes(words(key).at(-1));
+  const name = percentUnits && asked === "pct" ? "pp" : percentUnits && asked === "spct" ? "spp" : asked;
   const digits = digitsRaw != null && /^\d$/.test(digitsRaw) ? Number(digitsRaw) : null;
-  const needNum = ["pct", "spct", "pp", "usd", "num", "int"].includes(name);
+  const needNum = ["pct", "spct", "pp", "spp", "usd", "num", "int"].includes(name);
   if (needNum && !Number.isFinite(num)) return { ok: false, text: MISSING, reason: `"${String(value).slice(0, 40)}" is not a number` };
   switch (name) {
     case "pct": return { ok: true, text: `${minus(num)}${group(num * 100, digits ?? 1)}%` };
     case "spct": return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num * 100, digits ?? 1)}%` };
     case "pp": return { ok: true, text: `${minus(num)}${group(num, digits ?? 1)}%` };
+    case "spp": return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num, digits ?? 1)}%` };
     case "usd": return { ok: true, text: digits != null ? `${minus(num)}$${group(num, digits)}` : usd(num) };
     case "int": return { ok: true, text: `${minus(Math.round(num))}${group(Math.round(num), 0)}` };
     case "num": return { ok: true, text: `${minus(num)}${group(num, digits ?? (Number.isInteger(num) ? 0 : Math.abs(num) < 1 ? 4 : 2)).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "")}` };

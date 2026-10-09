@@ -53,7 +53,7 @@ export function filterToolDefs(defs, sourcing) {
 
 const PLATFORM_ONLY = /\b(only|just|solely|exclusively)\s+(use\s+)?(tradesimple|trade\s*simple|this\s+(app|terminal|platform)|platform|in[- ]?app|local)\s*(data|feeds?|sources?)?\b|\b(tradesimple|platform|in[- ]?app)[- ]only\b|\bno\s+(web|internet|outside)\b|\bstay\s+on\s+(the\s+)?(platform|app|terminal)\b|\bisolate\s+(to\s+)?(tradesimple|platform|app)\b/i;
 const WEB_ONLY = /\b(only|just|solely)\s+(use\s+)?(the\s+)?(web|internet|online|outside)\b|\bweb[- ]only\b|\binternet[- ]only\b|\bdon'?t\s+use\s+(tradesimple|the\s+platform|in[- ]?app)\b/i;
-const BOTH = /\b(use\s+)?(both|tradesimple\s+and\s+(the\s+)?web|platform\s+and\s+(the\s+)?(web|internet)|web\s+and\s+(the\s+)?(platform|app)|mix(ed)?\s+sources?|combine\s+(sources?|feeds?))\b|\balso\s+(search\s+)?(the\s+)?(web|internet)\b|\binclude\s+(the\s+)?(web|internet)\b/i;
+const BOTH = /\b(use\s+)?(both|tradesimple\s+and\s+(the\s+)?web|platform\s+and\s+(the\s+)?(web|internet)|web\s+and\s+(the\s+)?(platform|app)|mix(ed)?\s+sources?|combine\s+(sources?|feeds?))\b|\balso\s+(search\s+)?(the\s+)?(web|internet)\b|\binclude\s+(the\s+)?(web|internet)\b|\b(the\s+)?(in[- ]?app|tradesimple|platform)(\s+(data|feeds?|sources?))?\s*(and|\+|&)\s*(the\s+)?(open\s+)?(web|internet)\b/i;
 
 const STYLE_PRO = /\b(professional|formal|executive|brief(ing)?\s+style|memo\s+style)\b/i;
 const STYLE_SIMPLE = /\b(simplif(y|ied)|plain\s+language|plain\s+english|eli5|explain\s+like|for\s+(a\s+)?(layperson|non[- ]?expert)|less\s+jargon)\b/i;
