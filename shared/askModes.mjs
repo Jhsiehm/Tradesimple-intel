@@ -87,7 +87,9 @@ export function isModeStatement(q) {
   if (/\b(from now on|going forward|by default|set (my )?(sourcing|sources?|style|mode)|remember (to|that)|i want answers)\b/i.test(s)) return true;
   // Short toggle-only lines: "use the web", "switch to professional", "TradeSimple only", "simplified".
   if (s.length > 80) return false;
-  if (/\b(what|who|when|where|how|why|show|list|find|backtest|filed|bought|sold|headline|news|nvda|aapl|senator|rep\.|member|contract)\b/i.test(s)) return false;
+  if (/\b(what|who|when|where|how|why|show|list|find|back-?test|filed|bought|sold|headlines?|news|wires?|satellite|nvda|aapl|senator|rep\.|member|contract|latest|today|moving)\b/i.test(s)) return false;
+  // A colon usually means "style/mode: actual question".
+  if (s.includes(":")) return false;
   return /^(use |switch to |set |tradesimple only|platform only|web only|both|professional|simplified|terminal( style)?)\b/i.test(lc(s));
 }
 
