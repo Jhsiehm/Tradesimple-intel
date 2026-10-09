@@ -5,6 +5,14 @@ import type { ArcKind, ArcLink, EventKind, Level } from "../../shared/intel.mjs"
 export type IntelScope = { kind: "all"; id: "" } | { kind: "member"; id: string } | { kind: "symbol"; id: string };
 export const ALL_SCOPE: IntelScope = { kind: "all", id: "" };
 
+/** `member:P000197`, `symbol:LMT`, or anything else → all of Congress. */
+export function scopeOf(value: string): IntelScope {
+  const [kind, id = ""] = value.split(":");
+  if (kind === "member" && /^[A-Z]\d{6}$/.test(id)) return { kind: "member", id };
+  if (kind === "symbol" && /^[A-Za-z.\-]{1,8}$/.test(id)) return { kind: "symbol", id: id.toUpperCase() };
+  return ALL_SCOPE;
+}
+
 export type IntelKind = { id: EventKind; label: string; source: string; asOf: string; latency: string; total: number; note?: string; error?: string };
 export type IntelEvent = { d: number; k: EventKind; label: string; action?: string; link?: string };
 export type IntelPlace = { lon: number; lat: number; label: string; kind: "member" | "hq" | "agency"; action: string };

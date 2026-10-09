@@ -435,6 +435,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
       { label: "Positions", value: `${res.ticker.symbol} · every filer`, action: `pos:${res.ticker.symbol}` },
       { label: "Supply chain", value: `${res.ticker.symbol} · suppliers, customers, co-movement`, action: `supply:${res.ticker.symbol}` },
       { label: "Contracts", value: `${res.ticker.symbol} · federal contract actions`, action: `contracts:symbol:${res.ticker.symbol}` },
+      { label: "Map", value: `${res.ticker.symbol} · trades, contracts, PAC arcs on the Congress map`, action: `scope:symbol:${res.ticker.symbol}` },
       ...seats.flatMap((seat) => seat.members.length
         ? seat.members.map((member) => ({
             label: seat.code,

@@ -1735,8 +1735,9 @@ button.link.sym { color: var(--ink); text-decoration-color: rgba(228, 231, 230, 
 .scrub-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; padding: 5px 12px; }
 .scrub-fold { padding: 2px 4px 2px 0; color: var(--dim); }
 .scrub-fold:hover em { color: var(--ink); }
-.scrub-scope { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); letter-spacing: 0.02em; min-width: 0; max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.scrub-x { padding: 0 5px; color: var(--dim); border: 1px solid var(--line); line-height: 1.3; }
+.scrub-scope { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); letter-spacing: 0.02em; min-width: 0; max-width: 320px; white-space: nowrap; }
+.scrub-scope > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.scrub-x { flex: none; padding: 0 5px; color: var(--dim); border: 1px solid var(--line); line-height: 1.3; font-size: 10px; letter-spacing: 0.04em; }
 .scrub-x:hover { color: var(--ink); border-color: var(--blue); }
 .scrub-range { font-weight: 500; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .scrub-range small { color: var(--dim); font-weight: 400; }

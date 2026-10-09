@@ -32,9 +32,10 @@ import { districtCode, useDistricts, type DistrictLayer } from "./districts/useD
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
-import { ALL_SCOPE, useIntelScope, type IntelScope } from "./intel/useIntel";
+import { ALL_SCOPE, scopeOf, useIntelScope, type IntelScope } from "./intel/useIntel";
 import { arcView } from "./intel/arcs";
-import { presetWindow, Scrubber, type DayWindow } from "./intel/Scrubber";
+import { Scrubber } from "./intel/Scrubber";
+import { presetWindow, type DayWindow } from "./intel/lanes";
 import type { ArcKind } from "../shared/intel.mjs";
 import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
@@ -148,6 +149,8 @@ export function App() {
   const listItems = onToday ? (stageList?.items ?? []) : items;
   const drawer = onToday || timelineId ? null : (dossier || view.drawer);
   const ids = useMemo(() => listItems.map((item) => item.id), [listItems]);
+  const dossierScope = drawer?.watch ? `symbol:${drawer.watch}` : section === "districts" ? drawer?.links?.find((l) => l.label === "Representative")?.action || "" : "";
+  useEffect(() => { if (dossierScope) setIntelScope(scopeOf(dossierScope)); }, [dossierScope]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
@@ -230,6 +233,7 @@ export function App() {
     if (!/^[A-Z]\d{6}$/.test(bioguide)) return;
     const known = congress.roster.find((m) => m.bioguide === bioguide);
     cards.openMember(bioguide, side || known?.chamber || chamber, known?.name);
+    setIntelScope({ kind: "member", id: bioguide });
   }
 
   function showChart(symbol: string, span: ChartSpan, marks: ChartMark[] = []) {
@@ -350,8 +354,7 @@ export function App() {
       openContracts(["symbol", "place", "member"].includes(kind) ? { kind: kind as ContractScope["kind"], value: rest.join(":").toUpperCase() } : { kind: "all", value: "" });
     },
     scope: (value) => {
-      const [kind, id = ""] = value.split(":");
-      setIntelScope(kind === "member" && /^[A-Z]\d{6}$/.test(id) ? { kind: "member", id } : kind === "symbol" && id ? { kind: "symbol", id: id.toUpperCase() } : ALL_SCOPE);
+      setIntelScope(scopeOf(value));
       setScrubMin(false);
       if (!intelOn) {
         closeStage();
@@ -758,6 +761,7 @@ export function App() {
           </div>
           {intelOn ? (
             <Scrubber
+              scope={intelScope}
               data={intel.data}
               loading={intel.loading}
               window={intelWindow}
