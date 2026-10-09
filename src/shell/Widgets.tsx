@@ -12,6 +12,7 @@ import { SupplyBoard } from "../markets/SupplyBoard";
 import { toggleMember, useWatch } from "../lib/useWatch";
 import { CaseHeader } from "../intel/CaseHeader";
 import { CaseSection } from "../intel/CaseSection";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 
 export type WidgetCard = {
   id: string;
@@ -104,7 +105,7 @@ export function WidgetLayer({
               {cards.filter((c) => c !== open).map((c) => (
                 <span key={c.id} className="widget-chip">
                   <button className="widget-chip-open" aria-label={`Open ${c.title}`} onClick={() => onChange(c.id, { min: false })}>{c.title}</button>
-                  <button className="widget-btn" aria-label={`Close ${c.title}`} onClick={() => onClose(c.id)}>×</button>
+                  <button className="widget-btn" aria-label={`Close ${c.title}`} onClick={() => onClose(c.id)}><Icon name="close" /></button>
                 </span>
               ))}
             </div>
@@ -205,13 +206,13 @@ function Widget({
         onDoubleClick={card.min || sheet ? undefined : toggle}
         title={sheet ? undefined : card.min ? "Click to open · drag to move" : "Drag to move · double-click to collapse"}
       >
-        {sheet ? null : <span className="widget-grip" aria-hidden="true">⠿</span>}
+        {sheet ? null : <span className="widget-grip" aria-hidden="true"><Icon name="grip" /></span>}
         <strong>{card.title}</strong>
-        <button className="widget-btn" aria-label={card.min ? `Expand ${card.title}` : `Collapse ${card.title}`} title={card.min ? "Expand" : "Collapse to a chip"} onClick={toggle}>{card.min ? "▢" : "–"}</button>
+        <button className="widget-btn" aria-label={card.min ? `Expand ${card.title}` : `Collapse ${card.title}`} title={card.min ? "Expand" : "Collapse to a chip"} onClick={toggle}><Icon name={card.min ? "expand" : "collapse"} /></button>
         {card.min || sheet ? null : (
-          <button className="widget-btn pin" aria-pressed={card.pinned} aria-label={card.pinned ? "Unpin: drop this card when the view changes" : "Pin: keep this card across views"} title={card.pinned ? "Pinned: kept across views and reloads" : "Not pinned: closes when the view changes"} onClick={() => onChange(card.id, { pinned: !card.pinned })}>{card.pinned ? "Pinned" : "Pin"}</button>
+          <button className="widget-btn pin" aria-pressed={card.pinned} aria-label={card.pinned ? "Unpin: drop this card when the view changes" : "Pin: keep this card across views"} title={card.pinned ? "Pinned: kept across views and reloads" : "Not pinned: closes when the view changes"} onClick={() => onChange(card.id, { pinned: !card.pinned })}><IconLabel icon="pin" hide>{card.pinned ? "Pinned" : "Pin"}</IconLabel></button>
         )}
-        <button className="widget-btn close" aria-label={`Close ${card.title}`} title="Close (Esc)" onClick={() => onClose(card.id)}>×</button>
+        <button className="widget-btn close" aria-label={`Close ${card.title}`} title="Close (Esc)" onClick={() => onClose(card.id)}><Icon name="close" /></button>
       </header>
       {card.min ? null : (
         <>
@@ -272,7 +273,7 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
         <div>
           <h2>
             {member.name}
-            <button className={hasMember(bioguide) ? "star on" : "star"} title={hasMember(bioguide) ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleMember({ bioguide, name: member.name, chamber })}>{hasMember(bioguide) ? "★" : "☆"}</button>
+            <button className={hasMember(bioguide) ? "star on" : "star"} title={hasMember(bioguide) ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleMember({ bioguide, name: member.name, chamber })} aria-label={hasMember(bioguide) ? "Remove from watchlist" : "Add to watchlist"}><Icon name={hasMember(bioguide) ? "star-on" : "star"} /></button>
           </h2>
           <p>{member.party || "—"} · {member.state}{member.district ? `-${member.district}` : ""} · {member.chamber || chamber}</p>
           {member.leadership?.length ? (
@@ -281,9 +282,9 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
           <p>{member.served}{member.since ? ` · since ${member.since.slice(0, 4)}` : ""}{member.termEnds ? ` · term ends ${member.termEnds}` : ""}</p>
           {member.stateRank || member.senateClass ? <p>{member.stateRank ? `${member.stateRank[0].toUpperCase()}${member.stateRank.slice(1)} senator` : ""}{member.senateClass ? ` · class ${member.senateClass}` : ""}</p> : null}
           <p className="member-links">
-            <button className="member-timeline" onClick={() => onFollow(`timeline:${bioguide}`)}>Timeline ▸</button>
-            <button className="member-timeline" onClick={() => onFollow(`scope:member:${bioguide}`)} title="Scope the map's time scrubber and arcs to this member">Map ▸</button>
-            <button className="member-timeline" onClick={() => onFollow(`contracts:member:${bioguide}`)} title="Federal contract actions performed in this member's district (state for senators)">Contracts ▸</button>
+            <button className="member-timeline" onClick={() => onFollow(`timeline:${bioguide}`)}><IconLabel icon="timeline">Timeline</IconLabel></button>
+            <button className="member-timeline" onClick={() => onFollow(`scope:member:${bioguide}`)} title="Scope the map's time scrubber and arcs to this member"><IconLabel icon="arc">Map</IconLabel></button>
+            <button className="member-timeline" onClick={() => onFollow(`contracts:member:${bioguide}`)} title="Federal contract actions performed in this member's district (state for senators)"><IconLabel icon="contracts">Contracts</IconLabel></button>
             <a href={member.url} target="_blank" rel="noreferrer">Official site</a>
             <a href={`https://bioguide.congress.gov/search/bio/${member.bioguide}`} target="_blank" rel="noreferrer">Bioguide</a>
             {member.contact ? <a href={member.contact} target="_blank" rel="noreferrer">Contact</a> : null}
