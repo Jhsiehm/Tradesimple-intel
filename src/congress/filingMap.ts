@@ -15,6 +15,7 @@ type FeedRes = {
   asOf?: string;
   latency?: string;
   latest?: FeedRow[];
+  error?: string;
 };
 
 export function lastName(person: string) {
@@ -104,10 +105,14 @@ export function useWeekFilings(on: boolean) {
         setStatus({
           source: body.source || "House Clerk · Senate eFD",
           asOf: body.asOf ? when(body.asOf) : "",
-          latency: body.latency || "Filed up to 45 days after the trade."
+          latency: body.ok ? body.latency || "Filed up to 45 days after the trade." : `Feed unavailable: ${body.error || "no rows returned"}`
         });
       })
-      .catch(() => { if (!cancel) setRows([]); });
+      .catch((err: Error) => {
+        if (cancel) return;
+        setRows([]);
+        setStatus({ source: "House Clerk · Senate eFD", asOf: "", latency: `Feed unavailable: ${err.message || "request failed"}` });
+      });
     return () => { cancel = true; };
   }, [on]);
 

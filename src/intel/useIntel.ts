@@ -90,14 +90,27 @@ export function useIntelScope(scope: IntelScope, enabled: boolean) {
   return { data: current, loading };
 }
 
+const CASE_MEMO_MAX = 50;
 const caseMemo = new Map<string, { at: number; body: CaseFile }>();
+
+/** Least-recently-used: a read moves the key to the back, a write past the cap drops the front. */
+function memoGet(key: string) {
+  const hit = caseMemo.get(key);
+  if (hit) { caseMemo.delete(key); caseMemo.set(key, hit); }
+  return hit;
+}
+function memoSet(key: string, body: CaseFile) {
+  caseMemo.delete(key);
+  caseMemo.set(key, { at: Date.now(), body });
+  while (caseMemo.size > CASE_MEMO_MAX) caseMemo.delete(caseMemo.keys().next().value!);
+}
 
 /** `member:A000001`, `ticker:LMT`, or `district:TX-14` → case header for the dossier. */
 export function useCaseFile(key: string | undefined) {
-  const [body, setBody] = useState<CaseFile | null>(() => (key && caseMemo.get(key)?.body) || null);
+  const [body, setBody] = useState<CaseFile | null>(() => (key && memoGet(key)?.body) || null);
   useEffect(() => {
     if (!key) { setBody(null); return; }
-    const hit = caseMemo.get(key);
+    const hit = memoGet(key);
     if (hit && Date.now() - hit.at < 5 * 60 * 1000) { setBody(hit.body); return; }
     let cancel = false;
     setBody(null);
@@ -105,7 +118,7 @@ export function useCaseFile(key: string | undefined) {
     api<CaseFile>(`/api/intel/case/${kind}/${encodeURIComponent(rest.join(":"))}`)
       .then((res) => {
         if (cancel) return;
-        if (res.ok && !res.stats.some((s) => /still answering/.test(s.note || ""))) caseMemo.set(key, { at: Date.now(), body: res });
+        if (res.ok && !res.stats.some((s) => /still answering/.test(s.note || ""))) memoSet(key, res);
         setBody(res);
       })
       .catch((err: Error) => { if (!cancel) setBody({ ok: false, error: err.message } as CaseFile); });

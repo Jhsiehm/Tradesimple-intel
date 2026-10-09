@@ -187,12 +187,17 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
   return row;
 }
 
+let fileMemo = { mtime: -1, body: { asOf: null, items: [] } };
+
+/** data/hq.json, re-read only when its mtime changes (scripts/hq.mjs rewrites it). */
 function precomputed() {
   try {
-    return JSON.parse(fs.readFileSync(FILE, "utf8"));
+    const mtime = fs.statSync(FILE).mtimeMs;
+    if (mtime !== fileMemo.mtime) fileMemo = { mtime, body: JSON.parse(fs.readFileSync(FILE, "utf8")) };
   } catch {
-    return { asOf: null, items: [] };
+    fileMemo = { mtime: -1, body: { asOf: null, items: [] } };
   }
+  return fileMemo.body;
 }
 
 /** Every joined ticker's HQ: live cache first, then the precomputed file from scripts/hq.mjs. */
