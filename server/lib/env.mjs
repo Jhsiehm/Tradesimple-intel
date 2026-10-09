@@ -14,3 +14,8 @@ export function loadEnv(root) {
     if (!process.env[key]) process.env[key] = value;
   }
 }
+
+/** False when INTEL_NO_WARM is set (tests, offline runs): no scheduled or on-demand background builds. */
+export function warmEnabled() {
+  return !process.env.INTEL_NO_WARM;
+}

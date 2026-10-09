@@ -8,6 +8,7 @@ import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
 import { DAY } from "./lib/time.mjs";
 import { pool } from "./lib/pool.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { warmEnabled } from "./lib/env.mjs";
 
 const CONGRESS = 119;
 const START = "2025-01-03";
@@ -201,16 +202,15 @@ function gaps() {
   return p.house.total - state.votes.house.length + p.senate.total - state.votes.senate.length + p.meetings.total - p.meetings.done;
 }
 
-export function warmTimeline(db) {
-  const run = () => buildIndex(db)
+/** Rebuild the index; while roll calls or meetings are still missing, retry every 10 minutes. */
+export function refreshTimeline(db) {
+  return buildIndex(db)
     .then(() => {
       const missing = gaps();
       console.log(`timeline index: ${state.meetings.length} meetings, ${state.votes.house.length} house + ${state.votes.senate.length} senate roll calls, ${missing} missing`);
-      if (missing > 0) setTimeout(run, 10 * 60 * 1000).unref();
+      if (missing > 0) setTimeout(() => refreshTimeline(db), 10 * 60 * 1000).unref();
     })
     .catch((err) => console.error("timeline", err.message));
-  setTimeout(run, 8_000);
-  setInterval(run, 6 * 60 * 60 * 1000).unref();
 }
 
 function byDate(a, b) {
@@ -311,7 +311,7 @@ export async function memberTimeline(db, bioguide) {
   const id = String(bioguide || "").toUpperCase();
   if (!/^[A-Z]\d{6}$/.test(id)) return { ok: false, error: "Unknown member id" };
   if (!process.env.CONGRESS_API_KEY) return { ok: false, missing: "CONGRESS_API_KEY" };
-  if (!state.builtAt && !state.running && !process.env.INTEL_NO_WARM) void buildIndex(db);
+  if (!state.builtAt && !state.running && warmEnabled()) void buildIndex(db);
   const [board, seats, people] = await Promise.all([
     congressTrades(db).catch(() => ({ items: [] })),
     memberCommittees(db, id).catch(() => []),

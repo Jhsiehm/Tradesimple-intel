@@ -91,6 +91,21 @@ test("shared/ is pure", () => {
   assert.deepEqual(found, []);
 });
 
+test("server routes never fetch; feeds, domain and parsers never write responses", () => {
+  const rules = [
+    [/^server\/(routes\/|router\.mjs$)/, /\bfetch\w*\s*\(|lib\/http\.mjs/, "network call in a route"],
+    [/^server\/(feeds|domain|parsers)\//, /\b(send|sendJson|reply)\s*\(|\bres\.(end|writeHead)\b|router\.mjs|\/routes\//, "HTTP response outside routes"],
+    [/^server\/parsers\//, /\bfetch\w*\s*\(|lib\/(http|db|cache)\.mjs|feeds\//, "I/O in a parser"],
+  ];
+  const found = [];
+  for (const file of codeFiles) {
+    const name = rel(file);
+    const text = readFileSync(file, "utf8");
+    for (const [where, re, label] of rules) if (where.test(name) && re.test(text)) found.push(`${name}: ${label}`);
+  }
+  assert.deepEqual(found, []);
+});
+
 test("every shared/*.mjs has a .d.mts", () => {
   const missing = files
     .map(rel)

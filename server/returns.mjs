@@ -5,6 +5,7 @@ import { HOUR, DAY } from "./lib/time.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 import { yahooChart } from "./feeds/yahoo.mjs";
 import { readStale } from "./lib/cache.mjs";
+import { warmEnabled } from "./lib/env.mjs";
 
 export const BENCHMARK = "SPY";
 export const MAX_SYMBOLS = 300;
@@ -273,12 +274,10 @@ export async function buildReturns(db) {
   }
 }
 
-export function warmReturns(db) {
-  const run = () => buildReturns(db)
+export function refreshReturns(db) {
+  return buildReturns(db)
     .then(() => console.log(`returns: ${state.closes.size} symbols priced, ${state.rows.length} buys scored, ${state.progress.fetched} fetched, ${state.progress.failed} failed`))
     .catch((err) => console.error("returns", err.message));
-  setTimeout(run, 20_000);
-  setInterval(run, 12 * HOUR).unref();
 }
 
 function sourceBlock() {
@@ -301,7 +300,7 @@ export function memberReturns(bioguide) {
 }
 
 export async function leaders(db, people) {
-  if (!state.spy && !state.progress.running && !process.env.INTEL_NO_WARM) void buildReturns(db);
+  if (!state.spy && !state.progress.running && warmEnabled()) void buildReturns(db);
   const board = await congressTrades(db).catch(() => ({ items: [] }));
   const trades = board.items || [];
   return {
