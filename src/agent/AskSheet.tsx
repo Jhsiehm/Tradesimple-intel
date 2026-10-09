@@ -250,6 +250,7 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
           <>
             {done.grounding.unmatched.length ? <p className="ask-warn">Not found in any tool result: {done.grounding.unmatched.join(", ")}. Treat as unverified.</p> : null}
             {done.grounding.mislabeled?.length ? <p className="ask-warn">Counted as something else in the tool results: {done.grounding.mislabeled.map((m) => `“${m.raw}” is ${m.foundAs[0]}`).join("; ")}. Treat as mislabeled.</p> : null}
+            {done.grounding.scope?.length ? <p className="ask-warn">Not what the cited data covers: {done.grounding.scope.map((s) => `“${s.raw}”`).join(", ")}. See the caveats.</p> : null}
             {done.grounding.miscited?.length ? <p className="ask-warn">Cited to the wrong step: {done.grounding.miscited.map(miscitedNote).join(" ")}</p> : null}
             {done.grounding.uncitedRows?.length ? <p className="ask-warn">{done.grounding.uncitedRows.length} table row{done.grounding.uncitedRows.length === 1 ? " has" : "s have"} figures and no ref. Treat as unverified.</p> : null}
             {done.uncited ? <p className="ask-warn">Tools ran, but the answer cites none of them. Treat its figures as unverified.</p> : null}
