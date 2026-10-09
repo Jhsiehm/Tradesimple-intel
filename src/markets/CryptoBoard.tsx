@@ -82,7 +82,7 @@ export function CryptoBoard({ onOpen }: { onOpen: (symbol: string) => void }) {
   const g = board?.global;
 
   const header = (key: SortKey, label: string) => (
-    <th className={sort === key ? "sorted" : ""}>
+    <th key={key} className={sort === key ? "sorted" : ""}>
       <button onClick={() => setSort(sort === key ? "rank" : key)}>{label}</button>
     </th>
   );
