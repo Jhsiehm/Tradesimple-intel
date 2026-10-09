@@ -47,6 +47,7 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     attached: cleanAttached(raw.attached),
     prefs: raw.prefs ? cleanPrefs(raw.prefs) : null,
     prior: cleanPrior(raw.prior),
+    priors: (Array.isArray(raw.priors) ? raw.priors : []).map(cleanPrior).filter(Boolean).slice(-4),
     answers: cleanAnswers(raw.answers),
     acceptDefaults: raw.acceptDefaults === true
   };

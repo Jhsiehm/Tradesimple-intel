@@ -14,7 +14,7 @@ export function questionSources(q: string): BacktestSource[];
 export function questionHints(q: string, today: string): { fields: Record<string, unknown>; sources: BacktestSource[] };
 export function isFollowUp(q: string, prior: BacktestSpec | null): boolean;
 export function wantsBacktest(q: string): boolean;
-export type SpecPlan = { spec: BacktestSpec; sources: BacktestSource[]; from: Record<string, string>; followUp: boolean; locked: string[] };
+export type SpecPlan = { spec: BacktestSpec; sources: BacktestSource[]; from: Record<string, string>; followUp: boolean; prior: BacktestSpec | null; locked: string[] };
 export function buildSpec(input: { question: string; today: string; prefs?: unknown; prior?: BacktestSpec | null; answers?: Record<string, unknown> }): SpecPlan;
 export type Clarify = { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback: unknown };
 export function clarifyQuestions(input: { question: string; prefs?: unknown; prior?: BacktestSpec | null; answers?: Record<string, unknown>; today?: string; acceptDefaults?: boolean }): Clarify[];
@@ -22,4 +22,8 @@ export function specDiff(prev: BacktestSpec | null, next: BacktestSpec | null): 
 export function provenanceLine(from: Record<string, string>): string;
 export function mergeModelSpec(plan: SpecPlan, modelSpec: unknown): BacktestSpec;
 export function planNote(plan: SpecPlan, prior?: BacktestSpec | null): string;
+export function namedSources(q: string): BacktestSource[];
+export type FollowUpRun = SpecPlan & { prior: BacktestSpec; diff: string[]; notes: string[]; unchanged: boolean };
+export function planFollowUps(input: { question: string; today: string; priors?: BacktestSpec[]; answers?: Record<string, unknown> }): { runs: FollowUpRun[]; targeted: boolean; notes: string[] };
+export function followUpsNote(runs: FollowUpRun[], refs: string[], notes?: string[]): string;
 export const KNOWN_SOURCES: BacktestSource[];

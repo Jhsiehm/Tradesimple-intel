@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, DEMO } from "../lib/api";
 import type { AgentContext } from "../agent/context";
 import {
-  addPrefs, attachedBody, blankTurn, chatTitle, dropPref, historyOf, lastBacktest, loadChats, loadModelChoice, loadPrefs,
+  addPrefs, attachedBody, blankTurn, chatTitle, dropPref, historyOf, lastBacktests, loadChats, loadModelChoice, loadPrefs,
   newChatId, removeChat, saveChats, saveModelChoice, savePrefs, upsertChat
 } from "./chats";
 import { readEvents } from "./stream";
@@ -97,7 +97,8 @@ export function useAsk() {
     const used = s.choice && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : cfg.model;
     patch((t) => ({ ...t, model: used }));
     const attached = s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
-    const bt = lastBacktest(prior);
+    const bts = lastBacktests(prior);
+    const bt = bts.at(-1) || null;
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
@@ -110,6 +111,7 @@ export function useAsk() {
           attached: attachedBody(attached),
           prefs: s.prefs,
           prior: bt?.spec || null,
+          priors: bts.map((b) => b.spec),
           answers: opts.answers || {},
           acceptDefaults: Boolean(opts.acceptDefaults)
         }),
@@ -139,6 +141,9 @@ export function useAsk() {
             break;
           case "token":
             patch((t) => ({ ...t, text: t.text + String(e.delta || "") }));
+            break;
+          case "plan_note":
+            patch((t) => ({ ...t, notes: [...t.notes, String(e.note || "")] }));
             break;
           case "clarify":
             patch((t) => ({ ...t, clarify: e as unknown as ClarifyAsk }));

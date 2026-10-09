@@ -1,6 +1,6 @@
 import { ASK_LIMITS, caveatsFor, citationRefs, evidenceOf, groundingCheck, systemPrompt, toolMessage, trimForModel } from "../../shared/ask.mjs";
 import { attachedNote, contextNote, fallbackTable, figureCount, greetingText, isGreeting, retryReason } from "../../shared/agent.mjs";
-import { buildSpec, clarifyQuestions, describeValue, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
+import { buildSpec, clarifyQuestions, describeValue, followUpsNote, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planFollowUps, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
 import { mislabelNote } from "../../shared/countLabels.mjs";
 import { citationCheck, stripRefs } from "../../shared/citations.mjs";
@@ -26,10 +26,11 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  * Limits (tool calls, rounds, wall clock, tokens) end the loop with a last answer-only round, never a silent cut.
  * A finished answer with no figures after a data tool returned rows (or a backtest question with no backtest) is
  * rewritten once; if it still has no figures, `done.table` carries the tool's own rows.
- * Backtest questions are planned first (shared/backtestAsk.mjs): preferences, the previous run (`prior`), chip
+ * Backtest questions are planned first (shared/backtestAsk.mjs): preferences, the previous run (`prior`; `priors` when the
+ * previous turn ran several sources, which a follow-up re-runs before the model writes), chip
  * `answers`; ambiguous result-changing fields end the turn with `clarify`, and every run_backtest call runs the plan.
  */
-export async function runAsk({ question, history = [], context = null, attached = null, model = "", prefs = null, prior = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
+export async function runAsk({ question, history = [], context = null, attached = null, model = "", prefs = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
   const t0 = now();
   const evidence = [];
   const bodies = new Map();
@@ -49,9 +50,17 @@ export async function runAsk({ question, history = [], context = null, attached 
     return quick(`Saved as your backtest defaults:\n${list}\n\nThey apply to new backtests unless a question says otherwise. Edit or clear them under Preferences in this panel.`, { prefs: { set: values } });
   }
 
-  const plan = wantsBacktest(question) || isFollowUp(question, prior) ? buildSpec({ question, today, prefs, prior, answers }) : null;
-  if (plan) {
-    const questions = clarifyQuestions({ question, today, prefs, prior, answers, acceptDefaults });
+  // A follow-up on a turn that ran several sources changes each of them (or only the ones it names), all re-run here.
+  const priorList = priors?.length ? priors : prior ? [prior] : [];
+  const lastPrior = priorList.at(-1) || null;
+  const follow = isFollowUp(question, lastPrior);
+  const multi = follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
+  const reruns = multi ? multi.runs.filter((r) => !r.unchanged) : [];
+  for (const note of multi?.notes || []) emit({ type: "plan_note", note });
+  if (multi && !reruns.length) return quick(`Nothing to re-run. ${multi.notes.join(" ")}`);
+  const plan = multi ? (reruns.length === 1 ? reruns[0] : null) : wantsBacktest(question) || follow ? buildSpec({ question, today, prefs, prior: lastPrior, answers }) : null;
+  if (plan && !multi) {
+    const questions = clarifyQuestions({ question, today, prefs, prior: lastPrior, answers, acceptDefaults });
     if (questions.length) {
       emit({ type: "clarify", questions, spec: plan.spec, from: plan.from, sentence: describeSpec(plan.spec), sources: plan.sources, note: provenanceLine(plan.from) });
       log({ event: "clarify", fields: questions.map((q) => q.path) });
@@ -60,7 +69,8 @@ export async function runAsk({ question, history = [], context = null, attached 
   }
   const backtests = [];
 
-  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? prior : null) : ""].filter(Boolean).join("\n");
+  const rerunNote = reruns.length > 1 ? followUpsNote(reruns, reruns.map((_, i) => `t${i + 1}`), multi.notes) : "";
+  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
   if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
@@ -73,6 +83,13 @@ export async function runAsk({ question, history = [], context = null, attached 
 
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
+
+  if (reruns.length > 1) {
+    emit({ type: "step_progress", phase: "computing" });
+    const pending = reruns.map((r, i) => ({ id: `rerun_${i + 1}`, name: "run_backtest", args: { spec: r.spec } }));
+    await runCalls("", pending, Object.fromEntries(pending.map((c, i) => [c.id, reruns[i]])));
+    if (abort()) return;
+  }
 
   for (let round = 0; round < limits.rounds + 1; round++) {
     if (abort()) return;
@@ -131,6 +148,14 @@ export async function runAsk({ question, history = [], context = null, attached 
       break;
     }
 
+    await runCalls(text, pending);
+  }
+
+  /**
+   * One round of tool calls, run in parallel and added to the conversation. `presets` maps a call id to a follow-up
+   * run planned in full (its spec and previous run), so the model's spec is not merged into it.
+   */
+  async function runCalls(text, pending, presets = {}) {
     messages.push({ role: "assistant", content: text, toolCalls: pending.map((c) => ({ id: c.id, name: c.name, args: c.args || {} })) });
     const jobs = pending.map((call) => {
       const known = tools.some((t) => t.name === call.name);
@@ -147,11 +172,13 @@ export async function runAsk({ question, history = [], context = null, attached 
       const phase = COMPUTE.has(call.name) ? "computing" : "fetching";
       const started = now();
       let bt = null;
-      if (call.name === "run_backtest" && plan) {
-        const spec = mergeModelSpec(plan, call.args?.spec);
+      const preset = presets[call.id];
+      if (call.name === "run_backtest" && (preset || plan)) {
+        const p = preset || plan;
+        const spec = preset ? preset.spec : mergeModelSpec(plan, call.args?.spec);
         call.args = { ...call.args, spec };
-        const base = plan.followUp ? prior : null;
-        bt = { id, spec, from: plan.from, diff: base ? specDiff(base, spec) : [], prior: base, using: describeSpec(spec), note: provenanceLine(plan.from) };
+        const base = p.followUp ? p.prior : null;
+        bt = { id, spec, from: p.from, diff: base ? specDiff(base, spec) : [], prior: base, using: describeSpec(spec), note: provenanceLine(p.from) };
       }
       emit({ type: "step_start", id, tool: call.name, label, args: call.args, phase, at: new Date(started).toISOString(), ...(bt ? { spec: bt.spec, from: bt.from, diff: bt.diff } : {}) });
       emit({ type: "step_progress", phase });

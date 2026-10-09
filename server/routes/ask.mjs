@@ -63,6 +63,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         attached: asked.attached,
         prefs: asked.prefs,
         prior: asked.prior,
+        priors: asked.priors,
         answers: asked.answers,
         acceptDefaults: asked.acceptDefaults,
         model,

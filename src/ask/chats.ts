@@ -96,13 +96,16 @@ export function historyOf(turns: Turn[]) {
   ]).slice(-6);
 }
 
-/** The last backtest this chat ran: follow-ups like "hold 30 days instead" change it. */
-export function lastBacktest(turns: Turn[]) {
+/**
+ * Every backtest the latest backtest turn ran, in order: follow-ups like "hold 30 days instead" change all of them
+ * (an "all data sources" turn ran one per source). A source run twice in that turn counts once, its last run.
+ */
+export function lastBacktests(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) {
     const bt = turns[i].done?.backtests?.filter((b) => b.ok);
-    if (bt?.length) return bt[bt.length - 1];
+    if (bt?.length) return bt.filter((b, j) => !bt.slice(j + 1).some((x) => x.spec.source === b.spec.source));
   }
-  return null;
+  return [];
 }
 
 export function attachedBody(chat: SavedChat | null) {

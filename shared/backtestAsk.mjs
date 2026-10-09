@@ -198,7 +198,85 @@ export function buildSpec({ question, today, prefs = null, prior = null, answers
   }
   for (const [path, v] of Object.entries(answers || {})) { spec = setPath(spec, path, v); from[path] = "your pick"; }
   const cleaned = cleanSpec(spec);
-  return { spec: cleaned.ok ? cleaned.spec : spec, sources, from, followUp: follow, locked: Object.keys(from).filter((p) => from[p] === "question" || from[p] === "your pick") };
+  return { spec: cleaned.ok ? cleaned.spec : spec, sources, from, followUp: follow, prior: follow ? prior : null, locked: Object.keys(from).filter((p) => from[p] === "question" || from[p] === "your pick") };
+}
+
+/* ---------- follow-ups on several runs ---------- */
+
+/** Sources a filter means anything for. A field absent here applies to every source. */
+const APPLIES = {
+  "filters.excludeMembers": ["congress", "form4"],
+  "filters.member": ["congress", "form4"],
+  "filters.committee": ["congress"],
+  "filters.party": ["congress"],
+  "filters.chamber": ["congress"],
+  "filters.nearHearingDays": ["congress"],
+  "filters.include10b51": ["form4"],
+  "filters.contractLagDays": ["contracts"],
+  "filters.contractAgency": ["contracts"]
+};
+const NOT_APPLIES_WHY = { contracts: "awards name agencies and companies, not members or insiders", lobbying: "lobbying spikes name companies, not people", congress: "congressional trades have no such field", form4: "Form 4 rows have no such field" };
+
+/** Sources a question names outright ("only for insiders"), with no default. */
+export function namedSources(q) {
+  const s = lc(q);
+  const out = [];
+  if (/\binsiders?\b|\bform ?4\b|\bexecutives?\b|\bofficers?\b/.test(s)) out.push("form4");
+  if (/\bcontracts?\b|\bawards?\b|\busaspending\b/.test(s)) out.push("contracts");
+  if (/\blobby(ing)?\b/.test(s)) out.push("lobbying");
+  if (/\bcongress(ional)?\b|\bpoliticians?\b|\bptrs?\b/.test(s)) out.push("congress");
+  return out;
+}
+
+/**
+ * A follow-up on a turn that ran several sources ("hold 30 days instead" after "all data sources"): one plan per
+ * previous run, or only the runs whose source the question names. A field the question sets that means nothing for
+ * a source (excluding a member from contracts) keeps that run's previous value and leaves a note; a run left
+ * unchanged is `unchanged` and need not run again. `priors` are the previous turn's specs, in order.
+ */
+export function planFollowUps({ question, today, priors = [], answers = {} }) {
+  const list = (priors || []).filter((p) => p && SOURCES.includes(p.source));
+  const named = namedSources(question);
+  const picked = named.length ? list.filter((p) => named.includes(p.source)) : [];
+  const targets = picked.length ? picked : list;
+  const runs = targets.map((prior) => {
+    const plan = buildSpec({ question, today, prior, answers });
+    let spec = plan.spec;
+    const notes = [];
+    for (const [path, how] of Object.entries(plan.from)) {
+      if (how !== "question" && how !== "your pick") continue;
+      const ok = APPLIES[path];
+      if (!ok || ok.includes(spec.source)) continue;
+      const was = getPath(prior, path);
+      const asked = getPath(spec, path);
+      if (JSON.stringify(was) === JSON.stringify(asked)) continue;
+      spec = setPath(spec, path, was);
+      const what = path === "filters.excludeMembers" ? `Excluding ${[...(asked || [])].filter((x) => !(was || []).includes(x)).join(", ")}` : describeValue(path, asked);
+      notes.push(`${what} does not apply to ${SOURCE_LABEL[spec.source]} (${NOT_APPLIES_WHY[spec.source] || "no such field"}); skipped for that run.`);
+    }
+    const cleaned = cleanSpec(spec);
+    spec = cleaned.ok ? cleaned.spec : spec;
+    const diff = specDiff(prior, spec);
+    return { ...plan, spec, prior, diff, notes, unchanged: diff.length === 0, locked: plan.locked.filter((p) => !APPLIES[p] || APPLIES[p].includes(spec.source)) };
+  });
+  const left = list.filter((p) => !targets.includes(p)).map((p) => SOURCE_LABEL[p.source]);
+  const notes = [
+    ...(picked.length && left.length ? [`Only ${picked.map((p) => SOURCE_LABEL[p.source]).join(" and ")} re-run, as asked; ${left.join(" and ")} kept as before.`] : []),
+    ...runs.flatMap((r) => r.notes),
+    ...runs.filter((r) => r.unchanged).map((r) => `${SOURCE_LABEL[r.spec.source]}: nothing in the follow-up applies, so the previous run stands and is not re-run.`)
+  ];
+  return { runs, targeted: picked.length > 0, notes };
+}
+
+/** What the model is told when the server has already re-run several backtests for a follow-up. */
+export function followUpsNote(runs, refs, notes = []) {
+  const lines = runs.map((r, i) => `${refs[i]}: ${SOURCE_LABEL[r.spec.source]} re-run with ${r.diff.join(", ") || "no change"} (previous spec ${JSON.stringify(r.prior)}).`);
+  return [
+    `This follow-up changes the previous turn's ${runs.length > 1 ? "runs" : "run"}. The app already re-ran them; their results are below as tool results ${refs.join(", ")}. Do not call run_backtest again for these sources.`,
+    ...lines,
+    ...notes.map((n) => `Note for the user: ${n}`),
+    "For each source, say what changed and compare the previous run (figures from the earlier answer in this chat) with this run in one small table per source, citing refs. Start with one \"Using: …\" line."
+  ].join("\n");
 }
 
 /* ---------- clarifying chips ---------- */
