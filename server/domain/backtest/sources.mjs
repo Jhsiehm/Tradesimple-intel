@@ -58,6 +58,7 @@ export async function congressSource(db, f) {
       notes: [
         ...notes,
         ...(board.building ? [{ level: "warn", id: "building", text: "Disclosures are still being read; this run uses what is parsed so far." }] : []),
+        ...(out.dropped.amendedLater ? [{ level: "info", id: "amended", text: `${out.dropped.amendedLater} Senate rows come from amended reports. Their public date is the amendment date, not the original filing date, because the row may have first appeared in the amendment.` }] : []),
         { level: "info", id: "window", text: `Reports filed since ${board.from}; trades before the earliest filing in the window are not here. ${out.dropped.notJoined || 0} trades in tickers outside data/tickers.json are left out (no guessed joins).` }
       ]
     }

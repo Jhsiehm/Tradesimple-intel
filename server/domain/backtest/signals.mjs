@@ -79,7 +79,9 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     if (f.tickers.length && !f.tickers.includes(t.symbol)) continue;
     const sector = sectorOf(t.symbol);
     if (f.sector && sector !== f.sector) continue;
-    if (!inRange(t.filed, f)) continue;
+    // A Senate amendment keeps the original report date but its rows may only have become public with the amendment.
+    const publicDate = t.amended && t.amended > t.filed ? t.amended : t.filed;
+    if (!inRange(publicDate, f)) continue;
     if (f.minAmount && !(t.amountLow >= f.minAmount)) continue;
     if (f.minLagDays && !(t.lag >= f.minLagDays)) continue;
     if (f.maxLagDays && !(t.lag <= f.maxLagDays)) continue;
@@ -90,10 +92,11 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
       near = hearings ? nearestHearing(lanes.get(t.bioguide), hearings, tradeDay, f.nearHearingDays, f.hearingKnown ? filedDay : null) : null;
       if (near == null) { drop("noNearbyHearing"); continue; }
     }
+    if (publicDate !== t.filed) dropped.amendedLater = (dropped.amendedLater || 0) + 1;
     signals.push({
       id: t.id,
       symbol: t.symbol,
-      signalDate: t.filed,
+      signalDate: publicDate,
       tradeDate: t.traded,
       side: t.side,
       sizeHint: amountMid(t.amount, t.amountLow) || null,
