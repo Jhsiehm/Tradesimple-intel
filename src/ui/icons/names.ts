@@ -13,7 +13,10 @@ export const ICON_NAMES = [
   "view2d", "cube", "lanes", "imagery", "labels", "hq", "sites", "air", "military", "satellite", "live", "daily", "night", "filter", "arc",
   // Actions
   "search", "back", "close", "collapse", "expand", "chevron-down", "chevron-right", "pin", "share", "link", "external", "check", "checks",
-  "dismiss", "restore", "bell", "grip", "command", "panels", "dossier", "recent", "feed", "reset"
+  "dismiss", "restore", "bell", "grip", "command", "panels", "dossier", "recent", "feed", "reset",
+  // Relationship map
+  "lobbying", "agency", "firm", "company", "ticker", "insider", "theory", "user-node", "draw", "fit", "undo", "redo",
+  "zoom-in", "zoom-out", "export", "import", "layout", "more", "trash"
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

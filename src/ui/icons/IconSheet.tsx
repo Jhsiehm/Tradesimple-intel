@@ -5,6 +5,7 @@ import { CONGRESS } from "./congress";
 import { MARKETS } from "./markets";
 import { MAP } from "./map";
 import { ACTIONS } from "./actions";
+import { RELATIONS } from "./relations";
 
 const MEANING: Record<IconName, string> = {
   today: "Today · this week's filings", congress: "Congress section", markets: "Markets section", contracts: "Federal contracts",
@@ -21,7 +22,11 @@ const MEANING: Record<IconName, string> = {
   search: "Search", back: "Back", close: "Close", collapse: "Collapse", expand: "Expand", "chevron-down": "Fold open",
   "chevron-right": "Folded", pin: "Pin card", share: "Share", link: "Copy link", external: "Open source filing", check: "Mark read",
   checks: "Mark all read", dismiss: "Dismiss", restore: "Restore", bell: "Alerts", grip: "Drag", command: "Command line (⌘K)",
-  panels: "Panels", dossier: "Dossier (DES)", recent: "Recent", feed: "Feeds · source, as-of, lag", reset: "Reset scope"
+  panels: "Panels", dossier: "Dossier (DES)", recent: "Recent", feed: "Feeds · source, as-of, lag", reset: "Reset scope",
+  lobbying: "Lobbying (LDA)", agency: "Federal agency", firm: "Lobbying registrant", company: "Company outside the join table",
+  ticker: "Ticker", insider: "Form 4 filer", theory: "Your theory · not from a data source", "user-node": "Node you added",
+  draw: "Draw a theory", fit: "Fit to view", undo: "Undo", redo: "Redo", "zoom-in": "Zoom in", "zoom-out": "Zoom out",
+  export: "Export theories", import: "Import theories", layout: "Re-run layout", more: "Show more", trash: "Remove"
 };
 
 const GROUPS: [string, readonly string[]][] = [
@@ -29,7 +34,8 @@ const GROUPS: [string, readonly string[]][] = [
   ["Congress and records", Object.keys(CONGRESS)],
   ["Markets", Object.keys(MARKETS)],
   ["Map", Object.keys(MAP)],
-  ["Actions", Object.keys(ACTIONS)]
+  ["Actions", Object.keys(ACTIONS)],
+  ["Relationship map", Object.keys(RELATIONS)]
 ];
 
 /** Dev-only review sheet at `#icons`: every icon at 14, 16, and 20 px, plus in-button samples. */

@@ -9,10 +9,11 @@ import { CONGRESS } from "../src/ui/icons/congress.ts";
 import { MARKETS } from "../src/ui/icons/markets.ts";
 import { MAP } from "../src/ui/icons/map.ts";
 import { ACTIONS } from "../src/ui/icons/actions.ts";
+import { RELATIONS } from "../src/ui/icons/relations.ts";
 import { commandIcon } from "../src/ui/icons/commandIcon.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const DOMAINS = { NAV, CONGRESS, MARKETS, MAP, ACTIONS };
+const DOMAINS = { NAV, CONGRESS, MARKETS, MAP, ACTIONS, RELATIONS };
 const names = new Set(ICON_NAMES);
 
 test("every icon name has path data in exactly one domain file, and nothing extra", () => {

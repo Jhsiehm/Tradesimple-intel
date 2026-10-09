@@ -4,5 +4,6 @@ import { CONGRESS } from "./congress";
 import { MARKETS } from "./markets";
 import { MAP } from "./map";
 import { ACTIONS } from "./actions";
+import { RELATIONS } from "./relations";
 
-export const PATHS: Record<IconName, Glyph> = { ...NAV, ...CONGRESS, ...MARKETS, ...MAP, ...ACTIONS };
+export const PATHS: Record<IconName, Glyph> = { ...NAV, ...CONGRESS, ...MARKETS, ...MAP, ...ACTIONS, ...RELATIONS };
