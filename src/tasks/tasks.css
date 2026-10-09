@@ -3,10 +3,10 @@
 .ask-tasks > summary { cursor: pointer; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
 .ask-tasks > summary small { margin-left: 6px; text-transform: none; letter-spacing: 0; }
 .ask-tasks ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
-.ask-tasks li { border-left: 2px solid var(--line); padding: 4px 0 4px 8px; }
+.ask-tasks li { min-width: 0; border-left: 2px solid var(--line); padding: 4px 0 4px 8px; overflow-wrap: anywhere; }
 .ask-tasks li.off { opacity: 0.6; }
 .tk-head { display: flex; align-items: center; gap: 6px; margin: 0; }
-.tk-head b { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-head b { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-toggle input { margin: 0; }
 .tk-meta { margin: 2px 0; font-size: 11px; color: var(--dim); line-height: 1.4; }
 .tk-running { display: inline-flex; align-items: center; gap: 4px; }
