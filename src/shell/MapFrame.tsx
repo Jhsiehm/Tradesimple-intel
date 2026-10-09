@@ -73,6 +73,8 @@ export function MapFrame({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
   const onArcRef = useRef(onArc);
+  const idPropRef = useRef(idProp);
+  idPropRef.current = idProp;
   const [failed, setFailed] = useState(() => typeof document !== "undefined" && !webgl2Ok());
   const [ready, setReady] = useState(false);
   onSelectRef.current = onSelect;
@@ -180,7 +182,7 @@ export function MapFrame({
       map.on("mouseleave", "marks", () => { map.getCanvas().style.cursor = "crosshair"; });
       map.on("click", "base-fill", (event) => {
         if (map.queryRenderedFeatures(event.point, { layers: ["arcs", "arc-ends"] }).length) return;
-        const id = event.features?.[0]?.properties?.[idProp];
+        const id = event.features?.[0]?.properties?.[idPropRef.current];
         if (id) onSelectRef.current?.(String(id));
       });
       map.on("click", "marks", (event) => {
