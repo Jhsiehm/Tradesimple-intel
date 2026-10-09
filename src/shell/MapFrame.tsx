@@ -209,11 +209,7 @@ export function MapFrame({
   const markersKey = markers.map((m) => `${m.id}:${m.lon},${m.lat}:${m.size}:${m.color}:${m.hot}:${m.label}`).join("|");
   const pushedGeojson = useRef<GeoJSON.FeatureCollection | undefined | null>(null);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    map.easeTo({ center: [lon, lat], zoom, duration: 400 });
-  }, [lon, lat, zoom]);
+  const camera = useRef<{ view: string; lon: number; lat: number; zoom: number } | null>(null);
 
   useEffect(() => {
     const map = loadedMap();
@@ -296,15 +292,25 @@ export function MapFrame({
     map.setTerrain(relief ? { source: "dem", exaggeration: 1.6 } : null);
     map.setLayoutProperty("hillshade", "visibility", relief ? "visible" : "none");
     if (map.getLayer("buildings-3d")) map.setLayoutProperty("buildings-3d", "visibility", relief ? "visible" : "none");
+  }, [ready, earth, settings.view]);
+
+  /** One camera move per change: a new target flies there; a view toggle only pitches; leaving the globe restores the target. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const prev = camera.current;
+    camera.current = { view: settings.view, lon, lat, zoom };
+    const relief = settings.view === "3d";
+    const globe = settings.view === "globe";
+    const target = !prev || prev.lon !== lon || prev.lat !== lat || prev.zoom !== zoom || (prev.view === "globe" && !globe);
     map.easeTo({
+      ...(target ? { center: [lon, lat] as [number, number] } : {}),
       pitch: relief ? 64 : 0,
       bearing: relief ? map.getBearing() : 0,
-      zoom: settings.view === "globe" ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
+      zoom: target ? zoom : globe ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
       duration: 700
     });
-    // Leaving the globe restores the section's own zoom; later zoom changes ease separately.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, earth, settings.view]);
+  }, [ready, settings.view, lon, lat, zoom]);
 
   useEffect(() => {
     const map = loadedMap();
