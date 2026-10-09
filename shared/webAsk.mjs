@@ -132,3 +132,12 @@ export const COVERAGE_NOTE = [
   "Web results are third-party pages, not TradeSimple feeds: cite each result's own ref, name the site, and quote figures exactly as the snippet states them. Never present a web figure as TradeSimple data.",
   "Research only, not investment advice."
 ].join("\n");
+
+/** The same rule when this turn's sourcing leaves web_search and web_fetch out (in-app feeds only). */
+export const COVERAGE_PLATFORM_NOTE = [
+  "Coverage: TradeSimple's own tools hold US Congress trades, Form 4 insiders, lobbying, federal contracts, US market boards, news wires, X pulse, satellite status and backtests. world_markets has international index quotes from Yahoo Finance. Open-web search is off for this turn (in-app feeds only).",
+  "Never say you can only cover US data or that a question is outside your capabilities. Use TradeSimple tools and world_markets; if the answer needs the open web, say precisely what is missing and that saying \"use in-app and the web\" lets Ask search it.",
+  "Research only, not investment advice."
+].join("\n");
+
+export const coverageNote = (web) => (web ? COVERAGE_NOTE : COVERAGE_PLATFORM_NOTE);

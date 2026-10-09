@@ -15,4 +15,6 @@ export const WEB_NOTE: string;
 export const WEB_CAVEAT: string;
 export function webTail(answer: string): string;
 export const COVERAGE_NOTE: string;
+export const COVERAGE_PLATFORM_NOTE: string;
+export function coverageNote(web: boolean): string;
 export function scaledFigures(text: string): number[];

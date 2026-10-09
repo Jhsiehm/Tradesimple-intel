@@ -165,7 +165,7 @@ async function ask(question, provider, { execute } = {}) {
   const events = [];
   const ran = [];
   await runAsk({
-    question, provider, tools: toolDefs(), labelOf: (n) => n, emit: (e) => events.push(e), today: "2026-10-09", heartbeatMs: 60_000, now: () => NOW,
+    question, provider, tools: toolDefs("both"), session: { v: 1, sourcing: "both" }, labelOf: (n) => n, emit: (e) => events.push(e), today: "2026-10-09", heartbeatMs: 60_000, now: () => NOW,
     execute: execute || (async (name, args) => {
       ran.push([name, args]);
       if (name === "world_markets") return runWorldMarkets(args, { now: () => NOW, chart: async () => TWII });
@@ -228,6 +228,6 @@ test("runAsk: with no web provider the step fails with the setup message and the
 test("the standing coverage rule forbids 'limited to U.S. data' refusals and keeps the disclaimer", () => {
   assert.match(COVERAGE_NOTE, /Never say you can only cover US data/);
   assert.match(COVERAGE_NOTE, /Research only, not investment advice/);
-  const names = toolDefs().map((t) => t.name);
+  const names = toolDefs("both").map((t) => t.name);
   for (const n of ["world_markets", "web_search", "web_fetch", "market_snapshot"]) assert.ok(names.includes(n), n);
 });

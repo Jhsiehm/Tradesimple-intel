@@ -70,7 +70,7 @@ test("nothing selected means no screen context at all", () => {
 test("the system prompt carries the screen only when something is attached", async () => {
   const bare = scripted(TEXT("No figures needed."));
   await ask(bare, { question: "what is a PTR filing?" });
-  assert.doesNotMatch(bare.seen[0].messages[0].content, /attached what is on screen|strait/i);
+  assert.doesNotMatch(bare.seen[0].messages[0].content, /attached what is on screen|on screen: Strait/i);
   const withCtx = scripted(TEXT("ok"));
   await ask(withCtx, { question: "what about this one?", context: cleanContext({ node: "member:P000197" }) });
   assert.match(withCtx.seen[0].messages[0].content, /attached what is on screen: Member P000197/);

@@ -109,7 +109,7 @@ test("Auto: a backtest is answered by the strong model, and the turn says which 
 });
 
 test("Auto: web research goes to the strong model; a simple lookup stays on the server's model", async () => {
-  const web = await run({ question: "What happened with the ECB rate decision?", model: AUTO });
+  const web = await run({ question: "What happened with the ECB rate decision?", model: AUTO, session: { v: 1, sourcing: "both" } });
   assert.ok(web.used.length && web.used.every((m) => m === "anthropic/claude-sonnet-4.6"), web.used.join());
   assert.equal(web.events.find((e) => e.type === "model").reason, "web research");
   const simple = await run({ question: "What did Nancy Pelosi file most recently?" });

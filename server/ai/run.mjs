@@ -7,11 +7,15 @@ import { citationCheck, stripRefs } from "../../shared/citations.mjs";
 import { scopeCheck } from "../../shared/claimScope.mjs";
 import { MARKET_NOTE, marketTail, wantsMarkets } from "../../shared/marketAsk.mjs";
 import { WORLD_NOTE, worldRegions, worldTail } from "../../shared/worldMarkets.mjs";
-import { COVERAGE_NOTE, WEB_CAPS, WEB_CAVEAT, WEB_NOTE, splitWebResults, wantsWeb, webCallLabel, webQuery, webTail } from "../../shared/webAsk.mjs";
+import { WEB_CAPS, WEB_CAVEAT, WEB_NOTE, splitWebResults, wantsWeb, webCallLabel, webQuery, webTail, coverageNote } from "../../shared/webAsk.mjs";
 import { followUpOutcome, handOffNote } from "../../shared/followUpReply.mjs";
 import { heavyReason } from "../../shared/modelRoute.mjs";
 import { SLOT_NOTE, renderSlots, slotEvidence, slotStream } from "../../shared/slots.mjs";
 import { revisePass } from "./revise.mjs";
+import {
+  SOURCING_LABEL, STYLE_LABEL, describeModes, isModeClear, isModeStatement, mergeSession, parseSourcing, parseStyle,
+  resolveModes, sourcingClarify, toolsForSourcing
+} from "../../shared/askModes.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
@@ -30,7 +34,7 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  *   citation      { id, tool, label, source, asOf, ok }     the first time the answer cites a ref
  *   clarify       { questions, spec, from, sentence, sources }  chips to settle before a backtest runs (no model call)
  *   done          { answer, cited, unknown, grounding, caveats, usage, ms, stopped, model, theory, table, retried, greeting,
- *                   backtests, clarify, prefs }
+ *                   backtests, clarify, prefs, session, modes }
  *   error         { code, error }
  * Limits (tool calls, rounds, wall clock, tokens) end the loop with a last answer-only round, never a silent cut.
  * A finished answer with no figures after a data tool returned rows (or a backtest question with no backtest) is
@@ -38,6 +42,8 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  * Backtest questions are planned first (shared/backtestAsk.mjs): preferences, the previous run (`prior`; `priors` when the
  * previous turn ran several sources, which a follow-up re-runs before the model writes), chip
  * `answers`; ambiguous result-changing fields end the turn with `clarify`, and every run_backtest call runs the plan.
+ * Sourcing (platform / both / web) and style (terminal / professional / simplified) come from answers, the
+ * question text, or the session prefs; tools are filtered to match.
  * Under Auto (`auto`, the user pinned no model) a heavy turn and the revision pass use `strong` ({ model, provider });
  * `model { model, auto, reason }` says which model answers. A flagged answer gets one revision pass (server/ai/revise.mjs):
  *   revise        { state: "start", note } / { state: "end" }    the answer is being checked; done.answer replaces it
@@ -46,7 +52,7 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  * stream with slots filled from the tool results, `done.answer` is filled, and `done.slots { count, missing }` lists the
  * ones that did not resolve (shown as "[missing]"). Filled values count as their ref's for the grounding checks.
  */
-export async function runAsk({ question, history = [], context = null, attached = null, model = "", auto = false, strong = null, prefs = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
+export async function runAsk({ question, history = [], context = null, attached = null, model = "", auto = false, strong = null, prefs = null, session = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
   const t0 = now();
   const evidence = [];
   const bodies = new Map();
@@ -55,19 +61,40 @@ export async function runAsk({ question, history = [], context = null, attached 
   const fill = (t) => renderSlots(t, slotSrc);
   let filled = null;
   let theory = null;
+  const modes = resolveModes({ question, session, answers, acceptDefaults });
+  const allow = toolsForSourcing(modes.sourcing);
+  const activeTools = (tools || []).filter((t) => allow.has(t.name));
 
   const quick = (answer, extra = {}) => {
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
-    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [], miscited: [], uncitedRows: [], scope: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, revision: null, ...extra });
+    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [], miscited: [], uncitedRows: [], scope: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, revision: null, session: null, modes: { sourcing: modes.sourcing, style: modes.style, label: describeModes(modes) }, ...extra });
     return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
+  if (isModeClear(question)) {
+    return quick("Cleared Ask sourcing and style. New answers default to TradeSimple only · terminal style until you change them.", { session: { clear: true } });
+  }
+  if (isModeStatement(question)) {
+    const patch = { sourcing: parseSourcing(question) || undefined, style: parseStyle(question) || undefined };
+    const next = mergeSession(session, patch, new Date(now()).toISOString());
+    const bits = [];
+    if (patch.sourcing) bits.push(`sourcing → ${SOURCING_LABEL[patch.sourcing]}`);
+    if (patch.style) bits.push(`style → ${STYLE_LABEL[patch.style]}`);
+    return quick(`Saved for this browser: ${bits.join("; ") || describeModes({ sourcing: next.sourcing || "platform", style: next.style || "terminal" })}.\n\nSay “TradeSimple only”, “use TradeSimple and the web”, or “simplified” any time — including as a follow-up.`, { session: { set: next } });
+  }
   if (isPrefClear(question)) return quick("Cleared your backtest preferences. New backtests use the app defaults until you set new ones.", { prefs: { clear: true } });
   if (isPrefStatement(question)) {
     const values = parsePrefs(question);
     const list = Object.entries(values).map(([p, v]) => `- ${describeValue(p, v)}`).join("\n");
     return quick(`Saved as your backtest defaults:\n${list}\n\nThey apply to new backtests unless a question says otherwise. Edit or clear them under Preferences in this panel.`, { prefs: { set: values } });
+  }
+
+  const sourceQs = sourcingClarify({ question, session, answers, acceptDefaults });
+  if (sourceQs.length) {
+    emit({ type: "clarify", questions: sourceQs, spec: null, from: modes.from, sentence: "Pick where Ask may look for this answer.", sources: [], note: "Default is TradeSimple only." });
+    log({ event: "clarify", fields: sourceQs.map((q) => q.path) });
+    return quick("", { clarify: true });
   }
 
   // A follow-up on a turn that ran several sources changes each of them (or only the ones it names), all re-run here.
@@ -99,7 +126,8 @@ export async function runAsk({ question, history = [], context = null, attached 
 
   const rerunNote = reruns.length > 1 && !handOff ? followUpsNote(reruns, reruns.map((_, i) => `t${i + 1}`), multi.notes) : "";
   // Market overviews fetch market_snapshot before the model writes, so a small model cannot answer without the data.
-  const has = (name) => tools.some((t) => t.name === name);
+  // Only tools this turn's sourcing allows: platform-only never pre-fetches the web.
+  const has = (name) => activeTools.some((t) => t.name === name);
   const free = !plan && !reruns.length && !handOff;
   // Non-US market questions fetch world_markets (and the web for context) first, so a small model answers from data.
   const regions = free && has("world_markets") ? worldRegions(question) : [];
@@ -110,7 +138,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   if (auto && heavy && strong) { provider = strongProvider; model = strong.model; }
   const reviser = auto && strong ? { provider: strongProvider, model: strong.model } : { provider, model };
   if (auto) emit({ type: "model", model, auto, reason: strong ? heavy : "" });
-  const system = [systemPrompt(today), SLOT_NOTE, COVERAGE_NOTE, contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
+  const system = [systemPrompt(today, modes), SLOT_NOTE, coverageNote(has("web_search")), contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
   if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
@@ -122,6 +150,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   let answer = "";
   let stopped = "";
   let retried = false;
+  tools = activeTools;
 
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
@@ -253,7 +282,7 @@ export async function runAsk({ question, history = [], context = null, attached 
       const requests = [];
       let raw;
       try {
-        raw = await execute(call.name, call.args, { onRoute: (r) => { requests.push(r); emit({ type: "step_progress", id, request: r }); } });
+        raw = await execute(call.name, call.args, { onRoute: (r) => { requests.push(r); emit({ type: "step_progress", id, request: r }); }, sourcing: modes.sourcing });
       } finally {
         clearInterval(beat);
       }
@@ -323,7 +352,10 @@ export async function runAsk({ question, history = [], context = null, attached 
     const t = fallbackTable(bodies.get(best.id));
     if (t) table = { ...t, ref: best.id, label: best.label, source: best.source, asOf: best.asOf };
   }
-  log({ event: "done", ms: now() - t0, toolCalls: calls, retried, table: Boolean(table) });
+  const sessionPatch = (parseSourcing(question) || parseStyle(question))
+    ? { set: mergeSession(session, { sourcing: parseSourcing(question) || undefined, style: parseStyle(question) || undefined }, new Date(now()).toISOString()) }
+    : null;
+  log({ event: "done", ms: now() - t0, toolCalls: calls, retried, table: Boolean(table), sourcing: modes.sourcing, style: modes.style });
   emit({
     type: "done",
     answer,
@@ -345,6 +377,8 @@ export async function runAsk({ question, history = [], context = null, attached 
     clarify: false,
     prefs: null,
     revision: revised?.revision || null,
-    slots: { count: filled.count, missing: filled.missing }
+    slots: { count: filled.count, missing: filled.missing },
+    session: sessionPatch,
+    modes: { sourcing: modes.sourcing, style: modes.style, label: describeModes(modes) }
   });
 }

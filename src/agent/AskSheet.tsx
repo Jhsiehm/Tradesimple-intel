@@ -153,8 +153,34 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
           <section className="ask-saved" aria-label="Saved chats">
             <SavedChats ask={ask} />
             <ScheduledTasks openTurns={ask.openTurns} active={open} />
+            <details className="ask-prefs" open>
+              <summary>Sourcing &amp; style</summary>
+              <div className="ask-modes" role="group" aria-label="Sourcing">
+                {(status?.sourcing || [
+                  { id: "platform", label: "In-app feeds" },
+                  { id: "both", label: "In-app + web" },
+                  { id: "web", label: "Web only" }
+                ]).map((m) => (
+                  <button key={m.id} type="button" className="chip" aria-pressed={(ask.session.sourcing || "platform") === m.id} disabled={busy} onClick={() => ask.setSourcing(m.id)}>{m.label}</button>
+                ))}
+              </div>
+              <div className="ask-modes" role="group" aria-label="Style">
+                {(status?.styles || [
+                  { id: "terminal", label: "Terminal" },
+                  { id: "professional", label: "Professional" },
+                  { id: "simplified", label: "Simplified" }
+                ]).map((m) => (
+                  <button key={m.id} type="button" className="chip" aria-pressed={(ask.session.style || "terminal") === m.id} disabled={busy} onClick={() => ask.setStyle(m.id)}>{m.label}</button>
+                ))}
+              </div>
+              <p className="ask-note">
+                Default: in-app feeds only — Records (filings, contracts, prices) and Signals (wires, X, satellite status). Answers cite tool steps; unmatched numbers are unverified. Not advice. Say “use in-app and the web” or pick a chip to add open-web search.
+                {status?.web ? (status.web.configured ? ` Web search via ${status.web.note}.` : ` ${status.web.note}`) : ""}
+              </p>
+              {(ask.session.sourcing || ask.session.style) ? <button type="button" className="link" onClick={ask.resetSession}>Reset to in-app · terminal</button> : null}
+            </details>
             <details className="ask-prefs">
-              <summary>Preferences <small>{prefs.length ? `${prefs.length} saved` : "none"}</small></summary>
+              <summary>Backtest preferences <small>{prefs.length ? `${prefs.length} saved` : "none"}</small></summary>
               {prefs.length ? (
                 <ul>
                   {prefs.map(([p, v]) => <li key={p}>{describeValue(p, v)} <button type="button" className="link" aria-label={`Remove ${describeValue(p, v)}`} onClick={() => ask.removePref(p)}>×</button></li>)}
@@ -169,7 +195,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
               ref={input}
               value={ask.draft}
               maxLength={800}
-              placeholder={turns.length ? "Follow up: “hold 30 days instead”, “exclude Cisneros”" : "Ask about members, tickers, contracts, or a backtest"}
+              placeholder={turns.length ? "Follow up: “use the web too”, “simplified”, “hold 30 days”" : "Ask about members, tickers, news, satellite, or a backtest"}
               spellCheck={false}
               aria-label="Question"
               disabled={DEMO}
@@ -184,7 +210,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
             {status && !status.configured && !DEMO ? <p className="ask-fault">{status.notice || "Ask is not configured — add a key to .env.local"}</p> : null}
             {!turns.length && !DEMO ? (
               <div className="ask-empty">
-                <p className="ask-note">Answers come only from this terminal's feeds, each number tied to the step it came from. Research only.</p>
+                <p className="ask-note">Default: TradeSimple-only feeds with citations. Flip sourcing to add the open web; pick a writing style for professional or simplified briefs.</p>
                 <div className="ask-examples">{prompts.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div>
               </div>
             ) : null}
@@ -251,6 +277,7 @@ function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: bo
         ) : null}
         {done && !done.greeting && !done.clarify ? (
           <>
+            {done.modes?.label ? <p className="ask-meta">Mode · {done.modes.label}</p> : null}
             {done.grounding.unmatched.length ? <p className="ask-warn">Not found in any tool result: {done.grounding.unmatched.join(", ")}. Treat as unverified.</p> : null}
             {done.grounding.mislabeled?.length ? <p className="ask-warn">Counted as something else in the tool results: {done.grounding.mislabeled.map((m) => `“${m.raw}” is ${m.foundAs[0]}`).join("; ")}. Treat as mislabeled.</p> : null}
             {done.grounding.scope?.length ? <p className="ask-warn">Not what the cited data covers: {done.grounding.scope.map((s) => `“${s.raw}”`).join(", ")}. See the caveats.</p> : null}

@@ -87,7 +87,9 @@ export const EXAMPLES = [
   "Top disclosed buys vs SPY in the last 30 days",
   "Backtest the last 30 days from all data sources",
   "What did Nancy Pelosi file most recently?",
-  "Largest federal contract actions for LMT in the last 90 days"
+  "Latest markets headlines on semis",
+  "Parse the latest GOES and Himawari satellite frames",
+  "Use TradeSimple and the web: what is moving NVDA today?"
 ];
 
 const GREETING = /^(hi|hey|hello|yo|hiya|howdy|sup|hola|good (morning|afternoon|evening)|thanks|thank you|ok|okay|test|help|what can you do)[\s!.?,]*$/i;
@@ -98,7 +100,8 @@ export function isGreeting(question) {
 
 export function greetingText() {
   return [
-    "Hi. I answer from this terminal's own feeds — congressional filings, Form 4, contracts, lobbying, prices — and I cite every number.",
+    "Hi. Default is in-app feeds only: Records (filings, Form 4, contracts, prices) and Signals (news wires, X pulse, satellite status) — every number cited, and world questions pull more than one feed.",
+    "Say “use in-app and the web” (or pick the chip) to also search the open web. Say “professional” or “simplified” to change the writing style.",
     "",
     "Try one of these:",
     ...EXAMPLES.map((q) => `- ${q}`)

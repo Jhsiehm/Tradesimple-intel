@@ -77,9 +77,18 @@ export type Done = {
   slots?: { count: number; missing: SlotMissing[] };
   /** Set when the answer is a stored one replayed because its data had not changed. */
   reused?: Reused | null;
+  session?: { set?: { sourcing?: string; style?: string; v?: number; updated?: string }; clear?: boolean } | null;
+  modes?: { sourcing: string; style: string; label: string } | null;
 };
 
-export type ClarifyAsk = { questions: Clarify[]; spec: BacktestSpec; from: Record<string, string>; sentence: string; sources: string[]; note: string };
+export type ClarifyAsk = {
+  questions: Array<Clarify | { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback?: unknown }>;
+  spec: BacktestSpec | null;
+  from: Record<string, string>;
+  sentence: string;
+  sources: string[];
+  note: string;
+};
 
 /** One exchange: the question and everything the answer streamed. */
 export type Turn = {
@@ -115,4 +124,7 @@ export type AskStatus = {
   tools: string[];
   /** This month's Ask spend against ASK_MONTHLY_BUDGET_USD; null when the server keeps no ledger. */
   spend?: Spend | null;
+  sourcing?: { id: string; label: string }[];
+  styles?: { id: string; label: string }[];
+  web?: { configured: boolean; note: string };
 };

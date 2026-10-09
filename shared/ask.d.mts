@@ -1,6 +1,7 @@
 import type { AskContext, AttachedChat } from "./agent.mjs";
 import type { Prefs } from "./backtestAsk.mjs";
 import type { BacktestSpec } from "./backtestSpec.mjs";
+import type { AskSession } from "./askModes.mjs";
 
 export type AskLimits = {
   question: number; history: number; toolCalls: number; rounds: number; totalMs: number; roundMs: number;
@@ -13,9 +14,9 @@ export const NOT_CONFIGURED: string;
 export type AskTurn = { role: "user" | "assistant"; content: string };
 export function cleanAsk(raw: unknown, limits?: AskLimits):
   | { ok: true; question: string; history: AskTurn[]; model: string; context: AskContext | null; attached: AttachedChat | null;
-      prefs: Prefs | null; prior: BacktestSpec | null; priors: BacktestSpec[]; answers: Record<string, string | number | boolean>; acceptDefaults: boolean }
+      prefs: Prefs | null; session: AskSession; prior: BacktestSpec | null; priors: BacktestSpec[]; answers: Record<string, string | number | boolean>; acceptDefaults: boolean }
   | { ok: false; error: string };
-export function systemPrompt(today: string): string;
+export function systemPrompt(today: string, modes?: { sourcing?: string; style?: string } | null): string;
 export function trimForModel(value: unknown, limits?: AskLimits): unknown;
 
 export type Evidence = {

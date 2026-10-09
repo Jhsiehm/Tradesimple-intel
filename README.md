@@ -6,7 +6,9 @@
 <img width="324" height="316" alt="image" src="https://github.com/user-attachments/assets/ef494081-e109-4578-b410-b0a5e94b6c5d" />
 
 
-A one-screen research terminal that joins **what Congress is doing** with **what markets are doing**: roll-call votes, bills, committees, and member stock trades next to insider filings, fund holdings, lobbying, PAC money, global markets, news, X, ships, aircraft, and live satellite imagery.
+A one-screen research terminal that joins **what Congress is doing** with **what markets are doing**: roll-call votes, bills, committees, and member stock trades next to insider filings, fund holdings, lobbying, PAC money, federal contracts, global markets, news, X, ships, aircraft, and live satellite imagery.
+
+**Ask** answers questions from the app's own feeds (with citation chips and a grounding check). **Backtest** replays public records against a benchmark with no look-ahead. The **Map** section is a relationship graph you can expand by category, with theories you draw yourself.
 
 It is a research tool only. It does not connect to a brokerage and never places orders.
 
@@ -24,6 +26,7 @@ Every panel shows where its data came from, when it was fetched, and how late th
 | **News** | About 45 RSS wires across every region, a Board or a Globe view with headlines pinned to places, and an X column with trending topics and posts from market-moving accounts. |
 | **Districts** | Plants and headquarters for joined companies on the congressional district map. |
 | **Strait** | Taiwan Strait ships (AIS) and news, plus **Air**: live civil and military aircraft for every theater, including a worldwide military view, with flight routes. |
+| **Map** | Relationship graph for a member or ticker: expand neighbors by category (trades, committees, hearings, roll calls, contracts, lobbying, PAC money, supply chain, HQ/district, Form 4). Opening a member or ticker draws the latest disclosed trade (filing lag on the line) and a hearing or same-ticker contract only when it falls within 14 days. **Theory mode** lets you draw dashed links of your own; they are never mixed into data counts or case files. |
 | **Calendar** | Earnings, macro releases (CPI, FOMC, jobs), lobbying deadlines, and PAC filings. |
 
 ### Today: this week in Congress trading
@@ -45,31 +48,76 @@ The member timeline shows the same figure in its stats line and each trade's ret
 
 ### Backtest: replay public records against a benchmark
 
-Open it with the command `BT`, **Backtest** on a member or ticker dossier, or a `#bt=…` share link (the link holds the whole spec). Pick signals (congressional trades by committee, member, party, chamber, ticker, sector, size, or nearness to a hearing; Form 4 insider buys and sells without 10b5-1 plans; contract awards by agency to joined contractors; lobbying spikes), then rules (entry, hold days, stop and take-profit, equal or range-midpoint sizing, benchmark, costs and slippage). It draws the equity curve against the benchmark held on the same days, then stats, a trade table, per-member and per-ticker breakdowns, and **Data caveats** that you should read before any number.
+Open it with the command `BT`, **Backtest** on a member or ticker dossier, a `#bt=…` share link (the link holds the whole spec), or **Ask the chat to backtest…** on the board. Plain-words planning lives in Ask (clarifying chips and preferences); the board is the expanded view of a run. The hand-edit form folds under **Edit the spec by hand**.
+
+Pick signals (congressional trades by committee, member, party, chamber, ticker, sector, size, or nearness to a hearing; Form 4 insider buys and sells without 10b5-1 plans; contract awards by agency to joined contractors; lobbying spikes), then rules (entry, hold days, stop and take-profit, equal or range-midpoint sizing, benchmark, costs and slippage). It draws the equity curve against the benchmark held on the same days, then stats, a trade table, per-member and per-ticker breakdowns, **Formulas** (KaTeX with worked numbers from this run), a **Replicate** download (spec, CSVs, METHODS.md, and scripts), and **Data caveats** that you should read before any number.
 
 - **No look-ahead.** A signal is dated by when the record became public (the filing date; the amendment date for amended Senate rows; the action date plus 90 days for DoD awards, 7 days for civilian awards), never the trade date. Entry is the first trading day *after* that date, at the open or the close. Tests in `test/backtest.test.mjs` fail if a price before the entry day ever changes a result.
-- **Portfolio, in calendar time.** Each trading day is the average return of the positions open that day; idle days earn zero; the benchmark holds the same positions on the same days; holidays carry the last level forward; drawdown is peak to trough on that curve. Sells are scored as shorts with no borrow cost. Congress amounts are ranges, so equal weight is the default and range midpoint (capped at $1,000,000) is an estimate.
+- **Disclosure dedupe.** A trade listed in both a Senate original and its amendment (or two House PTRs) counts once (`shared/disclosures.mjs`). Filing lag is original report date minus trade date; amendment delay is reported on its own. The public date for backtests is the earliest date any of those reports was public.
+- **Portfolio, in calendar time.** Each trading day is the average return of the positions open that day; idle days earn zero; the benchmark holds the same positions on the same days; holidays carry the last level forward; drawdown is peak to trough on that curve. Sells are scored as shorts with no borrow cost. Congress amounts are ranges, so equal weight is the default and range midpoint (capped at $1,000,000) is an estimate. Only the selected side counts as signals; price history covers about three years.
 - **What it will not tell you.** Committee seats are the current roster applied to past trades; paper filings are not parsed (counted in the caveats); symbols with no Yahoo history (delisted, renamed) are excluded and counted, which flatters results; `^GSPC` is price only while stocks are dividend-adjusted; trades overlap, so the t-statistic overstates confidence; a single prolific member can be most of a sample (the caveats name them). The Sharpe-ish figure is labeled as rough.
-- **API.** `GET /api/backtest` returns the form options; `POST /api/backtest` with `{source, filters, rules}` (or `GET ?spec=<json or #bt token>`) runs one. Results carry source, as-of and latency per feed, are cached 30 minutes by spec hash, and at most two run at once (429 beyond that). A first run can take 15 to 40 seconds while prices load; the board retries while the server says it is still building.
+- **API.** `GET /api/backtest` returns the form options; `POST /api/backtest` with `{source, filters, rules}` (or `GET ?spec=<json or #bt token>`) runs one. `GET /api/backtest/replicate` builds the export pack. Results carry source, as-of and latency per feed, are cached 30 minutes by spec hash, and at most two run at once (429 beyond that). A first run can take 15 to 40 seconds while prices load; the board retries while the server says it is still building. Pure engine: `shared/backtest.mjs`; formulas: `shared/formulas.mjs`; export: `shared/replicate.mjs`.
 
-### Ask: questions answered from the app's own data
+### Ask: questions answered from the app's own data (and optionally the web)
 
-`ASK <your question>` in the command line (`⌘K`), or type a question in the top search box and choose the **Ask** row. The answer streams into the dossier panel with a chip after each claim ([t3] style) that opens the board it came from, a collapsible **How I got this** list of every tool call with its source, as-of time, and latency, a **Data caveats** list, and buttons to open a backtest, copy a link, or share. Recent questions are kept in this browser only (last 20).
+`ASK <your question>` in the command line (`⌘K`), type a question in the top search box and choose the **Ask** row, or press **Ask** when something is on screen. Answers stream in a floating **Ask sheet** (resizable, peek / half / full): live tool steps, citation chips after each claim (`[t3]` style) that open the board they came from, a collapsible **How I got this** list with source / as-of / latency per tool call, **Data caveats**, clarifying chips when a backtest or sourcing choice is needed, inline backtest cards, and buttons to Keep the chat, copy a link, or share. History stays in this browser only.
 
-The model can only call read-only tools that wrap the app's own routes (search, member profile and trades, member timeline, ticker dossier, case file for a member, ticker or district, committees and hearings, bill and roll-call votes, contracts, lobbying, PAC receipts, positions, insiders, alerts, intel scope, `run_backtest`). It never places orders and has no network tool of its own. The server enforces: at most 8 tool calls, 6 model rounds, 90 seconds, and a 60,000-token budget per question; 12 questions per 10 minutes per client address; 3 answers in flight. Tool calls (name, arguments, timing; never keys) are logged to `/tmp/intel-ask.log`.
+**Sourcing modes** (default: in-app feeds — isolates the research bot from the open web):
 
-**Grounding.** The prompt requires answering only from tool results with a ref after each fact. The server then checks the final text: refs that match no tool result are reported, and every number in the answer that appears in no tool result is listed under the answer as *not found in any tool result*. This is a warning, not a proof: a number can match by coincidence, and a claim can be wrong without a number in it.
+| Mode | What Ask may call |
+| --- | --- |
+| **In-app feeds** (`platform`) | Congress, markets, contracts, **news RSS**, **X pulse/posts**, world calendar, **satellite status**, Strait AIS/news, air, backtests, theories. World/news answers must cross-check ≥2 signal feeds and keep Records vs Signals distinct. |
+| **In-app + web** (`both`) | Everything above, plus `web_search` and `web_fetch` |
+| **Web only** (`web`) | Open web only (`web_search` / `web_fetch`); no in-app filing tools |
 
-**Provider.** Ask is off until `.env.local` names a provider and its key (the key never reaches the browser; GET `/api/ask` reports only whether it is configured):
+Toggle in the Ask sheet, say it in chat (“in-app only”, “use in-app and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared. `web_fetch` refuses private/link-local hosts and does not follow redirects.
 
-| `ASK_PROVIDER` | Key needed | Other settings |
+**Writing styles** (specialized instruction packs per data layer are injected automatically):
+
+| Style | Behavior |
+| --- | --- |
+| **Terminal** (default) | Dense, figures-first tables |
+| **Professional** | Executive brief: finding → evidence → one caveat |
+| **Simplified** | Plain language for a smart non-expert; jargon defined once |
+
+Say “professional”, “simplified”, or “terminal style” in the question or as a follow-up. Layer packs (`shared/askModes.mjs`) add standing rules for Congress, markets, money, news/X, world/geo, and web whenever those tools are enabled.
+
+Screen context (the selected member or ticker, or a theory) is attached only when something is selected; you can detach it. Accepting a **propose_theory** result writes one cleaned theory into your map document (`saveTheory`); dismiss writes nothing. Theories are labeled *not from a data source* and are never mixed into counts or case files.
+
+**Platform tools** (TradeSimple feeds): `search`, `member_profile`, `member_trades`, `member_timeline`, `ticker_dossier`, `case_file`, `committee`, `hearings`, `bill`, `bill_votes`, `votes`, `contracts`, `corporate`, `lobbying_client`, `pac_committee`, `positions`, `insiders`, `congress_feed`, `congress_leaders`, `alerts`, `intel_scope`, `run_backtest`, `propose_theory`, `news`, `news_desk`, `x_pulse`, `x_posts`, `world_calendar`, `macro_strip`, `satellite`, `shipping`, `strait_news`, `strait_ships`, `air_theater`.
+
+**Web tools** (only in `both` / `web`): `web_search` (Brave when `BRAVE_SEARCH_API_KEY` is set, else DuckDuckGo HTML), `web_fetch` (one public http(s) URL; localhost blocked). Web results are labeled as outside TradeSimple and must be cited by URL.
+
+It never places orders. The server enforces (see `ASK_LIMITS` in `shared/ask.mjs`): at most 8 tool calls, 6 model rounds, 150 seconds wall clock, and an 80,000-token budget per question; 12 questions per 10 minutes per client address; 3 answers in flight. Replies that skip the model (greetings, preference/mode saves, clarify-only turns) do not consume the rate limit. Tool calls (name, arguments, timing; never keys) are logged to `/tmp/intel-ask.log`.
+
+**Grounding.** The prompt requires answering only from tool results with a ref after each fact. The server then checks the final text: refs that match no tool result are reported, and every number in the answer that appears in no tool result is listed under the answer as *not found in any tool result*. This is a warning, not a proof: a number can match by coincidence, and a claim can be wrong without a number in it. If a data tool returned rows but the answer has no figures, Ask retries once; if it still has none, the tool's own table is shown.
+
+**Backtest planning.** Questions that want a backtest are planned first (`shared/backtestAsk.mjs`): preferences, the previous run, and chip answers. Ambiguous result-changing fields end the turn with clarify chips (no model call). Preferences can be set or cleared in plain words and apply to new backtests until changed.
+
+**Provider.** Ask is off until `.env.local` names a provider and its key (the key never reaches the browser; `GET /api/ask` reports only whether it is configured):
+
+| `ASK_PROVIDER` | Key needed | Default `ASK_MODEL` (when empty) |
 | --- | --- | --- |
-| `anthropic` | `ANTHROPIC_API_KEY` | `ASK_MODEL` (default `claude-sonnet-4-5`) |
-| `openai` | `OPENAI_API_KEY` | `ASK_MODEL` (default `gpt-4o-mini`) |
-| `compat` (OpenAI-compatible: Vercel AI Gateway, LiteLLM, vLLM, LM Studio…) | `ASK_API_KEY` | `ASK_BASE_URL` (for example `https://ai-gateway.vercel.sh/v1`) and `ASK_MODEL` (for example `anthropic/claude-sonnet-4.5`) |
-| `openrouter` | `OPENROUTER_API_KEY` | `ASK_MODEL` (default `openai/gpt-4o-mini`) |
+| `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5` |
+| `openai` | `OPENAI_API_KEY` | `gpt-4.1` |
+| `compat` (OpenAI-compatible: Vercel AI Gateway, LiteLLM, vLLM, LM Studio…) | `ASK_API_KEY` + `ASK_BASE_URL` | set `ASK_MODEL` (for example `anthropic/claude-sonnet-4.5`) |
+| `openrouter` | `OPENROUTER_API_KEY` | `anthropic/claude-sonnet-4.6` (menu also offers GPT, Gemini, Haiku, mini) |
 
-Without it the panel says *Ask is not configured — add a key to .env.local*, and the Backtest board and every other board still work. Adapters live in `server/ai/providers.mjs` and are tested with mocked fetch in `test/ask.test.mjs` (no network).
+With `ASK_PROVIDER` empty and only `OPENROUTER_API_KEY` set, the provider is inferred as `openrouter`. `AGENT_MODEL` is read as an alias of `ASK_MODEL`. Small models (mini, nano, haiku, flash) work but show a warning badge. Without a key the sheet says *Ask is not configured — add a key to .env.local*, and Backtest and every other board still work. Adapters live in `server/ai/providers.mjs` and are tested with mocked fetch in `test/ask.test.mjs` (no network).
+
+### Map: relationship graph and theories
+
+Open with **Map** in the nav, command `MAP`, or from a member/ticker follow action. The center stage is a canvas graph (pan / zoom / pinch, drag to pin, hover neighborhood, keyboard). Expand a node by category; each edge carries source, as-of, and latency. Filter chips, legend, search-to-add, and undo/redo are in the chrome.
+
+**Theory mode** draws dashed magenta links stored in this browser only (versioned documents, export / import / share link). Ask can propose a theory; Accept stores one cleaned theory and the open map picks it up. User-added nodes (person, event, company, other) are marked as yours.
+
+Data maps elsewhere (votes, filings, districts, HQ) run flat and dark by default; imagery and intel arcs are opt-in. On Congress and Districts maps, the time scrubber can draw trade / contract / PAC arcs for a member or ticker scope (`/api/intel/scope`), with case-file signals in the dossier.
+
+### Case files and alerts
+
+Opening a member, ticker, or district assembles a **case file**: headline, signal chip (hearing-proximity severity for members, 30-day activity spike for tickers), stats, and provenance. As-of is the stalest contributing feed, not request time. Signal rules are shown in the UI and defined in `shared/intel.mjs`.
+
+**Alerts** in the top bar list new disclosed trades by watched members, Congress trades and Form 4 filings in watched tickers, and lobbying filings for joined watched tickers. Optionally every trade filed more than 45 days late. Form 4 rows are one per filing (accession) with summed value; 10b5-1 planned sales only are ROUTINE. Triage levels: HIGH / ELEVATED / ROUTINE. Unread alerts are counted; browser notifications are opt-in; checked every 5 minutes while the tab is open.
 
 ### Posting bot (Bluesky and X), dry run by default
 
@@ -95,16 +143,15 @@ Nothing is posted without `--post` **and** keys in `.env.local` (names in `.env.
 
 ### Workflow features
 
-- **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `ALRT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), or `DES` (card). With nothing typed, it lists where you've been. `Alt+←` goes back.
+- **Command line.** Press `⌘K`, `Ctrl+K`, or `:`, or click **GO**. Type a section code (`CONG`, `VOTE`, `MKTS`, `WEI`, `POSN`, `PTRS`, `CTR`, `CAL`, `MAP`, `ALRT`, `ASK`, `BT`, …), a ticker and a function (`LMT CTR`, `NVDA GP`, `BA SPLC`, `NVDA BT`), a district (`TX-12`), or a member name followed by `TL` (timeline), `CTR` (district contracts), `DES` (card), or `BT` (backtest). With nothing typed, it lists where you've been. `Alt+←` goes back.
 - **Member timeline.** Click **Timeline ▸** on any member card, or open `#timeline/<bioguide>` (for example `#timeline/T000278`). It plots the member's disclosed trades against hearings on their committees and the roll calls they cast or missed. Trades within 14 days of a committee hearing are linked to it. The stats line compares that share with a baseline: the share of all days since Jan 3, 2025 that fall within 14 days of a hearing. A member whose committees meet most weeks will show a high count by chance. **Copy link** shares the view. This shows calendar proximity only, not what a hearing covered. Hearings and votes are indexed from the start of the 119th Congress (Jan 3, 2025). Earlier dates are shaded.
-- **Alerts.** The **Alerts** button in the top bar lists new disclosed trades by watched members, Congress trades and Form 4 filings in watched tickers, and lobbying filings for joined watched tickers. Optionally it also lists every trade filed more than 45 days late. Unread alerts are counted. Browser notifications are opt-in. Alerts are checked every 5 minutes while the tab is open.
-- **Phone view.** Below 720 px wide, the terminal is a read-only list and dossier with no map, for people arriving from a shared link. Member timelines still open from `#timeline/…` links.
+- **Phone view.** Below 720 px wide, the terminal is a read-only list and dossier with no map, for people arriving from a shared link. Member timelines still open from `#timeline/…` links; the Map canvas sits above the list when that section is open.
 - **Pinned panels.** Open **Panels** in the top bar to pin a Watchlist, X pulse, Last buyers, Headlines, Global markets, or a Supply chain card. Pinned cards float over every tab and are saved between sessions. The menu also suggests panels for whatever you're looking at, and has one-click workspaces (Ticker research, Congress money trail, Global macro and arbitrage).
 - **Watchlist.** Star (☆) any ticker on the S&P board or a dossier, and any member on their card. The watchlist card shows quotes and each member's latest disclosed trade.
-- **Resizable layout.** Drag the divider between the map and the list panel. Drag it closed, double-click it, click the ▸ tab, or press `\` to hide the list. Cards resize from any edge and collapse to their title bar with **–**.
+- **Resizable layout.** Drag the divider between the map and the list panel. Drag it closed, double-click it, click the ▸ tab, or press `\` to hide the list. Cards resize from any edge and collapse to their title bar with **–**. The Ask sheet is independently resizable and snaps peek / half / full.
 - **Last buyer drill-down.** On Positions, the Last buyer columns name the most recent Congress and insider buyer. Click ▸ on a row to see the last six buyers, with traded date, filed date, and filing lag.
 - **Supply chain.** For 38 curated large caps (semis, cloud, autos, airlines, defense, energy, pharma, logistics), you get suppliers and customers mapped to revenue lines, each company's home exchange, index, and country ETF, six-month correlation and beta, and a rebased chart of how they moved together. Every link cites the filing or announcement it comes from.
-- **Live imagery.** GOES-East, GOES-West, and Himawari frames every 10 minutes, VIIRS daily passes, and a time slider to scrub and play back.
+- **Live imagery.** GOES-East, GOES-West, and Himawari frames every 10 minutes, VIIRS daily passes, and a time slider to scrub and play back. On Strait, Dark / Live picture switch; imagery on data maps is opt-in.
 - **Trade age on every alert.** Alert rows, live toasts and the watchlist feed show when the record was filed ("filed 2h ago"), when the trade happened ("traded 38d ago"), and the filing lag between them, with a freshness tag on the trade date: FRESH ≤3 days, RECENT ≤14, STALE ≤45, OLD beyond. A Congress trade or Form 4 that is STALE drops one severity level and one that is OLD drops two, so a trade disclosed today but made 38 days ago ranks below an insider buy from yesterday. Late-filing rows keep their level (the lateness is the point). Hover the age for the rule and the level before ageing.
 - **Fast SEC alerts.** For watched tickers, the live poller reads EDGAR's latest-filings Atom feeds (Form 4, 8-K, Schedule 13D, 13G) every 30 seconds through the shared 8 req/s SEC gate, matches issuers by CIK from `data/tickers.json`, and fetches only the matching filings (Form 4s go through the same parser as the Positions board). A per-issuer submissions sweep still runs every 30 minutes and after a restart, so nothing is missed while the server was down. Detection latency (EDGAR acceptance → detected) is measured on every new filing in those feeds and shown in the live status strip; each pushed alert carries its own. Measured on 9 Oct 2026 (30-second polling, 35 new filings over 11.5 minutes): a median of 43 s after acceptance, p90 54 s, worst 63 s, best 25 s. About 25 s of that is EDGAR listing the filing in the feed; the rest is waiting for the next poll. The old per-issuer polling ran every 90 s and could only see a filing once it appeared in that company's submissions file. A 403 or 429 from SEC pauses SEC polling for 10 minutes.
 
@@ -125,13 +172,13 @@ Each message has the ticker, who and what, traded and filed ages, filing lag, de
 | Key | Action |
 | --- | --- |
 | `0` | Today: this week in Congress trading |
-| `1`–`6` | Switch sections |
+| `1`–`7` | Switch sections (Congress … Map) |
 | `⌘K` / `Ctrl+K` / `:` | Command line |
 | `Alt+←` | Back |
 | `/` | Search tickers, members, districts (a question there offers **Ask**) |
 | `↑` `↓` | Move through the list |
 | `\` | Hide or show the list panel |
-| `Esc` | Close the dossier, calendar, or menus |
+| `Esc` | Close the dossier, Ask sheet, calendar, backtest, or menus |
 
 ---
 
@@ -151,9 +198,11 @@ Open **http://127.0.0.1:5173**. `npm run dev` starts both the API server (port 8
 
 The first load of Positions and PAC data parses PDFs and SEC bulk files, which takes about a minute. After that, results are cached in `data/cache.sqlite`.
 
+To point a second Vite UI at another API (experiments, a fake model), set `INTEL_API` (API origin) and `VITE_PORT` (UI port). Vite proxies `/api/ask` with a long timeout so streamed answers and backtests can finish.
+
 ### Demo mode (no keys)
 
-`npm run demo` serves the UI from a frozen snapshot of the API, with no server and no keys. A **DEMO** chip with the snapshot date stays in the top bar, and every feed keeps the as-of time from when the snapshot was taken.
+`npm run demo` serves the UI from a frozen snapshot of the API, with no server and no keys. A **DEMO** chip with the snapshot date stays in the top bar, and every feed keeps the as-of time from when the snapshot was taken. Ask stays unavailable in demo (no provider, no live tools).
 
 ```bash
 npm run dev                  # in one terminal, with your keys, and let the indexes warm up
@@ -197,8 +246,13 @@ Keys live only in `.env.local`. The server reads them and they are never sent to
 | `X_BEARER_TOKEN` | Real X posts. Without it, the X column shows the same accounts' posts on Bluesky plus Truth Social. | [developer.x.com](https://developer.x.com) |
 | `NTFY_TOPIC` | Phone alerts through ntfy (see [Phone alerts](#phone-alerts-ntfy)) | Any long random string; no sign-up |
 | `SEC_CONTACT` | Your email in the SEC User-Agent. www.sec.gov refuses agents without a contact; a generic default is used when empty. | — |
+| `ASK_PROVIDER` + provider key | Ask sheet (see table above). `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ASK_API_KEY`+`ASK_BASE_URL`, or `OPENROUTER_API_KEY` | Provider dashboards |
+| `TAVILY_API_KEY` / `BRAVE_API_KEY` | Ask `web_search` when sourcing is "In-app + web" or "Web only" and no `OPENROUTER_API_KEY` is set (OpenRouter's web plugin is used first) | [Tavily](https://tavily.com), [Brave Search API](https://brave.com/search/api/) |
+| `INTEL_ALLOWED_ORIGINS` | Extra origins allowed to POST/PUT/PATCH/DELETE to the local API (comma-separated). Loopback Vite and Origin-less curl/scripts are already allowed. | — |
 
-Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free public endpoints.
+Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends, backtest prices) uses free public endpoints.
+
+**Cross-site guard.** POST / PUT / PATCH / DELETE to the API must come from an allowed origin (the Vite app, `INTEL_ALLOWED_ORIGINS`) or, with no Origin/Referer, from a loopback non-browser client. That stops another tab from running backtests or spending Ask credits against your local server. `PUBLIC_URL` is not an allowed write origin.
 
 ---
 
@@ -337,7 +391,7 @@ If Let's Encrypt cannot issue a certificate for the sslip.io name (rate limits),
 
 | Data | Source | Typical delay |
 | --- | --- | --- |
-| Congressional trades | House Clerk PTR PDFs, Senate eFD. Every electronic report filed since Jan 3, 2025; scanned paper filings are counted but not parsed. The first full backfill takes a few minutes, and the newest reports appear first. | Up to 45 days after the trade (legal filing window) |
+| Congressional trades | House Clerk PTR PDFs, Senate eFD. Every electronic report filed since Jan 3, 2025; scanned paper filings are counted but not parsed. Duplicate lines across an original and its amendment (or two House PTRs) are folded to one transaction. The first full backfill takes a few minutes, and the newest reports appear first. | Up to 45 days after the trade (legal filing window) |
 | Federal contract actions | USAspending.gov transactions API, joined through USAspending parent recipient UEIs in `data/tickers.json` | Civilian agencies within days. DoD actions publish about 90 days after award. |
 | DoD daily awards | War.gov contract announcements RSS (list of days; article text is not machine-readable here) | Same business day, about 5 p.m. ET |
 | Insider trades | SEC EDGAR Form 4 | Within 2 business days |
@@ -347,7 +401,7 @@ If Let's Encrypt cannot issue a certificate for the sslip.io name (rate limits),
 | Votes, bills, committees | Congress.gov API, unitedstates/congress-legislators | Minutes to hours |
 | Timeline index (hearings, per-member roll calls) | Congress.gov committee meetings, House Clerk EVS XML, Senate LIS XML | Rebuilt every 6 hours |
 | US equities | Nasdaq screener | About 15 min delayed |
-| Global indices, ETFs, ADRs, FX, charts | Yahoo Finance chart API | 15–20 min delayed; some exchanges end of day |
+| Global indices, ETFs, ADRs, FX, charts, backtest bars | Yahoo Finance chart API | 15–20 min delayed; some exchanges end of day; backtest OHLC cached ~12 h |
 | Crypto | Yahoo Finance, CoinGecko | Minutes |
 | News | Publisher RSS feeds | Minutes |
 | X | trends24 (hourly trending), Bluesky public API, trumpstruth.org, or X API v2 with a token | Minutes to an hour |
@@ -355,6 +409,7 @@ If Let's Encrypt cannot issue a certificate for the sslip.io name (rate limits),
 | Ships | aisstream.io | Seconds |
 | Satellite | NASA GIBS (GOES, Himawari, VIIRS) | About 1 hour for geostationary, daily for VIIRS |
 | Supply chain links | Curated from 10-K/20-F filings and company announcements (`data/supplychain.json`) | Changes when filings change |
+| Ask answers | Model provider + in-process tools over the routes above | Live; limited by tool and model latency |
 
 > **About the Global / ADR arbitrage view:** the premiums compare delayed snapshots, and most home markets are closed while the ADR trades. They show where dislocations tend to appear, not tradable opportunities. Real cross-listing arbitrage needs licensed low-latency exchange feeds. That's a possible future extension.
 
@@ -364,33 +419,47 @@ If Let's Encrypt cannot issue a certificate for the sslip.io name (rate limits),
 
 ```
 server/        Node HTTP API on :8787, no framework
-  index.mjs    routes
+  index.mjs, router.mjs, lib/guard.mjs   routes + cross-site write guard
+  ai/          Ask: providers, tools, run loop, SSE, config, log
+  routes/      ask, backtest, congress, markets, relations, …
+  domain/      backtest (signals, bars, sources, replicate), congress, corporate, …
   congress.mjs, roster.mjs        votes, bills, members, committees
   timeline.mjs, alerts.mjs        member timeline index, alerts
   feed.mjs                        landing feed (this week in Congress trading)
   returns.mjs                     buy returns vs SPY, member stats, leaderboards
   positions.mjs, corporate.mjs    PTRs, Form 4, 13F, FINRA, LDA, FEC
   contracts.mjs                   USAspending contract feed, contractor board, DoD daily index
+  intel.mjs                       case files, arc links, scope scrubber
   chart.mjs, globals.mjs, instruments.mjs, supply.mjs, macro.mjs   market data
   news.mjs     RSS wires, geotagging, X / Bluesky / Truth Social, trends
   air.mjs, strait.mjs, earth.mjs  aircraft, ships, imagery
   db.mjs       SQLite cache (node:sqlite) and ticker join table
 src/           React 19 + TypeScript + MapLibre GL (Vite)
   App.tsx      section state, action routing, and the one-screen layout
-  shell/       layout pieces: useCards (floating cards), useRail (list width),
-               useMapClock (imagery/news time), PanelsMenu, MapBar (toolbars),
-               SearchBox, mapView, follow (dossier link actions), sections
-  congress/ markets/ contracts/ news/ districts/ strait/   one folder per section: data hook + boards
+  agent/       Ask sheet (chat UI, context, size snaps)
+  ask/         stream client, answer/steps/clarify/backtest cards
+  backtest/    board, form, equity chart, formulas (KaTeX), replicate panel
+  relations/   relationship canvas, theory editor, palette, store
+  intel/       case header, scrubber, arcs
+  shell/       layout pieces: useCards, useRail, useMapClock, PanelsMenu,
+               MapBar, SearchBox, CommandBar, mapView, follow, sections
+  congress/ markets/ contracts/ news/ districts/ strait/ city/   section boards
+shared/        ask, agent, backtest, backtestAsk, backtestSpec, disclosures,
+               formulas, replicate, intel, relations, theories, sentences, …
 data/          tickers.json (join table), places, supply chain, globals, geo
-scripts/       dev runner, S&P 500 rows, derived joins
+scripts/       dev runner, S&P 500 rows, derived joins, snapshot, bot, publish
+test/          parsers, joins, ask, backtest, replicate, routes, intel, …
 ```
 
 ### Ground rules the code follows
 
-- **One screen:** top nav, center map or board, one list, one dossier. Extra views are floating cards, not extra rails.
-- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. 25 names are hand-curated and 76 more are derived by `scripts/joins.mjs` from exact matches only: SEC business address to Census 119th district, LDA client names, and FEC connected-organization PACs. Each derived row records its basis, and the dossier shows it. That makes 101 full-join names. The rest of the S&P 500 is quotes only. Separately, `scripts/contract-parents.mjs` joins 200 S&P 500 names to USAspending parent recipient records (`contractParents`), accepting only exact parent-name matches or a multi-word name plus a division word like SYSTEMS or SPACE. A name with no parent record, such as Apple, gets none rather than a fuzzy hit like Appleton Marine.
-- **Empty is honest.** A region or feed with no real source stays empty and says why.
+- **One screen:** top nav, center map or board, one list, one dossier. Extra views are floating cards or the Ask sheet, not extra rails.
+- **No invented joins.** Tickers link to companies, lobbying clients, PACs, and districts only through `data/tickers.json`. 25 names are hand-curated and 76 more are derived by `scripts/joins.mjs` from exact matches only: SEC business address to Census 119th district, LDA client names, and FEC connected-organization PACs. Each derived row records its basis, and the dossier shows it. That makes 101 full-join names. The rest of the S&P 500 is quotes only. Separately, `scripts/contract-parents.mjs` joins 200 S&P 500 names to USAspending parent recipient records (`contractParents`), accepting only exact parent-name matches or a multi-word name plus a division word like SYSTEMS or SPACE. A name with no parent record, such as Apple, gets none rather than a fuzzy hit like Appleton Marine. Ask must not invent a join the ticker tool did not return.
+- **Empty is honest.** A region or feed with no real source stays empty and says why. China, Europe, the Middle East, Eastern Europe, South Asia, and Southeast Asia stay empty until a feed is real.
 - **Label everything** with its source, as-of time, and real latency.
+- **Theories are yours.** Dashed theory edges and Ask proposals never feed counts, case files, or backtests until you accept them into the local theory document — and even then they stay marked as not from a data source.
+- **Research only.** No brokerage connection, no order placement. Ask must not recommend buys or sells or predict prices.
+- **Keys stay on the server.** Never commit `.env.local` or send keys to the browser.
 
 ### Scripts
 
@@ -402,14 +471,15 @@ npm run snapshot # capture the running API into demo/snapshot/ for demo mode
 npm run publish:demo   # build the static demo with member share pages and push it to gh-pages
 npm run bot      # dry-run the Bluesky/X posting bot (add --post to post)
 npm run demo     # zero-key demo from the snapshot; build:demo writes dist-demo/
-npm test         # parser checks against real filings in test/fixtures, join rules, data integrity, API routes (no network)
+npm test         # parsers, joins, ask, backtest, replicate, data integrity, API routes (no network)
 node scripts/sp500.mjs   # rebuild the S&P 500 rows in data/tickers.json from Wikipedia
 node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins for the largest quote-only names
 node scripts/contract-parents.mjs [--only LMT,BA]   # join tickers to USAspending parent recipients (no key)
+INTEL_API=http://127.0.0.1:8788 VITE_PORT=5174 npm run dev   # second UI against another API
 ```
 
 ---
 
 ## Disclaimer
 
-For research and education. Nothing here is investment advice. Public disclosures are late by design, and delayed quotes are not suitable for trading decisions. Check anything important against the primary filing, which every row links to.
+For research and education. Nothing here is investment advice. Public disclosures are late by design, and delayed quotes are not suitable for trading decisions. Backtests replay past public records with the caveats on the board — they are not proof of an edge. Ask answers are grounded against tool results with a warning check, not a guarantee. Check anything important against the primary filing, which every row links to.

@@ -29,7 +29,7 @@ export async function runPromptTask({ db, task, env = process.env, now = Date.no
       question: task.prompt,
       model,
       provider: metered(makeProvider({ ...cfg, model }), { db, kind: "task", askId: task.id, now }),
-      tools: toolDefs(),
+      tools: toolDefs("both"),
       execute: (name, args, hooks) => execute(db, name, args, callRoute, hooks?.onRoute || null),
       labelOf,
       emit: (e) => collectEvent(turn, e),

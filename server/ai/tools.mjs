@@ -1,8 +1,10 @@
 /**
  * Read-only tools for Ask. Each wraps a route handler or the backtest runner in process, so the model sees exactly
  * what the app's own boards see, with the same source, asOf, and latency. Nothing here writes, orders, or fetches.
+ * Web tools (web_search / web_fetch) are only offered when sourcing is `web` or `both`.
  */
 import { SOURCES, SECTOR_ETF, BENCHMARKS } from "../../shared/backtestSpec.mjs";
+import { toolsForSourcing, WEB_TOOLS } from "../../shared/askModes.mjs";
 import { handlers as system } from "../routes/system.mjs";
 import { handlers as congress } from "../routes/congress.mjs";
 import { handlers as markets } from "../routes/markets.mjs";
@@ -17,6 +19,7 @@ import { runWorldMarkets } from "./worldTool.mjs";
 import { runWebFetch, runWebSearch } from "./webTool.mjs";
 import { REGION_IDS } from "../../shared/worldMarkets.mjs";
 import { searchSignalsTool } from "./searchTool.mjs";
+import { summarizeNews, summarizeSatellite } from "./signals.mjs";
 
 const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest };
 
@@ -367,18 +370,58 @@ export const TOOLS = [
       latency: "Nothing is written until you press Accept.",
       theory: { a: ea, b: eb, label: String(a.label || "").slice(0, 80), note: String(a.note || "").slice(0, 280), confidence: ["low", "medium", "high"].includes(a.confidence) ? a.confidence : "medium" }
     };
-  }, "Theory")
+  }, "Theory"),
+
+  /* ---------- news, X, world, satellite (platform feeds) ---------- */
+  tool("news", "Latest headlines from the terminal's ~45 RSS wires (every region). Optional keyword filter. Publisher stamps, not TradeSimple invention.", obj({ q: str("Keyword in title/summary, optional"), limit: { type: "number", description: "Max headlines, default 12" } }), async (db, a, call) => {
+    const wire = await call(db, "news");
+    return summarizeNews(wire, { q: a.q, limit: Math.max(3, Math.min(20, Math.round(Number(a.limit) || 12))) });
+  }, "News"),
+  tool("news_desk", "Headlines from one desk or region on the RSS board (markets, politics, world, tech, x, or a region id).", obj({ desk: str("Desk or region id such as markets, world, china") }, ["desk"]), async (db, a, call) => {
+    const desk = String(a.desk || "").trim().slice(0, 40);
+    if (!desk) return bad("desk is required");
+    const wire = await call(db, "news");
+    return summarizeNews(wire, { desk, limit: 12 });
+  }, "News desk"),
+  tool("x_pulse", "X / Twitter pulse: US and world trending topics (hourly) plus posts from curated market accounts (X API when keyed, else Bluesky/Truth Social fallback).", obj({}), async (db, _a, call) => call(db, "news.xpulse"), "X pulse"),
+  tool("x_posts", "Recent posts from the curated X / social column (same accounts as the News X board).", obj({}), async (db, _a, call) => call(db, "news.x"), "X posts"),
+  tool("world_calendar", "Upcoming and recent macro releases (CPI, FOMC, jobs) and calendar strip context.", obj({ back: { type: "number" }, ahead: { type: "number" } }), (db, a, call) => call(db, "calendar.macro", {}, qs({
+    back: Math.max(0, Math.min(30, Math.round(Number(a.back) || 0))),
+    ahead: Math.max(1, Math.min(45, Math.round(Number(a.ahead) || 14)))
+  })), "World calendar"),
+  plain("macro_strip", "Macro strip: next CPI, FOMC, jobs and related markers the terminal shows.", "macro.strip", "Macro"),
+  tool("satellite", "Parse live satellite imagery status: GOES-East/West, Himawari, VIIRS daily — latest frame times, coverage gaps, basemap as-of. No pixel data; metadata only.", obj({}), async (db, _a, call) => {
+    const [live, imagery] = await Promise.all([call(db, "earth.live"), call(db, "earth.imagery")]);
+    return summarizeSatellite(live, imagery);
+  }, "Satellite"),
+  tool("shipping", "Reference shipping lanes and chokepoints (not live AIS). Source and as-of on the feed.", obj({}), async (db, _a, call) => {
+    const lanes = await call(db, "earth.lanes");
+    const points = (lanes?.chokepoints?.features || []).map((f) => ({ name: f.properties?.name, lon: f.geometry?.coordinates?.[0], lat: f.geometry?.coordinates?.[1] }));
+    return { ok: Boolean(lanes?.ok), source: lanes?.source, asOf: lanes?.asOf, latency: lanes?.latency || lanes?.license || "", chokepoints: points, laneCount: lanes?.lanes?.features?.length || 0, note: "Reference chart routes, not live traffic." };
+  }, "Shipping"),
+  plain("strait_news", "Taiwan Strait / theater news headlines the Strait board shows.", "strait.news", "Strait news"),
+  plain("strait_ships", "Taiwan Strait AIS ship snapshot (needs AISSTREAM_API_KEY for live positions).", "strait.ais", "Strait ships"),
+  tool("air_theater", "Live civil/military aircraft for a theater id (or default). Volunteer ADS-B; many military flights stay dark.", obj({ theater: str("Theater id from strait theaters, optional") }), (db, a, call) => call(db, "air", {}, qs({ theater: String(a.theater || "").trim().slice(0, 40) })), "Air")
 ];
 
-export const toolDefs = () => TOOLS.map(({ name, description, parameters }) => ({ name, description, parameters }));
+/** Tool defs the model may see for a sourcing mode (platform / both / web). */
+export const toolDefs = (sourcing = "platform") => {
+  const allow = toolsForSourcing(sourcing);
+  return TOOLS.filter((t) => allow.has(t.name)).map(({ name, description, parameters }) => ({ name, description, parameters }));
+};
 
 /**
  * Run one tool. Never throws: a failure is a result with `ok: false` so the model can say what went wrong.
  * `onRoute(path)` hears each in-process route the tool calls, for the live step timeline.
+ * `sourcing` is a second gate: web tools are refused when the session is platform-only even if the model asked.
  */
-export async function runTool(db, name, args, call = callRoute, onRoute = null) {
+export async function runTool(db, name, args, call = callRoute, onRoute = null, sourcing = "both") {
   const found = TOOLS.find((t) => t.name === name);
   if (!found) return { ok: false, error: `No such tool ${name}.` };
+  const allow = toolsForSourcing(sourcing);
+  if (!allow.has(name) || (WEB_TOOLS.has(name) && sourcing === "platform")) {
+    return { ok: false, error: `Tool ${name} is not available with sourcing=${sourcing}.` };
+  }
   const traced = onRoute
     ? (d, id, params = {}, query = "") => {
         try { onRoute(`GET ${fillRoute(id, params, query)}`); } catch { /* a listener never breaks a tool */ }
@@ -395,6 +438,6 @@ export async function runTool(db, name, args, call = callRoute, onRoute = null) 
 export const labelOf = (name, args = {}) => {
   const t = TOOLS.find((x) => x.name === name);
   const base = t?.label || name;
-  const hint = args.symbol || args.id || args.q || args.client || args.name || args.place || (args.spec?.source ? args.spec.source : "");
+  const hint = args.symbol || args.id || args.q || args.client || args.name || args.place || args.desk || args.url || args.theater || (args.spec?.source ? args.spec.source : "");
   return hint ? `${base} · ${String(hint).slice(0, 40)}` : base;
 };

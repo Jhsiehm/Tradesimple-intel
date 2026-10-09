@@ -1,5 +1,6 @@
 import { cleanPrefs, mergePrefs, PREFS_KEY, type Prefs } from "../../shared/backtestAsk.mjs";
 import { stripRefs } from "../../shared/citations.mjs";
+import { ASK_SESSION_KEY, cleanSession, mergeSession } from "../../shared/askModes.mjs";
 import type { SavedChat, Step, Turn } from "./types";
 
 /** Chats kept in this browser. v2 holds the step trace; v1 sheet chats and the old answer history migrate in once. */
@@ -229,3 +230,23 @@ export function dropPref(prefs: Prefs, path: string): Prefs {
   delete values[path];
   return savePrefs({ ...prefs, values, updated: new Date().toISOString() });
 }
+
+export type AskSession = ReturnType<typeof cleanSession>;
+
+export function loadSession(): AskSession {
+  return cleanSession(read(ASK_SESSION_KEY));
+}
+
+export function saveSession(next: AskSession): AskSession {
+  const clean = cleanSession(next);
+  try {
+    if (clean.sourcing || clean.style) localStorage.setItem(ASK_SESSION_KEY, JSON.stringify(clean));
+    else localStorage.removeItem(ASK_SESSION_KEY);
+  } catch { /* still applies for this session */ }
+  return clean;
+}
+
+export const setSessionModes = (prev: AskSession, patch: { sourcing?: string; style?: string }) =>
+  saveSession(mergeSession(prev, patch, new Date().toISOString()));
+
+export const clearSession = () => saveSession(cleanSession({ v: 1 }));

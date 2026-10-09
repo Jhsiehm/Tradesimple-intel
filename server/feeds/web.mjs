@@ -95,24 +95,26 @@ export async function webSearch(query, { env = process.env, max = WEB_CAPS.resul
 
 /** Loopback, private, link-local, CGNAT, multicast and reserved addresses: never fetched. */
 export function privateAddress(ip) {
+  if (!net.isIP(String(ip || ""))) return true;
   if (net.isIPv4(ip)) {
     const [a, b] = ip.split(".").map(Number);
     return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b < 128) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b < 32) || (a === 192 && b === 168) || a >= 224;
   }
   const s = ip.toLowerCase();
-  if (s.startsWith("::ffff:")) return privateAddress(s.slice(7));
+  if (s.startsWith("::ffff:")) return net.isIPv4(s.slice(7)) ? privateAddress(s.slice(7)) : true;
   return s === "::" || s === "::1" || /^f[cd]/.test(s) || /^fe[89ab]/.test(s) || /^ff/.test(s);
 }
 
 async function publicUrl(raw, lookup) {
   let u;
+  if (String(raw || "").length > 2000) return { error: "URL too long." };
   try { u = new URL(String(raw || "")); } catch { return { error: "Not a URL." }; }
   if (!/^https?:$/.test(u.protocol)) return { error: "Only http and https pages can be read." };
   if (u.username || u.password) return { error: "URLs with credentials are not read." };
   if (u.port && !["80", "443"].includes(u.port)) return { error: "Only the standard web ports are read." };
   const host = u.hostname.replace(/^\[|\]$/g, "");
   if (/^(localhost|.*\.local|.*\.internal|.*\.localhost)$/i.test(host)) return { error: "Local hosts are not read." };
-  const addrs = net.isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
+  const addrs = net.isIP(host) ? [{ address: host }] : await lookup(host, { all: true, verbatim: true }).catch(() => []);
   if (!addrs.length) return { error: `Could not resolve ${host}.` };
   if (addrs.some((a) => privateAddress(a.address))) return { error: "Private and loopback addresses are not read." };
   return { url: u };

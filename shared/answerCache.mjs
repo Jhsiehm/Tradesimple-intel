@@ -50,6 +50,7 @@ export function answerIdentity(asked, { model = "", pinned = false } = {}) {
     context: a.context || null,
     attached: a.attached || null,
     prefs: a.prefs || null,
+    modes: [a.session?.sourcing || "", a.session?.style || ""],
     prior: a.prior || null,
     priors: a.priors || [],
     answers: a.answers || {},

@@ -12,10 +12,13 @@ import { metered, spendState } from "../ai/spend.mjs";
 import { cacheTtlMs, findAnswer, keepAnswer, recordingExecutor, sameData, sha } from "../ai/answerCache.mjs";
 import { answerIdentity, noReuseReason, replayEvents } from "../../shared/answerCache.mjs";
 import { scheduleReply } from "./tasks.mjs";
+import { SOURCING, SOURCING_LABEL, STYLES, STYLE_LABEL } from "../../shared/askModes.mjs";
+import { webConfig } from "../feeds/web.mjs";
 
 export function askStatus(env = process.env, db = null, at = Date.now()) {
   const cfg = askConfig(env);
   const models = cfg.configured ? modelOptions(cfg) : [];
+  const web = webConfig(env);
   return {
     ok: true,
     configured: cfg.configured,
@@ -28,6 +31,9 @@ export function askStatus(env = process.env, db = null, at = Date.now()) {
     notice: cfg.configured ? "" : cfg.error || NOT_CONFIGURED,
     tools: TOOLS.map((t) => t.name),
     spend: cfg.configured ? spendState(db, env, at, cfg.provider) : null,
+    sourcing: SOURCING.map((id) => ({ id, label: SOURCING_LABEL[id] })),
+    styles: STYLES.map((id) => ({ id, label: STYLE_LABEL[id] })),
+    web: { configured: Boolean(web.provider), note: web.provider ? web.via : web.error },
     limits: { toolCalls: ASK_LIMITS.toolCalls, totalSeconds: ASK_LIMITS.totalMs / 1000, tokenBudget: ASK_LIMITS.tokenBudget, perIp: ASK_LIMITS.perIp, perIpMinutes: ASK_LIMITS.perIpWindowMs / 60_000 }
   };
 }
@@ -37,7 +43,7 @@ const clientOf = (req, env) => {
   return fwd || req.socket?.remoteAddress || "local";
 };
 
-const runToolTraced = (db, name, args, hooks) => runTool(db, name, args, callRoute, hooks?.onRoute || null);
+const runToolTraced = (db, name, args, hooks) => runTool(db, name, args, callRoute, hooks?.onRoute || null, hooks?.sourcing || "both");
 
 /**
  * Everything the handler touches is injectable: env, the provider factory, the clock, the limiter, the log.
@@ -82,7 +88,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     res.on("close", () => ctl.abort());
     res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     const emit = (event) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify(event)}\n\n`); };
-    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, auto: route.auto, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached), budget: spend?.level || "", fresh });
+    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, auto: route.auto, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached), budget: spend?.level || "", fresh, sourcing: asked.session?.sourcing || "", style: asked.session?.style || "" });
     try {
       const hit = key && !fresh ? findAnswer(db, key, now(), ttl) : null;
       if (hit) {
@@ -105,6 +111,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         context: asked.context,
         attached: asked.attached,
         prefs: asked.prefs,
+        session: asked.session,
         prior: asked.prior,
         priors: asked.priors,
         answers: asked.answers,
@@ -113,7 +120,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         provider: meter(makeProvider({ ...cfg, model })),
         auto: route.auto,
         strong,
-        tools: toolDefs(),
+        tools: toolDefs("both"),
         execute: rec.run,
         labelOf,
         emit: (e) => { events.push(e); emit(e); },
