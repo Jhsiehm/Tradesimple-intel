@@ -198,6 +198,22 @@ test("disclosure lag statistics come from the filing and trade dates", () => {
   assert.equal(out.caveats.lag.n, 2);
   assert.equal(out.caveats.lag.max, 50);
   assert.equal(out.caveats.lag.over45, 1);
+  assert.equal(out.caveats.lag.amended, null);
+});
+
+test("amendment delay is reported apart from filing lag", () => {
+  const out = run({
+    signals: [
+      sig({ id: "1", tradeDate: isoOf(START - 10) }),
+      sig({ id: "2", symbol: "BBB", tradeDate: isoOf(START - 300), filedDate: isoOf(START - 280) })
+    ],
+    bars: { AAA: flat(60), BBB: flat(60) }
+  });
+  assert.equal(out.caveats.lag.n, 2);
+  assert.equal(out.caveats.lag.max, 20, "the original report was filed 20 days after the trade");
+  assert.equal(out.caveats.lag.over45, 0);
+  assert.deepEqual(out.caveats.lag.amended, { n: 1, median: 282, max: 282 });
+  assert.match(out.caveats.items.find((c) => c.id === "amendLag").text, /^1 signals first appear in a later amendment, a median 282 days/);
 });
 
 test("a tiny sample says so", () => {

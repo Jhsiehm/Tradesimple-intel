@@ -413,12 +413,19 @@ function buildCurve(trades, calendar) {
   return { days, s, b, R, B, labels, maxOpen, avgOpen: activeDays ? sumOpen / activeDays : 0, activeDays };
 }
 
+/**
+ * Filing lag = original report date − trade date. A trade that first became public in a later amendment has its
+ * extra wait counted separately as `amended`, not as filing lag.
+ */
 function lagStats(signals) {
   const lags = [];
+  const waits = [];
   for (const s of signals) {
     const a = dayOf(s.tradeDate);
-    const b = dayOf(s.signalDate);
-    if (a != null && b != null && b >= a) lags.push(b - a);
+    const f = dayOf(s.filedDate || s.signalDate);
+    const p = dayOf(s.signalDate);
+    if (a != null && f != null && f >= a) lags.push(f - a);
+    if (f != null && p != null && p > f) waits.push(p - f);
   }
   if (!lags.length) return null;
   return {
@@ -427,7 +434,8 @@ function lagStats(signals) {
     mean: r2(mean(lags)),
     p90: pctile(lags, 0.9),
     max: Math.max(...lags),
-    over45: lags.filter((v) => v > 45).length
+    over45: lags.filter((v) => v > 45).length,
+    amended: waits.length ? { n: waits.length, median: median(waits), max: Math.max(...waits) } : null
   };
 }
 
@@ -436,7 +444,8 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   const add = (level, id, textValue) => items.push({ level, id, text: textValue });
   const lag = lagStats(signals);
   if (lag) {
-    add("info", "lag", `Disclosure lag on the ${lag.n} signals: median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the filing date, so the run only uses what was public.`);
+    add("info", "lag", `Disclosure lag on the ${lag.n} signals (original filing date minus trade date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the public date, so the run only uses what was public.`);
+    if (lag.amended) add("info", "amendLag", `${lag.amended.n} signals first appear in a later amendment, a median ${lag.amended.median} days (up to ${lag.amended.max}) after the original report; they enter after the amendment date. That wait is not counted as filing lag.`);
   }
   if (rules.sizing === "amountMid" || context.rangeAmounts) {
     add("warn", "ranges", `Congress discloses dollar ranges, not amounts. ${estimated ? `${estimated} trades are sized by the range midpoint, an estimate.` : "Equal weight ignores size."}${missingSize ? ` ${missingSize} had no amount and use the median size.` : ""} Ranges are open-ended at the top; sizes are capped at $${SIZE_CAP.toLocaleString("en-US")}.`);

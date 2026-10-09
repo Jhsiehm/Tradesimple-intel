@@ -5,6 +5,8 @@ export type BacktestSignal = {
   id: string;
   symbol: string;
   signalDate: string;
+  /** Original report date when the signal became public later (a Senate amendment); drives filing-lag stats. */
+  filedDate?: string;
   side: "buy" | "sell";
   sizeHint?: number | null;
   sizeIsRange?: boolean;
@@ -48,7 +50,11 @@ export type BacktestStats = {
 };
 export type BacktestCaveats = {
   items: { level: "info" | "warn"; id: string; text: string }[];
-  lag?: { n: number; median: number | null; mean: number | null; p90: number | null; max: number; over45: number } | null;
+  lag?: {
+    n: number; median: number | null; mean: number | null; p90: number | null; max: number; over45: number;
+    /** Signals first public in a later amendment: days from the original report to the amendment. */
+    amended?: { n: number; median: number | null; max: number } | null;
+  } | null;
   exclusions?: Record<string, number>;
   excludedSymbols?: Record<string, string[]>;
 };
