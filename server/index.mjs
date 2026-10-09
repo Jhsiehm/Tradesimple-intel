@@ -8,6 +8,8 @@ import { createFront } from "./front.mjs";
 import { siteRegistry } from "./domain/sites.mjs";
 import { startWarm } from "./jobs/warm.mjs";
 import { startTasks } from "./jobs/tasks.mjs";
+import { startLive, livePoller } from "./jobs/live.mjs";
+import { startNotify } from "./domain/notify/index.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv(root);
@@ -33,4 +35,6 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
   startWarm(db);
   startTasks(db);
+  startLive(db);
+  startNotify(db, livePoller(db).bus);
 });

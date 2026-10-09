@@ -5,13 +5,17 @@ import { RESEARCH_RULE } from "../../shared/taskSchedule.mjs";
 import { api, DEMO, when } from "../lib/api";
 import { memberShareUrl } from "../lib/share";
 import { toggleMember, toggleSymbol, useWatch } from "../lib/useWatch";
+import { LiveToasts, SEEN_EVENT } from "../live/LiveToasts";
+import { onLivePush } from "../live/stream";
+import { useLiveSync } from "../live/useLiveSync";
 import { Icon, IconLabel } from "../ui/icons/Icon";
 import { AgeLine } from "../ui/AgeLine";
 import { AGE_RULE, type TradeAge } from "../../shared/tradeAge.mjs";
 import { PhoneNotify } from "./PhoneNotify";
 
 type Pin = { kind: "member" | "symbol"; id: string; label: string; chamber?: string };
-type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; asOf?: string; latency?: string; pins?: Pin[] };
+type Live = { detectedAt: string; detection: string; filingLag: string };
+type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; asOf?: string; latency?: string; pins?: Pin[]; live?: Live };
 type Source = { label: string; source: string; asOf?: string; latency: string };
 type AlertsRes = { ok: boolean; asOf?: string; items: Alert[]; sources?: Source[] };
 
@@ -67,8 +71,17 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
       .catch(() => { if (!cancel) setRes({ ok: false, items: [] }); });
     void load();
     const timer = window.setInterval(load, POLL_MS);
-    return () => { cancel = true; window.clearInterval(timer); };
+    let soon = 0;
+    const off = DEMO ? () => {} : onLivePush(() => { window.clearTimeout(soon); soon = window.setTimeout(load, 800); });
+    return () => { cancel = true; window.clearInterval(timer); window.clearTimeout(soon); off(); };
   }, [query]);
+
+  useLiveSync(watch.symbols);
+  useEffect(() => {
+    const reread = () => setSeen(readSet(SEEN));
+    window.addEventListener(SEEN_EVENT, reread);
+    return () => window.removeEventListener(SEEN_EVENT, reread);
+  }, []);
 
   const items = res?.items || [];
   const unread = items.filter((a) => !seen.has(a.id) && !dismissed.has(a.id));
@@ -126,6 +139,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
         <p className="alerts-meta" title={a.latency || feed?.latency}>
           <span>{a.source || feed?.source || "Source unknown"}</span>
           {a.asOf || feed?.asOf ? <span>as of {when(a.asOf || feed?.asOf || "")}</span> : null}
+          {a.live && !a.detail.includes(a.live.detection) ? <span className="alerts-live" title={`Pushed by the live poller at ${when(a.live.detectedAt)}${a.live.filingLag ? ` · ${a.live.filingLag}` : ""}`}>{a.live.detection}</span> : null}
         </p>
         <div className="alerts-actions">
           {(a.pins || []).map((p) => {
@@ -153,12 +167,13 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
       <button className={`ghost panels-btn alerts-btn${unread.length ? " hot" : ""}`} aria-expanded={open} onClick={() => onOpen(!open)} title="Watchlist alerts">
         <Icon name="bell" /><span className="ic-lbl">Alerts{unread.length ? ` · ${unread.length}` : ""}</span>
       </button>
+      {DEMO ? null : <LiveToasts onFollow={onFollow} />}
       {open ? (
         <div className="panels-menu alerts-menu" role="dialog" aria-label="Alerts">
           <h4>
             Alerts · triage
             <small>
-              {watch.symbols.length} tickers · {watch.members.length} members watched · last 90 days by filed date · checks every 5 min
+              {watch.symbols.length} tickers · {watch.members.length} members watched · last 90 days by filed date · refreshed every 5 min and on each live push
               {res?.asOf ? ` · fetched ${when(res.asOf)}` : ""}
             </small>
           </h4>

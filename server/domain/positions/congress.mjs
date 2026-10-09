@@ -62,6 +62,17 @@ export function congressTrades(db) {
   return trades.last ? Promise.resolve(trades.last) : trades.head;
 }
 
+/**
+ * Re-reads this year's House Clerk index and the Senate eFD list now and resolves with the finished board. Reports
+ * already parsed stay cached, so only new filings are fetched. Joins a rebuild that is already running.
+ */
+export function refreshCongress(db) {
+  if (trades.job) return trades.job;
+  db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key IN (?, ?)").run(KEY.clerkIndex(new Date().getUTCFullYear()), KEY.posCongress);
+  void congressTrades(db);
+  return trades.job || congressTrades(db);
+}
+
 async function buildTrades(db, publish) {
   const tickers = new Set(listTickers(db).map((t) => t.symbol));
   const people = await roster(db).catch(() => ({ items: [] }));

@@ -11,9 +11,10 @@ import { handlers as ask } from "./ask.mjs";
 import { handlers as tasks } from "./tasks.mjs";
 import { handlers as watchlist } from "./watchlist.mjs";
 import { handlers as notify } from "./notify.mjs";
+import { handlers as live } from "./live.mjs";
 
 export { MANIFEST };
 
-export const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest, ...ask, ...tasks, ...watchlist, ...notify };
+export const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest, ...ask, ...tasks, ...watchlist, ...notify, ...live };
 
 export const router = () => createRouter(MANIFEST, handlers);

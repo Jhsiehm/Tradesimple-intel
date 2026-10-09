@@ -80,7 +80,7 @@ export async function contractFeed(db, params) {
   const start = new Date(end.getTime() - days * DAY);
   filters.time_period = [{ start_date: start.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10) }];
   const key = KEY.usaFeed([filters.recipient_search_text, filters.place_of_performance_locations, days, sort]);
-  const hit = readCache(db, key);
+  const hit = params.fresh ? null : readCache(db, key);
   if (hit) return { ...hit, items: keyed(hit.items || []), scope };
   const t0 = Date.now();
   let body;

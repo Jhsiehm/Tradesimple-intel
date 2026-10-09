@@ -8,7 +8,8 @@ import { LDA_DOWN_MS, ldaDownLabel } from "../../lobby.mjs";
 
 const PAGE_TIMEOUT = 30000;
 
-export async function lobbyingFor(db, ticker, years = 5) {
+/** `currentTtlMs` shortens how long this year's pages are reused (default 12 h), for the live watchlist poller. */
+export async function lobbyingFor(db, ticker, years = 5, { currentTtlMs = 0 } = {}) {
   const apiKey = process.env.LDA_API_KEY || "";
   if (!apiKey) return { ok: false, missing: "LDA_API_KEY", filings: [] };
   const now = new Date().getUTCFullYear();
@@ -16,7 +17,7 @@ export async function lobbyingFor(db, ticker, years = 5) {
   const gaps = [];
   let asOf = "";
   const asks = (ticker.ldaClients || []).flatMap((client) => Array.from({ length: years }, (_, i) => ({ client, year: now - i })));
-  const answers = await Promise.all(asks.map(({ client, year }) => ldaClientYear(db, client, year)));
+  const answers = await Promise.all(asks.map(({ client, year }) => ldaClientYear(db, client, year, year === now ? currentTtlMs : 0)));
   answers.forEach((res, i) => {
     const { client, year } = asks[i];
     if (res.down) gaps.push({ client, year, stale: Boolean(res.rows), down: res.down });
@@ -52,11 +53,13 @@ function withLag(row) {
  * `{ rows, storedAt }` for one client-year, or `{ rows: stale | null, down }` when LDA.gov failed within LDA_DOWN_MS.
  * `storedAt` is when the rows were fetched (ISO).
  */
-async function ldaClientYear(db, client, year) {
+async function ldaClientYear(db, client, year, ttlOverride = 0) {
   const key = KEY.ldaYear(client, year);
   const now = new Date().getUTCFullYear();
+  const prior = ttlOverride ? readStale(db, key) : null;
+  if (prior && Date.now() - prior.storedAt > ttlOverride) db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key = ?").run(key);
   const { value, staleAt, down } = await throughCache(db, key, {
-    ttlMs: year < now - 1 ? 30 * DAY : 12 * HOUR,
+    ttlMs: ttlOverride || (year < now - 1 ? 30 * DAY : 12 * HOUR),
     downMs: LDA_DOWN_MS,
     timeoutMs: PAGE_TIMEOUT,
     load: () => fetchClientYear(client, year)

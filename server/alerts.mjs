@@ -4,6 +4,7 @@ import { alertSeverity } from "../shared/intel.mjs";
 import { ageAlert } from "../shared/tradeAge.mjs";
 import { RESEARCH_SOURCE, researchAlerts } from "./domain/tasks/alerts.mjs";
 import { watchAlerts } from "./domain/watchlist/index.mjs";
+import { LIVE_SOURCE, liveAlerts, mergeLive } from "./domain/live/alerts.mjs";
 
 /** STOCK Act: periodic transaction reports are due within 45 days of the trade (30 from notice, 45 hard cap). */
 export const LATE_DAYS = 45;
@@ -158,7 +159,8 @@ export async function alertsFor(db, params) {
   const items = buildAlerts({ trades: trades.items || [], insiders: insiders.items || [], lobbying: lobbying.items || [], symbols, members, since, allLate });
   const research = researchAlerts(db, since);
   const watched = watchAlerts(db, symbols, since);
-  const base = [...research, ...capAlerts(items, 200)];
+  const live = mergeLive([...research, ...capAlerts(items, 200)], liveAlerts(db, symbols, since));
+  const base = [...live.rows, ...live.extra];
   const ids = new Set(base.map((a) => a.id));
   const extra = watched.rows.filter((a) => !ids.has(a.id) && (ids.add(a.id), true));
   return {
@@ -167,6 +169,7 @@ export async function alertsFor(db, params) {
     items: [...base, ...extra.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 200)].map((a) => ageAlert(a)),
     sources: [
       ...(research.length ? [RESEARCH_SOURCE] : []),
+      ...(live.extra.length || live.rows.some((a) => a.live) ? [LIVE_SOURCE] : []),
       ...(symbols.length ? [{ label: "Watchlist filings", source: "SEC EDGAR 8-K · 13D/13G · 13F · USAspending", asOf: watched.asOf || undefined, latency: "From each watched ticker's last activity pass (refreshed every 15 min). 8-K due 4 business days after the event, 13D 5, 13G and 13F up to 45 days after quarter end; contract actions carry their action date (DoD posts ~90 days late)." }] : []),
       { label: "Congress trades", source: trades.source || "House Clerk PTRs · Senate eFD", asOf: trades.asOf, latency: "Filed up to 45 days after the trade; alert date is the filed date." },
       { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade. One row per filing; 10b5-1 planned sales are ROUTINE." },

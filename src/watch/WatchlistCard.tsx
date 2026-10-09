@@ -5,6 +5,7 @@ import { api, when } from "../lib/api";
 import { signed } from "../lib/format";
 import { addWatchSymbol, moveWatchSymbol, removeWatchSymbol, useWatch } from "../lib/useWatch";
 import { Icon, IconLabel } from "../ui/icons/Icon";
+import { LiveFresh, LiveStatus } from "../live/LiveStatus";
 import { ActivityFeed } from "./ActivityFeed";
 import { useWatchSummary, type WatchRow } from "./useWatchActivity";
 import "./watch.css";
@@ -68,6 +69,7 @@ function Badges({ row }: { row: WatchRow }) {
   const keys = WATCH_SOURCES.map((s) => s.key).filter((k) => b[k]?.count);
   return (
     <span className="watch-badges">
+      <LiveFresh symbol={row.symbol} />
       {keys.map((k) => (
         <span key={k} className={`watch-badge src-${k}`} title={`${LABEL[k]}: ${b[k]!.count} made public in the window · newest ${when(b[k]!.newest)}`}>
           {SHORT[k]} <b>{b[k]!.count}</b> <small>{b[k]!.age}</small>
@@ -96,6 +98,7 @@ export function WatchlistCard({ onFollow }: { onFollow: (action: string) => void
       <h3>
         Watchlist
         <small>{watch.symbols.length} ticker{watch.symbols.length === 1 ? "" : "s"} · activity made public in the last {days} days · prices delayed (Yahoo){res?.asOf ? ` · fetched ${when(res.asOf)}` : ""}</small>
+        <LiveStatus />
         <span className="scope inline" role="group" aria-label="Badge window">
           {BADGE_DAYS.map((d) => <button key={d} className={d === days ? "on" : ""} onClick={() => setDays(d)}>{d}d</button>)}
         </span>
