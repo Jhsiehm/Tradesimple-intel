@@ -101,7 +101,10 @@ const SPEC_SCHEMA = obj({
       to: str("Last public date, YYYY-MM-DD"),
       minAmount: { type: "number", description: "Minimum disclosed range floor in dollars" },
       nearHearingDays: { type: "number", description: "Keep only trades within N days of a hearing of the member's committee" },
-      contractAgency: str("Awarding agency for source=contracts")
+      contractAgency: str("Awarding agency for source=contracts"),
+      contractLagDays: { type: "number", description: "source=contracts: days from award to public date; 0 = agency default (DoD 90, civilian 7)" },
+      include10b51: { type: "boolean", description: "source=form4: include 10b5-1 plan trades (excluded by default)" },
+      excludeMembers: { type: "array", items: { type: "string" }, description: "Names or bioguides to leave out" }
     }
   },
   rules: {
@@ -117,10 +120,25 @@ const SPEC_SCHEMA = obj({
       stopLossPct: { type: "number" },
       takeProfitPct: { type: "number" },
       slippageBps: { type: "number" },
-      costBps: { type: "number" }
+      costBps: { type: "number" },
+      openTrades: { type: "string", enum: ["exclude", "mark"], description: "exclude (default) drops positions that have not reached their exit; mark values them at the last close. Use mark for recent windows." }
     }
   }
 }, ["source"]);
+
+/** Two backtests at a time in this process; the rest wait their turn instead of failing. */
+let btRunning = 0;
+const btQueue = [];
+async function btSlot(fn) {
+  if (btRunning >= 2) await new Promise((r) => btQueue.push(r));
+  btRunning += 1;
+  try { return await fn(); } finally {
+    btRunning -= 1;
+    btQueue.shift()?.();
+  }
+}
+
+const endpoint = str("Node id such as member:P000197, ticker:NVDA, or committee:HSAS");
 
 const plain = (name, description, id, label) => tool(name, description, obj({}), (db, _a, call) => call(db, id), label);
 
@@ -194,21 +212,54 @@ export const TOOLS = [
     late: a.late === "all" ? "all" : ""
   })), "Alerts"),
   tool("intel_scope", "Joins for one member or one ticker over the scrubber window: trades, contracts, PAC arcs.", obj({ member: str("Bioguide"), symbol: str("Ticker") }), (db, a, call) => call(db, "intel.scope", {}, qs({ member: bioguideOf(a.member), symbol: symbolOf(a.symbol) })), "Scope"),
-  tool("run_backtest", "Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. Takes 5 to 40 seconds the first time.", obj({ spec: SPEC_SCHEMA }, ["spec"]), async (db, a, call) => {
+  tool("run_backtest", "Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. One source per call; call it once per source for several. Takes 5 to 40 seconds the first time.", obj({ spec: SPEC_SCHEMA }, ["spec"]), async (db, a, call) => {
     if (!a.spec || typeof a.spec !== "object") return bad("spec is required");
-    const out = await call(db, "backtest", {}, qs({ spec: JSON.stringify(a.spec) }));
+    const out = await btSlot(() => call(db, "backtest", {}, qs({ spec: JSON.stringify(a.spec) })));
     return summarizeBacktest(out);
-  }, "Backtest")
+  }, "Backtest"),
+  tool("propose_theory", "Propose a link between two things as the user's own theory. Writes nothing: the user sees it and may accept it into their map. Not a filing and not evidence.", obj({
+    a: endpoint,
+    b: endpoint,
+    aLabel: str("Label for a, such as Nancy Pelosi"),
+    bLabel: str("Label for b, such as NVDA"),
+    label: str("Short name of the theory"),
+    note: str("Why the user might think so, citing refs"),
+    confidence: { type: "string", enum: ["low", "medium", "high"] }
+  }, ["a", "b", "label"]), (_db, a) => {
+    const node = (id, label) => {
+      const s = String(id || "").trim().slice(0, 160);
+      return /^[a-z]+:[A-Za-z0-9.\-_]+$/.test(s) ? { id: s, type: s.split(":")[0], label: String(label || s).slice(0, 120) } : null;
+    };
+    const ea = node(a.a, a.aLabel);
+    const eb = node(a.b, a.bLabel);
+    if (!ea || !eb || ea.id === eb.id) return bad("a and b must be two different node ids such as member:P000197 and ticker:NVDA");
+    return {
+      ok: true,
+      source: "Your proposal (not a filing)",
+      asOf: "",
+      latency: "Nothing is written until you press Accept.",
+      theory: { a: ea, b: eb, label: String(a.label || "").slice(0, 80), note: String(a.note || "").slice(0, 280), confidence: ["low", "medium", "high"].includes(a.confidence) ? a.confidence : "medium" }
+    };
+  }, "Theory")
 ];
 
 export const toolDefs = () => TOOLS.map(({ name, description, parameters }) => ({ name, description, parameters }));
 
-/** Run one tool. Never throws: a failure is a result with `ok: false` so the model can say what went wrong. */
-export async function runTool(db, name, args, call = callRoute) {
+/**
+ * Run one tool. Never throws: a failure is a result with `ok: false` so the model can say what went wrong.
+ * `onRoute(path)` hears each in-process route the tool calls, for the live step timeline.
+ */
+export async function runTool(db, name, args, call = callRoute, onRoute = null) {
   const found = TOOLS.find((t) => t.name === name);
   if (!found) return { ok: false, error: `No such tool ${name}.` };
+  const traced = onRoute
+    ? (d, id, params = {}, query = "") => {
+        try { onRoute(`GET ${fillRoute(id, params, query)}`); } catch { /* a listener never breaks a tool */ }
+        return call(d, id, params, query);
+      }
+    : call;
   try {
-    return (await found.run(db, args && typeof args === "object" ? args : {}, call)) ?? { ok: false, error: "Empty tool result." };
+    return (await found.run(db, args && typeof args === "object" ? args : {}, traced)) ?? { ok: false, error: "Empty tool result." };
   } catch (err) {
     return { ok: false, error: err?.message || "Tool failed." };
   }

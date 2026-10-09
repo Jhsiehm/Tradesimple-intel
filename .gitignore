@@ -11,3 +11,4 @@ demo/snapshot
 demo/snapshot.partial
 dist-demo
 data/bot-state.json
+.cursor/coordination

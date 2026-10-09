@@ -2,17 +2,19 @@
  * Ask, pure. Limits, the grounding prompt, how a tool result becomes evidence, the numeric grounding check, the
  * per-IP limiter, and the follow action each citation chip opens. Nothing here reads the network, the clock, or env.
  */
-import { encodeSpec } from "./backtestSpec.mjs";
+import { cleanSpec, encodeSpec } from "./backtestSpec.mjs";
+import { PREF_FIELDS, cleanPrefs } from "./backtestAsk.mjs";
+import { cleanAttached, cleanContext, rowCount } from "./agent.mjs";
 
 export const ASK_LIMITS = {
   question: 800,
   history: 6,
   toolCalls: 8,
   rounds: 6,
-  totalMs: 90_000,
-  roundMs: 45_000,
-  tokenBudget: 60_000,
-  maxOutputTokens: 1_400,
+  totalMs: 150_000,
+  roundMs: 60_000,
+  tokenBudget: 80_000,
+  maxOutputTokens: 1_800,
   resultChars: 9_000,
   resultItems: 10,
   perIp: 12,
@@ -24,7 +26,7 @@ export const NOT_CONFIGURED = "Ask is not configured — add a key to .env.local
 
 const text = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
-/** The question and up to six earlier turns of this chat. */
+/** The question, up to six earlier turns of this chat, the model asked for, and what the user attached. */
 export function cleanAsk(raw, limits = ASK_LIMITS) {
   if (!raw || typeof raw !== "object") return { ok: false, error: "JSON body required." };
   const question = text(raw.question, limits.question);
@@ -35,22 +37,55 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     const content = text(turn.content, 1500);
     if (content) history.push({ role: turn.role, content });
   }
-  return { ok: true, question, history: history.slice(-limits.history) };
+  return {
+    ok: true,
+    question,
+    history: history.slice(-limits.history),
+    model: text(raw.model, 120),
+    context: cleanContext(raw.context),
+    attached: cleanAttached(raw.attached),
+    prefs: raw.prefs ? cleanPrefs(raw.prefs) : null,
+    prior: cleanPrior(raw.prior),
+    answers: cleanAnswers(raw.answers),
+    acceptDefaults: raw.acceptDefaults === true
+  };
 }
+
+function cleanPrior(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const out = cleanSpec(raw);
+  return out.ok ? out.spec : null;
+}
+
+/** Chip picks: known preference paths with a scalar value only. */
+function cleanAnswers(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [path, v] of Object.entries(raw)) {
+    if (path in PREF_FIELDS && ["string", "number", "boolean"].includes(typeof v)) out[path] = typeof v === "string" ? v.slice(0, 20) : v;
+  }
+  return out;
+}
+
+const daysBefore = (today, n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
 
 export function systemPrompt(today) {
   return [
     `You are the research assistant inside TradeSimple Intel, a read-only research terminal. Today is ${today}.`,
-    "Answer only from tool results. Call tools to look things up; you have no other knowledge of this data.",
-    "Every tool result carries a ref such as t3. Put that ref in square brackets, [t3], right after each sentence or number that comes from it. A number or fact without a ref from a result you called is not allowed.",
-    "Quote numbers as the tool returned them. Do not do arithmetic that no tool did; if a difference or ratio matters, say the two figures with their refs instead of computing a third.",
+    "Answer only from tool results. Call tools to look things up; you have no other knowledge of this data. Nothing on the user's screen is known to you unless the user attached it.",
+    "Every tool result carries a ref such as t3. Put that ref in square brackets, [t3], right after each sentence, table row, or number that comes from it. A number or fact without a ref from a result you called is not allowed.",
+    "When a tool returns rows, the answer must show the actual numbers: a compact markdown table (at most 8 rows, the key columns only, a ref in the last column) followed by one or two sentences. Never answer 'here are the results' without the figures.",
+    "Quote numbers as the tool returned them (a fraction such as 0.0834 may be written 8.34%). Do not do arithmetic that no tool did; if a difference matters, give the two figures with their refs.",
+    `Backtests: call run_backtest. For "the last N days", set filters.from to N days before today (30 days → ${daysBefore(today, 30)}), filters.to to ${today}, rules.openTrades to "mark" and rules.holdDays to N, because most of those positions have not reached a normal 90-day exit. "All data sources" means one run_backtest call per source in the same turn: congress, form4, and contracts (lobbying needs tickers; say so). State the spec you used in one line.`,
+    "Use congress_leaders for disclosed buys ranked against SPY.",
     "If the tools cannot answer, say so plainly and say what is missing. Do not guess, do not fill gaps from memory.",
     "Never guess a ticker join. A symbol that the ticker tool says is not joined is not joined; say that and stop.",
     "Congress trades are known by their filing date, not their trade date, and amounts are ranges. Say so when you use them. Committee seats are the current roster, applied to past trades.",
     "A backtest is a replay of past public records with the caveats the tool returned. Report the benchmark and the excess return next to any return, name the largest caveat, and do not call a result proof of anything.",
     "Closeness in time between a trade and a hearing does not show what the hearing discussed or that anyone acted on it.",
+    "If the user wants to save a link between two things as their own theory, call propose_theory; it writes nothing until the user accepts it.",
     "This is research, not advice. Do not recommend buying or selling anything, do not suggest an order, and do not predict prices.",
-    "Be short: a few plain sentences or a short list. Use at most six tool calls. No tables, no headings."
+    "Be short. No headings. Use at most six tool calls."
   ].join("\n");
 }
 
@@ -85,8 +120,11 @@ export function trimForModel(value, limits = ASK_LIMITS) {
   return { ...slim, note: "Trimmed to fit the model context; ask a narrower question for more." };
 }
 
-/** One tool result as the evidence the answer may cite. `body` is what the model saw. */
-export function evidenceOf(id, tool, args, body, { ms = 0, label = "" } = {}) {
+/**
+ * One tool result as the evidence the answer may cite. `body` is what the model saw; `raw` (optional) is the untrimmed
+ * result, used only to count rows. `requests` are the in-process routes the tool called.
+ */
+export function evidenceOf(id, tool, args, body, { ms = 0, label = "", raw = body, requests = [] } = {}) {
   const src = body && typeof body === "object" ? body : {};
   const failed = src.ok === false || Boolean(src.error);
   let json = "";
@@ -101,9 +139,12 @@ export function evidenceOf(id, tool, args, body, { ms = 0, label = "" } = {}) {
     asOf: text(src.asOf, 40),
     latency: text(src.latency, 420),
     ms,
+    rows: failed ? 0 : rowCount(raw),
     note: failed ? text(src.error || "Tool returned no data.", 200) : "",
     caveats: Array.isArray(src.caveatTexts) ? src.caveatTexts.slice(0, 6).map((c) => text(c, 320)) : [],
     open: openAction(tool, args, body),
+    requests: requests.slice(0, 6).map((r) => text(r, 300)),
+    preview: json.length > 1600 ? `${json.slice(0, 1600)}…` : json,
     json
   };
 }
@@ -138,6 +179,8 @@ export function openAction(tool, args = {}, body = {}) {
       return a.id ? `bill:${a.id}` : "";
     case "contracts":
       return sym ? `contracts:symbol:${sym}` : a.place ? `contracts:place:${String(a.place).toUpperCase()}` : /^[A-Za-z]\d{6}$/.test(String(a.member || "")) ? `contracts:member:${String(a.member).toUpperCase()}` : "";
+    case "congress_leaders":
+      return "today:leaders";
     case "intel_scope":
       return a.member ? `scope:member:${String(a.member).toUpperCase()}` : sym ? `scope:symbol:${sym}` : "";
     case "run_backtest": {

@@ -325,6 +325,8 @@ test("cleanAsk needs a question, trims it, and keeps six clean turns", () => {
 
 /* ---------- the loop ---------- */
 
+const kinds = (events) => events.filter((e) => e.type !== "step_progress").map((e) => e.type);
+
 function scripted(...rounds) {
   const seen = [];
   return {
@@ -359,8 +361,8 @@ async function ask(provider, { execute, limits, question = "q" } = {}) {
 test("a question that needs a tool: stream, call, evidence, final answer with its citations", async () => {
   const p = scripted(TOOL_ROUND("ticker_dossier", { symbol: "NVDA" }), TEXT_ROUND("It ran 520 trades for +29.7% [t1]."));
   const events = await ask(p);
-  assert.deepEqual(events.map((e) => e.type), ["status", "tool", "evidence", "status", "text", "done"]);
-  const ev = events.find((e) => e.type === "evidence");
+  assert.deepEqual(kinds(events), ["step_start", "step_end", "token", "citation", "done"]);
+  const ev = events.find((e) => e.type === "step_end");
   assert.deepEqual([ev.id, ev.tool, ev.ok, ev.source, ev.open], ["t1", "ticker_dossier", true, "src ticker_dossier", "ticker:NVDA"]);
   assert.equal(ev.json, undefined);
   const done = events.at(-1);
@@ -383,7 +385,7 @@ test("an answer with an invented number is delivered with the number flagged", a
 
 test("an answer from no tool at all says so, and a made-up ref is reported", async () => {
   const none = (await ask(scripted(TEXT_ROUND("Probably higher."))))[0];
-  assert.equal(none.type, "status");
+  assert.equal(none.type, "step_progress");
   const done = (await ask(scripted(TEXT_ROUND("Probably higher."))))
     .at(-1);
   assert.equal(done.noTools, true);
@@ -397,7 +399,7 @@ test("the tool-call cap refuses extra calls, then forces a last answer round wit
   const many = [{ type: "tool_call", id: "a", name: "alerts", args: {} }, { type: "tool_call", id: "b", name: "alerts", args: {} }, { type: "tool_call", id: "c", name: "alerts", args: {} }, { type: "end", reason: "tool_calls" }];
   const p = scripted(many, TEXT_ROUND("Partial answer [t1]."));
   const events = await ask(p, { limits });
-  assert.equal(events.filter((e) => e.type === "evidence").length, 2);
+  assert.equal(events.filter((e) => e.type === "step_end").length, 2);
   const done = events.at(-1);
   assert.equal(done.stopped, "tool-call limit");
   const toolMsgs = p.seen[1].messages.filter((m) => m.role === "tool");
@@ -417,7 +419,7 @@ test("the token budget stops the loop the same way", async () => {
 test("an unknown tool or arguments that are not JSON come back to the model as errors, not crashes", async () => {
   const p = scripted([{ type: "tool_call", id: "a", name: "place_order", args: {} }, { type: "tool_call", id: "b", name: "alerts", args: null }, { type: "end", reason: "tool_calls" }], TEXT_ROUND("I could not."));
   const events = await ask(p);
-  assert.equal(events.filter((e) => e.type === "evidence").length, 0);
+  assert.equal(events.filter((e) => e.type === "step_end").length, 0);
   const results = p.seen[1].messages.filter((m) => m.role === "tool").map((m) => JSON.parse(m.content));
   assert.match(results[0].error, /No such tool/);
   assert.match(results[1].error, /not valid JSON/);
@@ -426,7 +428,7 @@ test("an unknown tool or arguments that are not JSON come back to the model as e
 test("a provider failure becomes an error event, with no done", async () => {
   const boom = { name: "x", model: "x", async *chat() { throw new ProviderError("Anthropic returned 529: overloaded.", 529); } };
   const events = await ask(boom);
-  assert.deepEqual(events.map((e) => e.type), ["status", "error"]);
+  assert.deepEqual(kinds(events), ["error"]);
   assert.equal(events[1].code, "provider");
   assert.match(events[1].error, /529/);
 });
@@ -484,7 +486,7 @@ test("POST streams SSE events from the loop, through the real tool list with an 
   assert.equal(res.head.status, 200);
   assert.match(res.head.headers["Content-Type"], /text\/event-stream/);
   assert.equal(res.ended, true);
-  assert.deepEqual(res.events().map((e) => e.type), ["status", "tool", "evidence", "status", "text", "done"]);
+  assert.deepEqual(kinds(res.events()), ["step_start", "step_end", "token", "citation", "done"]);
 });
 
 test("POST validates the body, and rate-limits per client", async () => {
@@ -504,7 +506,7 @@ test("the route never puts the key in a log line or an event", async () => {
   const provider = { name: "x", model: "x", async *chat() { throw new ProviderError("The model endpoint returned 401: nope.", 401); } };
   const handler = makeAskHandler({ env: CONFIGURED, makeProvider: () => provider, log: (e) => lines.push(JSON.stringify(e)) });
   const res = fakeRes();
-  await handler({ req: fakeReq({ question: "hi" }), res, db: {} });
+  await handler({ req: fakeReq({ question: "What changed this week?" }), res, db: {} });
   assert.ok(![...lines, ...res.chunks].join("").includes("sk-route"));
   assert.equal(res.events().at(-1).type, "error");
 });
