@@ -4,14 +4,14 @@ const CODE_ICON: Record<string, IconName> = {
   WEEK: "today", LEAD: "leaders", CONG: "congress", VOTE: "votes", BILL: "bills", MEMB: "members", CMTE: "committees",
   MKTS: "markets", WEI: "globe", FXIP: "fx", CRYP: "crypto", POSN: "positions", PTRS: "trade", FRM4: "form4",
   NEWS: "news", DIST: "districts", STRT: "strait", MAP: "map", CITY: "city", CAL: "calendar", ALRT: "bell",
-  BACK: "back", RCNT: "recent",
+  BACK: "back", RCNT: "recent", BT: "backtest", ASK: "ask",
   DES: "dossier", GP: "chart", POS: "positions", CTR: "contracts", SPLC: "supply", HQ: "hq", TL: "timeline", REP: "members"
 };
 
 const ACTION_ICON: Record<string, IconName> = {
   member: "members", timeline: "timeline", pos: "positions", chart: "chart", ticker: "dossier", hq: "hq", contracts: "contracts",
   supply: "supply", scope: "arc", vote: "votes", bill: "bills", committee: "committees", district: "districts", inst: "chart",
-  section: "chevron-right", today: "today", calendar: "calendar", alerts: "bell"
+  section: "chevron-right", today: "today", calendar: "calendar", alerts: "bell", bt: "backtest", ask: "ask"
 };
 
 /** Dossier drill-link icon from its `go()` action (`pos:LMT` → positions); outside links open a source. */

@@ -283,6 +283,7 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
           {member.stateRank || member.senateClass ? <p>{member.stateRank ? `${member.stateRank[0].toUpperCase()}${member.stateRank.slice(1)} senator` : ""}{member.senateClass ? ` · class ${member.senateClass}` : ""}</p> : null}
           <p className="member-links">
             <button className="member-timeline" onClick={() => onFollow(`timeline:${bioguide}`)}><IconLabel icon="timeline">Timeline</IconLabel></button>
+            <button className="member-timeline" onClick={() => onFollow(`bt:member:${bioguide}`)} title="Replay their disclosed buys: entry the day after each filing, against the S&P 500"><IconLabel icon="backtest">Backtest</IconLabel></button>
             <button className="member-timeline" onClick={() => onFollow(`scope:member:${bioguide}`)} title="Scope the map's time scrubber and arcs to this member"><IconLabel icon="arc">Map</IconLabel></button>
             <button className="member-timeline" onClick={() => onFollow(`contracts:member:${bioguide}`)} title="Federal contract actions performed in this member's district (state for senators)"><IconLabel icon="contracts">Contracts</IconLabel></button>
             <a href={member.url} target="_blank" rel="noreferrer">Official site</a>

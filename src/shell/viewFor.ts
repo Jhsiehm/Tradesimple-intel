@@ -179,7 +179,8 @@ export function trailLabel(action: string, who: (bioguide: string) => string): s
     layer: `Markets · ${v}`,
     calendar: "Calendar",
     alerts: "Alerts",
-    today: v === "leaders" ? "Leaderboards" : "This week in Congress trading"
+    today: v === "bt" ? "Backtest" : v === "leaders" ? "Leaderboards" : "This week in Congress trading",
+    bt: "Backtest"
   };
   return label[kind] || action;
 }

@@ -78,10 +78,12 @@ test("every wired icon uses a valid name", () => {
 });
 
 test("command bar codes map to icons", () => {
-  for (const code of ["WEEK", "LEAD", "CTR", "LMT DES", "LMT GP", "TX-12 REP", "P000197 TL", "ALRT", "HQ", "NVDA HQ", "CAL", "BACK", "RCNT", "ZZZZ"]) {
+  for (const code of ["WEEK", "LEAD", "CTR", "LMT DES", "LMT GP", "TX-12 REP", "P000197 TL", "ALRT", "HQ", "NVDA HQ", "CAL", "BACK", "RCNT", "BT", "ASK", "ZZZZ"]) {
     assert.ok(names.has(commandIcon(code)), `${code} → ${commandIcon(code)}`);
   }
   assert.equal(commandIcon("LMT CTR"), "contracts");
   assert.equal(commandIcon("TX-12 REP"), "members");
   assert.equal(commandIcon("ALRT"), "bell");
+  assert.equal(commandIcon("BT"), "backtest");
+  assert.equal(commandIcon("ASK"), "ask");
 });

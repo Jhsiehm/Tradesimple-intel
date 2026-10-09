@@ -44,8 +44,8 @@ export function listItems(graph: Graph): RelItem[] {
 function opens(node: RelNode): DrawerLink[] {
   const p = parseNode(node.id);
   if (!p) return [];
-  if (p.type === "member") return [{ label: "Member", value: "Card, trades, votes", action: `member:${p.key}` }, { label: "Timeline", value: "Trades against hearings", action: `timeline:${p.key}` }];
-  if (p.type === "ticker") return [{ label: "Dossier", value: `${p.key} chart and case file`, action: `ticker:${p.key}` }, { label: "Supply chain", value: "SPLC board", action: `supply:${p.key}` }, { label: "Contracts", value: "USAspending actions", action: `contracts:symbol:${p.key}` }];
+  if (p.type === "member") return [{ label: "Member", value: "Card, trades, votes", action: `member:${p.key}` }, { label: "Timeline", value: "Trades against hearings", action: `timeline:${p.key}` }, { label: "Backtest", value: "Their buys, entered after each filing", action: `bt:member:${p.key}` }];
+  if (p.type === "ticker") return [{ label: "Dossier", value: `${p.key} chart and case file`, action: `ticker:${p.key}` }, { label: "Supply chain", value: "SPLC board", action: `supply:${p.key}` }, { label: "Contracts", value: "USAspending actions", action: `contracts:symbol:${p.key}` }, { label: "Backtest", value: "Congress and insider buys, entered after each filing", action: `bt:ticker:${p.key}` }];
   if (p.type === "district" && p.key.includes("-")) return [{ label: "District", value: `${p.key} dossier`, action: `district:${p.key}` }];
   return [];
 }

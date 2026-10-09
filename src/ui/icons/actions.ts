@@ -2,6 +2,12 @@ import type { Glyph, IconName } from "./names";
 
 /** Generic controls: navigation, card chrome, alert triage. */
 export const ACTIONS = {
+  // Backtest: a history arrow around a rising line.
+  backtest: ["M2.5 8a5.5 5.5 0 1 0 1.6-3.9", "M2.5 2.5v3h3", "M5.75 9.75l1.75-1.75 1.25 1 2-2.5"],
+  // Ask: speech bubble with a question mark.
+  ask: ["M2.5 2.75h11v7.5H8.5L5.5 13.25v-3H2.5z", "M6.4 5.7c0-.8.7-1.35 1.6-1.35s1.6.5 1.6 1.2c0 1-1.6 1-1.6 2", { d: "M7.5 8.6h1v1h-1z", fill: true }],
+  // Run: a solid-edged play triangle.
+  play: ["M4.5 2.75l8 5.25-8 5.25z"],
   search: ["M2.5 7a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0", "M10.25 10.25L14 14"],
   back: ["M13.5 8h-11", "M6.5 4L2.5 8l4 4"],
   close: ["M3.5 3.5l9 9", "M12.5 3.5l-9 9"],

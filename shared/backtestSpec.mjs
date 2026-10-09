@@ -168,9 +168,15 @@ function fromB64url(s) {
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
-/** URL token for `#bt=…`. */
+const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const nonDefault = (obj, base) => Object.fromEntries(Object.entries(obj).filter(([k, v]) => !sameValue(v, base[k])));
+
+/** URL token for `#bt=…`: only what differs from the defaults, so links stay short. */
 export function encodeSpec(spec) {
-  return toB64url(specKey(spec));
+  const c = cleanSpec(spec);
+  if (!c.ok) return "";
+  const { source, filters, rules } = c.spec;
+  return toB64url(specKey({ source, filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
 }
 
 export function decodeSpec(token) {

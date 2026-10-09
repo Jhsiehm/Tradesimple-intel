@@ -32,7 +32,8 @@ const STATIC: Command[] = [
   { code: "STRT", label: "Strait", hint: "Ships, aircraft, imagery", action: "section:strait" },
   { code: "MAP", label: "Map", hint: "Records in a window, lines you draw", action: "section:map" },
   { code: "CAL", label: "Calendar", hint: "Earnings, macro, lobbying, PAC", action: "calendar:" },
-  { code: "ALRT", label: "Alerts", hint: "Watched members and tickers", action: "alerts:" }
+  { code: "ALRT", label: "Alerts", hint: "Watched members and tickers", action: "alerts:" },
+  { code: "BT", label: "Backtest", hint: "Replay filings, insider trades, contracts, or lobbying against a benchmark", action: "today:bt" }
 ];
 
 const TICKER_FN: { code: string; label: string; action: (s: string) => string }[] = [
@@ -41,12 +42,14 @@ const TICKER_FN: { code: string; label: string; action: (s: string) => string }[
   { code: "POS", label: "positions · every filer", action: (s) => `pos:${s}` },
   { code: "CTR", label: "federal contract actions", action: (s) => `contracts:symbol:${s}` },
   { code: "SPLC", label: "supply chain", action: (s) => `supply:${s}` },
-  { code: "HQ", label: "headquarters district on the map", action: (s) => `hq:${s}` }
+  { code: "HQ", label: "headquarters district on the map", action: (s) => `hq:${s}` },
+  { code: "BT", label: "backtest · Congress and insider buys, entered after filing", action: (s) => `bt:ticker:${s}` }
 ];
 const MEMBER_FN: { code: string; label: string; action: (id: string) => string }[] = [
   { code: "DES", label: "member card", action: (id) => `member:${id}` },
   { code: "TL", label: "timeline · trades vs hearings and votes", action: (id) => `timeline:${id}` },
-  { code: "CTR", label: "contracts in their district", action: (id) => `contracts:member:${id}` }
+  { code: "CTR", label: "contracts in their district", action: (id) => `contracts:member:${id}` },
+  { code: "BT", label: "backtest · their buys, entered after each filing", action: (id) => `bt:member:${id}` }
 ];
 
 let tickerCache: Ticker[] | null = null;
@@ -70,8 +73,8 @@ export function commandsFor(text: string, tickers: Ticker[], roster: Seat[]): Co
     for (const f of TICKER_FN) if (!fn || f.code.startsWith(fn)) out.push({ code: `${t.symbol} ${f.code}`, label: `${t.name} · ${f.label}`, hint: t.core === false ? "quotes-only join" : "", action: f.action(t.symbol) });
   }
   if (raw.length >= 3) {
-    const words = raw.replace(/\s+(DES|TL|CTR)$/, "");
-    const mfn = /\s(DES|TL|CTR)$/.exec(raw)?.[1] || "";
+    const words = raw.replace(/\s+(DES|TL|CTR|BT)$/, "");
+    const mfn = /\s(DES|TL|CTR|BT)$/.exec(raw)?.[1] || "";
     const hits = district ? [] : matchMembers(roster, words, 4);
     for (const m of hits) {
       for (const f of MEMBER_FN) {

@@ -425,7 +425,8 @@ export function tickerShell(symbol: string, name = ""): DrawerModel {
       { label: "Positions", value: `${symbol} · every filer`, action: `pos:${symbol}` },
       { label: "Supply chain", value: `${symbol} · suppliers, customers, co-movement`, action: `supply:${symbol}` },
       { label: "Contracts", value: `${symbol} · federal contract actions`, action: `contracts:symbol:${symbol}` },
-      { label: "Map", value: `${symbol} · trades, contracts, PAC arcs on the Congress map`, action: `scope:symbol:${symbol}` }
+      { label: "Map", value: `${symbol} · trades, contracts, PAC arcs on the Congress map`, action: `scope:symbol:${symbol}` },
+      { label: "Backtest", value: `${symbol} · replay Congress and insider buys, entered after each filing`, action: `bt:ticker:${symbol}` }
     ],
     blocks: [LOBBY_TITLE, "PAC receipts (FEC)", "Federal contracts, last 180 days (USAspending)"].map((title) => ({ title, lines: loading }))
   };
@@ -492,6 +493,7 @@ export async function loadDossier(symbol: string): Promise<(DrawerModel & { lobb
       { label: "Supply chain", value: `${res.ticker.symbol} · suppliers, customers, co-movement`, action: `supply:${res.ticker.symbol}` },
       { label: "Contracts", value: `${res.ticker.symbol} · federal contract actions`, action: `contracts:symbol:${res.ticker.symbol}` },
       { label: "Map", value: `${res.ticker.symbol} · trades, contracts, PAC arcs on the Congress map`, action: `scope:symbol:${res.ticker.symbol}` },
+      { label: "Backtest", value: `${res.ticker.symbol} · replay Congress and insider buys, entered after each filing`, action: `bt:ticker:${res.ticker.symbol}` },
       ...seats.flatMap((seat) => seat.members.length
         ? seat.members.map((member) => ({
             label: seat.code,

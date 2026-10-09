@@ -17,4 +17,23 @@ export async function api<T>(path: string): Promise<T> {
   return body as T;
 }
 
+/** POST JSON. A `{ ok: false }` body is returned as-is so the caller can read `missing`. */
+export async function post<T>(path: string, body: unknown): Promise<T> {
+  if (DEMO) return { ok: false, error: "This needs the local server." } as T;
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let data: unknown = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (data && typeof data === "object") return data as T;
+  if (res.ok) throw new Error("Empty response.");
+  const hint = text.replace(/\s+/g, " ").trim().slice(0, 180);
+  if (hint) throw new Error(hint);
+  if (res.status === 502) throw new Error("The API proxy returned an empty 502 before the server answered.");
+  throw new Error(`HTTP ${res.status}`);
+}
+
 export { money, recent, when } from "./format";

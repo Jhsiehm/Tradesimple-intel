@@ -263,6 +263,7 @@ test("spec cleaning clamps, drops unknowns, and round-trips through the share to
   assert.equal(spec.rules.entry, "nextOpen");
   assert.equal(spec.rules.costBps, 300);
   assert.deepEqual(decodeSpec(encodeSpec(spec)), spec);
+  assert.ok(encodeSpec(spec).length < 200, "links carry only what differs from the defaults");
   assert.equal(decodeSpec("not a token"), null);
   assert.equal(specHash(spec), specHash(JSON.parse(JSON.stringify(spec))));
   assert.notEqual(specHash(spec), specHash({ ...spec, rules: { ...spec.rules, holdDays: 30 } }));
