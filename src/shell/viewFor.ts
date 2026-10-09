@@ -1,5 +1,5 @@
 import { districtGeoid, parseDistrict } from "../../shared/districts.mjs";
-import type { Chamber, CongressMode, MarketLayer, Section } from "../types";
+import type { Chamber, CongressMode, EarthSettings, MarketLayer, Section } from "../types";
 import type { MarketView } from "./sections";
 import type { DistrictLayer } from "../districts/useDistricts";
 import type { ContractScope } from "../contracts/useContracts";
@@ -16,6 +16,10 @@ export type View = {
   layer: MarketLayer;
   newsView: "board" | "globe";
   selectedId: string | null;
+  /** Satellite imagery under a data map. Off by default; imagery-first maps ignore it. */
+  imagery: boolean;
+  /** Intel arcs on a data map without a member or ticker scope. */
+  arcs: boolean;
 };
 
 export const START_VIEW: View = {
@@ -28,7 +32,9 @@ export const START_VIEW: View = {
   marketView: "board",
   layer: "politicians",
   newsView: "board",
-  selectedId: null
+  selectedId: null,
+  imagery: false,
+  arcs: false
 };
 
 export type ViewPatch = Partial<View> & {
@@ -87,7 +93,7 @@ export function viewFor(action: string, at: { intelOn: boolean }): ViewPatch | n
       return { ...leave("contracts"), selectedId: null, contracts: scoped ? { kind: k as ContractScope["kind"], value: val.join(":").toUpperCase() } : { kind: "all", value: "" } };
     }
     case "scope":
-      return at.intelOn ? { scope: v } : { ...leave("congress"), voteView: "map", selectedId: null, scope: v };
+      return at.intelOn ? { scope: v } : { ...leave("congress"), voteView: "map", mapLayer: "votes", selectedId: null, scope: v };
     default:
       return null;
   }
@@ -103,6 +109,40 @@ export function applyView(view: View, patch: ViewPatch): View {
 /** Only the view fields, for storing on a trail entry. */
 export function viewOnly(view: View): View {
   return Object.fromEntries(VIEW_KEYS.map((key) => [key, view[key]])) as View;
+}
+
+export type MapLook = {
+  /** The map's subject is records: a vote, filings, district, or HQ choropleth. */
+  data: boolean;
+  /** Satellite, clouds, and relief are on screen. */
+  imagery: boolean;
+  /** Base settings the map renders with: data maps without imagery run flat and dark. */
+  earth: EarthSettings;
+  /** Choropleth fill opacity. */
+  fill: number;
+  /** Intel arcs draw on the map. */
+  arcs: boolean;
+  /** The records time control under the map: the intel window, the week's filing index, or none. */
+  records: "window" | "filings" | null;
+};
+
+/**
+ * How the center map looks. Records maps sit on the flat dark base at full fill with no arcs,
+ * unless the user opts into imagery or arcs, or a member/ticker scope makes the arcs the subject.
+ * `onMap` is false while a board (Today, timeline, calendar) covers the map.
+ */
+export function mapLook(view: View, at: { onMap: boolean; scoped: boolean; settings: EarthSettings }): MapLook {
+  const data = at.onMap && ((view.section === "congress" && view.voteView === "map") || view.section === "districts");
+  const imagery = at.onMap && (!data || view.imagery);
+  const filings = data && view.section === "congress" && view.mapLayer === "filings";
+  return {
+    data,
+    imagery,
+    earth: data && !imagery ? { ...at.settings, base: "dark", view: "2d" } : at.settings,
+    fill: !data ? 1 : imagery ? 0.7 : 0.92,
+    arcs: data && !filings && (at.scoped || view.arcs),
+    records: !data ? null : filings ? "filings" : "window"
+  };
 }
 
 const SECTION_LABEL: Record<string, string> = { congress: "Congress", markets: "Markets", contracts: "Contracts", news: "News", districts: "Districts", strait: "Strait", map: "Map" };

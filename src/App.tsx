@@ -9,7 +9,7 @@ import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
-import { CongressBar, ContractsBar, DistrictsBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
+import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
 import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
 import { placeFilings, useWeekFilings } from "./congress/filingMap";
@@ -21,7 +21,7 @@ import { useCards } from "./shell/useCards";
 import { useMapClock } from "./shell/useMapClock";
 import { mapView } from "./shell/mapView";
 import { route } from "./shell/follow";
-import { trailLabel as labelFor, viewFor, viewOnly, type View, type ViewPatch } from "./shell/viewFor";
+import { trailLabel as labelFor, mapLook, viewFor, viewOnly, type View, type ViewPatch } from "./shell/viewFor";
 import { useDossierScope, useView } from "./shell/useView";
 import { useCongress } from "./congress/useCongress";
 import { STATE_NAME_TO_POSTAL } from "./congress/states";
@@ -32,6 +32,7 @@ import { loadDossier, loadLobby, loadPositions, tickerShell, useMarkets, withLob
 import { useNews } from "./news/useNews";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
 import { districtCode, useDistricts } from "./districts/useDistricts";
+import { HqLegend } from "./districts/HqLegend";
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
@@ -115,7 +116,7 @@ export function App() {
   const phone = usePhone();
   const rail = useRail();
   const cards = useCards();
-  const { earth, settings: earthSettings, update: updateEarth, credit: earthCredit } = useEarth();
+  const { earth, settings: earthSettings, update: updateEarth, credit: imageryCredit } = useEarth();
 
   const congress = useCongress(chamber, mode, query, section === "congress" && !today && !timelineId ? selectedId : null, party);
   const congressMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
@@ -454,9 +455,11 @@ export function App() {
   const newsGlobe = section === "news" && newsView === "globe";
   const lanesOn = section === "strait" || newsGlobe;
   const showMap = section === "strait" || section === "districts" || newsGlobe || (section === "congress" && voteView === "map");
-  const time = useMapClock({ mapOn: showMap && !calendarTab && !today && !timelineId, base: earthSettings.base, newsGlobe, headlines: news.all, clock, mapTime });
+  const look = mapLook(nav.view, { onMap: showMap && !calendarTab && !today && !timelineId, scoped: intelScope.kind !== "all", settings: earthSettings });
+  const earthCredit = look.imagery ? imageryCredit : "";
+  const time = useMapClock({ mapOn: look.imagery, base: look.earth.base, newsGlobe, headlines: news.all, clock, mapTime });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
-  const intelOn = !calendarTab && !today && !timelineId && ((section === "congress" && voteView === "map") || section === "districts");
+  const intelOn = look.records === "window";
   const intel = useIntelScope(intelScope, intelOn);
   const lagWindow = useDeferredValue(intelWindow);
   const arcs = useMemo(() => {
@@ -593,7 +596,8 @@ export function App() {
               </label>
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
-            {showMap && !calendarTab && !today && !timelineId && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
+            {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
+            {look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
@@ -661,9 +665,10 @@ export function App() {
                 <MapFrame
                   geojson={map.geojson}
                   colorProp={map.colorProp}
+                  fill={look.fill}
                   markers={map.markers}
                   earth={earth}
-                  settings={earthSettings}
+                  settings={look.earth}
                   center={map.center}
                   zoom={map.zoom}
                   selectedId={filingMapOn ? (activeFiling?.state || null) : section === "congress" ? null : selectedId}
@@ -671,7 +676,7 @@ export function App() {
                   dailyTiles={time.dailyLayer?.tiles}
                   flash={newsGlobe ? time.globe.flash : null}
                   lanes={lanesOn}
-                  arcs={arcs}
+                  arcs={look.arcs ? arcs : null}
                   onArc={follow}
                   onSelect={(id) => {
                     if (filingMapOn) {
@@ -706,15 +711,7 @@ export function App() {
             ) : congressMapOn ? (
               <VoteLegend chamber={chamber} counts={congress.mapCounts} source={congress.positions.length ? congress.voteSource : null} />
             ) : null}
-            {barFor === "districts" && districtLayer === "hq" && !phone ? (
-              <div className="legend vote-legend">
-                <span><i className="swatch" style={{ background: "#2c4f60" }} />1 HQ</span>
-                <span><i className="swatch" style={{ background: "#3f7287" }} />2–4</span>
-                <span><i className="swatch" style={{ background: "#5f9bb0" }} />5+</span>
-                <span>Top {districts.top.map((t) => `${t.code} ${t.n}`).join(" · ")}</span>
-                <small>{districts.status.source}</small>
-              </div>
-            ) : null}
+            {barFor === "districts" && districtLayer === "hq" && !phone ? <HqLegend top={districts.top} source={districts.status.source} /> : null}
             {barFor === "congress" && !timelineId && !today && voteView === "floor" ? (
               <div className="legend" aria-hidden="true">
                 <span><i className="swatch yea" />Yea</span>
@@ -735,6 +732,8 @@ export function App() {
               kinds={arcKinds}
               onKinds={setArcKinds}
               arcs={arcs}
+              mapArcs={look.arcs}
+              onMapArcs={nav.setArcs}
               onClearScope={() => setIntelScope(ALL_SCOPE)}
               collapsed={scrubMin}
               onCollapsed={setScrubMin}

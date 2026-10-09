@@ -9,6 +9,8 @@ type Props = {
   geojson?: GeoJSON.FeatureCollection;
   idProp?: string;
   colorProp?: string;
+  /** Choropleth fill opacity; defaults by base. */
+  fill?: number;
   markers?: Marker[];
   earth?: Earth | null;
   settings: EarthSettings;
@@ -55,6 +57,7 @@ export function MapFrame({
   geojson,
   idProp = "id",
   colorProp,
+  fill,
   markers = [],
   earth,
   settings,
@@ -223,14 +226,14 @@ export function MapFrame({
     map.setLayoutProperty("labels", "visibility", settings.labels && imagery ? "visible" : "none");
     map.setLayoutProperty("roads", "visibility", settings.labels && settings.base === "sat" ? "visible" : "none");
     map.setLayoutProperty("dark-labels", "visibility", settings.labels && !imagery ? "visible" : "none");
-    map.setPaintProperty("base-fill", "fill-opacity", colorProp ? (imagery ? 0.42 : 0.8) : 1);
+    map.setPaintProperty("base-fill", "fill-opacity", fill ?? (colorProp ? (imagery ? 0.42 : 0.8) : 1));
     map.setPaintProperty("base-line", "line-color", "#9aa7b2");
     map.setPaintProperty("base-line", "line-width", 1);
     map.setPaintProperty("base-line", "line-opacity", 1);
     ["lanes-minor", "lanes-middle", "lanes-major", "choke-dot", "choke-label"].forEach((id) => {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes && lanes ? "visible" : "none");
     });
-  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp]);
+  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp, fill]);
 
   useEffect(() => {
     const map = loadedMap();

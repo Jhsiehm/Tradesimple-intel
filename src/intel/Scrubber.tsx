@@ -26,6 +26,9 @@ type Props = {
   onKinds: (next: Set<ArcKind>) => void;
   /** Null on phones, where the map is not mounted. */
   arcs: ArcView | null;
+  /** Arcs are drawn on the map. A member or ticker scope always draws them. */
+  mapArcs: boolean;
+  onMapArcs: (on: boolean) => void;
   onClearScope: () => void;
   collapsed: boolean;
   onCollapsed: (v: boolean) => void;
@@ -37,7 +40,7 @@ type Props = {
  * Bottom-of-map time scrubber. One tick lane per feed, a draggable window that filters the map arcs,
  * and each lane's source, as-of, and latency on hover and under "Feeds".
  */
-export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, onKinds, arcs, onClearScope, collapsed, onCollapsed, phone, onFollow }: Props) {
+export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, onKinds, arcs, mapArcs, onMapArcs, onClearScope, collapsed, onCollapsed, phone, onFollow }: Props) {
   const [feeds, setFeeds] = useState(false);
   const track = useRef<HTMLDivElement>(null);
   const len = data?.ok ? data.len : 0;
@@ -137,7 +140,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
     <section className={`scrub${collapsed ? " min" : ""}`} aria-label="Time scrubber">
       <header className="scrub-head">
         <button className="scrub-fold" aria-expanded={!collapsed} onClick={() => onCollapsed(!collapsed)} title={collapsed ? "Show the time scrubber" : "Collapse to one line"}>
-          <Icon name={collapsed ? "chevron-right" : "chevron-down"} /> <em>TIMELINE</em>
+          <Icon name={collapsed ? "chevron-right" : "chevron-down"} /> <em>RECORDS WINDOW</em>
         </button>
         <span className="scrub-scope" title="Scope of the lanes and arcs. Opening a member or ticker dossier scopes it.">
           <span>{loading && !data ? "Loading…" : scopeText}</span>
@@ -158,6 +161,9 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
         {!collapsed ? (
           <span className="scrub-arcs" title="Arcs on the map. Hover an arc for its source and as-of.">
             <em>ARCS</em>
+            {arcs ? (
+              <button className="scrub-onmap" style={{ ["--arc" as string]: "var(--amber)" }} aria-pressed={mapArcs} disabled={scoped} onClick={() => onMapArcs(!mapArcs)} title={scoped ? "A member or ticker scope always draws its arcs. Clear the scope to hide them." : "Draw trade, contract, and PAC arcs over the map"}><IconLabel icon="arc">On map</IconLabel></button>
+            ) : null}
             {(["trade", "contract", "pac"] as ArcKind[]).map((k) => (
               <button key={k} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={{ ["--arc" as string]: ARC_COLOR[k] }}><IconLabel icon={ARC_ICON[k]}>{ARC_LABEL[k]}</IconLabel></button>
             ))}
@@ -207,7 +213,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           <div className="scrub-scale">
             <span>{data.from}</span>
             <span className="scrub-cov" title={`Whole scope since ${data.from}:\n${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}>
-              {!arcs ? "Map arcs show on wider screens" : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
+              {!arcs ? "Map arcs show on wider screens" : !mapArcs ? `Arcs hidden · ${arcs.shown} bundles ready · ARCS › On map draws them` : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
               {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this window couldn't be placed` : ""}
             </span>
             <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}><IconLabel icon="feed">Feeds</IconLabel> <Icon name={feeds ? "chevron-down" : "chevron-right"} /></button>

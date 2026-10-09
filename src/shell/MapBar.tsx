@@ -15,6 +15,15 @@ export function DistrictsBar({ layer, onLayer }: { layer: DistrictLayer; onLayer
   );
 }
 
+/** Records maps run on the flat dark base; satellite, clouds, and relief are opt-in. */
+export function ImageryToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <span className="seg" title="Satellite imagery under the data. Off keeps the flat dark base so colors read cleanly.">
+      <button aria-pressed={on} onClick={() => onChange(!on)}><IconLabel icon="imagery">Imagery</IconLabel></button>
+    </span>
+  );
+}
+
 export function PartyButtons({ party, onParty }: { party: PartyFilter; onParty: (p: PartyFilter) => void }) {
   return (
     <span className="seg">

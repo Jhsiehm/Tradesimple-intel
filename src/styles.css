@@ -1195,6 +1195,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 }
 .filing-index button.on { border-left-color: var(--amber); color: var(--ink); }
 .filing-index .late { color: var(--amber); font-weight: 500; }
+.filing-index > em { align-self: center; flex: none; font-style: normal; font-size: 10px; letter-spacing: 0.14em; color: var(--amber); }
 .map-body:has(.timebar) .filing-index { bottom: 108px; }
 .map-body:has(.timebar) .filing-plate { bottom: 148px; }
 

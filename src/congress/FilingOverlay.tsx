@@ -59,6 +59,7 @@ export function FilingOverlay({
       </aside>
       {rows.length ? (
         <div className="filing-index" aria-label="This week's filings">
+          <em>RECORDS · FILED THIS WEEK</em>
           {rows.map((item, index) => {
             const itemLate = item.lag != null && item.lag > LATE;
             return (

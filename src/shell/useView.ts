@@ -23,6 +23,8 @@ export function useView() {
       setLayer: one("layer"),
       setNewsView: one("newsView"),
       setSelectedId: one("selectedId"),
+      setImagery: one("imagery"),
+      setArcs: one("arcs"),
       applyPatch: (patch: ViewPatch) => setView((v) => applyView(v, patch))
     } satisfies Setters & { applyPatch: unknown };
   }, []);

@@ -27,7 +27,7 @@ export function useMapClock({ mapOn, base, newsGlobe, headlines, clock, mapTime 
   const liveLayers = live && base === "live" ? liveTiles(live, cursor) : undefined;
   const dailyLayer = live ? dailyTiles(live, base === "daily" ? cursor : Date.now()) : undefined;
   const globe = useNewsGlobe(headlines, mapTime == null ? Date.parse(clock) : base === "daily" ? cursor + 86400000 : cursor);
-  const title = base === "live" ? "LIVE SAT" : base === "daily" ? "DAILY PASS" : "NEWS CLOCK";
+  const title = base === "live" ? "IMAGERY TIME · LIVE SAT" : base === "daily" ? "IMAGERY TIME · DAILY PASS" : "HEADLINE TIME";
   const notes: TimeNote[] = [
     ...(liveLayers || []).map((l) => {
       const old = Date.now() - l.frame;
