@@ -7,9 +7,10 @@ import { handlers as corporate } from "./corporate.mjs";
 import { handlers as world } from "./world.mjs";
 import { handlers as relations } from "./relations.mjs";
 import { handlers as backtest } from "./backtest.mjs";
+import { handlers as ask } from "./ask.mjs";
 
 export { MANIFEST };
 
-export const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest };
+export const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest, ...ask };
 
 export const router = () => createRouter(MANIFEST, handlers);
