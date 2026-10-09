@@ -228,6 +228,9 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
               </li>
             </ul>
           ) : null}
+          {latest.length && data.scope.kind === "all" ? (
+            <p className="scrub-note">Latest contract awards in the window. Open a member or ticker to list its trades and hearings here.</p>
+          ) : null}
           {latest.length ? (
             <ul className="scrub-events">
               {latest.map((e, i) => (
