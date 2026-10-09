@@ -1,0 +1,30 @@
+.api-banner {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  margin: 0;
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--amber);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  font-size: 12px;
+  pointer-events: none;
+}
+.api-banner[hidden] { display: none; }
+.api-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: api-banner-pulse 1.2s ease-in-out infinite;
+}
+@keyframes api-banner-pulse { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .api-banner-dot { animation: none; } }

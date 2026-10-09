@@ -13,6 +13,7 @@ import { toggleMember, useWatch } from "../lib/useWatch";
 import { CaseHeader } from "../intel/CaseHeader";
 import { CaseSection } from "../intel/CaseSection";
 import { Icon, IconLabel } from "../ui/icons/Icon";
+import { askAction, type AskModel } from "../agent/starters";
 
 export type WidgetCard = {
   id: string;
@@ -145,6 +146,11 @@ function Widget({
   const [live, setLive] = useState<Rect | null>(null);
   const r = live || fitCard(card, box, card.min);
   const toggle = () => onChange(card.id, { min: !card.min });
+  const about: AskModel | null = card.model
+    ? card.model
+    : card.memberId ? { title: card.title, caseKey: `member:${card.memberId}` }
+    : card.kind === "supply" && card.symbol ? { title: card.title, caseKey: `ticker:${card.symbol}` }
+    : null;
 
   function move(event: ReactPointerEvent) {
     if (sheet || (event.target as HTMLElement).closest("button, a, input, select")) return;
@@ -208,6 +214,7 @@ function Widget({
       >
         {sheet ? null : <span className="widget-grip" aria-hidden="true"><Icon name="grip" /></span>}
         <strong>{card.title}</strong>
+        {about && !card.min ? <button className="widget-btn widget-ask" aria-label={`Ask about ${card.title}`} title="Ask about this: opens Ask with this card attached" onClick={() => onFollow(askAction(about))}><Icon name="ask" /></button> : null}
         <button className="widget-btn" aria-label={card.min ? `Expand ${card.title}` : `Collapse ${card.title}`} title={card.min ? "Expand" : "Collapse to a chip"} onClick={toggle}><Icon name={card.min ? "expand" : "collapse"} /></button>
         {card.min || sheet ? null : (
           <button className="widget-btn pin" aria-pressed={card.pinned} aria-label={card.pinned ? "Unpin: drop this card when the view changes" : "Pin: keep this card across views"} title={card.pinned ? "Pinned: kept across views and reloads" : "Not pinned: closes when the view changes"} onClick={() => onChange(card.id, { pinned: !card.pinned })}><IconLabel icon="pin" hide>{card.pinned ? "Pinned" : "Pin"}</IconLabel></button>

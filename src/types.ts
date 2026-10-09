@@ -102,6 +102,8 @@ export type DrawerModel = {
   watch?: string;
   /** `ticker:NVDA` or `district:CA-11`: puts the case-file header on top of the dossier. */
   caseKey?: string;
+  /** What its Ask button attaches when there is no case key: `bill:ID`, `vote:ID`, `committee:ID`, `edge:ID`, `rel:ID`. */
+  askKey?: string;
   /** Kind icon and its palette color beside the title (relationship map). */
   icon?: import("./ui/icons/names").IconName;
   tint?: string;

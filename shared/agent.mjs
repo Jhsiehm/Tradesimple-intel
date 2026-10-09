@@ -39,16 +39,25 @@ export function cleanContext(raw) {
   if (!raw || typeof raw !== "object") return null;
   const node = text(raw.node, 160);
   const theory = cleanTheory(raw.theory);
-  const okNode = /^(member:[A-Z]\d{6}|ticker:[A-Z][A-Z0-9.\-]{0,11})$/.test(node) ? node : "";
+  const okNode = NODE.test(node) ? node : "";
   if (!okNode && !theory) return null;
   return { node: okNode, label: text(raw.label, 120), theory };
 }
+
+/** Members and tickers by id; bills, roll calls, committees, districts, map links and nodes, and other cards by key. */
+const NODE = /^(member:[A-Z]\d{6}|ticker:[A-Z][A-Z0-9.\-]{0,11}|(bill|vote|committee|district|edge|rel|item):\S.{0,149})$/;
+const NODE_KIND = { member: "Member", ticker: "Ticker", bill: "Bill", vote: "Roll call", committee: "Committee", district: "District", edge: "Relationship-map link", rel: "Relationship-map node", item: "Card" };
 
 /** The line the model sees about the screen. Empty when nothing is attached, so nothing leaks in by default. */
 export function contextNote(ctx) {
   if (!ctx) return "";
   const bits = [];
-  if (ctx.node) bits.push(`${ctx.node.startsWith("member:") ? "Member" : "Ticker"} ${ctx.node.split(":")[1]}${ctx.label ? ` (${ctx.label})` : ""}`);
+  if (ctx.node) {
+    const [kind, ...rest] = ctx.node.split(":");
+    const id = rest.join(":");
+    const keyed = kind === "member" || kind === "ticker" || kind === "bill" || kind === "vote" || kind === "committee" || kind === "district";
+    bits.push(keyed ? `${NODE_KIND[kind]} ${id}${ctx.label ? ` (${ctx.label})` : ""}` : `${NODE_KIND[kind] || "Card"}: ${ctx.label || id}`);
+  }
   if (ctx.theory) bits.push(`the user's own theory, not a filing: ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}${ctx.theory.label ? ` — ${ctx.theory.label}` : ""}`);
   return `The user attached what is on screen: ${bits.join("; ")}. Use it only when the question refers to it.`;
 }

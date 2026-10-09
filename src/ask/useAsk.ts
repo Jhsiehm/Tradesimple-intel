@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, DEMO } from "../lib/api";
+import { api, DEMO, waitForApi } from "../lib/api";
+import { isRestart, mayResend } from "../lib/retry";
 import type { AgentContext } from "../agent/context";
 import {
   addPrefs, attachedBody, blankTurn, chatTitle, dropPref, historyOf, lastBacktests, loadChats, loadModelChoice, loadPrefs,
-  newChatId, removeChat, saveChats, saveModelChoice, savePrefs, upsertChat
+  newChatId, pinChat, removeChat, renameChat, restoreChat, saveChats, saveModelChoice, savePrefs, upsertChat
 } from "./chats";
 import { readEvents } from "./stream";
 import { AUTO } from "../../shared/modelRoute.mjs";
@@ -38,6 +39,10 @@ export function useAsk() {
   const [attachId, setAttachId] = useState("");
   const [detached, setDetached] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Size the next `show` asks for ("Ask about this" opens at Half); the sheet reads it when `shown` changes. */
+  const [snapTo, setSnapTo] = useState<"half" | null>(null);
+  /** The last deleted chat and where it was, for Undo. */
+  const [deleted, setDeleted] = useState<{ chat: SavedChat; index: number } | null>(null);
   const ctl = useRef<AbortController | null>(null);
   const ctxRef = useRef<AgentContext>({ section: "", node: null, theory: null });
   const state = useRef({ turns, chatId, kept, detached, prefs, attachId, chats, choice });
@@ -78,7 +83,7 @@ export function useAsk() {
     setDraft("");
     const s = state.current;
     const ctx = hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
-    const ctxLabel = ctx ? (ctx.theory ? `theory ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}` : ctx.node || "") : "";
+    const ctxLabel = ctx ? (ctx.theory ? `theory ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}` : ctx.label || ctx.node || "") : "";
     const prior = opts.turnId ? s.turns.filter((t) => t.id !== opts.turnId) : s.turns;
     const turn = blankTurn(question, opts.turnId ? { id: opts.turnId, context: ctxLabel } : { context: ctxLabel });
     const tid = turn.id;
@@ -101,30 +106,69 @@ export function useAsk() {
     const attached = s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
     const bts = lastBacktests(prior);
     const bt = bts.at(-1) || null;
+    const payload = JSON.stringify({
+      question,
+      history: historyOf(prior),
+      model: used,
+      context: ctx ? { node: ctx.node, theory: ctx.theory, label: ctx.label || "" } : null,
+      attached: attachedBody(attached),
+      prefs: s.prefs,
+      prior: bt?.spec || null,
+      priors: bts.map((b) => b.spec),
+      answers: opts.answers || {},
+      acceptDefaults: Boolean(opts.acceptDefaults)
+    });
+    /** Answer text seen so far: a restart before any token resends the question once; after that it would answer twice. */
+    const seen = { tokens: 0, done: false, resent: false };
+    const recover = async () => {
+      if (!mayResend(seen) || mine.signal.aborted) return false;
+      seen.resent = true;
+      const back = await waitForApi(mine.signal);
+      if (!back || mine.signal.aborted) return false;
+      patch((t) => ({ ...t, steps: [], text: "", phase: "planning", notes: [...t.notes, "The API restarted before an answer arrived, so the question was sent again."] }));
+      return true;
+    };
     try {
-      const res = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          question,
-          history: historyOf(prior),
-          model: used,
-          context: ctx ? { node: ctx.node, theory: ctx.theory } : null,
-          attached: attachedBody(attached),
-          prefs: s.prefs,
-          prior: bt?.spec || null,
-          priors: bts.map((b) => b.spec),
-          answers: opts.answers || {},
-          acceptDefaults: Boolean(opts.acceptDefaults)
-        }),
-        signal: mine.signal
-      });
-      if (!res.ok || !res.body) {
-        const body = await res.json().catch(() => ({} as Record<string, unknown>));
-        patch((t) => ({ ...t, phase: "error", error: String(body.error || `HTTP ${res.status}`) }));
-        return;
+      for (;;) {
+        let res: Response;
+        try {
+          res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: payload, signal: mine.signal });
+        } catch (error) {
+          if (isRestart({ error }) && (await recover())) continue;
+          throw error;
+        }
+        if (!res.ok || !res.body) {
+          const text = await res.text().catch(() => "");
+          if (isRestart({ status: res.status, body: text }) && (await recover())) continue;
+          let body: Record<string, unknown> = {};
+          try { body = JSON.parse(text); } catch { /* not JSON */ }
+          patch((t) => ({ ...t, phase: "error", error: String(body.error || `HTTP ${res.status}`) }));
+          return;
+        }
+        let ended = false;
+        try {
+          ended = await stream(res.body);
+        } catch (error) {
+          if (!mine.signal.aborted && isRestart({ error }) && (await recover())) continue;
+          throw error;
+        }
+        if (!ended && (await recover())) continue;
+        break;
       }
-      await readEvents(res.body, (e) => {
+      patch((t) => (t.phase === "done" || t.phase === "error" ? t : { ...t, phase: "error", error: "The answer stopped before it finished." }));
+    } catch (err) {
+      if (!mine.signal.aborted) patch((t) => ({ ...t, phase: "error", error: err instanceof Error ? err.message : "Ask failed." }));
+    } finally {
+      if (ctl.current === mine) finish();
+    }
+
+    /** Read one event stream; true when it ended with `done` or `error`. */
+    async function stream(body: ReadableStream<Uint8Array>) {
+      let ended = false;
+      await readEvents(body, (e) => {
+        if (e.type === "token") seen.tokens += 1;
+        if (e.type === "done") { seen.done = true; ended = true; }
+        if (e.type === "error") ended = true;
         switch (e.type) {
           case "step_progress":
             if (typeof e.id === "string") {
@@ -168,15 +212,17 @@ export function useAsk() {
             break;
         }
       });
-      patch((t) => (t.phase === "done" || t.phase === "error" ? t : { ...t, phase: "error", error: "The answer stopped before it finished." }));
-    } catch (err) {
-      if (!mine.signal.aborted) patch((t) => ({ ...t, phase: "error", error: err instanceof Error ? err.message : "Ask failed." }));
-    } finally {
-      if (ctl.current === mine) finish();
+      return ended;
     }
   }, [loadStatus, persist]);
 
-  const show = useCallback((prefill = "") => { setOpen(true); setShown((n) => n + 1); if (prefill) setDraft(prefill); void loadStatus(); }, [loadStatus]);
+  const show = useCallback((prefill = "", size: "half" | null = null) => {
+    setOpen(true);
+    setSnapTo(size);
+    setShown((n) => n + 1);
+    if (prefill) setDraft(prefill);
+    void loadStatus();
+  }, [loadStatus]);
   const close = useCallback(() => setOpen(false), []);
   const stop = useCallback(() => { ctl.current?.abort(); ctl.current = null; setBusy(false); }, []);
   const newChat = useCallback(() => { stop(); setTurns([]); setChatId(null); setKept(false); setAttachId(""); setDraft(""); }, [stop]);
@@ -203,12 +249,26 @@ export function useAsk() {
     setAttachId("");
   }, [stop]);
 
+  const store = useCallback((list: SavedChat[]) => { if (saveChats(list)) setChats(list); }, []);
+
+  /** Delete now; `undoForget` puts it back where it was. The open chat stays on screen, no longer kept. */
   const forget = useCallback((cid: string) => {
-    const list = removeChat(loadChats(), cid);
-    saveChats(list);
-    setChats(list);
-    if (state.current.chatId === cid) { setChatId(null); setKept(false); }
-  }, []);
+    const all = loadChats();
+    const index = all.findIndex((c) => c.id === cid);
+    if (index < 0) return;
+    setDeleted({ chat: all[index], index });
+    store(removeChat(all, cid));
+    if (state.current.chatId === cid) setKept(false);
+  }, [store]);
+  const undoForget = useCallback(() => {
+    if (!deleted) return;
+    store(restoreChat(loadChats(), deleted.chat, deleted.index));
+    if (state.current.chatId === deleted.chat.id) setKept(true);
+    setDeleted(null);
+  }, [deleted, store]);
+  const dropUndo = useCallback(() => setDeleted(null), []);
+  const rename = useCallback((cid: string, name: string) => store(renameChat(loadChats(), cid, name)), [store]);
+  const pin = useCallback((cid: string, on: boolean) => store(pinChat(loadChats(), cid, on)), [store]);
 
   const removePref = useCallback((path: string) => setPrefs((p) => dropPref(p, path)), []);
   const clearPrefs = useCallback(() => setPrefs(savePrefs({ v: 1, values: {}, updated: "" })), []);
@@ -228,8 +288,8 @@ export function useAsk() {
   useEffect(() => { if (open) void loadStatus(); }, [open, loadStatus]);
 
   return {
-    open, shown, show, close, draft, setDraft, turns, busy, run, stop, newChat,
-    chats, chatId, kept, keep, openSaved, forget, attachId, setAttachId,
+    open, shown, show, snapTo, close, draft, setDraft, turns, busy, run, stop, newChat,
+    chats, chatId, kept, keep, openSaved, forget, undoForget, dropUndo, deleted, rename, pin, attachId, setAttachId,
     status, model, models, small, chooseModel,
     prefs, removePref, clearPrefs,
     detached, setDetached, bindContext

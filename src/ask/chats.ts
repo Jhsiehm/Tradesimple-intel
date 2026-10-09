@@ -47,28 +47,42 @@ function migrate(): SavedChat[] {
         turns.push(blankTurn(str(u.content, 800), { phase: "done", text: answer, notes: ["Kept before live steps existed; tool trace not recorded."] }));
         if (a?.role === "assistant") i += 1;
       }
-      if (turns.length) out.push({ id: str(c.id, 40) || id(), title: str(c.title, 80) || turns[0].question.slice(0, 80), turns, updated: str(c.updated, 40) });
+      if (turns.length) out.push({ id: str(c.id, 40) || id(), title: chatTitle(turns), turns, updated: str(c.updated, 40) });
     }
   }
   const hist = read(OLD_HISTORY);
   if (Array.isArray(hist)) {
     for (const h of hist) {
       if (!h || typeof h.question !== "string" || typeof h.answer !== "string") continue;
-      out.push({ id: id(), title: h.question.slice(0, 80), turns: [blankTurn(h.question.slice(0, 800), { phase: "done", text: h.answer.slice(0, TEXT_CAP), at: str(h.at, 40), model: str(h.model, 120), notes: ["Saved answer from the earlier Ask panel."] })], updated: str(h.at, 40) });
+      const turn = blankTurn(h.question.slice(0, 800), { phase: "done", text: h.answer.slice(0, TEXT_CAP), at: str(h.at, 40), model: str(h.model, 120), notes: ["Saved answer from the earlier Ask panel."] });
+      out.push({ id: id(), title: chatTitle([turn]), turns: [turn], updated: str(h.at, 40) });
     }
   }
   return out;
 }
 
+/**
+ * Stored v2 chats as they load. Chats kept before short titles had the first question cut at 80 characters:
+ * unless the user renamed one (`named`), its title is recomputed, so old chats migrate on read without a new key.
+ */
+export function normalizeChats(raw: unknown): SavedChat[] {
+  if (!Array.isArray(raw)) return [];
+  const out = raw.flatMap((c) => {
+    if (!c || typeof c.id !== "string" || !Array.isArray(c.turns)) return [];
+    const turns = c.turns.map(asTurn).filter(Boolean) as Turn[];
+    if (!turns.length) return [];
+    const named = c.named === true && Boolean(cleanName(c.title));
+    const chat: SavedChat = { id: c.id, title: named ? cleanName(c.title) : chatTitle(turns), turns, updated: str(c.updated, 40) };
+    if (named) chat.named = true;
+    if (c.pinned === true) chat.pinned = true;
+    return [chat];
+  });
+  return capChats(out);
+}
+
 export function loadChats(): SavedChat[] {
   const raw = read(CHATS_KEY);
-  if (Array.isArray(raw)) {
-    return raw.flatMap((c) => {
-      if (!c || typeof c.id !== "string" || !Array.isArray(c.turns)) return [];
-      const turns = c.turns.map(asTurn).filter(Boolean) as Turn[];
-      return turns.length ? [{ id: c.id, title: str(c.title, 80) || turns[0].question.slice(0, 80), turns, updated: str(c.updated, 40) }] : [];
-    }).slice(0, CAP);
-  }
+  if (Array.isArray(raw)) return normalizeChats(raw);
   const moved = migrate().sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, CAP);
   if (moved.length) saveChats(moved);
   return moved;
@@ -76,16 +90,94 @@ export function loadChats(): SavedChat[] {
 
 export function saveChats(chats: SavedChat[]): boolean {
   try {
-    localStorage.setItem(CHATS_KEY, JSON.stringify(chats.slice(0, CAP).map((c) => ({ ...c, turns: c.turns.map(slimTurn) }))));
+    localStorage.setItem(CHATS_KEY, JSON.stringify(capChats(chats).map((c) => ({ ...c, turns: c.turns.map(slimTurn) }))));
     return true;
   } catch {
     return false;
   }
 }
 
-export const upsertChat = (chats: SavedChat[], chat: SavedChat) => [chat, ...chats.filter((c) => c.id !== chat.id)].slice(0, CAP);
+/** Over the cap, the oldest unpinned chats go first; pinned chats are never dropped to make room. */
+export function capChats(chats: SavedChat[]): SavedChat[] {
+  if (chats.length <= CAP) return chats;
+  const out = [...chats];
+  for (let i = out.length - 1; i >= 0 && out.length > CAP; i--) if (!out[i].pinned) out.splice(i, 1);
+  return out;
+}
+
+/** Most recent first; the chat keeps its pin and a name the user gave it. */
+export function upsertChat(chats: SavedChat[], chat: SavedChat): SavedChat[] {
+  const was = chats.find((c) => c.id === chat.id);
+  const next: SavedChat = { ...chat };
+  if (was?.named && !chat.named) { next.named = true; next.title = was.title; }
+  if (was?.pinned && chat.pinned === undefined) next.pinned = true;
+  return capChats([next, ...chats.filter((c) => c.id !== chat.id)]);
+}
 export const removeChat = (chats: SavedChat[], chatId: string) => chats.filter((c) => c.id !== chatId);
-export const chatTitle = (turns: Turn[]) => (turns[0]?.question.replace(/\s+/g, " ").trim() || "Untitled").slice(0, 80);
+/** Put a deleted chat back where it was (Undo). */
+export function restoreChat(chats: SavedChat[], chat: SavedChat, index: number): SavedChat[] {
+  const rest = chats.filter((c) => c.id !== chat.id);
+  return capChats([...rest.slice(0, index), chat, ...rest.slice(index)]);
+}
+/** An empty name goes back to the automatic title. */
+export function renameChat(chats: SavedChat[], chatId: string, name: string): SavedChat[] {
+  const title = cleanName(name);
+  return chats.map((c) => {
+    if (c.id !== chatId) return c;
+    const next: SavedChat = { ...c, title: title || chatTitle(c.turns) };
+    if (title) next.named = true; else delete next.named;
+    return next;
+  });
+}
+export function pinChat(chats: SavedChat[], chatId: string, pinned: boolean): SavedChat[] {
+  return chats.map((c) => {
+    if (c.id !== chatId) return c;
+    const next: SavedChat = { ...c };
+    if (pinned) next.pinned = true; else delete next.pinned;
+    return next;
+  });
+}
+/** Display order: pinned first, each group keeping its most-recent-first order. */
+export const orderChats = (chats: SavedChat[]) => [...chats.filter((c) => c.pinned), ...chats.filter((c) => !c.pinned)];
+/** Case-insensitive match on the title and every question in the chat. */
+export function filterChats(chats: SavedChat[], query: string): SavedChat[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return chats;
+  return chats.filter((c) => c.title.toLowerCase().includes(q) || c.turns.some((t) => t.question.toLowerCase().includes(q)));
+}
+
+const cleanName = (v: unknown) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 80) : "");
+
+const TITLE_MAX = 48;
+const LEAD = /^(?:(?:hey|hi|hello|ok|okay|so|um|uh|well|yo)\b[\s,!.:-]*)+/i;
+const ASKING = /^(?:(?:please|pls|kindly)\s+)?(?:(?:can|could|would|will) (?:you|u)(?: please| pls| kindly)?|i want to know|i wonder|i (?:want|need|would like|wanna) (?:you )?to|i'd like (?:you )?to|tell me|show me|give me|help me(?: to)?|let me know|please|pls)\b[\s,:-]*/i;
+const TAIL = /(?:[\s,]+(?:please|pls|thanks|thank you|thx|for me))+[\s.!?]*$/i;
+
+/**
+ * A short title from the first question, without a model: collapse spacing, drop greetings and
+ * "can you / please / tell me" lead-ins and "thanks" tails, tidy punctuation, capitalize, ≤48 characters
+ * cut on a word with an ellipsis.
+ */
+export function shortTitle(question: string): string {
+  let s = String(question || "").replace(/[\u201c\u201d]/g, "\"").replace(/\s+/g, " ").trim();
+  s = s.replace(/^["'`]+|["'`]+$/g, "").trim();
+  for (let i = 0; i < 3; i++) {
+    const before = s;
+    s = s.replace(LEAD, "").replace(ASKING, "").trim();
+    if (s === before) break;
+  }
+  s = s.replace(TAIL, "");
+  s = s.replace(/\s+([,.;:!?%)])/g, "$1").replace(/([,;:])(?=[^\s\d])/g, "$1 ").replace(/\(\s+/g, "(");
+  s = s.replace(/([!?.])\1+/g, "$1").replace(/[\s,;:.!?-]+$/, "").trim();
+  if (!s) return "Untitled";
+  s = s[0].toUpperCase() + s.slice(1);
+  if (s.length <= TITLE_MAX) return s;
+  const cut = s.slice(0, TITLE_MAX - 1);
+  const space = s[TITLE_MAX - 1] === " " ? cut.length : cut.lastIndexOf(" ");
+  return `${(space > TITLE_MAX * 0.5 ? cut.slice(0, space) : cut).replace(/[\s,;:.!?-]+$/, "")}…`;
+}
+
+export const chatTitle = (turns: Turn[]) => shortTitle(turns[0]?.question || "");
 export const newChatId = id;
 
 /** Prior turns as model history: question and answer text only, without refs (each turn numbers its tools from t1). */

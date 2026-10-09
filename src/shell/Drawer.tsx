@@ -4,6 +4,7 @@ import { CaseHeader } from "../intel/CaseHeader";
 import { CaseSection } from "../intel/CaseSection";
 import { Icon, IconLabel } from "../ui/icons/Icon";
 import { actionIcon } from "../ui/icons/commandIcon";
+import { askAction } from "../agent/starters";
 
 export function Drawer({
   model,
@@ -34,6 +35,7 @@ export function Drawer({
           <span>DOSSIER</span>
           <span className="drawer-actions">
             {star}
+            {onFollow ? <button className="ghost drawer-ask" onClick={() => onFollow(askAction(model))} title="Ask about this: opens Ask with this dossier attached"><IconLabel icon="ask" hide>Ask</IconLabel></button> : null}
             {onPin ? <button className="ghost" onClick={onPin} title="Pin as a card that stays across views"><IconLabel icon="pin" hide>Pin</IconLabel></button> : null}
             <button className="ghost" onClick={onClose} title="Close (Esc)"><IconLabel icon="close" hide>Close</IconLabel></button>
           </span>

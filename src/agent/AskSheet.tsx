@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { EXAMPLES } from "../../shared/agent.mjs";
 import { describeValue } from "../../shared/backtestAsk.mjs";
 import { cleanTheory } from "../../shared/theories.mjs";
-import { DEMO, when } from "../lib/api";
+import { DEMO } from "../lib/api";
 import { Icon } from "../ui/icons/Icon";
 import { THEORY_LOOK } from "../relations/palette";
 import { saveTheory } from "../relations/store";
@@ -14,8 +13,10 @@ import { BacktestCard } from "../ask/BacktestCard";
 import { Clarify } from "../ask/Clarify";
 import { revealStep, Steps } from "../ask/Steps";
 import { hasContext, type AskApi } from "../ask/useAsk";
+import { SavedChats } from "../ask/SavedChats";
 import type { Step, Turn } from "../ask/types";
 import { contextLine, type AgentContext } from "./context";
+import { starters } from "./starters";
 import { EDGES, useAskSize } from "./useAskSize";
 import "./ask.css";
 import "../ask/chat.css";
@@ -25,7 +26,7 @@ import "../ask/chat.css";
  * Each answer streams its steps; backtests render inline; Keep stores the chat with its trace in this browser.
  * Accept writes a proposed theory to your theory document. Dismiss writes nothing.
  */
-export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context: AgentContext; onFollow: (action: string) => void }) {
+export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi; context: AgentContext; region?: string | null; onFollow: (action: string) => void }) {
   const { open, turns, busy, status } = ask;
   const [wrote, setWrote] = useState("");
   const [fault, setFault] = useState("");
@@ -35,9 +36,19 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
 
   useEffect(() => {
     if (!open) return;
-    const timer = window.setTimeout(() => input.current?.focus(), 0);
+    const timer = window.setTimeout(() => {
+      const el = input.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, [open]);
+  }, [open, ask.shown]);
+
+  useEffect(() => {
+    if (ask.shown && ask.snapTo) applySnap(ask.snapTo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ask.shown]);
 
   useEffect(() => {
     if ((ask.shown || busy) && snap === "peek") applySnap("half");
@@ -45,7 +56,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
   }, [ask.shown, busy]);
 
   useEffect(() => {
-    if (open && snap) applySnap(snap);
+    if (open && (ask.snapTo || snap)) applySnap(ask.snapTo || snap!);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -73,7 +84,8 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
   const writable = theory ? cleanTheory(theory) : null;
   const others = ask.chats.filter((c) => c.id !== ask.chatId);
   const prefs = Object.entries(ask.prefs.values);
-  const title = turns.length ? turns[0].question.slice(0, 80) : "New chat";
+  const title = (ask.kept && ask.chats.find((c) => c.id === ask.chatId)?.title) || (turns.length ? turns[0].question.slice(0, 80) : "New chat");
+  const prompts = starters({ ctx, attached: attachedCtx, today: ctx.section === "today", section: ctx.section, region });
 
   const follow = (action: string) => {
     if (!action) return;
@@ -107,7 +119,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
             <div className="ask-context">
               {attachedCtx ? (
                 <span className="ask-ctx-chip" title="Sent with the next question so it can say 'this one'">
-                  Attached · {contextLine(ctx).split(" · ").slice(1).join(" · ")}
+                  <span className="ask-ctx-text">Attached · {contextLine(ctx).split(" · ").slice(1).join(" · ")}</span>
                   <button type="button" aria-label="Do not send what is on screen" onClick={() => ask.setDetached(true)}>×</button>
                 </span>
               ) : (
@@ -135,19 +147,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
             <ModelPick ask={ask} busy={busy} />
           </div>
           <section className="ask-saved" aria-label="Saved chats">
-            <h2>Saved</h2>
-            {ask.chats.length ? (
-              <ul>
-                {ask.chats.map((c) => (
-                  <li key={c.id}>
-                    <button type="button" aria-current={c.id === ask.chatId ? "true" : undefined} onClick={() => ask.openSaved(c.id)}>
-                      <b>{c.title}</b>
-                      <time dateTime={c.updated || undefined}>{when(c.updated)}</time>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="ask-note">None kept yet.</p>}
+            <SavedChats ask={ask} />
             <details className="ask-prefs">
               <summary>Preferences <small>{prefs.length ? `${prefs.length} saved` : "none"}</small></summary>
               {prefs.length ? (
@@ -180,10 +180,10 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
             {!turns.length && !DEMO ? (
               <div className="ask-empty">
                 <p className="ask-note">Answers come only from this terminal's feeds, each number tied to the step it came from. Research only.</p>
-                <div className="ask-examples">{EXAMPLES.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div>
+                <div className="ask-examples">{prompts.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div>
               </div>
             ) : null}
-            {turns.map((t) => <TurnView key={t.id} turn={t} busy={busy} ask={ask} onFollow={follow} />)}
+            {turns.map((t) => <TurnView key={t.id} turn={t} busy={busy} ask={ask} prompts={prompts} onFollow={follow} />)}
           </div>
           <footer className="ask-foot">
             <button type="button" className="panels-btn" disabled={!turns.length} onClick={keep}>{ask.kept ? "Kept" : "Keep"}</button>
@@ -215,7 +215,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
   );
 }
 
-function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; ask: AskApi; onFollow: (action: string) => void }) {
+function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: boolean; ask: AskApi; prompts: string[]; onFollow: (action: string) => void }) {
   const done = turn.done;
   const chip = (s: Step) => {
     revealStep(turn.id, s.id);
@@ -230,7 +230,7 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
         <Steps turn={turn} />
         {turn.clarify ? <Clarify ask={turn.clarify} disabled={busy} onRun={(answers, acceptDefaults) => void ask.run(turn.question, { answers, acceptDefaults, turnId: turn.id })} /> : null}
         {turn.text ? <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} /> : null}
-        {done?.greeting ? <div className="ask-examples">{EXAMPLES.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div> : null}
+        {done?.greeting ? <div className="ask-examples">{prompts.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div> : null}
         <AnswerMeta turn={turn} />
         {done?.table ? <ToolTable table={done.table} steps={turn.steps} onChip={chip} /> : null}
         {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} cite={<Chip id={b.id} steps={byId} onChip={chip} />} />)}
@@ -259,6 +259,7 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
           </>
         ) : null}
         {turn.phase === "error" ? <p className="ask-fault">{turn.error}</p> : null}
+        {turn.phase === "error" && !busy ? <button type="button" className="panels-btn ask-retry" onClick={() => void ask.run(turn.question, { turnId: turn.id })}>Retry</button> : null}
       </article>
     </>
   );

@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AskSheet } from "./agent/AskSheet";
-import { contextLine, screenContext } from "./agent/context";
+import { contextLine, screenContext, type AgentContext } from "./agent/context";
+import { aboutContext, itemStarters, parseAskAction, selectionKey } from "./agent/starters";
+import { ApiBanner } from "./shell/ApiBanner";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
 import { useAsk } from "./ask/useAsk";
 import { api, DEMO } from "./lib/api";
@@ -110,6 +112,7 @@ export function App() {
   });
   const [btSeed, setBtSeed] = useState(() => (location.hash.startsWith("#bt=") ? `token:${location.hash.slice(4)}` : ""));
   const ask = useAsk();
+  const [askAbout, setAskAbout] = useState<AgentContext | null>(null);
   const [clock, setClock] = useState(utcNow);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [trail, setTrail] = useState<(TrailEntry & { view?: View })[]>(() => {
@@ -157,7 +160,9 @@ export function App() {
   const items = view.items;
   const onToday = Boolean(today) && !timelineId;
   const listItems = onToday ? (stageList?.items ?? []) : items;
-  const drawer = onToday || timelineId ? null : (dossier || view.drawer);
+  const shownDrawer = onToday || timelineId ? null : (dossier || view.drawer);
+  const selAsk = shownDrawer && !dossier && !shownDrawer.caseKey && !shownDrawer.askKey ? selectionKey(section, mode, selectedId) : null;
+  const drawer = selAsk && shownDrawer ? { ...shownDrawer, askKey: selAsk } : shownDrawer;
   const ids = useMemo(() => listItems.map((item) => item.id), [listItems]);
   const dossierScope = drawer?.watch ? `symbol:${drawer.watch}` : section === "districts" ? drawer?.links?.find((l) => l.label === "Representative")?.action || "" : "";
   useDossierScope(dossierScope, setIntelScope);
@@ -305,15 +310,21 @@ export function App() {
     else routeAction(action);
   }
 
-  /** Every Ask entry (nav ASK, ⌘K ASK, the search Ask row, `#ask=`, ⌘K BT) opens the one sheet. */
-  function openAsk(prefill = "") {
+  /** Every Ask entry (nav ASK, ⌘K ASK, the search Ask row, `#ask=`, ⌘K BT, a card's Ask button) opens the one sheet. */
+  function openAsk(prefill = "", size: "half" | null = null) {
     setPanelsOpen(false);
     setAlertsOpen(false);
     setCmdOpen(false);
-    ask.show(prefill);
+    ask.show(prefill, size);
   }
 
   function go(action: string, label?: string) {
+    const card = parseAskAction(action);
+    if (card) {
+      const ctx = aboutContext(card, section);
+      setAskAbout(ctx);
+      return openAsk(itemStarters(ctx)[0] || "", "half");
+    }
     if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
     if (action.split(":")[0] === "ask") return openAsk();
@@ -511,7 +522,7 @@ export function App() {
   const askTheory = boardOn && selectedId?.startsWith("theory:")
     ? board.graph.theories.find((t) => selectedId === `theory:${t.id}`) || null
     : null;
-  const askContext = screenContext({
+  const screenAsk = screenContext({
     section,
     mode,
     marketView,
@@ -524,9 +535,16 @@ export function App() {
     rowSymbol: section === "markets" && selectedId ? markets.chartFocus?.symbol || null : null,
     caseKey: drawer?.caseKey || null,
     watch: drawer?.watch || null,
-    theory: askTheory
+    theory: askTheory,
+    label: drawer?.title || null,
+    askKey: drawer?.askKey || null
   });
+  const screenKey = `${screenAsk.section}|${screenAsk.node || ""}|${screenAsk.theory?.id || ""}`;
+  /** A card's Ask button attaches that card until the screen selection changes. */
+  useEffect(() => { setAskAbout(null); }, [screenKey]);
+  const askContext = askAbout || screenAsk;
   ask.bindContext(askContext);
+  const askRegion = section === "news" && newsRegion !== "all" ? REGIONS.find((r) => r.id === newsRegion)?.label || null : null;
   const askKey = `${askContext.node || ""}|${askContext.theory?.id || ""}`;
   const { setDetached } = ask;
   useEffect(() => { setDetached(false); }, [askKey, setDetached]);
@@ -825,7 +843,8 @@ export function App() {
         <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
       <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
-      <AskSheet ask={ask} context={askContext} onFollow={follow} />
+      <AskSheet ask={ask} context={askContext} region={askRegion} onFollow={follow} />
+      <ApiBanner />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
     </div>
   );

@@ -1,0 +1,50 @@
+/* Saved chats in the Ask sheet: rows with pin / rename / delete tools, a filter past six chats, an Undo line. */
+.ask-saved-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ask-saved .ask-saved-head h2 { margin: 0; }
+.ask-saved-find {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 220px;
+  margin-left: auto;
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 11px;
+}
+.ask-saved-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+.ask-saved .ask-saved-open b { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ask-saved-pin { flex: none; color: var(--amber); }
+.ask-saved-tools { display: inline-flex; gap: 1px; opacity: 0; transition: opacity 120ms; }
+.ask-saved-row:hover .ask-saved-tools,
+.ask-saved-row:focus-within .ask-saved-tools { opacity: 1; }
+.ask-saved .ask-saved-tools button {
+  width: auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  color: var(--faint);
+}
+.ask-saved .ask-saved-tools button:hover { color: var(--ink); border-color: var(--line); }
+.ask-saved .ask-saved-tools button[aria-pressed="true"] { color: var(--amber); }
+.ask-saved-name {
+  min-width: 0;
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--amber);
+  color: var(--ink);
+  font-size: 11px;
+}
+.ask-undo { margin: 0 0 4px; display: flex; align-items: baseline; gap: 6px; color: var(--dim); font-size: 11px; }
+.ask-saved .ask-undo button { width: auto; display: inline; padding: 0 2px; border: 0; color: var(--amber); }
+.ask-turn .ask-retry { justify-self: start; }
+.ask-ctx-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ask-frame { grid-template-columns: minmax(0, 1fr); }
+@media (hover: none) { .ask-saved-tools { opacity: 1; } }
+@container (max-width: 480px) {
+  .ask-head .ask-context { flex-basis: 100%; order: 1; }
+  .ask-saved .ask-saved-open { grid-template-columns: minmax(0, 1fr); }
+  .ask-saved .ask-saved-open time { display: none; }
+}
+.app.phone .ask-saved-tools { opacity: 1; }

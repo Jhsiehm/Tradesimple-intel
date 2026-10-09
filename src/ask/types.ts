@@ -86,7 +86,8 @@ export type Turn = {
   revising?: string;
 };
 
-export type SavedChat = { id: string; title: string; turns: Turn[]; updated: string };
+/** `named`: the user renamed it, so the automatic title stays off. `pinned`: listed first, never dropped at the cap. */
+export type SavedChat = { id: string; title: string; turns: Turn[]; updated: string; pinned?: boolean; named?: boolean };
 
 export type AskStatus = {
   ok: boolean;
