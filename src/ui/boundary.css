@@ -1,0 +1,28 @@
+.boundary {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg, #06080b);
+  z-index: 1;
+}
+.boundary p {
+  margin: 0;
+  max-width: 44ch;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  color: var(--dim, #8a8f98);
+  font: 11px/1.4 var(--mono, ui-monospace, monospace);
+}
+.boundary strong {
+  color: var(--ink, #e4e7e6);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.boundary span {
+  overflow-wrap: anywhere;
+}

@@ -30,6 +30,8 @@ type Sky = Parameters<maplibregl.Map["setSky"]>[0];
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 const BASES = ["dark", "sat", "daily", "night"] as const;
 const LIVE_ORDER = ["himawari", "goesWest", "goesEast"];
+/** Maps whose base style and core layers are in place. */
+const STYLED = new WeakSet<maplibregl.Map>();
 const SKY = {
   "sky-color": "#04070a",
   "horizon-color": "#18232d",
@@ -75,6 +77,8 @@ export function MapFrame({
   const [ready, setReady] = useState(false);
   onSelectRef.current = onSelect;
   onArcRef.current = onArc;
+  /** `ready` can outlive its map across a hot remount; only a map whose own style finished loading takes layers. */
+  const loadedMap = () => (ready && mapRef.current && STYLED.has(mapRef.current) ? mapRef.current : null);
 
   useEffect(() => {
     if (failed || !el.current || mapRef.current) return;
@@ -184,6 +188,7 @@ export function MapFrame({
         if (id) onSelectRef.current?.(String(id));
       });
       map.getCanvas().style.cursor = "crosshair";
+      STYLED.add(map);
       setReady(true);
     });
     mapRef.current = map;
@@ -211,8 +216,8 @@ export function MapFrame({
   }, [lon, lat, zoom]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !earth) return;
+    const map = loadedMap();
+    if (!map || !earth) return;
     addEarth(map, earth);
     const imagery = settings.base !== "dark";
     BASES.forEach((base) => map.setLayoutProperty(`img-${base}`, "visibility", settings.base === base || (base === "daily" && settings.base === "live") ? "visible" : "none"));
@@ -230,8 +235,8 @@ export function MapFrame({
   }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !earth) return;
+    const map = loadedMap();
+    if (!map || !earth) return;
     addEarth(map, earth);
     if (earth.lanes) (map.getSource("lanes") as maplibregl.GeoJSONSource).setData(earth.lanes);
     if (earth.chokepoints) (map.getSource("chokepoints") as maplibregl.GeoJSONSource).setData(earth.chokepoints);
@@ -239,8 +244,8 @@ export function MapFrame({
 
   const liveKey = (live || []).map((l) => l.tiles[0]).join("|");
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !earth) return;
+    const map = loadedMap();
+    if (!map || !earth) return;
     addEarth(map, earth);
     const daily = map.getSource("img-daily") as maplibregl.RasterTileSource | undefined;
     if (daily && dailyTiles?.length && (daily as unknown as { tiles?: string[] }).tiles?.[0] !== dailyTiles[0]) daily.setTiles(dailyTiles);
@@ -262,8 +267,8 @@ export function MapFrame({
   }, [ready, earth, liveKey, dailyTiles?.[0]]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !flash) return;
+    const map = loadedMap();
+    if (!map || !flash) return;
     const box = document.createElement("div");
     const title = document.createElement("strong");
     title.textContent = flash.title;
@@ -280,8 +285,8 @@ export function MapFrame({
   }, [ready, flash]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !earth) return;
+    const map = loadedMap();
+    if (!map || !earth) return;
     addEarth(map, earth);
     const relief = settings.view === "3d";
     // MapLibre cannot fog terrain on the globe projection, so relief runs on mercator.
@@ -302,8 +307,8 @@ export function MapFrame({
   }, [ready, earth, settings.view]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
+    const map = loadedMap();
+    if (!map) return;
     const source = map.getSource("base") as maplibregl.GeoJSONSource | undefined;
     if (source && pushedGeojson.current !== geojson) {
       source.setData(geojson || EMPTY);
@@ -333,8 +338,8 @@ export function MapFrame({
   }, [ready, geojson, colorProp, idProp, markersKey, selectedId]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
+    const map = loadedMap();
+    if (!map) return;
     (map.getSource("arcs") as maplibregl.GeoJSONSource | undefined)?.setData(arcs?.lines || EMPTY);
     (map.getSource("arc-ends") as maplibregl.GeoJSONSource | undefined)?.setData(arcs?.ends || EMPTY);
   }, [ready, arcs]);

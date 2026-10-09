@@ -36,6 +36,7 @@ import { ALL_SCOPE, scopeOf, useIntelScope, type IntelScope } from "./intel/useI
 import { arcView } from "./intel/arcs";
 import { Scrubber } from "./intel/Scrubber";
 import { presetWindow, type DayWindow } from "./intel/lanes";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import type { ArcKind } from "../shared/intel.mjs";
 import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
@@ -630,7 +631,7 @@ export function App() {
             {showMap && !calendarTab && !today && !timelineId && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
           </div>
           <div className="map-body">
-            <Suspense fallback={<p className="stage-loading">Loading…</p>}>
+            <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
             {phone && !timelineId && !today ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
             ) : today ? (
@@ -734,7 +735,7 @@ export function App() {
                 {time.domain ? <TimeBar domain={time.domain} value={mapTime} onChange={setMapTime} notes={time.notes} title={time.title} /> : null}
               </>
             )}
-            </Suspense>
+            </Suspense></ErrorBoundary>
             {filingMapOn ? (
               <FilingOverlay rows={weekFilings.rows} status={weekFilings.status} selectedId={activeFiling?.id || null} onSelect={setFilingId} onFollow={follow} />
             ) : congressMapOn ? (
