@@ -58,20 +58,21 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
     }
   }
 
-  for (const f of insiders) {
-    if (!syms.has(f.symbol) || !after(f.filed)) continue;
+  for (const g of groupForm4(insiders.filter((f) => syms.has(f.symbol) && after(f.filed)))) {
+    const traded = g.from === g.to ? g.from : `${g.from} – ${g.to}`;
     out.push({
-      id: `f4:${f.id}`,
+      id: `f4:${g.symbol}:${g.accession}`,
       kind: "form4",
-      date: f.filed,
-      title: `Form 4 · ${f.symbol} · ${f.person}`,
-      detail: `${f.title ? `${f.title} · ` : ""}${f.side === "sell" ? "sold" : f.side === "buy" ? "bought" : f.code} ${Math.round(f.shares || 0).toLocaleString("en-US")} sh${f.price ? ` @ ${f.price}` : ""} · traded ${f.traded}`,
-      link: f.link,
-      action: `pos:${f.symbol}`,
+      date: g.filed,
+      title: `Form 4 · ${g.symbol} · ${g.person}`,
+      detail: `${g.title ? `${g.title} · ` : ""}${g.buys} buy${g.buys === 1 ? "" : "s"} · ${g.sells} sell${g.sells === 1 ? "" : "s"} · ${g.other} other${g.value ? ` · ${usd(g.value)}` : ""} · ${g.lines} line${g.lines === 1 ? "" : "s"}${g.planned ? " · 10b5-1 plan" : ""} · traded ${traded}`,
+      link: g.link,
+      action: `pos:${g.symbol}`,
       late: false,
-      severity: alertSeverity({ kind: "form4", value: f.value ?? (f.shares || 0) * (f.price || 0) }),
+      severity: alertSeverity({ kind: "form4", value: g.openValue, planned: g.planned }),
       source: "SEC EDGAR Form 4",
-      pins: [{ kind: "symbol", id: f.symbol, label: f.symbol }]
+      pins: [{ kind: "symbol", id: g.symbol, label: g.symbol }],
+      form4: { lines: g.lines, buys: g.buys, sells: g.sells, other: g.other, value: g.value, planned: g.planned }
     });
   }
 
@@ -94,6 +95,37 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
 
   out.sort((a, b) => String(b.date).localeCompare(String(a.date)) || a.id.localeCompare(b.id));
   return out;
+}
+
+const usd = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`);
+
+/**
+ * One group per Form 4 filing (accession) from per-line insider rows. `value` sums every priced line;
+ * `openValue` sums open-market buys and sells (codes P, S) not under a 10b5-1 plan. `planned` is true when the
+ * filing has open-market sells, all under a plan, and no open-market buys.
+ */
+export function groupForm4(rows) {
+  const groups = new Map();
+  for (const f of rows) {
+    const accession = f.accession || String(f.id);
+    const key = `${f.symbol}:${accession}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { symbol: f.symbol, accession, person: f.person, title: f.title, filed: f.filed, link: f.link, from: f.traded, to: f.traded, lines: 0, buys: 0, sells: 0, other: 0, value: 0, openValue: 0, plannedSells: 0 };
+      groups.set(key, g);
+    }
+    const value = f.value ?? (f.shares || 0) * (f.price || 0);
+    g.lines += 1;
+    g.value += value || 0;
+    if (f.side === "buy") g.buys += 1;
+    else if (f.side === "sell") g.sells += 1;
+    else g.other += 1;
+    if (f.side === "sell" && f.plan) g.plannedSells += 1;
+    else if (f.side === "buy" || f.side === "sell") g.openValue += value || 0;
+    if (f.traded && (!g.from || f.traded < g.from)) g.from = f.traded;
+    if (f.traded && (!g.to || f.traded > g.to)) g.to = f.traded;
+  }
+  return [...groups.values()].map(({ plannedSells, ...g }) => ({ ...g, value: Math.round(g.value), openValue: Math.round(g.openValue), planned: g.sells > 0 && plannedSells === g.sells && g.buys === 0 }));
 }
 
 /** Keeps watchlist rows ahead of unwatched late filings when trimming, so a late-filing batch cannot push them out. */
@@ -120,7 +152,7 @@ export async function alertsFor(db, params) {
     items: capAlerts(items, 200),
     sources: [
       { label: "Congress trades", source: trades.source || "House Clerk PTRs · Senate eFD", asOf: trades.asOf, latency: "Filed up to 45 days after the trade; alert date is the filed date." },
-      { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade." },
+      { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade. One row per filing; 10b5-1 planned sales are ROUTINE." },
       { label: "Lobbying", source: lobbying.source || "LDA.gov", asOf: lobbying.asOf, latency: "Quarterly LD-2 reports, due 20 days after quarter end." }
     ]
   };

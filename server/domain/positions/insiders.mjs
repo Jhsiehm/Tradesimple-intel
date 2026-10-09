@@ -44,6 +44,7 @@ export function insiderTrades(db) {
           parsed.lines.forEach((line, i) => {
             rows.push({
               id: `f4-${ticker.symbol}-${pick.accession}-${i}`,
+              accession: pick.accession,
               symbol: ticker.symbol,
               person: parsed.owner,
               title: parsed.title,
@@ -53,6 +54,7 @@ export function insiderTrades(db) {
               price: line.price,
               value: line.shares && line.price ? Math.round(line.shares * line.price) : null,
               owned: line.owned,
+              plan: Boolean(line.plan),
               traded: line.date,
               filed: pick.filed,
               lag: lagDays(line.date, pick.filed),

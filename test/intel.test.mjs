@@ -111,6 +111,8 @@ test("alertSeverity triages lateness, size, and Form 4 value", () => {
   assert.equal(alertSeverity({ kind: "symbol-trade", lag: 5, amountLow: 250001 }), "high");
   assert.equal(alertSeverity({ kind: "form4", value: 150000 }), "elevated");
   assert.equal(alertSeverity({ kind: "form4", value: 2e6 }), "high");
+  assert.equal(alertSeverity({ kind: "form4", value: 0, planned: true }), "routine", "10b5-1 planned sales only");
+  assert.equal(alertSeverity({ kind: "form4", value: 5e6, planned: true }), "routine");
   assert.equal(alertSeverity({ kind: "lobbying", amount: 60000 }), "routine");
 });
 
@@ -124,7 +126,7 @@ test("buildAlerts rows carry severity, source, and what a pin would watch", () =
   const trade = out.find((a) => a.id === "trade:t1");
   assert.deepEqual([trade.severity, trade.source], ["high", "Senate eFD PTR"]);
   assert.deepEqual(trade.pins.map((p) => `${p.kind}:${p.id}`), ["member:B000002", "symbol:AMD"]);
-  const f4 = out.find((a) => a.id === "f4:f1");
+  const f4 = out.find((a) => a.id === "f4:AMD:f1");
   assert.deepEqual([f4.severity, f4.source], ["elevated", "SEC EDGAR Form 4"]);
 });
 

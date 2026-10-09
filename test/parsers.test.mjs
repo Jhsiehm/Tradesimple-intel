@@ -56,5 +56,20 @@ test("Form 4 0000002488-26-000165 (AMD, Ava Hahn): 10b5-1 sale with footnoted sh
   const f = parseForm4(fs.readFileSync(fixture("form4-0000002488-26-000165.xml"), "utf8"));
   assert.equal(f.owner, "Hahn Ava");
   assert.equal(f.title, "SVP, GC & Corporate Secretary");
-  assert.deepEqual(f.lines, [{ date: "2026-08-18", code: "S", shares: 2993, price: 488.69, ad: "D", owned: 26623 }]);
+  assert.deepEqual(f.lines, [{ date: "2026-08-18", code: "S", shares: 2993, price: 488.69, ad: "D", owned: 26623, plan: true }]);
+  assert.equal(f.plan10b5, true);
+});
+
+test("Form 4 10b5-1: footnote references mark lines; the checkbox covers filings without a plan footnote", () => {
+  const xml = fs.readFileSync(fixture("form4-0000002488-26-000165.xml"), "utf8");
+  const block = /<nonDerivativeTransaction>[\s\S]*?<\/nonDerivativeTransaction>/.exec(xml)[0];
+  const unfooted = block.replace(/<footnoteId id="F1"\/>/, "").replace("<value>2993</value>", "<value>100</value>");
+  const two = parseForm4(xml.replace(block, block + unfooted));
+  assert.deepEqual(two.lines.map((l) => l.plan), [true, false], "only the footnoted line is planned");
+  const boxOnly = parseForm4(xml.replace(/<footnote id="F1">[^<]*<\/footnote>/, '<footnote id="F1">Weighted average price.</footnote>'));
+  assert.equal(boxOnly.plan10b5, true);
+  assert.equal(boxOnly.lines[0].plan, true, "aff10b5One with no plan footnote marks every line");
+  const none = parseForm4(xml.replace("<aff10b5One>1</aff10b5One>", "<aff10b5One>0</aff10b5One>").replace(/<footnote id="F1">[^<]*<\/footnote>/, ""));
+  assert.equal(none.plan10b5, false);
+  assert.equal(none.lines[0].plan, false);
 });

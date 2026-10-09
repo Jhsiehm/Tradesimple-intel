@@ -143,11 +143,13 @@ export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
   return { ...base, level: "baseline", label: "BASELINE", why };
 }
 
-export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; or a Form 4 worth $1M+. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a Form 4 of $100K+, or lobbying of $500K+. Otherwise ROUTINE.";
+export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; or a Form 4 filing with $1M+ of open-market buys and sells outside a 10b5-1 plan. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a Form 4 filing with $100K+ of such trades, or lobbying of $500K+. Otherwise ROUTINE. Form 4 is one row per filing; 10b5-1 planned sales, grants, exercises, tax withholding and gifts do not count toward its value, and a filing of planned sales only is ROUTINE.";
 
 /**
  * Triage level for one alert row; amounts are the disclosed range floor, not the trade size. Unwatched
  * late filings arrive in catch-up batches of small lines, so lateness alone does not make one HIGH.
+ * A Form 4 row is one filing: `value` is its open-market (P/S) value outside a 10b5-1 plan, `planned` marks a
+ * filing of planned sales only.
  */
 export function alertSeverity(a) {
   const lag = a.lag ?? 0;
@@ -158,6 +160,7 @@ export function alertSeverity(a) {
     if (lag > 90 || low >= 15001) return "elevated";
     return "routine";
   }
+  if (a.kind === "form4" && a.planned) return "routine";
   if (lag > 90 || low >= 250001 || (a.kind === "form4" && value >= 1e6)) return "high";
   if (a.late || lag > 45 || low >= 50001 || (a.kind === "form4" && value >= 1e5) || (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)) return "elevated";
   return "routine";
