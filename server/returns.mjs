@@ -215,7 +215,7 @@ export function applyWindow(trades, { from = "", to = "", days = 0, basis = "fil
     const d = String(t[key] || "").slice(0, 10);
     return ISO.test(d) && (!lo || d >= lo) && (!hi || d <= hi);
   });
-  return { trades: kept, window: { all: false, from: lo, to: hi, ...(n > 0 ? { days: n } : {}), basis: label, rows: kept.length } };
+  return { trades: kept, window: { all: false, from: lo, to: hi, ...(n > 0 ? { days: n } : {}), basis: label, trades: kept.length } };
 }
 
 /**

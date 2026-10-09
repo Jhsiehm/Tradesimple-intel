@@ -117,7 +117,7 @@ const WINDOW_ARGS = {
  * Rows of a list result kept to a date window by `key`, with `window` saying what was applied (or `all: true` and the
  * span the rows cover). Counts after the cut are the window's; `itemsBeforeWindow` is the list's size before it.
  */
-export function windowItems(body, { days = 0, from = "", to = "", key = "filed", basis = "filing date", today = new Date().toISOString().slice(0, 10), coverage = "" } = {}) {
+export function windowItems(body, { days = 0, from = "", to = "", key = "filed", basis = "filing date", unit = "rows", today = new Date().toISOString().slice(0, 10), coverage = "" } = {}) {
   if (!body || body.ok === false || !Array.isArray(body.items)) return body;
   const n = daysArg(days, 730);
   let lo = ISO_DAY.test(from) ? from : "";
@@ -129,7 +129,15 @@ export function windowItems(body, { days = 0, from = "", to = "", key = "filed",
     return { ...body, window: { all: true, from: dates[0] || "", to: dates.at(-1) || "", basis, ...(coverage ? { coverage } : {}) } };
   }
   const items = body.items.filter((r) => { const d = dayOf(r); return ISO_DAY.test(d) && (!lo || d >= lo) && (!hi || d <= hi); });
-  return { ...body, items, itemsBeforeWindow: body.items.length, window: { all: false, from: lo, to: hi, ...(n ? { days: n } : {}), basis, rows: items.length, ...(coverage ? { coverage } : {}) } };
+  return { ...body, items, itemsBeforeWindow: body.items.length, window: { all: false, from: lo, to: hi, ...(n ? { days: n } : {}), basis, [unit]: items.length, ...(coverage ? { coverage } : {}) } };
+}
+
+/** Form 4 rows are transaction lines; several lines share one form. Counts say which is which. */
+export function insiderCounts(body) {
+  if (!body || body.ok === false || !Array.isArray(body.items)) return body;
+  const distinct = (k) => new Set(body.items.map((r) => r[k]).filter(Boolean)).size;
+  const { itemsBeforeWindow, ...rest } = body;
+  return { ...rest, counts: { transactionLines: body.items.length, forms: distinct("accession"), issuers: distinct("symbol"), insiders: distinct("person") }, ...(itemsBeforeWindow != null ? { transactionLinesBeforeWindow: itemsBeforeWindow } : {}) };
 }
 
 /** What congress_leaders gives a model: the window and benchmark status first, then the boards, shortened. */
@@ -277,9 +285,9 @@ export const TOOLS = [
     const s = symbolOf(a.symbol);
     return s ? call(db, "markets.position", { symbol: s }) : call(db, "markets.positions");
   }, "Positions"),
-  tool("insiders", "Recent Form 4 insider transactions: the latest eight Form 4s per join-table issuer, newest filed first. days (or from/to) keeps Form 4s filed in that window; `window` says what the rows cover.", obj(WINDOW_ARGS), async (db, a, call) => windowItems(await call(db, "markets.insiders"), {
-    days: a.days, from: a.from, to: a.to, key: "filed", basis: "Form 4 filing date", coverage: "latest eight Form 4s per join-table issuer"
-  }), "Insiders"),
+  tool("insiders", "Recent Form 4 insider transactions: the latest eight Form 4s per join-table issuer, newest filed first. days (or from/to) keeps Form 4s filed in that window; `window` says what the rows cover.", obj(WINDOW_ARGS), async (db, a, call) => insiderCounts(windowItems(await call(db, "markets.insiders"), {
+    days: a.days, from: a.from, to: a.to, key: "filed", basis: "Form 4 filing date", unit: "transactionLines", coverage: "latest eight Form 4s per join-table issuer"
+  })), "Insiders"),
   tool("congress_feed", "Congressional trade disclosures by filing date: newest filings, biggest, most-traded tickers, late filings. Default window is the last 7 days, widened to 14 or 30 when few members filed; days sets the starting window (up to 90). `window` says what was used.", obj({ days: { type: "number", description: "Starting window in days (default 7, up to 90). Pass N for a last-N-days question." } }), (db, a, call) => {
     const days = daysArg(a.days, 90);
     return call(db, "congress.feed", {}, days ? qs({ days }) : "");

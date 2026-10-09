@@ -17,7 +17,7 @@ type TickerRow = { symbol: string; asset: string; inJoin: boolean; trades: numbe
 type FeedRes = {
   ok: boolean; error?: string; source?: string; asOf?: string; latency?: string; building?: boolean;
   window?: { from: string; to: string; days: number; fallback: boolean };
-  counts?: { filings: number; members: number; lateThisWindow: number };
+  counts?: { trades: number; reports: number; members: number; lateThisWindow: number };
   latest?: FeedRow[]; late?: FeedRow[]; biggest?: FeedRow[]; tickers?: TickerRow[];
 };
 
@@ -130,7 +130,7 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
       ) : (
         <div className="board-scroll today-grid">
           <section className="today-card">
-            <h3>Latest filings <small>{res.counts?.filings ?? 0} trades from {res.counts?.members ?? 0} members · one row per report</small></h3>
+            <h3>Latest filings <small>{res.counts?.trades ?? 0} trades in {res.counts?.reports ?? 0} reports from {res.counts?.members ?? 0} members · one row per report</small></h3>
             <ol>{(res.latest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
           </section>
           <section className="today-card">

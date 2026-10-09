@@ -92,7 +92,9 @@ export function mislabeledCounts(answer, bodies) {
     if (c.value <= 10 || out.some((x) => x.raw === c.raw)) continue;
     const labels = bodies.flatMap((b) => labelsFor(b, c.value));
     if (!labels.length) continue;
-    if (labels.some((l) => l.startsWith("?") || FAMILY[c.family].test(words(l)))) continue;
+    if (labels.some((l) => FAMILY[c.family].test(words(l)))) continue;
+    // A generic total gets the benefit of the doubt unless the same number is also a named count of something else.
+    if (labels.some((l) => l.startsWith("?")) && !labels.some((l) => /^counts\./.test(l))) continue;
     out.push({ raw: c.raw, value: c.value, unit: c.unit, foundAs: [...new Set(labels)].slice(0, 3) });
   }
   return out.slice(0, 6);

@@ -127,7 +127,7 @@ test("applyWindow keeps rows by disclosure date by default, by trade date on req
   assert.deepEqual(all.window, { all: true, from: "2025-06-02", to: "2026-10-01", basis: "disclosure date (filed)", note: "No window requested: every disclosure the app holds, disclosure date (filed) 2025-06-02 to 2026-10-01." });
   const filed = applyWindow(TRADES, { days: 30, today: "2026-10-09" });
   assert.deepEqual(filed.trades.map((t) => t.id), ["a", "b"]);
-  assert.deepEqual(filed.window, { all: false, from: "2026-09-09", to: "2026-10-09", days: 30, basis: "disclosure date (filed)", rows: 2 });
+  assert.deepEqual(filed.window, { all: false, from: "2026-09-09", to: "2026-10-09", days: 30, basis: "disclosure date (filed)", trades: 2 });
   const traded = applyWindow(TRADES, { days: 30, basis: "traded", today: "2026-10-09" });
   assert.deepEqual(traded.trades.map((t) => t.id), ["b"]);
   assert.equal(traded.window.basis, "trade date");
@@ -166,10 +166,15 @@ test("congress_feed takes a starting window; insiders are cut to a filing-date w
   await TOOLS.find((t) => t.name === "congress_feed").run({}, { days: 30 }, async (_d, id, _p, q) => { seen.push([id, q]); return { ok: true }; });
   assert.deepEqual(seen, [["congress.feed", "days=30"]]);
   const body = { ok: true, source: "SEC", items: [{ filed: "2026-10-05" }, { filed: "2026-08-01" }] };
-  const cut = windowItems(body, { days: 30, today: "2026-10-09", basis: "Form 4 filing date" });
+  const cut = windowItems(body, { days: 30, today: "2026-10-09", basis: "Form 4 filing date", unit: "transactionLines" });
   assert.equal(cut.items.length, 1);
   assert.equal(cut.itemsBeforeWindow, 2);
-  assert.deepEqual(cut.window, { all: false, from: "2026-09-09", to: "2026-10-09", days: 30, basis: "Form 4 filing date", rows: 1 });
+  assert.deepEqual(cut.window, { all: false, from: "2026-09-09", to: "2026-10-09", days: 30, basis: "Form 4 filing date", transactionLines: 1 });
+  const lines = [{ filed: "2026-10-05", accession: "A", symbol: "ADI", person: "Ray" }, { filed: "2026-10-05", accession: "A", symbol: "ADI", person: "Ray" }, { filed: "2026-10-06", accession: "B", symbol: "LMT", person: "Jo" }];
+  const ins = await TOOLS.find((t) => t.name === "insiders").run({}, { days: 30 }, async () => ({ ok: true, source: "SEC", items: lines }));
+  assert.deepEqual(ins.counts, { transactionLines: 3, forms: 2, issuers: 2, insiders: 2 }, "lines, forms, issuers and people are counted apart");
+  assert.equal(ins.transactionLinesBeforeWindow, 3);
+  assert.equal(ins.window.basis, "Form 4 filing date");
   assert.deepEqual(windowItems(body, { basis: "Form 4 filing date", coverage: "latest eight" }).window, { all: true, from: "2026-08-01", to: "2026-10-05", basis: "Form 4 filing date", coverage: "latest eight" });
 });
 
@@ -179,6 +184,7 @@ test("buildFeed starts at the requested window and labels its basis", () => {
   assert.equal(f.window.days, 30);
   assert.equal(f.window.fallback, false);
   assert.equal(f.window.basis, "disclosure date (filed)");
+  assert.deepEqual([f.counts.trades, f.counts.reports, f.counts.filings], [5, 5, undefined], "trade rows and reports are counted apart; nothing is called filings");
 });
 
 test("the system prompt forbids windows and comparisons the tools did not return", () => {

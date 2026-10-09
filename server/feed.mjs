@@ -62,7 +62,8 @@ export function buildFeed(trades, { today, days = 7, minMembers = 5, limit = 30 
   return {
     window: { from, to: today, days: span, fallback, basis: "disclosure date (filed)", late: "the late list covers every filing the app holds, not this window" },
     counts: {
-      filings: base.length,
+      trades: base.length,
+      reports: filings.size,
       members: new Set(base.map((t) => t.bioguide || t.person)).size,
       lateThisWindow: base.filter((t) => t.lag != null && t.lag > LATE_DAYS).length
     },
