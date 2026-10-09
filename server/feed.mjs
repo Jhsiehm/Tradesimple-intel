@@ -60,7 +60,7 @@ export function buildFeed(trades, { today, days = 7, minMembers = 5, limit = 30 
     .sort((a, b) => b.members - a.members || b.trades - a.trades || b.low - a.low || a.symbol.localeCompare(b.symbol))
     .slice(0, 20);
   return {
-    window: { from, to: today, days: span, fallback },
+    window: { from, to: today, days: span, fallback, basis: "disclosure date (filed)", late: "the late list covers every filing the app holds, not this window" },
     counts: {
       filings: base.length,
       members: new Set(base.map((t) => t.bioguide || t.person)).size,
@@ -73,7 +73,8 @@ export function buildFeed(trades, { today, days = 7, minMembers = 5, limit = 30 
   };
 }
 
-export async function congressFeed(db) {
+/** `days` (optional) starts the window there instead of 7; it still widens when too few members filed. */
+export async function congressFeed(db, { days = 0 } = {}) {
   const board = await congressTrades(db).catch(() => ({ items: [] }));
   const today = new Date().toISOString().slice(0, 10);
   return {
@@ -82,6 +83,6 @@ export async function congressFeed(db) {
     asOf: board.asOf || new Date().toISOString(),
     latency: `Grouped by filed date, the day the public could first see the trade. Trades are filed up to ${LATE_DAYS} days after the trade date by law; "late" means more than ${LATE_DAYS} days. ${board.building ? "Backfill still running; older reports are still arriving." : ""}`.trim(),
     building: Boolean(board.building),
-    ...buildFeed(board.items || [], { today })
+    ...buildFeed(board.items || [], { today, ...(days > 0 ? { days } : {}) })
   };
 }

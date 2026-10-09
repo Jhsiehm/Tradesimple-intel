@@ -22,8 +22,14 @@ export const handlers = {
   "congress.memberTrades": async ({ db, params }) => ({ ok: true, items: await memberTrades(db, params.id.toUpperCase()) }),
   "congress.memberTimeline": ({ db, params }) => memberTimeline(db, params.id),
   "congress.member": ({ db, params, query }) => memberProfile(db, params.id, query.chamber()),
-  "congress.leaders": ({ db }) => leadersBoard(db),
-  "congress.feed": ({ db }) => congressFeed(db),
+  "congress.leaders": ({ db, query }) => leadersBoard(db, {
+    from: query.str("from"),
+    to: query.str("to"),
+    days: Math.max(0, Math.min(730, Math.round(Number(query.str("days")) || 0))),
+    basis: query.str("basis") === "traded" ? "traded" : "filed",
+    waitMs: query.str("wait") === "1" ? 15_000 : 0
+  }),
+  "congress.feed": ({ db, query }) => congressFeed(db, { days: Math.max(0, Math.min(90, Math.round(Number(query.str("days")) || 0))) }),
   lobby: ({ db, query }) => lobbyingForClient(db, query.str("client")),
   fec: ({ db, query }) => fecForName(db, query.str("name"))
 };

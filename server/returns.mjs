@@ -187,6 +187,67 @@ export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_
   return { minBuys, scoredMembers: scored.length, excessTop, excessBottom, active, late, longest, tickers };
 }
 
+/* ---------- date window and benchmark status ---------- */
+
+/** A windowed board ranks members with this many priced buys in the window; the all-time board keeps MIN_BUYS. */
+export const WINDOW_MIN_BUYS = 3;
+const BASIS_LABEL = { filed: "disclosure date (filed)", traded: "trade date" };
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const back = (today, days) => isoOf(dayNum(today) - days);
+
+/**
+ * Pure. The disclosure rows inside [from, to] by `basis` ("filed", the day the public could see it, or "traded"),
+ * and the window that was applied. `days` means the last N days through `today`. With no window every row is kept
+ * and `window.all` says so, with the span the rows actually cover.
+ */
+export function applyWindow(trades, { from = "", to = "", days = 0, basis = "filed", today }) {
+  const key = basis === "traded" ? "traded" : "filed";
+  const n = Math.round(Number(days) || 0);
+  let lo = ISO.test(from) ? from : "";
+  let hi = ISO.test(to) ? to : "";
+  if (n > 0) { hi = hi || today; lo = back(hi, n); }
+  const label = BASIS_LABEL[key];
+  if (!lo && !hi) {
+    const dates = trades.map((t) => String(t[key] || "")).filter((d) => ISO.test(d.slice(0, 10))).map((d) => d.slice(0, 10)).sort();
+    return { trades, window: { all: true, from: dates[0] || "", to: dates.at(-1) || "", basis: label, note: `No window requested: every disclosure the app holds${dates.length ? `, ${label} ${dates[0]} to ${dates.at(-1)}` : ""}.` } };
+  }
+  const kept = trades.filter((t) => {
+    const d = String(t[key] || "").slice(0, 10);
+    return ISO.test(d) && (!lo || d >= lo) && (!hi || d <= hi);
+  });
+  return { trades: kept, window: { all: false, from: lo, to: hi, ...(n > 0 ? { days: n } : {}), basis: label, rows: kept.length } };
+}
+
+/**
+ * Pure. Whether the board holds any SPY comparison, and why not when it doesn't. `benchmarkComparison` is null
+ * whenever no member row carries an excess-vs-SPY figure, so a 0 is never read as "matched the market".
+ */
+export function benchmarkStatus({ lastClose, buys, pricedBuys, scoredMembers, minBuys, progress = {}, warm = true }) {
+  const symbols = Math.max(0, (progress.total || 0) - 1);
+  const none = (reason) => ({ benchmarkComparison: null, benchmarkComparisonReason: reason });
+  if (!lastClose) {
+    if (progress.running) return none(`Prices are still loading after a server start (${progress.priced || 0} of ${symbols} symbols read so far), so no buy has an SPY comparison yet.`);
+    if (progress.total && progress.failed) return none("SPY closes could not be read from Yahoo Finance, so no buy can be compared with SPY.");
+    return none(warm ? "Prices have not been loaded yet, so no buy can be compared with SPY." : "Price loading is off (INTEL_NO_WARM), so no buy can be compared with SPY.");
+  }
+  if (!buys) return none("There are no disclosed buys in this window.");
+  if (!pricedBuys) return none(`None of the ${buys} disclosed buys in this window has a priced entry (a joined ticker with a close within ${ENTRY_SLACK_DAYS} days of the trade date; closes through ${lastClose}).`);
+  if (!scoredMembers) return none(`${pricedBuys} of ${buys} disclosed buys are priced, but no member has the ${minBuys} priced buys needed to be ranked against SPY.`);
+  return {
+    benchmarkComparison: {
+      benchmark: BENCHMARK,
+      buysInWindow: buys,
+      pricedBuys,
+      membersRanked: scoredMembers,
+      minPricedBuysToRank: minBuys,
+      measured: "Each buy from the close on its trade date to the latest close, against SPY over the same days (excessSince); excess30 / excess90 only where 30 / 90 days have passed.",
+      through: lastClose,
+      ...(progress.running ? { partial: `Prices still loading: ${progress.priced || 0} of ${symbols} symbols so far.` } : {})
+    },
+    benchmarkComparisonReason: ""
+  };
+}
+
 /* ---------- daily closes (Yahoo chart, adjusted), cached in sqlite ---------- */
 
 
@@ -244,8 +305,28 @@ export function pickSymbols(trades, max = MAX_SYMBOLS) {
   return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, max).map(([s]) => s);
 }
 
-export async function buildReturns(db) {
-  if (state.progress.running) return;
+let job = null;
+
+/** One build at a time; callers that want to wait share its promise. */
+export function buildReturns(db) {
+  if (!job) job = build(db).finally(() => { job = null; });
+  return job;
+}
+
+/**
+ * Wait up to `ms` for prices when none are loaded yet. Prices live in memory, so every server start rebuilds them
+ * (about a second from the sqlite cache, minutes when Yahoo must be fetched); a board read in that gap has none.
+ */
+export async function awaitReturns(db, ms) {
+  if (state.spy?.length && !(state.progress.running && !state.rows.length)) return;
+  if (!job && !warmEnabled()) return;
+  const running = buildReturns(db).catch(() => {});
+  let timer;
+  await Promise.race([running, new Promise((r) => { timer = setTimeout(r, ms); timer.unref?.(); })]);
+  clearTimeout(timer);
+}
+
+async function build(db) {
   const board = await congressTrades(db).catch(() => ({ items: [] }));
   const trades = board.items || [];
   if (!trades.length) return;
@@ -286,7 +367,7 @@ function sourceBlock() {
   return {
     source: "Disclosures: House Clerk PTRs · Senate eFD. Prices: Yahoo Finance daily adjusted closes.",
     asOf: p.finishedAt || p.startedAt || new Date().toISOString(),
-    latency: `Daily closes through ${lastClose || "—"}, refreshed every 12 h (cached 20 h). ${p.running ? `Pricing in progress: ${p.done} of ${p.total} symbols.` : `${state.closes.size} of ${Math.max(0, p.total - 1)} symbols priced.`} Only joined tickers from data/tickers.json with disclosed buys, up to ${MAX_SYMBOLS}.`,
+    latency: `Daily closes through ${lastClose || "—"}, refreshed every 12 h (cached 20 h). ${p.running ? `Pricing in progress: ${state.closes.size} of ${Math.max(0, p.total - 1)} symbols priced so far.` : `${state.closes.size} of ${Math.max(0, p.total - 1)} symbols priced.`} Only joined tickers from data/tickers.json with disclosed buys, up to ${MAX_SYMBOLS}.`,
     basis: BASIS,
     progress: { ...p, priced: state.closes.size, scored: state.rows.length, lastClose }
   };
@@ -299,15 +380,38 @@ export function memberReturns(bioguide) {
   return { stats: stats ? { ...stats, basis: BASIS, lastClose: state.spy?.length ? isoOf(state.spy.at(-1)[0]) : null, building: state.progress.running } : null, byTrade };
 }
 
-export async function leaders(db, people) {
-  if (!state.spy && !state.progress.running && warmEnabled()) void buildReturns(db);
+/**
+ * The leaderboards over every disclosure, or over a window (`from`/`to`/`days`, by filed or traded date). `waitMs`
+ * waits that long for prices after a server start instead of answering with none. `window` and
+ * `benchmarkComparison` say what the board covers and whether it holds any SPY figures.
+ */
+export async function leaders(db, people, { from = "", to = "", days = 0, basis = "filed", waitMs = 0, today = new Date().toISOString().slice(0, 10) } = {}) {
+  if (waitMs > 0) await awaitReturns(db, waitMs);
+  else if (!state.spy && !state.progress.running && warmEnabled()) void buildReturns(db);
   const board = await congressTrades(db).catch(() => ({ items: [] }));
-  const trades = board.items || [];
+  const all = board.items || [];
+  const { trades, window } = applyWindow(all, { from, to, days, basis, today });
+  const ids = window.all ? null : new Set(trades.map((t) => t.id));
+  const rows = ids ? state.rows.filter((r) => ids.has(r.id)) : state.rows;
+  const stats = ids ? memberStats(trades, rows) : state.stats;
+  const minBuys = window.all ? MIN_BUYS : WINDOW_MIN_BUYS;
+  const boards = buildLeaders({ trades, stats, people, minBuys });
+  const lastClose = state.spy?.length ? isoOf(state.spy.at(-1)[0]) : null;
   return {
-    ok: trades.length > 0,
+    ok: all.length > 0,
     building: state.progress.running || Boolean(board.building),
     ...sourceBlock(),
+    window,
+    ...benchmarkStatus({
+      lastClose,
+      buys: trades.filter((t) => t.side === "buy").length,
+      pricedBuys: rows.length,
+      scoredMembers: boards.scoredMembers,
+      minBuys,
+      progress: { ...state.progress, priced: state.closes.size },
+      warm: warmEnabled()
+    }),
     tradesSource: { source: board.source, asOf: board.asOf, latency: board.latency },
-    ...buildLeaders({ trades, stats: state.stats, people })
+    ...boards
   };
 }

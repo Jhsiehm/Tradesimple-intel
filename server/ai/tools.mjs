@@ -104,6 +104,57 @@ export function summarizeBacktest(out) {
   };
 }
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const DAY_MS = 86_400_000;
+const daysArg = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+const WINDOW_ARGS = {
+  days: { type: "number", description: "Only the last N days. Pass it whenever the question says last N days, this week/month, or recent; leave it out for all available data." },
+  from: str("First day, YYYY-MM-DD (instead of days)"),
+  to: str("Last day, YYYY-MM-DD (instead of days)")
+};
+
+/**
+ * Rows of a list result kept to a date window by `key`, with `window` saying what was applied (or `all: true` and the
+ * span the rows cover). Counts after the cut are the window's; `itemsBeforeWindow` is the list's size before it.
+ */
+export function windowItems(body, { days = 0, from = "", to = "", key = "filed", basis = "filing date", today = new Date().toISOString().slice(0, 10), coverage = "" } = {}) {
+  if (!body || body.ok === false || !Array.isArray(body.items)) return body;
+  const n = daysArg(days, 730);
+  let lo = ISO_DAY.test(from) ? from : "";
+  let hi = ISO_DAY.test(to) ? to : "";
+  if (n) { hi = hi || today; lo = new Date(Date.parse(`${hi}T00:00:00Z`) - n * DAY_MS).toISOString().slice(0, 10); }
+  const dayOf = (r) => String(r?.[key] || "").slice(0, 10);
+  if (!lo && !hi) {
+    const dates = body.items.map(dayOf).filter((d) => ISO_DAY.test(d)).sort();
+    return { ...body, window: { all: true, from: dates[0] || "", to: dates.at(-1) || "", basis, ...(coverage ? { coverage } : {}) } };
+  }
+  const items = body.items.filter((r) => { const d = dayOf(r); return ISO_DAY.test(d) && (!lo || d >= lo) && (!hi || d <= hi); });
+  return { ...body, items, itemsBeforeWindow: body.items.length, window: { all: false, from: lo, to: hi, ...(n ? { days: n } : {}), basis, rows: items.length, ...(coverage ? { coverage } : {}) } };
+}
+
+/** What congress_leaders gives a model: the window and benchmark status first, then the boards, shortened. */
+export function leadersForModel(out) {
+  if (!out || out.ok === false) return out;
+  return {
+    ok: true,
+    source: out.source,
+    asOf: out.asOf,
+    latency: out.latency,
+    window: out.window,
+    benchmarkComparison: out.benchmarkComparison ?? null,
+    ...(out.benchmarkComparisonReason ? { benchmarkComparisonReason: out.benchmarkComparisonReason } : {}),
+    basis: out.basis,
+    building: out.building,
+    minBuys: out.minBuys,
+    scoredMembers: out.scoredMembers,
+    excessTop: (out.excessTop || []).slice(0, 10),
+    excessBottom: (out.excessBottom || []).slice(0, 5),
+    active: (out.active || []).slice(0, 10),
+    tickers: (out.tickers || []).slice(0, 10),
+    late: (out.late || []).slice(0, 5)
+  };
+}
+
 const SPEC_SCHEMA = obj({
   source: { type: "string", enum: SOURCES, description: "congress = congressional trades by filing date; form4 = insider buys/sells excluding 10b5-1; contracts = federal awards to joined contractors; lobbying = lobbying spikes (needs tickers)" },
   filters: {
@@ -200,13 +251,16 @@ export const TOOLS = [
     return /^[a-z]+\d+-\d+$/.test(id) ? call(db, "congress.billRolls", { id }) : bad("id must look like hr5334-119");
   }, "Bill votes"),
   tool("votes", "The most recent roll calls in one chamber.", obj({ chamber: { type: "string", enum: ["house", "senate"] } }), (db, a, call) => call(db, "congress.votes", {}, qs({ chamber: a.chamber === "senate" ? "senate" : "house" })), "Votes"),
-  tool("contracts", "Federal contract actions from USAspending. Filter by joined ticker, place (TX-12 or a state), or the member whose district it is.", obj({ symbol: str("Ticker"), place: str("District or state"), member: str("Bioguide"), days: { type: "number", description: "Lookback, default 30" }, sort: { type: "string", enum: ["recent", "largest"] } }), (db, a, call) => call(db, "contracts.feed", {}, qs({
-    symbol: symbolOf(a.symbol),
-    place: String(a.place || "").trim().slice(0, 20),
-    member: bioguideOf(a.member),
-    days: Math.max(1, Math.min(365, Math.round(Number(a.days) || 30))),
-    sort: a.sort === "largest" ? "largest" : "recent"
-  })), "Contracts"),
+  tool("contracts", "Federal contract actions from USAspending by action date. Filter by joined ticker, place (TX-12 or a state), or the member whose district it is. `window` says the days covered.", obj({ symbol: str("Ticker"), place: str("District or state"), member: str("Bioguide"), days: { type: "number", description: "Lookback, default 30" }, sort: { type: "string", enum: ["recent", "largest"] } }), async (db, a, call) => {
+    const out = await call(db, "contracts.feed", {}, qs({
+      symbol: symbolOf(a.symbol),
+      place: String(a.place || "").trim().slice(0, 20),
+      member: bioguideOf(a.member),
+      days: Math.max(1, Math.min(365, Math.round(Number(a.days) || 30))),
+      sort: a.sort === "largest" ? "largest" : "recent"
+    }));
+    return out?.window && typeof out.window === "object" ? { ...out, window: { ...out.window, basis: "action date" } } : out;
+  }, "Contracts"),
   tool("corporate", "Lobbying, PAC receipts, contracts, or earnings for one joined ticker.", obj({ kind: { type: "string", enum: ["lobbying", "pac", "contracts", "earnings"] }, symbol: str("Ticker") }, ["kind", "symbol"]), (db, a, call) => {
     const s = symbolOf(a.symbol);
     return ["lobbying", "pac", "contracts", "earnings"].includes(a.kind) && s ? call(db, "corporate", { kind: a.kind, symbol: s }) : bad("kind and symbol are required");
@@ -223,9 +277,27 @@ export const TOOLS = [
     const s = symbolOf(a.symbol);
     return s ? call(db, "markets.position", { symbol: s }) : call(db, "markets.positions");
   }, "Positions"),
-  plain("insiders", "Recent Form 4 insider transactions.", "markets.insiders", "Insiders"),
-  plain("congress_feed", "This week's congressional trade disclosures: newest filings, late filings, biggest, most-traded tickers.", "congress.feed", "Congress feed"),
-  plain("congress_leaders", "Disclosed buys ranked against SPY. Equal-weighted, not a portfolio.", "congress.leaders", "Leaders"),
+  tool("insiders", "Recent Form 4 insider transactions: the latest eight Form 4s per join-table issuer, newest filed first. days (or from/to) keeps Form 4s filed in that window; `window` says what the rows cover.", obj(WINDOW_ARGS), async (db, a, call) => windowItems(await call(db, "markets.insiders"), {
+    days: a.days, from: a.from, to: a.to, key: "filed", basis: "Form 4 filing date", coverage: "latest eight Form 4s per join-table issuer"
+  }), "Insiders"),
+  tool("congress_feed", "Congressional trade disclosures by filing date: newest filings, biggest, most-traded tickers, late filings. Default window is the last 7 days, widened to 14 or 30 when few members filed; days sets the starting window (up to 90). `window` says what was used.", obj({ days: { type: "number", description: "Starting window in days (default 7, up to 90). Pass N for a last-N-days question." } }), (db, a, call) => {
+    const days = daysArg(a.days, 90);
+    return call(db, "congress.feed", {}, days ? qs({ days }) : "");
+  }, "Congress feed"),
+  tool("congress_leaders", "Members ranked by their disclosed buys' return against SPY (equal-weighted, not a portfolio), plus most active traders, most-traded tickers, and late filers. With no window it covers every disclosure the app holds (back to 2025); days or from/to keep disclosures in that window, by disclosure (filed) date unless basis is traded. `window` says what was covered; `benchmarkComparison` is null with a reason when no buy has an SPY figure.", obj({
+    ...WINDOW_ARGS,
+    basis: { type: "string", enum: ["filed", "traded"], description: "Which date the window applies to: filed (disclosure date, default) or traded" }
+  }), async (db, a, call) => {
+    const days = daysArg(a.days, 730);
+    const out = await call(db, "congress.leaders", {}, qs({
+      days: days || "",
+      from: ISO_DAY.test(String(a.from || "")) ? a.from : "",
+      to: ISO_DAY.test(String(a.to || "")) ? a.to : "",
+      basis: a.basis === "traded" ? "traded" : "",
+      wait: 1
+    }));
+    return leadersForModel(out);
+  }, "Leaders"),
   tool("market_snapshot", "How US markets are doing now: S&P 500, Nasdaq Composite, Dow, Russell 2000, VIX, benchmark and sector ETFs (last, change % from the previous close), and the 10-year and 2-year Treasury yields. Delayed Yahoo Finance quotes and FRED yields, each with as-of. Call it for any question about how the market, stocks overall, indices, volatility, or yields are doing today. Ends with a disclaimer sentence to quote.", obj({}), (db, _a, call) => runMarketSnapshot(db, call), "Markets"),
   tool("alerts", "Late filings and anything on a watch list of tickers or members.", obj({ symbols: str("Comma-separated tickers"), members: str("Comma-separated bioguides"), late: { type: "string", enum: ["all", ""] } }), (db, a, call) => call(db, "alerts", {}, qs({
     symbols: String(a.symbols || "").slice(0, 200),
