@@ -10,29 +10,54 @@ const RING = 150;
 const STEP = 64;
 const GAP = 46;
 
-/** Positions for `ids` around `parent`. `neighbors` are where the parent's current links already point. */
-export function fan(parent: Pt, ids: string[], neighbors: Pt[]): Map<string, Pt> {
+/**
+ * Positions for `ids` around `parent`. `neighbors` are where the parent's current links already point; slots
+ * within GAP of anything in `taken` are skipped, so a crowded side pushes new nodes to an outer ring.
+ */
+export function fan(parent: Pt, ids: string[], neighbors: Pt[], taken: Pt[] = []): Map<string, Pt> {
   const out = new Map<string, Pt>();
   if (!ids.length) return out;
   let away = -Math.PI / 2;
-  if (neighbors.length) {
-    const sx = neighbors.reduce((s, p) => s + (p.x - parent.x), 0);
-    const sy = neighbors.reduce((s, p) => s + (p.y - parent.y), 0);
-    if (Math.hypot(sx, sy) > 1) away = Math.atan2(-sy, -sx);
+  let room = Math.PI * 2;
+  const angles = neighbors.filter((p) => Math.hypot(p.x - parent.x, p.y - parent.y) > 1).map((p) => Math.atan2(p.y - parent.y, p.x - parent.x)).sort((a, b) => a - b);
+  if (angles.length) {
+    room = 0;
+    for (let i = 0; i < angles.length; i += 1) {
+      const next = i + 1 < angles.length ? angles[i + 1] : angles[0] + Math.PI * 2;
+      if (next - angles[i] > room) {
+        room = next - angles[i];
+        away = angles[i] + room / 2;
+      }
+    }
   }
-  const spread = Math.min(Math.PI * 2, Math.max(Math.PI * 0.6, ids.length * 0.32));
+  const spread = Math.min(Math.PI * 2, Math.max(Math.min(Math.PI * 0.6, room * 0.7), ids.length * 0.32));
+  const grid = new Map<string, Pt[]>();
+  const cellOf = (p: Pt) => `${Math.floor(p.x / GAP)},${Math.floor(p.y / GAP)}`;
+  const hold = (p: Pt) => (grid.get(cellOf(p)) || grid.set(cellOf(p), []).get(cellOf(p))!).push(p);
+  const free = (p: Pt) => {
+    const cx = Math.floor(p.x / GAP);
+    const cy = Math.floor(p.y / GAP);
+    for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
+      for (const q of grid.get(`${cx + dx},${cy + dy}`) || []) if (Math.hypot(p.x - q.x, p.y - q.y) < GAP) return false;
+    }
+    return true;
+  };
+  for (const p of taken) hold(p);
   let ring = 0;
   let placed = 0;
   while (placed < ids.length) {
     const r = RING + ring * STEP;
-    const fits = Math.max(1, Math.floor((spread * r) / GAP));
-    const take = Math.min(fits, ids.length - placed);
-    for (let i = 0; i < take; i += 1) {
+    const take = Math.min(Math.max(1, Math.floor((spread * r) / GAP)), ids.length - placed);
+    const last = ring >= 24;
+    for (let i = 0; i < take && placed < ids.length; i += 1) {
       const t = take === 1 ? 0 : i / (take - 1) - 0.5;
       const a = away + t * spread * (spread >= Math.PI * 2 ? (take - 1) / take : 1) + (ring % 2) * 0.08;
-      out.set(ids[placed + i], { x: parent.x + Math.cos(a) * r, y: parent.y + Math.sin(a) * r });
+      const p = { x: parent.x + Math.cos(a) * r, y: parent.y + Math.sin(a) * r };
+      if (!last && !free(p)) continue;
+      out.set(ids[placed], p);
+      hold(p);
+      placed += 1;
     }
-    placed += take;
     ring += 1;
   }
   return out;
@@ -44,7 +69,7 @@ export function fan(parent: Pt, ids: string[], neighbors: Pt[]): Map<string, Pt>
  */
 export function relax(all: Placed[], moving: Map<string, Pt>, anchors: Map<string, Pt>, rounds = 40): Map<string, Pt> {
   const pos = new Map(moving);
-  const cell = 60;
+  const cell = 76;
   for (let r = 0; r < rounds; r += 1) {
     const grid = new Map<string, Pt[]>();
     const put = (p: Pt) => {

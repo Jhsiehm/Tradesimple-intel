@@ -94,10 +94,15 @@
 .drawer h2 .drawer-kind { display: inline-flex; vertical-align: -1px; margin-right: 8px; }
 
 /* Phone: the canvas sits above the list and dossier; menus fill the width. */
-.app.phone .map-body:has(.relmap) { display: block; height: 62dvh; }
+.app.phone:not(.tl) .map-wrap:has(.relmap) { grid-template-rows: auto 56dvh; }
+.app.phone:not(.tl) .map-body:has(.relmap) { display: block; min-height: 0; }
 .app.phone .relmap-bar { padding: 6px; }
 .app.phone .relmap-search { flex-basis: 100%; max-width: none; }
-.app.phone .relmap-bar .seg button { padding: 8px 10px; }
+.app.phone .relmap-bar { gap: 4px; flex-wrap: wrap; }
+.app.phone .relmap-bar .seg { padding: 1px; }
+.app.phone .relmap-bar .seg button { padding: 8px 9px; }
+.app.phone .relmap-bar [aria-label="Zoom in"], .app.phone .relmap-bar [aria-label="Zoom out"] { display: none; }
+.app.phone .relmap-more { margin-left: 0; }
 .app.phone .relmap-menu, .app.phone .relmap-pop { left: 6px !important; right: 6px; width: auto; top: auto !important; bottom: 6px; max-height: 70%; overflow: auto; }
 .app.phone .relmap-more-pop { position: fixed; top: auto; bottom: 8px; }
 .app.phone .relmap-cat > button { padding: 10px; }

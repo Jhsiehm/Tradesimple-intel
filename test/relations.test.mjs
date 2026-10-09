@@ -7,6 +7,7 @@ import {
 import { MAX_THEORIES, cleanDoc, decodeShare, encodeShare, mergeDocs, migrate, parseDoc, serialize } from "../shared/theories.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK, contrast } from "../src/relations/palette.ts";
 import { ICON_NAMES } from "../src/ui/icons/names.ts";
+import { fan } from "../src/relations/layout.ts";
 import { expand, nodeInfo } from "../server/domain/relations.mjs";
 
 const src = { source: "S", asOf: "2026-10-01T00:00:00Z", latency: "L" };
@@ -157,6 +158,19 @@ test("palette covers every category and node type, clears contrast, and keeps th
   assert.ok(icons.has(THEORY_LOOK.icon));
   assert.match(THEORY_LOOK.label, /not from a data source/);
   assert.equal(CATEGORIES.length, CATEGORY_IDS.length);
+});
+
+test("fan aims new nodes into the widest empty angle and keeps clear of nodes already placed", () => {
+  const parent = { x: 0, y: 0 };
+  const ring = Array.from({ length: 12 }, (_, i) => ({ x: Math.cos((i / 12) * Math.PI) * 150, y: Math.sin((i / 12) * Math.PI) * 150 }));
+  const [lone] = fan(parent, ["a"], ring, ring).values();
+  assert.ok(lone.y < -100, "a single new node goes into the empty upper half");
+  const out = fan(parent, Array.from({ length: 30 }, (_, i) => `n${i}`), ring, [parent, ...ring]);
+  assert.equal(out.size, 30);
+  const placed = [...out.values()];
+  for (const p of placed) {
+    for (const q of [parent, ...ring, ...placed]) if (p !== q) assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= 45, "no new node lands on another");
+  }
 });
 
 test("expand and nodeInfo reject bad input before touching any feed", async () => {

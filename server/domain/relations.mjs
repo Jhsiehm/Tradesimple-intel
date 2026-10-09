@@ -370,6 +370,12 @@ async function insiders(db, origin, { type, key }) {
 
 const BUILD = { trade: trades, committee: committeeSeats, hearing: hearings, vote: votes, contract: contractsOf, lobbying, pac: pacs, supply, hq, insider: insiders };
 
+/** One row per neighbor (a supplier that is also a customer is one node), never the origin itself. */
+function distinct(rows, origin) {
+  const seen = new Set();
+  return rows.filter((r) => r.node.id !== origin.id && !seen.has(r.node.id) && seen.add(r.node.id));
+}
+
 /** One page of neighbors for `node` in `category`. Every edge carries its feed's source, as-of, and latency. */
 export async function expand(db, params) {
   const id = String(params.get("node") || "");
@@ -381,8 +387,7 @@ export async function expand(db, params) {
   const origin = await describe(db, id);
   if (!origin) return { ok: false, status: 404, error: "Nothing on file for that node" };
   const built = await BUILD[category](db, origin, parsed);
-  const seen = new Set();
-  const rows = built.rows.filter((r) => r.node.id !== origin.id && !seen.has(r.node.id) && seen.add(r.node.id));
+  const rows = distinct(built.rows, origin);
   const p = page(rows, clampOffset(params.get("offset")), clampLimit(params.get("limit")));
   return {
     ok: true,
@@ -410,7 +415,7 @@ export async function nodeInfo(db, params) {
   const node = await describe(db, id);
   if (!node) return { ok: false, status: 404, error: "Nothing on file for that node" };
   const cats = categoriesFor(parsed.type);
-  const sizes = await Promise.all(cats.map((c) => within(Promise.resolve().then(() => BUILD[c.id](db, node, parsed)).then((b) => ({ count: b.rows.length, source: b.source, asOf: b.asOf })), COUNT_WAIT, { count: null })));
+  const sizes = await Promise.all(cats.map((c) => within(Promise.resolve().then(() => BUILD[c.id](db, node, parsed)).then((b) => ({ count: distinct(b.rows, node).length, source: b.source, asOf: b.asOf })), COUNT_WAIT, { count: null })));
   return {
     ok: true,
     node,

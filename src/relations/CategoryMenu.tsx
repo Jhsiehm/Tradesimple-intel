@@ -41,10 +41,11 @@ export function CategoryMenu({ rel, node, at, bounds, onExpand, onTheory, onRemo
       {cats.map((c) => {
         const cl = CATEGORY_LOOK[c.id];
         const key = `${node.id}|${c.id}`;
-        const got = rel.loaded[key];
+        const meta = rel.loaded[key];
+        const got = meta?.shown ? meta : undefined;
         const busy = rel.busy.has(key);
         const ci = info?.categories?.find((x) => x.id === c.id);
-        const total = got ? got.total : ci?.count;
+        const total = meta && !meta.error ? meta.total : ci?.count;
         const title = `${ci?.source || c.source}${ci?.asOf ? ` · as of ${when(ci.asOf)} UTC` : ""}`;
         const empty = total === 0;
         return (
@@ -57,7 +58,7 @@ export function CategoryMenu({ rel, node, at, bounds, onExpand, onTheory, onRemo
               </span>
               <span className="relmap-cat-act">{busy ? "Loading" : empty ? "None" : got ? (got.more ? <><Icon name="more" /> More</> : "All shown") : "Add"}</span>
             </button>
-            {got?.error ? <small className="relmap-cat-err">{got.error}</small> : null}
+            {meta?.error ? <small className="relmap-cat-err">{meta.error}</small> : null}
           </div>
         );
       })}

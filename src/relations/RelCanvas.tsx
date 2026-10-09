@@ -92,6 +92,9 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   const press = useRef<number | null>(null);
   const dirty = useRef(true);
   const fitted = useRef(false);
+  /** The user panned or zoomed; resizes stop re-fitting from then on. */
+  const moved = useRef(false);
+  const fitRef = useRef(() => {});
   const perf = useRef({ n: 0, ms: 0 });
   const live = useRef(props);
   live.current = props;
@@ -161,7 +164,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     if (!list.length) { view.current = { x: w / 2, y: h / 2, k: 1 }; dirty.current = true; return; }
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const n of list) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); }
-    const pad = 70;
+    const pad = Math.min(70, Math.min(w, h) * 0.1);
     const k = Math.max(MIN_K, Math.min(1.6, Math.min((w - pad * 2) / Math.max(1, x1 - x0), (h - pad * 2) / Math.max(1, y1 - y0))));
     view.current = { k, x: w / 2 - ((x0 + x1) / 2) * k, y: h / 2 - ((y0 + y1) / 2) * k };
     dirty.current = true;
@@ -171,6 +174,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     const v = view.current;
     const k = Math.max(MIN_K, Math.min(MAX_K, v.k * f));
     view.current = { k, x: sx - ((sx - v.x) * k) / v.k, y: sy - ((sy - v.y) * k) / v.k };
+    moved.current = true;
     dirty.current = true;
   }
 
@@ -192,7 +196,8 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   useEffect(() => { dirty.current = true; }, [selectedId, theoryMode, pendingFrom]);
 
   useEffect(() => {
-    if (!fitted.current && scene.nodes.length && size.current.w > 1) { fitted.current = true; fit(); }
+    fitRef.current = fit;
+    if (!fitted.current && scene.nodes.length && size.current.w > 1 && size.current.h > 1) { fitted.current = true; fit(); }
   });
 
   useEffect(() => {
@@ -203,14 +208,15 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = el.clientWidth;
       const h = el.clientHeight;
-      const first = size.current.w <= 1;
+      const was = size.current;
       size.current = { w, h, dpr };
       cv.width = Math.round(w * dpr);
       cv.height = Math.round(h * dpr);
-      if (first) {
-        view.current = { x: w / 2, y: h / 2, k: 1 };
-        if (live.current.graph.nodes.length) { fitted.current = true; fit(); }
-      }
+      if (w > 1 && h > 1 && !moved.current && live.current.graph.nodes.length) {
+        fitted.current = true;
+        fitRef.current();
+      } else if (was.w <= 1) view.current = { x: w / 2, y: h / 2, k: 1 };
+      else view.current = { ...view.current, x: view.current.x + (w - was.w) / 2, y: view.current.y + (h - was.h) / 2 };
       dirty.current = true;
     });
     ro.observe(el);
@@ -470,6 +476,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       const cx = (pts[0].x + pts[1].x) / 2;
       const cy = (pts[0].y + pts[1].y) / 2;
       view.current = { k, x: cx - ((g.cx - g.view.x) * k) / g.view.k, y: cy - ((g.cy - g.view.y) * k) / g.view.k };
+      moved.current = true;
       dirty.current = true;
       return;
     }
@@ -480,8 +487,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       live.current.onCloseMenu();
     }
     if (!g.moved) return;
-    if (g.mode === "pan") view.current = { ...view.current, x: g.vx + p.x - g.sx, y: g.vy + p.y - g.sy };
-    else if (g.mode === "node") drag.current.set(g.id, { x: g.ox + (p.x - g.sx) / view.current.k, y: g.oy + (p.y - g.sy) / view.current.k });
+    if (g.mode === "pan") {
+      view.current = { ...view.current, x: g.vx + p.x - g.sx, y: g.vy + p.y - g.sy };
+      moved.current = true;
+    } else if (g.mode === "node") drag.current.set(g.id, { x: g.ox + (p.x - g.sx) / view.current.k, y: g.oy + (p.y - g.sy) / view.current.k });
     dirty.current = true;
   }
 

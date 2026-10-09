@@ -13,7 +13,7 @@ import type { TheoryDoc } from "../../shared/theories.mjs";
 export type CategoryInfo = { id: CategoryId; label: string; count: number | null; source: string; asOf: string };
 type NodeInfo = { ok: boolean; error?: string; node: NodeRef; categories: CategoryInfo[] };
 
-const EMPTY_TEXT = "Search above the map to add a member, ticker, or committee, or open a member card and choose Map. Click a node for its relationships.";
+const EMPTY_TEXT = "Search above to add a member, ticker, committee, or district (TX-12), or start from one below. Click a node for its relationships.";
 
 /** Where an expansion's new nodes go: fanned away from the parent's links, then nudged apart. Old nodes stay put. */
 function placer(graph: Graph, exp: Pick<Expansion, "node" | "nodes">, at: Pt) {
@@ -21,9 +21,17 @@ function placer(graph: Graph, exp: Pick<Expansion, "node" | "nodes">, at: Pt) {
   const parent = have.get(exp.node.id) || { ...at, id: exp.node.id };
   const fresh = exp.nodes.map((n) => n.id).filter((id) => !have.has(id) && id !== exp.node.id);
   const linked = graph.edges.filter((e) => e.from === parent.id || e.to === parent.id).map((e) => have.get(e.from === parent.id ? e.to : e.from)).filter(Boolean) as Pt[];
-  const fanned = fan(parent, fresh, linked);
+  const fanned = fan(parent, fresh, linked, graph.nodes);
   const moved = relax(graph.nodes, new Map([...fanned].map(([k, p]) => [k, { ...p }])), fanned);
   return (node: NodeRef) => (node.id === exp.node.id && !have.has(node.id) ? { x: at.x, y: at.y } : moved.get(node.id) || { x: parent.x + 40, y: parent.y + 40 });
+}
+
+/** Data links of one category touching one node; `key` is `<node>|<category>`. */
+function linksOf(graph: Graph, key: string) {
+  const cut = key.lastIndexOf("|");
+  const id = key.slice(0, cut);
+  const cat = key.slice(cut + 1);
+  return graph.edges.reduce((n, e) => n + (e.cat === cat && (e.from === id || e.to === id) ? 1 : 0), 0);
 }
 
 export function useRelations(scope: IntelScope, selectedId: string | null, on: boolean) {
@@ -79,10 +87,11 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
   const expand = useCallback(async (id: string, cat: CategoryId, more = false, at: Pt = { x: 0, y: 0 }) => {
     const key = `${id}|${cat}`;
     const prior = loadedRef.current[key];
-    if (prior && !more) return;
+    const have = linksOf(graphRef.current, key);
+    if (prior && !prior.error && have && (!more || have >= prior.total)) return;
     setBusy((s) => new Set(s).add(key));
     try {
-      const offset = more && prior ? prior.shown : 0;
+      const offset = more ? have : 0;
       const res = await api<Expansion>(`/api/relations/expand?node=${encodeURIComponent(id)}&category=${cat}&offset=${offset}`);
       const { dropped } = mergeExpansion(graphRef.current, res, placer(graphRef.current, res, at));
       setH((cur) => commit(cur, mergeExpansion(cur.present, res, placer(cur.present, res, at)).graph));
@@ -183,6 +192,27 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
   }, [on, seed, addNode]);
 
   const items = useMemo(() => listItems(graph), [graph]);
+  /** What each fetch would add, recounted from the canvas so undo, remove, and redo keep "shown" honest. */
+  const onCanvas = useMemo(() => {
+    const out: Record<string, Loaded> = {};
+    for (const res of Object.values(infos)) {
+      for (const c of res.ok ? res.categories : []) {
+        const key = `${res.node.id}|${c.id}`;
+        const shown = c.count == null ? 0 : linksOf(graph, key);
+        if (shown && !loaded[key]) out[key] = { shown, total: Math.max(shown, c.count || 0), more: shown < (c.count || 0), source: c.source, asOf: c.asOf || "", latency: "" };
+      }
+    }
+    for (const [key, meta] of Object.entries(loaded)) {
+      if (meta.error) {
+        out[key] = meta;
+        continue;
+      }
+      const shown = linksOf(graph, key);
+      out[key] = { ...meta, shown, more: shown < meta.total };
+    }
+    return out;
+  }, [graph, loaded, infos]);
+
   const drawer = useMemo(() => {
     if (!selectedId) return null;
     if (selectedId.startsWith("theory:")) {
@@ -192,9 +222,9 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
     const e = findEdge(graph, selectedId);
     if (e) return edgeDrawer(graph, e);
     const n = graph.nodes.find((x) => x.id === selectedId);
-    return n ? nodeDrawer(graph, n, loaded) : null;
-  }, [graph, selectedId, loaded]);
-  const line = useMemo(() => status(graph, loaded), [graph, loaded]);
+    return n ? nodeDrawer(graph, n, onCanvas) : null;
+  }, [graph, selectedId, onCanvas]);
+  const line = useMemo(() => status(graph, onCanvas), [graph, onCanvas]);
 
   return {
     graph,
@@ -202,7 +232,7 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
     empty: graph.nodes.length ? "" : EMPTY_TEXT,
     drawer,
     status: line,
-    loaded,
+    loaded: onCanvas,
     busy,
     infos,
     hidden,
