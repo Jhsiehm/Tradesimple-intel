@@ -29,9 +29,11 @@
 .app.phone .nav button[aria-current="page"] .ic-tight { position: static; width: auto; height: auto; margin: 0 0 0 5px; clip-path: none; }
 .app.phone .nav .ic { width: 16px; height: 16px; }
 
-@media (max-width: 1500px) and (min-width: 901px) {
+/* Desktop nav: digits go first (the footer lists them), then other sections drop to icon + tooltip. */
+@media (max-width: 1800px) { .nav button kbd { display: none; } }
+@media (max-width: 1720px) and (min-width: 901px) {
   .nav button:not([aria-current="page"]) .ic-tight { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .nav button:not([aria-current="page"]) { padding: 6px 7px; }
+  .nav button:not([aria-current="page"]) { padding: 6px 8px; }
 }
 
 /* Dev icon sheet (#icons). */

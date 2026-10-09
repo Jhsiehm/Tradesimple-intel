@@ -4,12 +4,13 @@ import { BASE_TITLE, type MarketView } from "./sections";
 import type { ContractScope, ContractSort } from "../contracts/useContracts";
 import type { BillRoll } from "../congress/useCongress";
 import type { DistrictLayer } from "../districts/useDistricts";
+import { IconLabel, type IconName } from "../ui/icons/Icon";
 
 export function DistrictsBar({ layer, onLayer }: { layer: DistrictLayer; onLayer: (l: DistrictLayer) => void }) {
   return (
     <span className="seg" title="What the list and map show">
-      <button aria-pressed={layer === "sites"} onClick={() => onLayer("sites")}>Sites</button>
-      <button aria-pressed={layer === "hq"} onClick={() => onLayer("hq")}>S&amp;P 500 HQ</button>
+      <button aria-pressed={layer === "sites"} onClick={() => onLayer("sites")}><IconLabel icon="sites">Sites</IconLabel></button>
+      <button aria-pressed={layer === "hq"} onClick={() => onLayer("hq")}><IconLabel icon="hq">S&amp;P 500 HQ</IconLabel></button>
     </span>
   );
 }
@@ -47,24 +48,24 @@ export function CongressBar(props: {
   return (
     <>
       <span className="seg">
-        <button aria-pressed={props.chamber === "house"} onClick={() => props.onChamber("house")}>House</button>
-        <button aria-pressed={props.chamber === "senate"} onClick={() => props.onChamber("senate")}>Senate</button>
+        <button aria-pressed={props.chamber === "house"} onClick={() => props.onChamber("house")}><IconLabel icon="house">House</IconLabel></button>
+        <button aria-pressed={props.chamber === "senate"} onClick={() => props.onChamber("senate")}><IconLabel icon="senate">Senate</IconLabel></button>
       </span>
       <span className="seg">
         {(["votes", "bills", "members", "committees"] as CongressMode[]).map((m) => (
           <button key={m} aria-pressed={props.mode === m} onClick={() => props.onMode(m)}>
-            {m[0].toUpperCase() + m.slice(1)}
+            <IconLabel icon={m}>{m[0].toUpperCase() + m.slice(1)}</IconLabel>
           </button>
         ))}
       </span>
       <span className="seg center-only">
-        <button aria-pressed={props.voteView === "floor"} onClick={() => props.onVoteView("floor")}>Floor</button>
-        <button aria-pressed={props.voteView === "map"} onClick={() => props.onVoteView("map")}>Map</button>
+        <button aria-pressed={props.voteView === "floor"} onClick={() => props.onVoteView("floor")}><IconLabel icon="floor">Floor</IconLabel></button>
+        <button aria-pressed={props.voteView === "map"} onClick={() => props.onVoteView("map")}><IconLabel icon="map">Map</IconLabel></button>
       </span>
       {map ? (
         <span className="seg center-only" title="Map layer: roll-call coloring, or this week's trade filings by state">
-          <button aria-pressed={props.mapLayer === "votes"} onClick={() => props.onMapLayer("votes")}>Votes</button>
-          <button aria-pressed={props.mapLayer === "filings"} onClick={() => props.onMapLayer("filings")}>Filings</button>
+          <button aria-pressed={props.mapLayer === "votes"} onClick={() => props.onMapLayer("votes")}><IconLabel icon="votes">Votes</IconLabel></button>
+          <button aria-pressed={props.mapLayer === "filings"} onClick={() => props.onMapLayer("filings")}><IconLabel icon="filings">Filings</IconLabel></button>
         </span>
       ) : null}
       <PartyButtons party={props.party} onParty={props.onParty} />
@@ -85,14 +86,14 @@ export function CongressBar(props: {
   );
 }
 
-const MARKET_VIEWS: [MarketView, string][] = [
-  ["board", "Equities"],
-  ["globals", "Global"],
-  ["fx", "FX"],
-  ["crypto", "Crypto"],
-  ["positions", "Positions"],
-  ["supply", "Supply"],
-  ["chart", "Chart"]
+const MARKET_VIEWS: [MarketView, string, IconName][] = [
+  ["board", "Equities", "board"],
+  ["globals", "Global", "globe"],
+  ["fx", "FX", "fx"],
+  ["crypto", "Crypto", "crypto"],
+  ["positions", "Positions", "positions"],
+  ["supply", "Supply", "supply"],
+  ["chart", "Chart", "chart"]
 ];
 
 export function MarketsBar(props: {
@@ -106,8 +107,8 @@ export function MarketsBar(props: {
   return (
     <>
       <span className="seg center-only">
-        {MARKET_VIEWS.map(([v, label]) => (
-          <button key={v} aria-pressed={props.view === v} onClick={() => props.onView(v)}>{label}</button>
+        {MARKET_VIEWS.map(([v, label, icon]) => (
+          <button key={v} aria-pressed={props.view === v} onClick={() => props.onView(v)} title={label}><IconLabel icon={icon} hide>{label}</IconLabel></button>
         ))}
       </span>
       <span className="seg" title="Trade list in the right panel">
@@ -133,8 +134,8 @@ export function NewsBar(props: {
   return (
     <>
       <span className="seg center-only">
-        <button aria-pressed={props.view === "board"} onClick={() => props.onView("board")}>Board</button>
-        <button aria-pressed={props.view === "globe"} onClick={() => props.onView("globe")}>Globe</button>
+        <button aria-pressed={props.view === "board"} onClick={() => props.onView("board")}><IconLabel icon="news">Board</IconLabel></button>
+        <button aria-pressed={props.view === "globe"} onClick={() => props.onView("globe")}><IconLabel icon="globe">Globe</IconLabel></button>
       </span>
       <span className="seg">
         {(["all", "world", "markets", "x"] as NewsDesk[]).map((desk) => (
@@ -203,19 +204,21 @@ export function StraitBar(props: { feed: StraitFeed; onFeed: (f: StraitFeed) => 
   return (
     <>
       <span className="seg">
-        <button aria-pressed={props.feed === "ships"} onClick={() => props.onFeed("ships")}>Ships</button>
-        <button aria-pressed={props.feed === "news"} onClick={() => props.onFeed("news")}>News</button>
-        <button aria-pressed={props.feed === "air"} onClick={() => props.onFeed("air")}>Air</button>
+        <button aria-pressed={props.feed === "ships"} onClick={() => props.onFeed("ships")}><IconLabel icon="strait">Ships</IconLabel></button>
+        <button aria-pressed={props.feed === "news"} onClick={() => props.onFeed("news")}><IconLabel icon="news">News</IconLabel></button>
+        <button aria-pressed={props.feed === "air"} onClick={() => props.onFeed("air")}><IconLabel icon="air">Air</IconLabel></button>
       </span>
       {props.feed === "air" ? (
         <span className="seg" title="Aircraft filter">
-          <button aria-pressed={!props.mil} onClick={() => props.onMil(false)}>All traffic</button>
-          <button aria-pressed={props.mil} onClick={() => props.onMil(true)}>Military</button>
+          <button aria-pressed={!props.mil} onClick={() => props.onMil(false)}><IconLabel icon="air">All traffic</IconLabel></button>
+          <button aria-pressed={props.mil} onClick={() => props.onMil(true)}><IconLabel icon="military">Military</IconLabel></button>
         </span>
       ) : null}
     </>
   );
 }
+
+const BASE_ICON: Record<EarthBase, IconName> = { dark: "map", sat: "satellite", live: "live", daily: "daily", night: "night" };
 
 /** `lanes` is false on views that never draw shipping lanes, so the toggle is not offered there. */
 export function EarthBar({ settings, update, onBase, lanes = true }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void; lanes?: boolean }) {
@@ -224,18 +227,18 @@ export function EarthBar({ settings, update, onBase, lanes = true }: { settings:
       <span className="seg" title="Projection">
         {(["2d", "globe", "3d"] as EarthView[]).map((v) => (
           <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Pitch the camera. Zoom into a city for the building skyline." : undefined} onClick={() => update({ view: v })}>
-            {v === "2d" ? "2D" : v === "globe" ? "Globe" : "3D"}
+            <IconLabel icon={v === "2d" ? "view2d" : v === "globe" ? "globe" : "cube"}>{v === "2d" ? "2D" : v === "globe" ? "Globe" : "3D"}</IconLabel>
           </button>
         ))}
       </span>
       <span className="seg" title="Imagery">
         {([["dark", "Map"], ["sat", "Mosaic"], ["live", "Live"], ["daily", "Daily"], ["night", "Night"]] as [EarthBase, string][]).map(([b, label]) => (
-          <button key={b} aria-pressed={settings.base === b} onClick={() => { update({ base: b }); onBase(); }} title={BASE_TITLE[b]}>{label}</button>
+          <button key={b} aria-pressed={settings.base === b} onClick={() => { update({ base: b }); onBase(); }} title={BASE_TITLE[b]}><IconLabel icon={BASE_ICON[b]} hide>{label}</IconLabel></button>
         ))}
       </span>
       <span className="seg">
-        <button aria-pressed={settings.labels} onClick={() => update({ labels: !settings.labels })}>Labels</button>
-        {lanes ? <button aria-pressed={settings.lanes} onClick={() => update({ lanes: !settings.lanes })}>Lanes</button> : null}
+        <button aria-pressed={settings.labels} onClick={() => update({ labels: !settings.labels })} title="Place and border labels"><IconLabel icon="labels" hide>Labels</IconLabel></button>
+        {lanes ? <button aria-pressed={settings.lanes} onClick={() => update({ lanes: !settings.lanes })} title="Shipping lanes"><IconLabel icon="lanes" hide>Lanes</IconLabel></button> : null}
       </span>
     </>
   );

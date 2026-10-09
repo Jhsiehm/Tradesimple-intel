@@ -14,6 +14,7 @@ import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
 import { placeFilings, useWeekFilings } from "./congress/filingMap";
 import { MODE_BLURB, SECTIONS, utcNow, type MarketView } from "./shell/sections";
+import { Icon, IconLabel } from "./ui/icons/Icon";
 import { useRail } from "./shell/useRail";
 import { usePhone } from "./shell/usePhone";
 import { useCards } from "./shell/useCards";
@@ -497,19 +498,17 @@ export function App() {
         </div>
         <nav className="nav">
           <button aria-current={today ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
-            <kbd>0</kbd>
-            Today
+            <kbd>0</kbd><IconLabel icon="today" hide>Today</IconLabel>
           </button>
           {SECTIONS.map((item, index) => (
-            <button key={item.id} aria-current={section === item.id && !today && !calendarTab ? "page" : undefined} onClick={() => go(`section:${item.id}`)}>
-              <kbd>{index + 1}</kbd>
-              {item.label}
+            <button key={item.id} aria-current={section === item.id && !today && !calendarTab ? "page" : undefined} onClick={() => go(`section:${item.id}`)} title={`${item.label} · ${item.blurb}`}>
+              <kbd>{index + 1}</kbd><IconLabel icon={item.id} hide>{item.label}</IconLabel>
             </button>
           ))}
-          <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar}>Calendar</button>
+          <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
-          <button className="go-btn panels-btn" onClick={() => setCmdOpen(true)} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes">GO <kbd>⌘K</kbd></button>
+          <button className="go-btn panels-btn" onClick={() => setCmdOpen(true)} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes"><Icon name="command" /> GO <kbd>⌘K</kbd></button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
           <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) setPanelsOpen(false); }} onFollow={follow} />
           <PanelsMenu
