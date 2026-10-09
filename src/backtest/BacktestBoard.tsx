@@ -70,7 +70,14 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
         <p className="bt-sentence" aria-live="polite">{describeSpec(spec)}</p>
       </header>
       <div className="board-scroll bt-body">
-        <BacktestForm spec={spec} options={bt.options} onChange={setSpec} onRun={() => go(spec)} running={running} />
+        <div className="bt-ask">
+          <span>Backtests are asked in the chat; this board is the expanded view of a run.</span>
+          <button className="panels-btn" onClick={() => onFollow("ask:draft:Backtest ")}>Ask the chat to backtest…</button>
+        </div>
+        <details className="bt-manual" open={!seed}>
+          <summary>Edit the spec by hand</summary>
+          <BacktestForm spec={spec} options={bt.options} onChange={setSpec} onRun={() => go(spec)} running={running} />
+        </details>
         {recent.length > 1 ? (
           <div className="bt-recent"><em>Recent</em>{recent.slice(0, 5).map((r, i) => <button key={i} className="link" onClick={() => { setSpec(r); go(r); }} title={describeSpec(r)}>{describeSpec(r).split(" · enter")[0]}</button>)}</div>
         ) : null}
