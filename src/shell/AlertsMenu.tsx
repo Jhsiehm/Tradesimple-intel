@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { nyDaysAgo } from "../../shared/dates.mjs";
 import { ALERT_LEVELS, ALERT_RULE, countAlertLevels, triageAlerts, type AlertLevel } from "../../shared/intel.mjs";
 import { api, DEMO, when } from "../lib/api";
 import { memberShareUrl } from "../lib/share";
@@ -46,7 +47,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
     if (watch.symbols.length) p.set("symbols", watch.symbols.join(","));
     if (watch.members.length) p.set("members", watch.members.map((m) => m.bioguide).join(","));
     if (allLate) p.set("late", "all");
-    p.set("since", new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10));
+    p.set("since", nyDaysAgo(90));
     return p.toString();
   }, [watch, allLate]);
   const empty = !watch.symbols.length && !watch.members.length && !allLate;
