@@ -19,6 +19,7 @@ const NOTIFY = "intel:alerts:notify:v1";
 const POLL_MS = 5 * 60 * 1000;
 const KIND: Record<string, string> = { "member-trade": "MEMBER", "symbol-trade": "CONGRESS", form4: "FORM 4", lobbying: "LDA", "late-filing": "LATE", research: "RESEARCH" };
 const FEED: Record<string, string> = { "member-trade": "Congress trades", "symbol-trade": "Congress trades", "late-filing": "Congress trades", form4: "Form 4", lobbying: "Lobbying", research: "Research tasks" };
+const WATCH_KIND: Record<string, string> = { contract: "CONTRACT", stake: "13D/G", whale: "13F", "8-k": "8-K", news: "NEWS" };
 const LEVEL_LABEL: Record<AlertLevel, string> = { high: "HIGH", elevated: "ELEVATED", routine: "ROUTINE" };
 const RULE_PARTS = ALERT_RULE.split(/(?<=\.)\s+(?=[A-Z]+:|Otherwise)/);
 const LEVEL_RULE: Record<AlertLevel, string> = {
@@ -105,13 +106,13 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
 
   const row = (a: Alert) => {
     const lv = levelOf(a);
-    const feed = feeds.get(FEED[a.kind] || "");
+    const feed = feeds.get(FEED[a.kind] || (WATCH_KIND[a.kind] ? "Watchlist filings" : ""));
     const gone = dismissed.has(a.id);
     return (
       <article key={a.id} className={`alerts-row sev-${lv}${seen.has(a.id) ? "" : " unread"}${gone ? " dismissed" : ""}`}>
         <header className="alerts-row-head">
           <span className={`alerts-sev sev-${lv}`} title={LEVEL_RULE[lv]}>{LEVEL_LABEL[lv]}</span>
-          <span className={`alerts-kind${a.late ? " late" : ""}`}>{KIND[a.kind] || a.kind}</span>
+          <span className={`alerts-kind${a.late ? " late" : ""}`}>{KIND[a.kind] || WATCH_KIND[a.kind] || a.kind}</span>
           <time className="alerts-date" dateTime={a.date} title={a.kind === "research" ? "Run date (ET)" : "Filed / posted date"}>{a.date}</time>
         </header>
         <button className="alerts-title" onClick={() => follow(a)} title={a.kind === "research" ? "Open the stored result in Ask" : "Open dossier"}>{a.title}</button>

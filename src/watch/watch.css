@@ -1,0 +1,67 @@
+.today-card.watch-card { position: relative; overflow: visible; margin-top: 12px; }
+.watch-add { position: relative; max-width: 360px; margin: 2px 0 8px; }
+.watch-add input { width: 100%; box-sizing: border-box; padding: 5px 8px; font: inherit; font-size: 12px; color: inherit; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
+.watch-add input:focus { outline: none; border-color: var(--amber); }
+.watch-suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 2px; list-style: none; background: var(--panel, #0d1117); border: 1px solid var(--line); max-height: 240px; overflow: auto; }
+.watch-suggest button { display: block; width: 100%; text-align: left; padding: 4px 6px; font-size: 12px; color: var(--dim); background: none; border: 0; cursor: pointer; }
+.watch-suggest li[aria-selected="true"] button, .watch-suggest button:hover { color: inherit; background: rgba(232, 163, 61, 0.1); }
+.watch-suggest b { color: var(--amber); margin-right: 6px; }
+.watch-err { margin: 4px 0; font-size: 11.5px; color: var(--nay, #e57373); }
+
+.today-card ol.watch-rows { margin: 0; padding: 0; list-style: none; max-height: none; overflow: visible; }
+.watch-row { border-top: 1px solid var(--line); }
+.watch-row.invalid .watch-sym b { text-decoration: line-through; color: var(--faint); }
+.watch-line { display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(110px, auto) minmax(0, 2fr) auto; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.watch-sym { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 2px 0; text-align: left; color: inherit; background: none; border: 0; cursor: pointer; font: inherit; }
+.watch-sym b { color: var(--amber); letter-spacing: 0.04em; }
+.watch-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); }
+.watch-px { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.watch-px small, .watch-badge small { color: var(--faint); font-size: 10px; }
+.watch-badges { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
+.watch-badge { display: inline-flex; align-items: baseline; gap: 3px; padding: 1px 5px; font-size: 10.5px; letter-spacing: 0.04em; color: var(--dim); border: 1px solid var(--line); }
+.watch-badge b { color: inherit; font-weight: 600; }
+.watch-badge.quiet { border-style: dashed; color: var(--faint); }
+.watch-badge.src-congress, .watch-src.src-congress { color: var(--amber); }
+.watch-badge.src-insiders { color: #9ecbff; }
+.watch-badge.src-stakes { color: #f0a6ff; }
+.watch-badge.src-contracts { color: #b7e38a; }
+.watch-acts { display: inline-flex; gap: 2px; }
+.watch-acts button { padding: 2px 5px; color: var(--dim); background: none; border: 1px solid transparent; cursor: pointer; }
+.watch-acts button:hover:not(:disabled) { color: inherit; border-color: var(--line); }
+.watch-acts button:disabled { opacity: 0.3; cursor: default; }
+.watch-acts .flip { transform: rotate(180deg); }
+
+.watch-feed { padding: 4px 0 10px 18px; }
+.watch-sections { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; }
+.watch-sections button { padding: 2px 7px; font-size: 10.5px; color: var(--dim); background: none; border: 1px solid var(--line); cursor: pointer; }
+.watch-sections button[aria-pressed="true"] { color: var(--amber); background: rgba(232, 163, 61, 0.1); }
+.watch-sections button:disabled { cursor: default; opacity: 0.6; }
+.watch-sections button b { font-weight: 500; margin-left: 2px; }
+.watch-note { margin: 3px 0; font-size: 11px; color: var(--faint); }
+.watch-note.st-not-configured b, .watch-note.st-error b { color: var(--amber); }
+.today-card ol.watch-events { margin: 0; padding: 0; list-style: none; max-height: 420px; overflow: auto; }
+.watch-event { display: grid; grid-template-columns: 46px minmax(0, 1fr) 16px; gap: 6px; padding: 5px 0; border-top: 1px dotted var(--line); font-size: 12px; }
+.watch-event a { color: var(--amber); }
+.watch-src { font-size: 10px; letter-spacing: 0.05em; color: var(--dim); padding-top: 1px; }
+.watch-title { margin: 0; line-height: 1.35; }
+.watch-detail { margin: 1px 0 0; color: var(--dim); font-size: 11.5px; line-height: 1.35; }
+.watch-when { display: block; margin-top: 2px; color: var(--faint); font-size: 10.5px; }
+.watch-when .late, .watch-title .late { color: var(--nay, #e57373); }
+.watch-lines { margin: 2px 0 0; padding: 0; list-style: none; font-size: 11px; color: var(--dim); }
+.watch-srcs { margin-top: 6px; font-size: 10.5px; color: var(--faint); }
+.watch-srcs summary { cursor: pointer; }
+.watch-srcs ul { margin: 4px 0 0; padding-left: 14px; }
+.watch-srcs li { margin: 2px 0; }
+.watch-foot { margin: 6px 0 0; font-size: 10.5px; color: var(--faint); }
+
+.app.phone .watch-card h3 .scope.inline { float: none; display: flex; width: max-content; margin-top: 6px; }
+.app.phone .watch-line { grid-template-columns: minmax(0, 1fr) auto; }
+.app.phone .watch-badges { grid-column: 1 / -1; }
+.app.phone .watch-acts { grid-column: 1 / -1; justify-content: flex-end; }
+.app.phone .watch-feed { padding-left: 0; }
+@media (max-width: 520px) {
+  .watch-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .watch-badges, .watch-acts { grid-column: 1 / -1; }
+  .watch-acts { justify-content: flex-end; }
+  .watch-feed { padding-left: 0; }
+}

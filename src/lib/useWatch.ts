@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { addSymbol, moveSymbol, removeSymbol } from "../../shared/watchlist.mjs";
 
 export type WatchMember = { bioguide: string; name: string; chamber?: string };
 export type Watch = { symbols: string[]; members: WatchMember[] };
@@ -24,6 +25,24 @@ export function toggleSymbol(symbol: string) {
   const w = read();
   const s = symbol.toUpperCase();
   write({ ...w, symbols: w.symbols.includes(s) ? w.symbols.filter((x) => x !== s) : [...w.symbols, s] });
+}
+
+/** Watchlist edits on the same store Alerts reads; `symbols` order is the user's order. */
+export function addWatchSymbol(symbol: string) {
+  const w = read();
+  const next = addSymbol(w.symbols, symbol);
+  if (next !== w.symbols) write({ ...w, symbols: next });
+}
+
+export function removeWatchSymbol(symbol: string) {
+  const w = read();
+  write({ ...w, symbols: removeSymbol(w.symbols, symbol) });
+}
+
+export function moveWatchSymbol(symbol: string, delta: number) {
+  const w = read();
+  const next = moveSymbol(w.symbols, symbol, delta);
+  if (next !== w.symbols) write({ ...w, symbols: next });
 }
 
 export function toggleMember(member: WatchMember) {

@@ -3,6 +3,7 @@ import { api, when } from "../lib/api";
 import { amountShort, dayLabel, honorific, partyTag, verbOf } from "../../shared/sentences.mjs";
 import type { StageList } from "../types";
 import { Icon, IconLabel } from "../ui/icons/Icon";
+import { WatchlistCard } from "../watch/WatchlistCard";
 
 const LeadersBoard = lazy(() => import("./LeadersBoard").then((m) => ({ default: m.LeadersBoard })));
 
@@ -123,43 +124,48 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
       </header>
       {tab === "leaders" ? (
         <Suspense fallback={<p className="stage-loading">Loading…</p>}><LeadersBoard onFollow={onFollow} onList={onList} /></Suspense>
-      ) : !res ? (
-        <p className="stage-loading">Loading this week's filings…</p>
-      ) : !res.ok ? (
-        <p className="stage-loading">{res.error || "No disclosures loaded yet. The first backfill takes a few minutes."}</p>
       ) : (
-        <div className="board-scroll today-grid">
-          <section className="today-card">
-            <h3>Latest filings <small>{res.counts?.trades ?? 0} trades in {res.counts?.reports ?? 0} reports from {res.counts?.members ?? 0} members · one row per report</small></h3>
-            <ol>{(res.latest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-          </section>
-          <section className="today-card">
-            <h3>Filed more than {LATE} days late <small>newest first · any trade date</small></h3>
-            <ol>{(res.late || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-            {!res.late?.length ? <p className="today-empty">No late filings on record.</p> : null}
-          </section>
-          <section className="today-card">
-            <h3>Biggest trades <small>by the low end of the disclosed range · same window</small></h3>
-            <ol>{(res.biggest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-          </section>
-          <section className="today-card">
-            <h3>Most-traded tickers <small>by members trading it · same window</small></h3>
-            <table>
-              <thead><tr><th>Ticker</th><th>Members</th><th>Trades</th><th>Buys</th><th>Sells</th><th>Disclosed ≥</th></tr></thead>
-              <tbody>
-                {(res.tickers || []).map((s) => (
-                  <tr key={s.symbol} onClick={() => s.inJoin && onFollow(`pos:${s.symbol}`)} title={s.inJoin ? `${s.asset} · every filer in this ticker` : `${s.asset} · not in the ticker join table`} style={s.inJoin ? undefined : { cursor: "default" }}>
-                    <td>{s.symbol}</td>
-                    <td>{s.members}</td>
-                    <td>{s.trades}</td>
-                    <td className="up">{s.buys}</td>
-                    <td className="down">{s.sells}</td>
-                    <td>${Math.round(s.low / 1000).toLocaleString("en-US")}k</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+        <div className="board-scroll today-scroll">
+          <WatchlistCard onFollow={onFollow} />
+          {!res ? (
+            <p className="stage-loading">Loading this week's filings…</p>
+          ) : !res.ok ? (
+            <p className="stage-loading">{res.error || "No disclosures loaded yet. The first backfill takes a few minutes."}</p>
+          ) : (
+            <div className="today-grid">
+              <section className="today-card">
+                <h3>Latest filings <small>{res.counts?.trades ?? 0} trades in {res.counts?.reports ?? 0} reports from {res.counts?.members ?? 0} members · one row per report</small></h3>
+                <ol>{(res.latest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
+              </section>
+              <section className="today-card">
+                <h3>Filed more than {LATE} days late <small>newest first · any trade date</small></h3>
+                <ol>{(res.late || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
+                {!res.late?.length ? <p className="today-empty">No late filings on record.</p> : null}
+              </section>
+              <section className="today-card">
+                <h3>Biggest trades <small>by the low end of the disclosed range · same window</small></h3>
+                <ol>{(res.biggest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
+              </section>
+              <section className="today-card">
+                <h3>Most-traded tickers <small>by members trading it · same window</small></h3>
+                <table>
+                  <thead><tr><th>Ticker</th><th>Members</th><th>Trades</th><th>Buys</th><th>Sells</th><th>Disclosed ≥</th></tr></thead>
+                  <tbody>
+                    {(res.tickers || []).map((s) => (
+                      <tr key={s.symbol} onClick={() => s.inJoin && onFollow(`pos:${s.symbol}`)} title={s.inJoin ? `${s.asset} · every filer in this ticker` : `${s.asset} · not in the ticker join table`} style={s.inJoin ? undefined : { cursor: "default" }}>
+                        <td>{s.symbol}</td>
+                        <td>{s.members}</td>
+                        <td>{s.trades}</td>
+                        <td className="up">{s.buys}</td>
+                        <td className="down">{s.sells}</td>
+                        <td>${Math.round(s.low / 1000).toLocaleString("en-US")}k</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            </div>
+          )}
         </div>
       )}
     </div>
