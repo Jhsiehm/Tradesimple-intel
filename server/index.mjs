@@ -10,6 +10,7 @@ import { billDetail, billVote, calendar, committeeDetail, committeeList, compare
 import { fecForCommittees, fecForName, lobbyingForClient } from "./lobby.mjs";
 import { memberTimeline, warmTimeline } from "./timeline.mjs";
 import { alertsFor } from "./alerts.mjs";
+import { caseFile, intelScope } from "./intel.mjs";
 import { congressFeed } from "./feed.mjs";
 import { leaders, warmReturns } from "./returns.mjs";
 import { roster } from "./roster.mjs";
@@ -215,6 +216,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === "/api/alerts") {
       return send(res, 200, await alertsFor(db, url.searchParams));
+    }
+    if (url.pathname === "/api/intel/scope") {
+      return send(res, 200, await intelScope(db, url.searchParams));
+    }
+    const caseMatch = url.pathname.match(/^\/api\/intel\/case\/(member|ticker|district)\/([A-Za-z0-9.\-]+)$/);
+    if (caseMatch) {
+      return send(res, 200, await caseFile(db, caseMatch[1], decodeURIComponent(caseMatch[2])));
     }
     if (url.pathname === "/api/calendar/lobbying") {
       return send(res, 200, await lobbyingBoard(db));

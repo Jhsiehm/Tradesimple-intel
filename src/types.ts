@@ -5,9 +5,9 @@ export type CongressMode = "votes" | "bills" | "members" | "committees";
 export type EarthBase = "dark" | "sat" | "live" | "daily" | "night";
 export type EarthView = "2d" | "globe" | "3d";
 export type EarthSettings = { base: EarthBase; view: EarthView; labels: boolean; lanes: boolean };
-export type TileLayer = { tiles: string[]; maxzoom: number; source?: string; asOf?: string; attribution?: string; encoding?: string };
+export type TileLayer = { tiles: string[]; maxzoom: number; source?: string; asOf?: string; attribution?: string; encoding?: string; tilejson?: string };
 export type Earth = {
-  layers: Record<"dark" | "sat" | "daily" | "night" | "labels" | "darkLabels" | "roads" | "terrain", TileLayer>;
+  layers: Record<"dark" | "sat" | "daily" | "night" | "labels" | "darkLabels" | "roads" | "terrain", TileLayer> & { buildings?: TileLayer };
   lanes?: GeoJSON.FeatureCollection;
   chokepoints?: GeoJSON.FeatureCollection;
   lanesSource?: string;

@@ -1,0 +1,33 @@
+{
+  "source": "Federal agency headquarters street addresses (agency websites), geocoded to the building",
+  "asOf": "2026-10-08",
+  "note": "Arcs start at the awarding agency's headquarters, not the contracting office that signed the action.",
+  "items": [
+    { "name": "Department of Defense", "short": "DoD", "address": "The Pentagon, Arlington, VA", "lon": -77.0563, "lat": 38.8719 },
+    { "name": "Department of Homeland Security", "short": "DHS", "address": "2707 Martin Luther King Jr Ave SE, Washington, DC", "lon": -76.9958, "lat": 38.8536 },
+    { "name": "Department of Veterans Affairs", "short": "VA", "address": "810 Vermont Ave NW, Washington, DC", "lon": -77.0342, "lat": 38.9007 },
+    { "name": "Department of Health and Human Services", "short": "HHS", "address": "200 Independence Ave SW, Washington, DC", "lon": -77.0144, "lat": 38.8867 },
+    { "name": "Department of Energy", "short": "DOE", "address": "1000 Independence Ave SW, Washington, DC", "lon": -77.0262, "lat": 38.8868 },
+    { "name": "National Aeronautics and Space Administration", "short": "NASA", "address": "300 E St SW, Washington, DC", "lon": -77.0163, "lat": 38.8830 },
+    { "name": "General Services Administration", "short": "GSA", "address": "1800 F St NW, Washington, DC", "lon": -77.0424, "lat": 38.8973 },
+    { "name": "Department of State", "short": "State", "address": "2201 C St NW, Washington, DC", "lon": -77.0484, "lat": 38.8946 },
+    { "name": "Department of Justice", "short": "DOJ", "address": "950 Pennsylvania Ave NW, Washington, DC", "lon": -77.0250, "lat": 38.8933 },
+    { "name": "Department of the Treasury", "short": "Treasury", "address": "1500 Pennsylvania Ave NW, Washington, DC", "lon": -77.0343, "lat": 38.8981 },
+    { "name": "Department of Transportation", "short": "DOT", "address": "1200 New Jersey Ave SE, Washington, DC", "lon": -77.0035, "lat": 38.8755 },
+    { "name": "Department of Agriculture", "short": "USDA", "address": "1400 Independence Ave SW, Washington, DC", "lon": -77.0303, "lat": 38.8878 },
+    { "name": "Department of the Interior", "short": "DOI", "address": "1849 C St NW, Washington, DC", "lon": -77.0425, "lat": 38.8946 },
+    { "name": "Department of Commerce", "short": "DOC", "address": "1401 Constitution Ave NW, Washington, DC", "lon": -77.0327, "lat": 38.8935 },
+    { "name": "Department of Labor", "short": "DOL", "address": "200 Constitution Ave NW, Washington, DC", "lon": -77.0138, "lat": 38.8930 },
+    { "name": "Department of Education", "short": "ED", "address": "400 Maryland Ave SW, Washington, DC", "lon": -77.0185, "lat": 38.8862 },
+    { "name": "Department of Housing and Urban Development", "short": "HUD", "address": "451 7th St SW, Washington, DC", "lon": -77.0222, "lat": 38.8838 },
+    { "name": "Environmental Protection Agency", "short": "EPA", "address": "1200 Pennsylvania Ave NW, Washington, DC", "lon": -77.0290, "lat": 38.8940 },
+    { "name": "Social Security Administration", "short": "SSA", "address": "6401 Security Blvd, Woodlawn, MD", "lon": -76.7300, "lat": 39.3150 },
+    { "name": "National Science Foundation", "short": "NSF", "address": "2415 Eisenhower Ave, Alexandria, VA", "lon": -77.0710, "lat": 38.8030 },
+    { "name": "Small Business Administration", "short": "SBA", "address": "409 3rd St SW, Washington, DC", "lon": -77.0160, "lat": 38.8840 },
+    { "name": "Office of Personnel Management", "short": "OPM", "address": "1900 E St NW, Washington, DC", "lon": -77.0440, "lat": 38.8955 },
+    { "name": "Nuclear Regulatory Commission", "short": "NRC", "address": "11555 Rockville Pike, Rockville, MD", "lon": -77.1100, "lat": 39.0470 },
+    { "name": "Agency for International Development", "short": "USAID", "address": "1300 Pennsylvania Ave NW, Washington, DC", "lon": -77.0306, "lat": 38.8936 },
+    { "name": "Federal Trade Commission", "short": "FTC", "address": "600 Pennsylvania Ave NW, Washington, DC", "lon": -77.0193, "lat": 38.8929 },
+    { "name": "Smithsonian Institution", "short": "Smithsonian", "address": "1000 Jefferson Dr SW, Washington, DC", "lon": -77.0260, "lat": 38.8888 }
+  ]
+}

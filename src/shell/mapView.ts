@@ -15,7 +15,7 @@ type Sources = {
   strait: { theater?: { lon: number; lat: number; zoom: number } | null; markers: Marker[]; airMarkers: Marker[]; air: boolean };
   news: { globe: boolean; region: string; markers: Marker[] };
   districts: { geojson?: GeoJSON.FeatureCollection; markers: Marker[]; selected?: { lon: number; lat: number; zoom?: number } | null };
-  congress: { geojson?: GeoJSON.FeatureCollection; voted: boolean };
+  congress: { geojson?: GeoJSON.FeatureCollection; voted: boolean; markers?: Marker[] };
 };
 
 /** What the center map shows for the current section. */
@@ -31,5 +31,5 @@ export function mapView({ section, chamber, strait, news, districts, congress }:
     const site = districts.selected;
     return { geojson: districts.geojson, colorProp: "vote", markers: districts.markers, center: site ? [site.lon, site.lat] : [-96, 38], zoom: site ? site.zoom ?? 6.5 : 3.2 };
   }
-  return { geojson: congress.geojson, colorProp: congress.voted ? "vote" : undefined, markers: [], center: [-96, 38], zoom: chamber === "house" ? 3.3 : 3.1 };
+  return { geojson: congress.geojson, colorProp: congress.voted ? "vote" : undefined, markers: congress.markers || [], center: [-96, 38], zoom: chamber === "house" ? 3.3 : 3.1 };
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
@@ -10,7 +10,8 @@ import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
 import { CongressBar, ContractsBar, DistrictsBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
-import { VoteLegend } from "./congress/VoteLegend";
+import { FilingOverlay } from "./congress/FilingOverlay";
+import { placeFilings, useWeekFilings } from "./congress/filingMap";
 import { MODE_BLURB, SECTIONS, utcNow, type MarketView } from "./shell/sections";
 import { useRail } from "./shell/useRail";
 import { usePhone } from "./shell/usePhone";
@@ -30,6 +31,10 @@ import { districtCode, useDistricts, type DistrictLayer } from "./districts/useD
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
+import { ALL_SCOPE, useIntelScope, type IntelScope } from "./intel/useIntel";
+import { arcView } from "./intel/arcs";
+import { presetWindow, Scrubber, type DayWindow } from "./intel/Scrubber";
+import type { ArcKind } from "../shared/intel.mjs";
 import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
 const MapFrame = lazy(() => import("./shell/MapFrame").then((m) => ({ default: m.MapFrame })));
@@ -57,6 +62,7 @@ export function App() {
   const [mode, setMode] = useState<CongressMode>("votes");
   const [party, setParty] = useState<PartyFilter>("all");
   const [voteView, setVoteView] = useState<"map" | "floor">("floor");
+  const [filingId, setFilingId] = useState<string | null>(null);
   const [districtLayer, setDistrictLayer] = useState<DistrictLayer>("sites");
   const [layer, setLayer] = useState<MarketLayer>("politicians");
   const [marketView, setMarketView] = useState<MarketView>("board");
@@ -75,6 +81,10 @@ export function App() {
   const [contractScope, setContractScope] = useState<ContractScope>({ kind: "all", value: "" });
   const [contractSort, setContractSort] = useState<ContractSort>("largest");
   const [contractDays, setContractDays] = useState(30);
+  const [intelScope, setIntelScope] = useState<IntelScope>(ALL_SCOPE);
+  const [intelWindow, setIntelWindow] = useState<DayWindow | null>(null);
+  const [arcKinds, setArcKinds] = useState<Set<ArcKind>>(() => new Set<ArcKind>(["trade", "contract", "pac"]));
+  const [scrubMin, setScrubMin] = useState(() => window.matchMedia?.("(max-width: 720px)").matches ?? false);
   const [panelsOpen, setPanelsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [calendarTab, setCalendarTab] = useState<CalendarTab | null>(null);
@@ -108,6 +118,15 @@ export function App() {
   const { earth, settings: earthSettings, update: updateEarth, credit: earthCredit } = useEarth();
 
   const congress = useCongress(chamber, mode, query, section === "congress" && !today && !timelineId ? selectedId : null, party);
+  const filingMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
+  const weekFilings = useWeekFilings(filingMapOn);
+  const placed = useMemo(() => placeFilings(congress.states, weekFilings.rows), [congress.states, weekFilings.rows]);
+  const activeFiling = weekFilings.rows.find((row) => row.id === filingId) || null;
+  useEffect(() => {
+    if (!filingMapOn || !weekFilings.rows.length) return;
+    if (filingId && weekFilings.rows.some((row) => row.id === filingId)) return;
+    setFilingId(weekFilings.rows[0].id);
+  }, [filingMapOn, weekFilings.rows, filingId]);
   const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party);
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
@@ -244,6 +263,7 @@ export function App() {
     const who = (id: string) => congress.roster.find((m) => m.bioguide === id)?.name || id;
     if (kind === "member") return `${who(v)} · card`;
     if (kind === "timeline") return `${who(v)} · timeline`;
+    if (kind === "scope") return `Map scope · ${v.startsWith("member:") ? who(v.slice(7)) : v.slice(7) || "all Congress"}`;
     if (kind === "contracts") {
       const [k, val] = v.split(":");
       return k === "member" ? `Contracts · ${who(val)} district` : k === "all" || !val ? "Contracts · all agencies" : `Contracts · ${val}`;
@@ -323,6 +343,17 @@ export function App() {
     contracts: (value) => {
       const [kind, ...rest] = value.split(":");
       openContracts(["symbol", "place", "member"].includes(kind) ? { kind: kind as ContractScope["kind"], value: rest.join(":").toUpperCase() } : { kind: "all", value: "" });
+    },
+    scope: (value) => {
+      const [kind, id = ""] = value.split(":");
+      setIntelScope(kind === "member" && /^[A-Z]\d{6}$/.test(id) ? { kind: "member", id } : kind === "symbol" && id ? { kind: "symbol", id: id.toUpperCase() } : ALL_SCOPE);
+      setScrubMin(false);
+      if (!intelOn) {
+        closeStage();
+        setCalendarTab(null);
+        setSection("congress");
+        setVoteView("map");
+      }
     }
   });
 
@@ -448,6 +479,13 @@ export function App() {
   const showMap = section === "strait" || section === "districts" || newsGlobe || (section === "congress" && voteView === "map");
   const time = useMapClock({ mapOn: showMap && !calendarTab && !today && !timelineId, base: earthSettings.base, newsGlobe, headlines: news.all, clock, mapTime });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
+  const intelOn = !calendarTab && !today && !timelineId && ((section === "congress" && voteView === "map") || section === "districts");
+  const intel = useIntelScope(intelScope, intelOn);
+  const lagWindow = useDeferredValue(intelWindow);
+  const arcs = useMemo(() => {
+    if (!intelOn || phone || !intel.data?.ok) return null;
+    return arcView(intel.data, lagWindow || presetWindow(intel.data.len, 90), arcKinds);
+  }, [intelOn, phone, intel.data, lagWindow, arcKinds]);
   const seatRoster = useMemo(
     () => congress.roster.filter((m) => m.chamber === chamber).map((m) => ({ name: m.name, state: m.state, district: m.district, party: m.party, bioguide: m.bioguide, vote: "Seat", geoid: null })),
     [congress.roster, chamber]
@@ -458,7 +496,11 @@ export function App() {
     strait: { theater: strait.theater, markers: strait.markers, airMarkers: strait.airMarkers, air: straitFeed === "air" },
     news: { globe: newsGlobe, region: newsRegion, markers: time.globe.markers },
     districts: { geojson: districts.geojson, markers: districts.markers, selected: districts.selected },
-    congress: { geojson: congress.geojson, voted: congress.positions.length > 0 }
+    congress: {
+      geojson: filingMapOn ? placed.geojson : congress.geojson,
+      voted: filingMapOn ? false : congress.positions.length > 0,
+      markers: filingMapOn ? placed.markers : []
+    }
   });
   const active = SECTIONS.find((item) => item.id === section)!;
   const barFor: Section | null = calendarTab || (today && !timelineId) ? null : section;
@@ -647,12 +689,19 @@ export function App() {
                   settings={earthSettings}
                   center={map.center}
                   zoom={map.zoom}
-                  selectedId={section === "congress" ? null : selectedId}
+                  selectedId={filingMapOn ? (activeFiling?.state || null) : section === "congress" ? null : selectedId}
                   live={time.liveLayers}
                   dailyTiles={time.dailyLayer?.tiles}
                   flash={newsGlobe ? time.globe.flash : null}
                   lanes={section === "strait" || newsGlobe}
+                  arcs={arcs}
+                  onArc={follow}
                   onSelect={(id) => {
+                    if (filingMapOn) {
+                      const hit = placed.byState[id];
+                      if (hit) setFilingId(hit);
+                      return;
+                    }
                     rail.show();
                     if (section === "congress") openSeat(id);
                     else if (id.startsWith("place:")) setDossier(time.globe.placeModel(id));
@@ -675,8 +724,8 @@ export function App() {
               </>
             )}
             </Suspense>
-            {barFor === "congress" && !timelineId && !today && voteView === "map" ? (
-              <VoteLegend chamber={chamber} counts={congress.mapCounts} source={congress.positions.length ? congress.voteSource : null} />
+            {filingMapOn ? (
+              <FilingOverlay rows={weekFilings.rows} status={weekFilings.status} selectedId={activeFiling?.id || null} onSelect={setFilingId} onFollow={follow} />
             ) : null}
             {barFor === "districts" && districtLayer === "hq" && !phone ? (
               <div className="legend vote-legend">
@@ -697,6 +746,22 @@ export function App() {
               </div>
             ) : null}
           </div>
+          {intelOn ? (
+            <Scrubber
+              data={intel.data}
+              loading={intel.loading}
+              window={intelWindow}
+              onWindow={setIntelWindow}
+              kinds={arcKinds}
+              onKinds={setArcKinds}
+              arcs={arcs}
+              onClearScope={() => setIntelScope(ALL_SCOPE)}
+              collapsed={scrubMin}
+              onCollapsed={setScrubMin}
+              phone={phone}
+              onFollow={follow}
+            />
+          ) : null}
         </div>
         {timelineId ? null : (
         <div
@@ -745,7 +810,6 @@ export function App() {
       </footer>
       <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
-      <div className="scan" aria-hidden="true" />
     </div>
   );
 }

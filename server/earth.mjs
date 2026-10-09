@@ -9,7 +9,7 @@ const LANES_URL = "https://raw.githubusercontent.com/newzealandpaul/Shipping-Lan
 const CHOKEPOINTS = JSON.parse(readFileSync(new URL("../data/chokepoints.json", import.meta.url), "utf8"));
 
 export async function imagery(db) {
-  const hit = readCache(db, "earth:imagery:v1");
+  const hit = readCache(db, "earth:imagery:v2");
   if (hit) return hit;
   const daily = await latestGibsDay();
   const result = {
@@ -65,10 +65,18 @@ export async function imagery(db) {
         encoding: "terrarium",
         source: "AWS Terrain Tiles (SRTM, GMTED, ETOPO1)",
         attribution: "Mapzen, AWS Open Data"
+      },
+      buildings: {
+        tiles: [],
+        tilejson: "https://tiles.openfreemap.org/planet",
+        maxzoom: 14,
+        source: "OpenFreeMap · OpenStreetMap buildings",
+        asOf: "OpenStreetMap, continuously updated",
+        attribution: "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors"
       }
     }
   };
-  writeCache(db, "earth:imagery:v1", result, 3 * HOUR);
+  writeCache(db, "earth:imagery:v2", result, 3 * HOUR);
   return result;
 }
 

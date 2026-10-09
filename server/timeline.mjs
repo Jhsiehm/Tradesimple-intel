@@ -189,6 +189,11 @@ export function indexedVotes(chamber) {
   return state.votes[chamber] || [];
 }
 
+/** Indexed committee meetings, both chambers, oldest first. */
+export function indexedMeetings() {
+  return state.meetings;
+}
+
 export function indexStatus() {
   return { builtAt: state.builtAt, running: state.running, house: state.votes.house.length, senate: state.votes.senate.length };
 }

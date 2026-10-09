@@ -1,18 +1,25 @@
 import { congressTrades, insiderTrades } from "./positions.mjs";
 import { lobbyingBoard } from "./corporate.mjs";
+import { alertSeverity } from "../shared/intel.mjs";
 
 /** STOCK Act: periodic transaction reports are due within 45 days of the trade (30 from notice, 45 hard cap). */
 export const LATE_DAYS = 45;
 
 /**
  * Pure. Turns the three feeds into alert rows for a watchlist. `since` (YYYY-MM-DD) filters on the date the
- * public could first see the record: filed date for disclosures, posted date for LDA.
+ * public could first see the record: filed date for disclosures, posted date for LDA. Each row carries a
+ * triage `severity`, the member and ticker a pin can add to the watchlist, and its `source`.
  */
 export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols = [], members = [], since = "", allLate = false }) {
   const syms = new Set(symbols.map((s) => s.toUpperCase()));
   const ids = new Set(members);
   const after = (d) => !since || String(d || "") >= since;
   const out = [];
+  const tradeSource = (t) => (t.chamber === "senate" ? "Senate eFD PTR" : "House Clerk PTR");
+  const tradePins = (t) => [
+    ...(t.bioguide ? [{ kind: "member", id: t.bioguide, label: t.person, chamber: t.chamber }] : []),
+    ...(t.symbol ? [{ kind: "symbol", id: t.symbol, label: t.symbol }] : [])
+  ];
 
   for (const t of trades) {
     if (!after(t.filed)) continue;
@@ -20,15 +27,19 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
     const watchedMember = ids.has(t.bioguide);
     const watchedSymbol = t.symbol && syms.has(t.symbol);
     if (watchedMember || watchedSymbol) {
+      const kind = watchedMember ? "member-trade" : "symbol-trade";
       out.push({
         id: `trade:${t.id}`,
-        kind: watchedMember ? "member-trade" : "symbol-trade",
+        kind,
         date: t.filed,
         title: `${t.person} ${t.side === "sell" ? "sold" : t.side === "buy" ? "bought" : t.type || "traded"} ${t.symbol || t.asset}`,
         detail: `${t.amount} · traded ${t.traded} · filed ${t.filed}${t.lag != null ? ` (${t.lag}d)` : ""}${late ? " · LATE" : ""}`,
         link: t.link,
         action: t.symbol ? `pos:${t.symbol}` : `member:${t.bioguide}`,
-        late
+        late,
+        severity: alertSeverity({ kind, late, lag: t.lag, amountLow: t.amountLow }),
+        source: tradeSource(t),
+        pins: tradePins(t)
       });
     } else if (late && allLate) {
       out.push({
@@ -39,7 +50,10 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
         detail: `Filed ${t.lag} days after the trade (limit ${LATE_DAYS}) · ${t.amount}`,
         link: t.link,
         action: `member:${t.bioguide}`,
-        late: true
+        late: true,
+        severity: alertSeverity({ kind: "late-filing", late: true, lag: t.lag, amountLow: t.amountLow }),
+        source: tradeSource(t),
+        pins: tradePins(t)
       });
     }
   }
@@ -54,7 +68,10 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
       detail: `${f.title ? `${f.title} · ` : ""}${f.side === "sell" ? "sold" : f.side === "buy" ? "bought" : f.code} ${Math.round(f.shares || 0).toLocaleString("en-US")} sh${f.price ? ` @ ${f.price}` : ""} · traded ${f.traded}`,
       link: f.link,
       action: `pos:${f.symbol}`,
-      late: false
+      late: false,
+      severity: alertSeverity({ kind: "form4", value: f.value ?? (f.shares || 0) * (f.price || 0) }),
+      source: "SEC EDGAR Form 4",
+      pins: [{ kind: "symbol", id: f.symbol, label: f.symbol }]
     });
   }
 
@@ -68,7 +85,10 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
       detail: `${l.typeLabel || l.type}${l.amount ? ` · $${Math.round(l.amount).toLocaleString("en-US")}` : ""}${l.issues?.length ? ` · ${l.issues.slice(0, 2).join(", ")}` : ""}`,
       link: l.link,
       action: `pos:${l.symbol}`,
-      late: false
+      late: false,
+      severity: alertSeverity({ kind: "lobbying", amount: l.amount }),
+      source: "LDA.gov",
+      pins: [{ kind: "symbol", id: l.symbol, label: l.symbol }]
     });
   }
 

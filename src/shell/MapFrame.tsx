@@ -21,6 +21,8 @@ type Props = {
   flash?: MapFlash | null;
   /** Shipping lanes only belong on ocean views; district and vote maps hide them. */
   lanes?: boolean;
+  arcs?: { lines: GeoJSON.FeatureCollection; ends: GeoJSON.FeatureCollection } | null;
+  onArc?: (action: string) => void;
 };
 
 type Sky = Parameters<maplibregl.Map["setSky"]>[0];
@@ -61,14 +63,18 @@ export function MapFrame({
   live,
   dailyTiles,
   flash,
-  lanes = true
+  lanes = true,
+  arcs,
+  onArc
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onArcRef = useRef(onArc);
   const [failed, setFailed] = useState(() => typeof document !== "undefined" && !webgl2Ok());
   const [ready, setReady] = useState(false);
   onSelectRef.current = onSelect;
+  onArcRef.current = onArc;
 
   useEffect(() => {
     if (failed || !el.current || mapRef.current) return;
@@ -101,9 +107,42 @@ export function MapFrame({
     });
     map.on("load", () => {
       map.addSource("base", { type: "geojson", data: EMPTY });
-      map.addLayer({ id: "base-fill", type: "fill", source: "base", paint: { "fill-color": "#131b22", "fill-opacity": 0.8 } });
-      map.addLayer({ id: "base-line", type: "line", source: "base", paint: { "line-color": "#2f3d48", "line-width": 0.6 } });
+      map.addLayer({ id: "base-fill", type: "fill", source: "base", paint: { "fill-color": "#12171c", "fill-opacity": 0.92 } });
+      map.addLayer({ id: "base-line", type: "line", source: "base", paint: { "line-color": "#9aa7b2", "line-width": 1 } });
       map.addLayer({ id: "base-focus", type: "line", source: "base", filter: ["==", ["get", "vote"], "Focus"], paint: { "line-color": "#f3e2ae", "line-width": 2.2 } });
+      map.addLayer({ id: "base-pick", type: "line", source: "base", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#3df0ff", "line-width": 1.5 } });
+      map.addSource("arcs", { type: "geojson", data: EMPTY });
+      map.addSource("arc-ends", { type: "geojson", data: EMPTY });
+      map.addLayer({ id: "arcs-glow", type: "line", source: "arcs", layout: { "line-cap": "round" }, paint: { "line-color": ["get", "color"], "line-width": ["*", ["get", "w"], 4], "line-opacity": 0.08, "line-blur": 3 } });
+      map.addLayer({ id: "arcs", type: "line", source: "arcs", layout: { "line-cap": "round" }, paint: { "line-color": ["get", "color"], "line-width": ["get", "w"], "line-opacity": 0.72 } });
+      map.addLayer({
+        id: "arc-ends",
+        type: "circle",
+        source: "arc-ends",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["get", "n"], 1, 2.5, 50, 6],
+          "circle-color": "#06080b",
+          "circle-stroke-width": 1.2,
+          "circle-stroke-color": ["match", ["get", "kind"], "member", "#4aa8ff", "agency", "#d9b45a", "#e4e7e6"]
+        }
+      });
+      const tip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "arc-pop", maxWidth: "340px", offset: 8 });
+      const showTip = (event: maplibregl.MapLayerMouseEvent, text: string) => {
+        map.getCanvas().style.cursor = "pointer";
+        tip.setLngLat(event.lngLat).setText(text).addTo(map);
+      };
+      map.on("mousemove", "arcs", (event) => showTip(event, String(event.features?.[0]?.properties?.tip || "")));
+      map.on("mousemove", "arc-ends", (event) => {
+        const p = event.features?.[0]?.properties;
+        if (p) showTip(event, `${p.label}\n${p.n} linked record${Number(p.n) === 1 ? "" : "s"} in this window`);
+      });
+      ["arcs", "arc-ends"].forEach((id) => {
+        map.on("mouseleave", id, () => { tip.remove(); map.getCanvas().style.cursor = "crosshair"; });
+        map.on("click", id, (event) => {
+          const action = event.features?.[0]?.properties?.action;
+          if (action) onArcRef.current?.(String(action));
+        });
+      });
       map.addSource("marks", { type: "geojson", data: EMPTY });
       map.addLayer({
         id: "marks",
@@ -136,6 +175,7 @@ export function MapFrame({
       map.on("mouseenter", "marks", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "marks", () => { map.getCanvas().style.cursor = "crosshair"; });
       map.on("click", "base-fill", (event) => {
+        if (map.queryRenderedFeatures(event.point, { layers: ["arcs", "arc-ends"] }).length) return;
         const id = event.features?.[0]?.properties?.[idProp];
         if (id) onSelectRef.current?.(String(id));
       });
@@ -180,13 +220,14 @@ export function MapFrame({
     map.setLayoutProperty("labels", "visibility", settings.labels && imagery ? "visible" : "none");
     map.setLayoutProperty("roads", "visibility", settings.labels && settings.base === "sat" ? "visible" : "none");
     map.setLayoutProperty("dark-labels", "visibility", settings.labels && !imagery ? "visible" : "none");
-    map.setPaintProperty("base-fill", "fill-opacity", imagery ? 0.42 : 0.8);
-    map.setPaintProperty("base-line", "line-color", imagery ? "#d8c690" : "#2f3d48");
-    map.setPaintProperty("base-line", "line-opacity", imagery ? 0.55 : 1);
+    map.setPaintProperty("base-fill", "fill-opacity", colorProp ? (imagery ? 0.42 : 0.8) : 1);
+    map.setPaintProperty("base-line", "line-color", "#9aa7b2");
+    map.setPaintProperty("base-line", "line-width", 1);
+    map.setPaintProperty("base-line", "line-opacity", 1);
     ["lanes-minor", "lanes-middle", "lanes-major", "choke-dot", "choke-label"].forEach((id) => {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes && lanes ? "visible" : "none");
     });
-  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes]);
+  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -249,8 +290,9 @@ export function MapFrame({
     else map.setSky(SKY);
     map.setTerrain(relief ? { source: "dem", exaggeration: 1.6 } : null);
     map.setLayoutProperty("hillshade", "visibility", relief ? "visible" : "none");
+    if (map.getLayer("buildings-3d")) map.setLayoutProperty("buildings-3d", "visibility", relief ? "visible" : "none");
     map.easeTo({
-      pitch: relief ? 58 : 0,
+      pitch: relief ? 64 : 0,
       bearing: relief ? map.getBearing() : 0,
       zoom: settings.view === "globe" ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
       duration: 700
@@ -272,16 +314,12 @@ export function MapFrame({
         "match",
         ["get", colorProp],
         ...Object.entries(MAP_FILL).flat(),
-        "#131b22"
+        "#12171c"
       ] as unknown as maplibregl.ExpressionSpecification);
     } else {
-      map.setPaintProperty("base-fill", "fill-color", [
-        "case",
-        ["==", ["get", idProp], selectedId || ""],
-        "#2c3f52",
-        "#131b22"
-      ]);
+      map.setPaintProperty("base-fill", "fill-color", "#12171c");
     }
+    if (map.getLayer("base-pick")) map.setFilter("base-pick", ["==", ["get", idProp], selectedId || ""]);
     (map.getSource("marks") as maplibregl.GeoJSONSource | undefined)?.setData({
       type: "FeatureCollection",
       features: markers.map((m) => ({
@@ -293,6 +331,13 @@ export function MapFrame({
     // Keys stand in for array props that the parent rebuilds on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, geojson, colorProp, idProp, markersKey, selectedId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource("arcs") as maplibregl.GeoJSONSource | undefined)?.setData(arcs?.lines || EMPTY);
+    (map.getSource("arc-ends") as maplibregl.GeoJSONSource | undefined)?.setData(arcs?.ends || EMPTY);
+  }, [ready, arcs]);
 
   if (failed) {
     return (
@@ -308,10 +353,46 @@ export function MapFrame({
   return <div ref={el} className="map" />;
 }
 
+function addBuildings(map: maplibregl.Map, layer: Earth["layers"]["buildings"]) {
+  if (map.getSource("osm-buildings") || !map.getLayer("marks")) return;
+  try {
+    map.addSource("osm-buildings", {
+      type: "vector",
+      url: layer?.tilejson || "https://tiles.openfreemap.org/planet",
+      attribution: layer?.attribution || "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors"
+    });
+    map.addLayer({
+      id: "buildings-3d",
+      type: "fill-extrusion",
+      source: "osm-buildings",
+      "source-layer": "building",
+      minzoom: 13,
+      filter: ["!=", ["get", "hide_3d"], true],
+      layout: { visibility: "none" },
+      paint: {
+        "fill-extrusion-color": [
+          "interpolate", ["linear"], ["coalesce", ["get", "render_height"], 8],
+          0, "#3a4652",
+          24, "#5c7384",
+          80, "#8ea6b6",
+          200, "#d5e2ea"
+        ],
+        "fill-extrusion-height": ["case", [">", ["coalesce", ["get", "render_height"], 0], 0], ["get", "render_height"], 8],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.45, 14.5, 0.92],
+        "fill-extrusion-vertical-gradient": true
+      }
+    }, "marks");
+  } catch {
+    /* Skyline tiles are optional. The map still pitches. */
+  }
+}
+
 function addEarth(map: maplibregl.Map, earth: Earth) {
-  if (map.getSource("img-dark")) return;
   const { layers } = earth;
-  const raster = (id: string, key: keyof Earth["layers"], before: string, paint: Record<string, number> = {}) => {
+  addBuildings(map, layers.buildings);
+  if (map.getSource("img-dark")) return;
+  const raster = (id: string, key: Exclude<keyof Earth["layers"], "buildings">, before: string, paint: Record<string, number> = {}) => {
     const layer = layers[key];
     map.addSource(id, { type: "raster", tiles: layer.tiles, tileSize: 256, maxzoom: layer.maxzoom, attribution: layer.attribution });
     map.addLayer({ id, type: "raster", source: id, layout: { visibility: "none" }, paint }, before);

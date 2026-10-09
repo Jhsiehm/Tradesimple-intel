@@ -213,7 +213,7 @@ export function EarthBar({ settings, update, onBase }: { settings: EarthSettings
     <>
       <span className="seg" title="Projection">
         {(["2d", "globe", "3d"] as EarthView[]).map((v) => (
-          <button key={v} aria-pressed={settings.view === v} onClick={() => update({ view: v })}>
+          <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Pitch the camera. Zoom into a city for the building skyline." : undefined} onClick={() => update({ view: v })}>
             {v === "2d" ? "2D" : v === "globe" ? "Globe" : "3D"}
           </button>
         ))}

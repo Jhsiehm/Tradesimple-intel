@@ -1,0 +1,26 @@
+export type EventKind = "trade" | "hearing" | "roll" | "contract" | "form4";
+export type ArcKind = "trade" | "contract" | "pac";
+export type Level = "high" | "elevated" | "baseline" | "low" | "thin";
+export type Signal = { level: Level; label: string; why: string; excess?: number };
+export type Proximity = { from?: string; trades?: number; near?: number; tradeDays?: number; nearTradeDays?: number; dayShare: number | null; baseline: number | null };
+export type ArcLink = [day: number, kind: number, from: number, to: number, amount: number, action: number];
+export type ArcBundle = { key: string; kind: ArcKind; from: number; to: number; n: number; amount: number; first: number; last: number; action: number };
+
+export const DAY_MS: number;
+export const EVENT_KINDS: EventKind[];
+export const ARC_KINDS: ArcKind[];
+export const NEAR_DAYS: number;
+export const SEVERITY_RULE: string;
+export const ACTIVITY_RULE: string;
+export const ALERT_RULE: string;
+
+export function dayNum(iso: string): number;
+export function dayIso(n: number): string;
+export function bucketDays(events: { kind: string; date: string }[], from: string, to: string): { start: number; len: number; days: Record<string, number[]>; dropped: number };
+export function windowSum(counts: number[] | undefined, a: number, b: number): number;
+export function binCounts(counts: number[] | undefined, bins: number): number[];
+export function greatCircle(a: [number, number], b: [number, number], steps?: number): [number, number][];
+export function bundleArcs(links: ArcLink[], opts?: { from?: number; to?: number; kinds?: Set<string> | null; cap?: number }): { arcs: ArcBundle[]; bundles: number; hidden: number; links: number; local: number };
+export function severity(prox: Proximity | null | undefined): Signal;
+export function activitySignal(dates: string[], today: string, recentDays?: number, baseDays?: number): Signal & { recent: number; prior: number; expected: number; ratio: number | null };
+export function alertSeverity(a: { kind: string; late?: boolean; lag?: number | null; amountLow?: number | null; value?: number | null; amount?: number | null }): "high" | "elevated" | "routine";

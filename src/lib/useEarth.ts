@@ -39,6 +39,7 @@ export function useEarth() {
     settings.base === "live" ? "NASA GIBS · GOES-East + GOES-West GeoColor, Himawari-9 IR, over daily VIIRS where no geostationary feed exists" : "",
     layer ? `${layer.source} · ${layer.asOf}` : "",
     settings.view === "3d" && earth?.layers?.terrain ? `Relief ${earth.layers.terrain.source}` : "",
+    settings.view === "3d" && earth?.layers?.buildings ? `${earth.layers.buildings.source} · ${earth.layers.buildings.asOf}` : "",
     settings.lanes && earth?.lanesSource ? `Lanes ${earth.lanesAsOf}` : ""
   ].filter(Boolean).join("  ·  ");
 
