@@ -25,7 +25,7 @@ import { STATE_NAME_TO_POSTAL } from "./congress/states";
 import { meetingModel } from "./congress/meeting";
 import type { ChartSpan } from "./markets/CandleChart";
 import type { CalendarTab, Meeting } from "./markets/CalendarBoard";
-import { loadDossier, loadPositions, useMarkets } from "./markets/useMarkets";
+import { loadDossier, loadLobby, loadPositions, tickerShell, useMarkets, withLobby } from "./markets/useMarkets";
 import { useNews } from "./news/useNews";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
 import { districtCode, useDistricts, type DistrictLayer } from "./districts/useDistricts";
@@ -471,11 +471,28 @@ export function App() {
     if (section === "congress" && (mode === "bills" || mode === "votes")) setMapLayer("votes");
   }
 
+  /** Header first, then the fast joins, then LDA.gov; each step lands only if this ticker's dossier is still open. */
+  async function openTickerDossier(symbol: string, name: string) {
+    const key = `ticker:${symbol}`;
+    const still = (d: DrawerModel | null) => d?.caseKey === key;
+    setDossier(tickerShell(symbol, name));
+    const loaded = await loadDossier(symbol).catch(() => null);
+    if (!loaded) {
+      setDossier((d) => (still(d) ? { ...d!, meta: "Ticker dossier did not load. Retry from search.", blocks: [] } : d));
+      return;
+    }
+    const { lobbyClient, ...model } = loaded;
+    setDossier((d) => (still(d) ? model : d));
+    if (!lobbyClient) return;
+    const lines = await loadLobby(lobbyClient);
+    setDossier((d) => (still(d) ? withLobby(d!, lines) : d));
+  }
+
   async function chooseHit(hit: SearchHit) {
     if (hit.kind === "ticker") {
       showChart(hit.id, OPEN_SPAN);
-      setDossier(await loadDossier(hit.id));
       setSelectedId(null);
+      await openTickerDossier(hit.id, hit.label.slice(hit.id.length + 1));
     } else if (hit.kind === "site") {
       setSection("districts");
       setSelectedId(hit.id);

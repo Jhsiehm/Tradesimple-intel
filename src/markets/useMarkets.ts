@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../lib/api";
+import { api, DEMO } from "../lib/api";
 import { money, when } from "../lib/format";
 import type { ChartMark, DrawerModel, DrawerLink, DrawerTable, ListItem, MarketLayer, PartyFilter, StatusLine } from "../types";
 
@@ -392,11 +392,55 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
   };
 }
 
-export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
+const LOBBY_TITLE = "Lobbying (LDA)";
+type Lobby = { missing?: string; error?: string; deferred?: boolean; client?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
+
+function lobbyLines(lobby: Lobby | undefined) {
+  if (lobby?.missing) return [`Set ${lobby.missing}`];
+  if (lobby?.deferred) return ["Loading LDA.gov filings… LDA.gov takes 10–30 s on a cold client query."];
+  if (lobby?.error) return [`LDA.gov ${lobby.error}`];
+  const filings = lobby?.filings || [];
+  return filings.length ? filings.slice(0, 4).map((f) => `${f.registrant} · income ${money(f.income)} · expenses ${money(f.expenses)}`) : ["No LDA filings this year for this client."];
+}
+
+/** Instant dossier for `symbol` while `/api/tickers/:symbol` loads: header, case file, and the links that need only the symbol. */
+export function tickerShell(symbol: string, name = ""): DrawerModel {
+  const loading = ["Loading…"];
+  return {
+    title: `${symbol}${name ? ` ${name}` : ""}`,
+    meta: "Loading quote, positions, and joins…",
+    watch: symbol,
+    caseKey: `ticker:${symbol}`,
+    rows: [],
+    links: [
+      { label: "Positions", value: `${symbol} · every filer`, action: `pos:${symbol}` },
+      { label: "Supply chain", value: `${symbol} · suppliers, customers, co-movement`, action: `supply:${symbol}` },
+      { label: "Contracts", value: `${symbol} · federal contract actions`, action: `contracts:symbol:${symbol}` },
+      { label: "Map", value: `${symbol} · trades, contracts, PAC arcs on the Congress map`, action: `scope:symbol:${symbol}` }
+    ],
+    blocks: [LOBBY_TITLE, "PAC receipts (FEC)", "Federal contracts, last 180 days (USAspending)"].map((title) => ({ title, lines: loading }))
+  };
+}
+
+/** LDA.gov lines for a dossier whose ticker response deferred lobbying. */
+export async function loadLobby(client: string): Promise<string[]> {
+  try {
+    return lobbyLines(await api<Lobby>(`/api/lobby?client=${encodeURIComponent(client)}`));
+  } catch (err) {
+    return [`LDA.gov did not answer: ${(err as Error).message}`];
+  }
+}
+
+export function withLobby(model: DrawerModel, lines: string[]): DrawerModel {
+  return { ...model, blocks: model.blocks?.map((b) => (b.title === LOBBY_TITLE ? { ...b, lines } : b)) };
+}
+
+/** `lobbyClient` is set when lobbying was deferred; pass it to `loadLobby`. */
+export async function loadDossier(symbol: string): Promise<(DrawerModel & { lobbyClient?: string }) | null> {
   const res = await api<{
     ok: boolean;
     ticker?: { symbol: string; name: string; districts: string[]; ldaClients?: string[]; pacs?: string[]; recipients?: string[]; joinBasis?: JoinBasis | null; core?: boolean };
-    lobby?: { missing?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
+    lobby?: Lobby;
     fec?: {
       missing?: string;
       error?: string;
@@ -408,7 +452,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
     positions?: Positions | null;
     seats?: { code: string; members: { bioguide: string; name: string; party: string; district: string }[] }[];
     hq?: { city: string; state: string; district: string | null; foreign: boolean; country?: string; note: string } | null;
-  }>(`/api/tickers/${symbol}`);
+  }>(DEMO ? `/api/tickers/${symbol}` : `/api/tickers/${symbol}?lobby=0`);
   if (!res.ok || !res.ticker) return null;
   const last = res.quote?.last;
   const change = res.quote?.change;
@@ -417,6 +461,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
   const hq = res.hq;
   const hqPlace = hq ? (hq.foreign ? `${hq.city}, ${hq.country || hq.state} · outside the US` : `${hq.city}, ${hq.state}${hq.district ? ` · ${hq.district}` : ""}`) : "";
   return {
+    lobbyClient: res.lobby?.deferred ? res.lobby.client : undefined,
     title: `${res.ticker.symbol} ${res.ticker.name}`,
     meta: res.ticker.districts.join(", "),
     watch: res.ticker.symbol,
@@ -447,12 +492,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
         : [{ label: seat.code, value: "No current House member on the 119th list" }])
     ],
     blocks: [
-      {
-        title: "Lobbying (LDA)",
-        lines: res.lobby?.missing
-          ? [`Set ${res.lobby.missing}`]
-          : (res.lobby?.filings || []).slice(0, 4).map((f) => `${f.registrant} · income ${money(f.income)} · expenses ${money(f.expenses)}`)
-      },
+      { title: LOBBY_TITLE, lines: lobbyLines(res.lobby) },
       {
         title: "PAC receipts (FEC)",
         lines: res.fec?.missing

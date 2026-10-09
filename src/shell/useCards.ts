@@ -1,6 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "../lib/api";
-import { loadDossier, loadPositions } from "../markets/useMarkets";
+import { loadDossier, loadLobby, loadPositions, tickerShell, withLobby } from "../markets/useMarkets";
 import type { Chamber, DrawerModel } from "../types";
 import { PANEL_TITLE, type PanelKind } from "./Panels";
 import { clampCard, type WidgetCard } from "./Widgets";
@@ -90,8 +90,15 @@ export function useCards() {
   }
 
   async function pinSymbol(symbol: string) {
-    const model = await loadDossier(symbol);
-    if (model) placeCard(`${symbol}-dossier`, model, { w: 440, h: 560 });
+    const id = `${symbol}-dossier`;
+    placeCard(id, tickerShell(symbol), { w: 440, h: 560 });
+    const loaded = await loadDossier(symbol).catch(() => null);
+    if (!loaded) return;
+    const { lobbyClient, ...model } = loaded;
+    setCards((current) => current.map((card) => (card.id === id ? { ...card, title: model.title, model } : card)));
+    if (!lobbyClient) return;
+    const lines = await loadLobby(lobbyClient);
+    setCards((current) => current.map((card) => (card.id === id && card.model ? { ...card, model: withLobby(card.model, lines) } : card)));
   }
 
   async function openPositions(symbol: string) {

@@ -13,7 +13,7 @@ export async function lobbyingForClient(db, clientName) {
   const url = new URL("https://lda.gov/api/v1/filings/");
   url.searchParams.set("client_name", clientName);
   url.searchParams.set("filing_year", String(new Date().getUTCFullYear()));
-  const body = await fetchJson(url, { headers: { Authorization: `Token ${apiKey}` } });
+  const body = await fetchJson(url, { headers: { Authorization: `Token ${apiKey}` } }, 45000);
   const filings = (body.results || []).map((f) => ({
     id: f.filing_uuid,
     client: f.client?.name || clientName,
