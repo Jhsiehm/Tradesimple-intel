@@ -85,6 +85,7 @@ export const SMOKE = [
   ["/api/markets/supply", 200, "items,ok"],
   ["/api/markets/supply/AAPL", 200, "asOf,focus,indices,latency,name,nodes,ok,segments,series,source,symbol"],
   ["/api/air?theater=hormuz", 200, "asOf,box,items,latency,milWorld,ok,source,theater"],
+  ["/api/air/near?lat=40.75&lon=-73.99", 200, "asOf,error,items,lat,latency,lon,nm,ok,source"],
   ["/api/air/route/UAL1", 200, "callsign,error,ok,source"],
   ["/api/news/x", 200, "asOf,feeds,items,latency,mode,ok,source,tokenMissing,trends,trendsAsOf"],
   ["/api/markets/board", 500, "error,ok"],

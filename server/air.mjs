@@ -85,6 +85,51 @@ export async function airspace(db, theater) {
   };
 }
 
+/** Aircraft inside a downtown radius. Smaller than a theater box, so a city view can poll it. */
+export async function metroAir(db, lat, lon) {
+  const nm = 25;
+  const source = "adsb.lol community ADS-B network (v2 /point)";
+  const blank = (error) => ({
+    ok: false,
+    error,
+    source,
+    asOf: new Date().toISOString(),
+    latency: "Live aircraft need the adsb.lol point feed.",
+    lat,
+    lon,
+    nm,
+    items: []
+  });
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85 || Math.abs(lon) > 180) return blank("Bad coordinates");
+  const key = KEY.airMetro(lat.toFixed(2), lon.toFixed(2));
+  const hit = readCache(db, key);
+  if (hit) return hit;
+  let body;
+  try {
+    body = await fetchJson(`https://api.adsb.lol/v2/point/${lat}/${lon}/${nm}`, HEADERS, 20000);
+  } catch (err) {
+    return blank(err.message || "adsb.lol unreachable");
+  }
+  const now = body?.now || Date.now();
+  const items = (body?.ac || [])
+    .filter((ac) => ac.lat != null && ac.lon != null)
+    .map((ac) => shape(ac, Boolean(ac.dbFlags & 1), now))
+    .slice(0, 400);
+  const out = {
+    ok: true,
+    error: "",
+    source,
+    asOf: new Date(now).toISOString(),
+    latency: `Aircraft within ${nm} nm of the downtown, from volunteer ADS-B/MLAT receivers, usually 1–60 s old · cached 12 s. The map advances each fix along its last heading and ground speed for at most 45 s until the next fix. Aircraft not broadcasting stay invisible.`,
+    lat,
+    lon,
+    nm,
+    items
+  };
+  writeCache(db, key, out, 12 * 1000);
+  return out;
+}
+
 export async function flightRoute(db, callsign) {
   const cs = String(callsign || "").trim().toUpperCase();
   if (!/^[A-Z0-9]{3,8}$/.test(cs)) return { ok: false, error: "Bad callsign" };

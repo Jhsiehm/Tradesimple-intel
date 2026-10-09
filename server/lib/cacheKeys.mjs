@@ -70,6 +70,7 @@ export const KEY = {
   airMil: "air:mil:v1",
   airTheater: (theaterId) => `air:pt:v1:${theaterId}`,
   airRoute: (callsign) => `air:route:v1:${callsign}`,
+  airMetro: (lat, lon) => `air:metro:v1:${lat}:${lon}`,
   earthImagery: "earth:imagery:v2",
   earthLive: "earth:live:v1",
   earthLanes: "earth:lanes:v1",
