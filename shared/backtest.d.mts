@@ -32,6 +32,7 @@ export type BacktestTrade = {
   why: string;
   open: boolean;
   benchmark: string;
+  weight?: number;
 };
 export type BacktestBreakdown = {
   key: string; label: string; n: number; avg: number | null; median: number | null; hitRate: number | null; avgExcess: number | null; beatRate: number | null;
@@ -41,6 +42,7 @@ export type BacktestStats = {
   excessTotal: number | null; excessAnnualized: number | null; hitRate: number | null; beatRate: number | null; avgTrade: number | null;
   medianTrade: number | null; avgExcess: number | null; medianExcess: number | null; excessT: number | null; best: number | null; worst: number | null;
   avgHoldDays: number | null; maxDrawdown: number | null; drawdownFrom: string; drawdownTo: string; benchmarkMaxDrawdown: number | null;
+  wins?: number; sessions?: number; dailyMean?: number | null; dailySd?: number | null; drawdownPeak?: number | null; drawdownTrough?: number | null;
   volatility: number | null; sharpeish: number | null; infoRatioish: number | null; maxConcurrent: number; avgConcurrent: number | null;
   activeShare: number | null; from: string; to: string; spanDays: number; sharpeNote: string; weighting: string;
 };
@@ -71,7 +73,7 @@ export function firstAfter(bars: Bar[], day: number): number;
 export function lastOnOrBefore(bars: Bar[], day: number): number;
 export function median(xs: number[]): number | null;
 export function amountMid(text: string, low?: number): number;
-export function maxDrawdown(values: number[], labels?: string[]): { depth: number; from: string | number; to: string | number };
+export function maxDrawdown(values: number[], labels?: string[]): { depth: number; from: string | number; to: string | number; peak: number; trough: number };
 export function simulateTrade(signal: unknown, bars: Bar[], bench: Bar[], rules: BacktestRules, signalDay: number, sign: 1 | -1): { skip?: string; trade?: Record<string, unknown> };
 export function runBacktest(input: {
   signals?: BacktestSignal[];

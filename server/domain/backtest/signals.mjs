@@ -63,6 +63,17 @@ export function nearestHearing(lanes, hearings, tradeDay, days, knownBy = null) 
   return best;
 }
 
+/** A name in `excludeMembers` matches by bioguide or by a case-insensitive part of the person's name. */
+function excluded(f, person, bioguide) {
+  const list = f.excludeMembers || [];
+  if (!list.length) return false;
+  const name = lc(person);
+  return list.some((x) => {
+    const k = lc(x).trim();
+    return k && (lc(bioguide) === k || name.includes(k));
+  });
+}
+
 export function congressSignals({ trades, filters: f, sectorOf, committee = null, lanes = new Map(), hearings = null }) {
   const dropped = {};
   const drop = (why) => { dropped[why] = (dropped[why] || 0) + 1; };
@@ -75,6 +86,7 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     if (f.party && t.party !== f.party) continue;
     if (f.chamber && t.chamber !== f.chamber) continue;
     if (member && !(lc(t.bioguide) === member || lc(t.person).includes(member))) continue;
+    if (excluded(f, t.person, t.bioguide)) { drop("excludedMember"); continue; }
     if (committee && !committee.members.has(t.bioguide)) continue;
     if (f.tickers.length && !f.tickers.includes(t.symbol)) continue;
     const sector = sectorOf(t.symbol);
@@ -122,12 +134,13 @@ export function form4Signals({ rows, filters: f, sectorOf }) {
   for (const r of rows) {
     const side = FORM4_SIDE[r.side];
     if (!side || (r.code !== "P" && r.code !== "S")) { drop("notOpenMarket"); continue; }
-    if (r.plan) { drop("plan10b5"); continue; }
+    if (r.plan && !f.include10b51) { drop("plan10b5"); continue; }
     if (!r.filed || !r.traded || !r.symbol) { drop("noDates"); continue; }
     if (f.tickers.length && !f.tickers.includes(r.symbol)) continue;
     const sector = sectorOf(r.symbol);
     if (f.sector && sector !== f.sector) continue;
     if (member && !lc(r.person).includes(member)) continue;
+    if (excluded(f, r.person, "")) { drop("excludedMember"); continue; }
     if (!inRange(r.filed, f)) continue;
     if (f.minAmount && !(r.value >= f.minAmount)) continue;
     if (seen.has(r.id)) continue;
@@ -168,7 +181,7 @@ export function contractSignals({ rows, filters: f, sectorOf }) {
     if (f.sector && sector !== f.sector) continue;
     if (!(r.amount > 0)) { drop("deobligation"); continue; }
     if (f.minAmount && r.amount < f.minAmount) continue;
-    const lag = /defense/i.test(r.agency || "") ? DOD_LAG_DAYS : CIVILIAN_LAG_DAYS;
+    const lag = f.contractLagDays > 0 ? f.contractLagDays : /defense/i.test(r.agency || "") ? DOD_LAG_DAYS : CIVILIAN_LAG_DAYS;
     const day = dayOf(r.date);
     if (day == null) continue;
     const signalDate = isoOf(day + lag);

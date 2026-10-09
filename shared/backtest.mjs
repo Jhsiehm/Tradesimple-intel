@@ -82,7 +82,7 @@ export function maxDrawdown(values, labels = []) {
     const dd = values[i] / peak - 1;
     if (dd < worst) { worst = dd; from = peakAt; to = i; }
   }
-  return { depth: worst, from: labels[from] ?? from, to: labels[to] ?? to };
+  return { depth: worst, from: labels[from] ?? from, to: labels[to] ?? to, peak: values[from], trough: values[to] };
 }
 
 function benchmarkId(rules, signal) {
@@ -331,6 +331,12 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     drawdownFrom: dd.from,
     drawdownTo: dd.to,
     benchmarkMaxDrawdown: r4(bdd.depth),
+    wins: rets.filter((v) => v > 0).length,
+    sessions: curve.R.length,
+    dailyMean: curve.R.length ? Math.round(mean(curve.R) * 1e8) / 1e8 : null,
+    dailySd: sd ? Math.round(sd * 1e8) / 1e8 : null,
+    drawdownPeak: r4(dd.peak),
+    drawdownTrough: r4(dd.trough),
     volatility: sd ? r4(sd * Math.sqrt(252)) : null,
     sharpeish: sd ? r2((mean(curve.R) / sd) * Math.sqrt(252)) : null,
     infoRatioish: sdx ? r2((mean(curve.R.map((v, i) => v - curve.B[i])) / sdx) * Math.sqrt(252)) : null,
@@ -361,7 +367,8 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     days: t.days,
     why: t.exit,
     open: t.open,
-    benchmark: t.benchmark
+    benchmark: t.benchmark,
+    weight: t.weight
   }));
   result.byMember = breakdown(trades, (t) => t.actor, (t) => t.actorLabel);
   result.byTicker = breakdown(trades, (t) => t.symbol, (t) => t.symbol);

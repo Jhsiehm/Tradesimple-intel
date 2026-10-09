@@ -60,6 +60,9 @@ export const DEFAULT_FILTERS = {
   minLagDays: 0,
   maxLagDays: 0,
   contractAgency: "",
+  contractLagDays: 0,
+  include10b51: false,
+  excludeMembers: [],
   spikePct: 50
 };
 
@@ -115,6 +118,9 @@ export function cleanFilters(raw) {
     minLagDays: Math.round(num(f.minLagDays, 0, 3650, 0)),
     maxLagDays: Math.round(num(f.maxLagDays, 0, 3650, 0)),
     contractAgency: text(f.contractAgency, 80),
+    contractLagDays: Math.round(num(f.contractLagDays, 0, 365, 0)),
+    include10b51: Boolean(f.include10b51),
+    excludeMembers: [...new Set((Array.isArray(f.excludeMembers) ? f.excludeMembers : String(f.excludeMembers || "").split(/[,;]+/)).map((x) => text(x, 60)).filter(Boolean))].slice(0, 10),
     spikePct: Math.round(num(f.spikePct, 1, 10000, DEFAULT_FILTERS.spikePct))
   };
 }
@@ -207,6 +213,9 @@ export function describeSpec(spec) {
     f.sector,
     f.minAmount ? `≥ ${fmtUsd(f.minAmount)}` : "",
     f.nearHearingDays ? `within ${f.nearHearingDays} d of a hearing` : "",
+    f.excludeMembers?.length ? `excluding ${f.excludeMembers.join(", ")}` : "",
+    spec.source === "form4" && f.include10b51 ? "10b5-1 plan trades included" : "",
+    spec.source === "contracts" && f.contractLagDays ? `public ${f.contractLagDays} d after the award` : "",
     f.from || f.to ? `${f.from || "start"} → ${f.to || "now"} (public date)` : ""
   ].filter(Boolean);
   const exit = `hold ${r.holdDays} d${r.stopLossPct ? `, stop −${r.stopLossPct}%` : ""}${r.takeProfitPct ? `, take +${r.takeProfitPct}%` : ""}`;

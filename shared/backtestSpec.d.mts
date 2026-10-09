@@ -26,6 +26,9 @@ export type BacktestFilters = {
   minLagDays: number;
   maxLagDays: number;
   contractAgency: string;
+  contractLagDays: number;
+  include10b51: boolean;
+  excludeMembers: string[];
   spikePct: number;
 };
 export type BacktestSpec = { source: BacktestSource; filters: BacktestFilters; rules: BacktestRules };

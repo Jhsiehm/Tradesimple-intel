@@ -1,0 +1,25 @@
+import type { BacktestSource, BacktestSpec } from "./backtestSpec.mjs";
+
+export const PREFS_VERSION: number;
+export const PREFS_KEY: string;
+export const PREF_FIELDS: Record<string, string>;
+export type Prefs = { v: number; values: Record<string, unknown>; updated: string };
+export function isPrefStatement(q: string): boolean;
+export function isPrefClear(q: string): boolean;
+export function parsePrefs(q: string): Record<string, unknown>;
+export function cleanPrefs(raw: unknown): Prefs;
+export function mergePrefs(prefs: unknown, values: Record<string, unknown>, updated?: string): Prefs;
+export function describeValue(path: string, v: unknown): string;
+export function questionSources(q: string): BacktestSource[];
+export function questionHints(q: string, today: string): { fields: Record<string, unknown>; sources: BacktestSource[] };
+export function isFollowUp(q: string, prior: BacktestSpec | null): boolean;
+export function wantsBacktest(q: string): boolean;
+export type SpecPlan = { spec: BacktestSpec; sources: BacktestSource[]; from: Record<string, string>; followUp: boolean; locked: string[] };
+export function buildSpec(input: { question: string; today: string; prefs?: unknown; prior?: BacktestSpec | null; answers?: Record<string, unknown> }): SpecPlan;
+export type Clarify = { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback: unknown };
+export function clarifyQuestions(input: { question: string; prefs?: unknown; prior?: BacktestSpec | null; answers?: Record<string, unknown>; today?: string; acceptDefaults?: boolean }): Clarify[];
+export function specDiff(prev: BacktestSpec | null, next: BacktestSpec | null): string[];
+export function provenanceLine(from: Record<string, string>): string;
+export function mergeModelSpec(plan: SpecPlan, modelSpec: unknown): BacktestSpec;
+export function planNote(plan: SpecPlan, prior?: BacktestSpec | null): string;
+export const KNOWN_SOURCES: BacktestSource[];
