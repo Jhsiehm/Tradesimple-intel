@@ -77,7 +77,7 @@ export const SMOKE = [
   ["/api/tickers/ZZ-Q", 200, "error,ok"],
   ["/api/congress/leaders", 200, "active,asOf,basis,building,excessBottom,excessTop,late,latency,longest,minBuys,ok,progress,scoredMembers,source,tickers,tradesSource"],
   ["/api/congress/feed", 200, "asOf,biggest,building,counts,late,latency,latest,ok,source,tickers,window"],
-  ["/api/markets/politicians", 200, "asOf,building,errors,from,items,latency,ok,progress,source"],
+  ["/api/markets/politicians", 200, "asOf,building,dedupe,errors,from,items,latency,ok,progress,source"],
   ["/api/markets/insiders", 200, "asOf,errors,items,latency,ok,scanned,source"],
   ["/api/markets/whales", 200, "asOf,errors,items,latency,ok,source"],
   ["/api/markets/shorts", 200, "asOf,items,latency,ok,scanned,source"],

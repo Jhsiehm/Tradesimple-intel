@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { KEY } from "../server/lib/cacheKeys.mjs";
 
 test("cache keys keep the strings already stored in data/cache.sqlite", () => {
-  assert.equal(KEY.posCongress, "pos:congress:v4");
+  assert.equal(KEY.posCongress, "pos:congress:v5");
   assert.equal(KEY.chart("AAPL", "1d"), "chart:v3:AAPL:1d");
   assert.equal(KEY.lda("Lockheed Martin"), "lda:lockheed martin");
   assert.equal(KEY.ldaYear("Boeing", 2025), "lda:v2:boeing:2025");

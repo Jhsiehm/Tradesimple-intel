@@ -16,7 +16,7 @@ export const KEY = {
 
   // Disclosures and positions
   ptr: "ptr:v1",
-  posCongress: "pos:congress:v4",
+  posCongress: "pos:congress:v5",
   clerkIndex: (year) => `clerk:index:${year}`,
   ptrDoc: (docId) => `ptr:doc:v2:${docId}`,
   efdPtr: (href) => `efd:ptr:${href}`,
@@ -49,7 +49,7 @@ export const KEY = {
   screener: "board:screener:v1",
   closes: (symbol) => `closes:v1:${symbol}`,
   bars: (symbol) => `bars:v2:${symbol}`,
-  backtest: (hash) => `backtest:v3:${hash}`,
+  backtest: (hash) => `backtest:v4:${hash}`,
   fxBoard: "board:fx:v1",
   cryptoBoard: "board:crypto:v1",
   geckoMarkets: "gecko:markets:v1",

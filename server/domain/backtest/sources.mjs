@@ -58,7 +58,8 @@ export async function congressSource(db, f) {
       notes: [
         ...notes,
         ...(board.building ? [{ level: "warn", id: "building", text: "Disclosures are still being read; this run uses what is parsed so far." }] : []),
-        ...(out.dropped.amendedLater ? [{ level: "info", id: "amended", text: `${out.dropped.amendedLater} Senate rows come from amended reports. Their public date is the amendment date, not the original filing date, because the row may have first appeared in the amendment.` }] : []),
+        ...(board.dedupe?.merged ? [{ level: "info", id: "dedupe", text: `Across all disclosures, ${board.dedupe.merged} rows repeat a trade already listed in another report (${board.dedupe.byChamber?.senate || 0} Senate amendments re-listing the original, ${board.dedupe.byChamber?.house || 0} House lines filed twice) and are counted once, public on the earliest filing.${out.dropped.revised ? ` ${out.dropped.revised} of these signals use the amendment's corrected values (type or amount).` : ""}` }] : []),
+        ...(out.dropped.amendedLater ? [{ level: "info", id: "amended", text: `${out.dropped.amendedLater} Senate trades appear only in an amended report, not in the original we have. Their public date is the amendment date, not the original filing date.` }] : []),
         { level: "info", id: "window", text: `Reports filed since ${board.from}; trades before the earliest filing in the window are not here. ${out.dropped.notJoined || 0} trades in tickers outside data/tickers.json are left out (no guessed joins).` }
       ]
     }

@@ -13,6 +13,7 @@ import { roster } from "../../roster.mjs";
 import { parsePtrPdf } from "../../parsers/ptr.mjs";
 import { parseEfd } from "../../parsers/efd.mjs";
 import { isoDate, lagDays, usDate } from "../../parsers/dates.mjs";
+import { dedupeDisclosures } from "../../../shared/disclosures.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -74,7 +75,8 @@ async function buildTrades(db, publish) {
   let headSent = false;
   let lastPublish = 0;
   const compose = (building) => {
-    const items = [...house, ...senate]
+    const deduped = dedupeDisclosures([...house, ...senate]);
+    const items = deduped.items
       .map((row) => ({ ...row, inJoin: tickers.has(row.symbol) }))
       .sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
     const h = progress.house;
@@ -82,6 +84,7 @@ async function buildTrades(db, publish) {
     const notes = [...errors];
     if (h.paper || s.paper) notes.push(`${h.paper} House and ${s.paper || 0} Senate reports since ${TRADES_FROM} are scanned paper filings and are not parsed.`);
     if (h.failed || s.failed) notes.push(`${h.failed} House and ${s.failed} Senate reports could not be read this run.`);
+    const { merged, revised, byChamber } = deduped.stats;
     return {
       ok: items.length > 0,
       source: "House Clerk PTR PDFs · Senate eFD PTRs",
@@ -89,7 +92,8 @@ async function buildTrades(db, publish) {
       building,
       from: TRADES_FROM,
       progress: structuredClone(progress),
-      latency: `STOCK Act allows up to 45 days from trade to filing. ${building ? "Backfilling: " : ""}Parsed ${h.parsed} of ${h.total} electronic House and ${s.parsed} of ${s.total} Senate reports filed since ${TRADES_FROM}. Lag is filed date minus trade date. Senate amendments keep the original report date and list the amendment date separately.`,
+      latency: `STOCK Act allows up to 45 days from trade to filing. ${building ? "Backfilling: " : ""}Parsed ${h.parsed} of ${h.total} electronic House and ${s.parsed} of ${s.total} Senate reports filed since ${TRADES_FROM}. Lag is filed date minus trade date. Senate amendments keep the original report date and list the amendment date separately. A trade listed in more than one report counts once (${merged} repeat rows folded: ${byChamber.senate || 0} Senate amendment, ${byChamber.house || 0} House; ${revised} take amended values); \`public\` is the earliest date it was disclosed, or the amendment date for a trade only in an amendment.`,
+      dedupe: deduped.stats,
       errors: notes,
       items
     };

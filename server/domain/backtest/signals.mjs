@@ -3,6 +3,7 @@
  * the record became public (filing, Form 4 filing, contract publication, LDA posting), never the event date.
  */
 import { amountMid, dayOf, isoOf } from "../../../shared/backtest.mjs";
+import { publicDateOf } from "../../../shared/disclosures.mjs";
 
 const inRange = (date, f) => (!f.from || date >= f.from) && (!f.to || date <= f.to);
 const lc = (v) => String(v || "").toLowerCase();
@@ -91,8 +92,8 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     if (f.tickers.length && !f.tickers.includes(t.symbol)) continue;
     const sector = sectorOf(t.symbol);
     if (f.sector && sector !== f.sector) continue;
-    // A Senate amendment keeps the original report date but its rows may only have become public with the amendment.
-    const publicDate = t.amended && t.amended > t.filed ? t.amended : t.filed;
+    // A trade also in the original report was public at the original filing; one only in an amendment, at the amendment.
+    const publicDate = t.public || publicDateOf(t);
     if (!inRange(publicDate, f)) continue;
     if (f.minAmount && !(t.amountLow >= f.minAmount)) continue;
     if (f.minLagDays && !(t.lag >= f.minLagDays)) continue;
@@ -105,10 +106,12 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
       if (near == null) { drop("noNearbyHearing"); continue; }
     }
     if (publicDate !== t.filed) dropped.amendedLater = (dropped.amendedLater || 0) + 1;
+    if (t.revised?.length) dropped.revised = (dropped.revised || 0) + 1;
     signals.push({
       id: t.id,
       symbol: t.symbol,
       signalDate: publicDate,
+      filedDate: t.filed,
       tradeDate: t.traded,
       side: t.side,
       sizeHint: amountMid(t.amount, t.amountLow) || null,
