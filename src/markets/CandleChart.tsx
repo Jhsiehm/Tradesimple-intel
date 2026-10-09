@@ -152,11 +152,11 @@ export function CandleChart({
   useEffect(() => {
     let cancel = false;
     setEvents([]);
-    api<{ ok: boolean; source?: string; marks: ChartMark[] }>(`/api/markets/events?symbol=${encodeURIComponent(symbol)}`)
+    api<{ ok: boolean; source?: string; asOf?: string; pending?: string[]; marks: ChartMark[] }>(`/api/markets/events?symbol=${encodeURIComponent(symbol)}`)
       .then((res) => {
         if (cancel || !res.ok) return;
         setEvents(res.marks || []);
-        setEventSource(res.source || "");
+        setEventSource(`${res.source || ""}${res.asOf ? ` as of ${when(res.asOf)}` : ""}${res.pending?.length ? ` · ${res.pending.join(", ")} still loading` : ""}`);
       })
       .catch(() => null);
     return () => {

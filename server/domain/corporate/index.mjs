@@ -1,7 +1,7 @@
 import { lobbyingBoard } from "./lobbying.mjs";
 import { pacData } from "./pacs.mjs";
 
-export { earningsCalendar, earningsHistory } from "./earnings.mjs";
+export { EARNINGS_LATENCY, EARNINGS_SOURCE, earningsCalendar, earningsFiled, earningsHistory } from "./earnings.mjs";
 export { lobbyingBoard, lobbyingFor } from "./lobbying.mjs";
 export { memberPacs, pacData, pacFor } from "./pacs.mjs";
 export { contractsFor } from "./contracts.mjs";

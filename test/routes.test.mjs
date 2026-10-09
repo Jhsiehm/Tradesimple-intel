@@ -103,7 +103,7 @@ export const SMOKE = [
   ["/api/relations/expand?node=member:bogus&category=trade", 400, "error,ok"],
   ["/api/calendar/lobbying", 200, "asOf,items,latency,ok,source,totals"],
   ["/api/calendar/pacs", 200, "asOf,cycle,groups,latency,members,ok,rows,source"],
-  ["/api/markets/events?symbol=AAPL", 200, "marks,ok,source,symbol"],
+  ["/api/markets/events?symbol=AAPL", 200, "asOf,feeds,latency,marks,ok,source,symbol"],
   ["/api/corporate/lobbying/AAPL", 200, "asOf,byYear,filings,latency,ok,source,unavailable"],
   ["/api/corporate/pac/AAPL", 200, "asOf,cycle,dem,latency,ok,recipients,rep,rows,source,total"],
   ["/api/corporate/contracts/AAPL", 200, "asOf,awards,byYear,note,ok,parents,source"],

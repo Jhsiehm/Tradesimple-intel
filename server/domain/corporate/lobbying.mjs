@@ -15,14 +15,14 @@ export async function lobbyingFor(db, ticker, years = 5) {
   const filings = [];
   const gaps = [];
   let asOf = "";
-  for (const client of ticker.ldaClients || []) {
-    for (let y = now; y > now - years; y -= 1) {
-      const res = await ldaClientYear(db, client, y);
-      if (res.down) gaps.push({ client, year: y, stale: Boolean(res.rows), down: res.down });
-      if (res.storedAt && (!asOf || res.storedAt < asOf)) asOf = res.storedAt;
-      filings.push(...(res.rows || []).map((row) => withLag({ ...row, symbol: ticker.symbol })));
-    }
-  }
+  const asks = (ticker.ldaClients || []).flatMap((client) => Array.from({ length: years }, (_, i) => ({ client, year: now - i })));
+  const answers = await Promise.all(asks.map(({ client, year }) => ldaClientYear(db, client, year)));
+  answers.forEach((res, i) => {
+    const { client, year } = asks[i];
+    if (res.down) gaps.push({ client, year, stale: Boolean(res.rows), down: res.down });
+    if (res.storedAt && (!asOf || res.storedAt < asOf)) asOf = res.storedAt;
+    filings.push(...(res.rows || []).map((row) => withLag({ ...row, symbol: ticker.symbol })));
+  });
   const seen = new Set();
   const unique = filings.filter((f) => (seen.has(f.id) ? false : (seen.add(f.id), true)));
   unique.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));

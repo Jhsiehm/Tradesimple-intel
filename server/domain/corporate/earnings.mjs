@@ -1,6 +1,7 @@
 import { nasdaqJson } from "../../feeds/nasdaq.mjs";
 import { secJson } from "../../feeds/sec.mjs";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
+import { readStale } from "../../lib/cache.mjs";
 import { HOUR, DAY } from "../../lib/time.mjs";
 import { pool } from "../../lib/pool.mjs";
 import { KEY } from "../../lib/cacheKeys.mjs";
@@ -62,10 +63,21 @@ async function earningsDay(db, date) {
   return rows;
 }
 
+export const EARNINGS_SOURCE = "SEC EDGAR 8-K item 2.02 (issuer submissions)";
+export const EARNINGS_LATENCY = "Results 8-Ks are due within 4 business days of the release; dates are filed dates. Submissions rechecked every 12 h.";
+
 export async function earningsHistory(db, ticker) {
-  if (!ticker?.cik) return [];
+  return (await earningsFiled(db, ticker)).items;
+}
+
+/** Earnings 8-Ks for a ticker with the as-of time of the submissions index they came from. */
+export async function earningsFiled(db, ticker) {
+  if (!ticker?.cik) return { items: [], asOf: "", note: "No SEC CIK in data/tickers.json." };
   const subs = await secSubmissions(db, ticker.cik);
-  const recent = subs?.filings?.recent;
+  return { items: earningsRows(ticker, subs?.filings?.recent), asOf: subs?.asOf || "" };
+}
+
+function earningsRows(ticker, recent) {
   if (!recent) return [];
   const out = [];
   for (let i = 0; i < recent.form.length; i += 1) {
@@ -84,9 +96,9 @@ export async function earningsHistory(db, ticker) {
 async function secSubmissions(db, cik) {
   const key = KEY.secSubsV1(cik);
   const hit = readCache(db, key);
-  if (hit) return hit;
+  if (hit) return hit.asOf ? hit : { ...hit, asOf: new Date(readStale(db, key).storedAt).toISOString() };
   const body = await secJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, { timeoutMs: 30000 });
-  const slim = { name: body.name, filings: { recent: pick(body.filings?.recent || {}, ["form", "items", "accessionNumber", "filingDate", "reportDate"]) } };
+  const slim = { name: body.name, asOf: new Date().toISOString(), filings: { recent: pick(body.filings?.recent || {}, ["form", "items", "accessionNumber", "filingDate", "reportDate"]) } };
   writeCache(db, key, slim, 12 * HOUR);
   return slim;
 }

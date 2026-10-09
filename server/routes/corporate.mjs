@@ -1,6 +1,6 @@
 import { tickerBySymbol } from "../lib/db.mjs";
 import { contractFeed, contractorBoard, dodAnnouncements } from "../contracts.mjs";
-import { contractsFor, earningsCalendar, earningsHistory, lobbyingBoard, lobbyingFor, pacFor } from "../corporate.mjs";
+import { EARNINGS_LATENCY, EARNINGS_SOURCE, contractsFor, earningsCalendar, earningsFiled, lobbyingBoard, lobbyingFor, pacFor } from "../corporate.mjs";
 import { econCalendar, fomcMeetings, macroStrip } from "../macro.mjs";
 import { pacCalendar } from "../domain/calendar.mjs";
 import { reply } from "../router.mjs";
@@ -17,7 +17,10 @@ const CORPORATE = {
   lobbying: (db, ticker) => lobbyingFor(db, ticker, 5),
   pac: (db, ticker) => pacFor(db, ticker.symbol),
   contracts: (db, ticker) => contractsFor(db, ticker),
-  earnings: async (db, ticker) => ({ ok: true, source: "SEC EDGAR 8-K item 2.02", items: await earningsHistory(db, ticker) })
+  earnings: async (db, ticker) => {
+    const { items, asOf, note } = await earningsFiled(db, ticker);
+    return { ok: true, source: EARNINGS_SOURCE, asOf, latency: EARNINGS_LATENCY, ...(note ? { note } : {}), items };
+  }
 };
 
 export const handlers = {
