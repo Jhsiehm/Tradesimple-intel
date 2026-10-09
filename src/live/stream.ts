@@ -40,8 +40,8 @@ function apply(o: Overview) {
 }
 
 async function send(method: "GET" | "PUT" | "POST", path: string, body?: unknown): Promise<Overview> {
-  const res = await fetch(path, body === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  return res.json().catch(() => ({ ok: false }));
+  const res = await fetch(path, body === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  return res ? res.json().catch(() => ({ ok: false })) : { ok: false };
 }
 
 export const refreshLive = () => (DEMO ? Promise.resolve() : send("GET", "/api/live").then(apply, () => undefined));
