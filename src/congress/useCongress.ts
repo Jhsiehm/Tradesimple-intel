@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, recent, when } from "../lib/api";
 import type { Chamber, CongressMode, DrawerModel, ListItem, PartyFilter, StatusLine } from "../types";
 import { houseVoteMap, senateVoteMap } from "./voteMap";
+import { voteTitle } from "./voteTitle";
 
 type Bill = {
   id: string;
@@ -207,7 +208,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
       .then((res) => {
         if (cancel || !res.vote) return;
         setPositions(res.vote.positions);
-        setVoteCaption(`Latest roll call · ${res.vote.question || res.vote.bill} · ${res.vote.result}`);
+        setVoteCaption(`Latest roll call · ${voteTitle(latestVote.roll, res.vote.bill || latestVote.bill, res.vote.question, latestVote.question)} · ${res.vote.result}`);
         setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `Latest ${chamber} roll ${latestVote.roll}` });
       })
       .catch(() => null);
@@ -254,7 +255,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${roll.chamber}/${roll.congress}/${roll.session}/${roll.roll}`)
       .then((res) => {
         if (cancel || !res.vote) return;
-        if (!res.vote.question || /^roll call$/i.test(res.vote.question)) res.vote.question = roll.question;
+        res.vote.question = voteTitle(roll.roll, res.vote.bill || "", res.vote.question, roll.question);
         setBillVote(res.vote);
         setPositions(res.vote.positions);
         setVoteCaption(`${res.vote.question} · ${res.vote.result || roll.result}`);
@@ -281,11 +282,12 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${chamber}/${vote.congress}/${vote.session}/${vote.roll}`)
       .then((res) => {
         if (!res.vote) return;
+        const title = voteTitle(vote.roll, res.vote.bill || vote.bill, res.vote.question, vote.question);
         setPositions(res.vote.positions);
-        setVoteCaption(`${res.vote.question || res.vote.bill} · ${res.vote.result}`);
+        setVoteCaption(`${title} · ${res.vote.result}`);
         setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `${chamber === "house" ? "House" : "Senate"} roll ${vote.roll}` });
         setDrawer({
-          title: res.vote.question || `Roll ${vote.roll}`,
+          title,
           meta: res.vote.result,
           rows: [
             { label: "Date", value: when(res.vote.date) },
@@ -373,7 +375,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
       .filter((v) => `${v.question} ${v.bill} ${v.result}`.toLowerCase().includes(q))
       .map((v) => ({
         id: v.id,
-        title: v.question || `Roll ${v.roll}`,
+        title: voteTitle(v.roll, v.bill, v.question),
         meta: voteMeta(v),
         tone: isClose(v) ? "close" as const : v.result.toLowerCase().includes("pass") || v.result.toLowerCase().includes("agreed") ? "yea" as const : v.result.toLowerCase().includes("fail") || v.result.toLowerCase().includes("reject") ? "nay" as const : "" as const
       }));

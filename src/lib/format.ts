@@ -57,8 +57,10 @@ export function recent(value: string | number | null | undefined) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+/** `YYYY-MM-DD HH:MM` in UTC; a date-only value stays a date, with no invented midnight. */
 export function when(value: string | null | undefined) {
   if (!value) return "—";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value.slice(0, 16);
   return date.toISOString().slice(0, 16).replace("T", " ");
