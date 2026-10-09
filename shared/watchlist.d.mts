@@ -41,7 +41,7 @@ export type WatchEvent = {
 
 export type WatchBadge = { count: number; newest: string; age: string };
 export type WatchAlertRow = {
-  id: string; kind: string; date: string; title: string; detail: string; link: string; action: string; late: boolean;
+  id: string; kind: string; date: string; eventAt: string; filedAt: string; title: string; detail: string; link: string; action: string; late: boolean;
   severity: "high" | "elevated" | "routine"; source: string; pins: { kind: "symbol"; id: string; label: string }[];
 };
 
