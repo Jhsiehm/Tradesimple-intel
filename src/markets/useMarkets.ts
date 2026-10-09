@@ -420,6 +420,7 @@ export async function loadDossier(symbol: string): Promise<DrawerModel | null> {
     title: `${res.ticker.symbol} ${res.ticker.name}`,
     meta: res.ticker.districts.join(", "),
     watch: res.ticker.symbol,
+    caseKey: `ticker:${res.ticker.symbol}`,
     source: "Nasdaq quote · House Clerk / Senate eFD · SEC Form 4 · LDA.gov · FEC · USAspending · SEC EDGAR business address · join table data/tickers.json",
     rows: [
       {

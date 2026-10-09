@@ -6,6 +6,8 @@ import { LastBuysPanel, WatchPanel, WirePanel, XPanel, type PanelKind } from "./
 import { GlobalBoard } from "../markets/GlobalBoard";
 import { SupplyBoard } from "../markets/SupplyBoard";
 import { toggleMember, useWatch } from "../lib/useWatch";
+import { CaseHeader } from "../intel/CaseHeader";
+import { CaseSection } from "../intel/CaseSection";
 
 export type WidgetCard = {
   id: string;
@@ -200,6 +202,7 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
 
   return (
     <div className="member">
+      <CaseHeader caseKey={`member:${bioguide}`} />
       <div className="member-top">
         {broken ? <div className="member-photo missing">{member.party || "?"}</div> : (
           <img className="member-photo" src={member.photo} alt="" onError={() => setBroken(true)} />
@@ -226,72 +229,83 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
           </p>
         </div>
       </div>
-      <p className="member-pattern">
-        Yea {pattern.Yea || 0} · Nay {pattern.Nay || 0} · Present {pattern.Present || 0} · Not voting {pattern["Not voting"] || 0}
-      </p>
       <p className="note">{profile.latency}</p>
       <p className="note">Source {profile.source} · {when(profile.asOf)}</p>
-      <h3 className="member-h">Recent roll calls</h3>
-      {(profile.votes || []).map((vote) => (
-        <button key={vote.id} className="member-vote" onClick={() => onFollow(`vote:${vote.id}`)}>
-          <b className={vote.vote === "Yea" ? "up" : vote.vote === "Nay" ? "down" : ""}>{vote.vote}</b>
-          <span>{(vote.question || vote.bill || "Roll call").replace(/<[^>]+>/g, "")}</span>
-          <small>{vote.result} · {(vote.date || "").slice(0, 10)}</small>
-        </button>
-      ))}
-      <h3 className="member-h">Committees <small>{profile.committees?.length || 0}</small></h3>
-      {(profile.committees || []).length ? (profile.committees || []).map((c) => (
-        <button key={c.id} className="member-vote" onClick={() => onFollow(`committee:${c.id}`)}>
-          <b>{c.title || c.side}</b>
-          <span>{c.name}</span>
-        </button>
-      )) : <p className="note">No assignments on the current list.</p>}
-      <h3 className="member-h">PAC money <small>{profile.pacs?.cycle ? `${profile.pacs.cycle} cycle` : ""}</small></h3>
-      {profile.pacs?.loading ? <p className="note">FEC bulk file still parsing. Reopen the card in a minute.</p> : profile.pacs?.count ? (
-        <>
-          <p className="member-pattern">{usdShort(profile.pacs.total || 0)} from {profile.pacs.pacs} PACs · {profile.pacs.count} contributions</p>
+      <CaseSection kind="member" title="Trades" count={tradeCount(trades)}>
+        {trades === null ? <p className="note">Loading parsed periodic transaction reports…</p> : trades.length ? (
           <table className="dt">
-            <thead><tr><th>PAC</th><th>Type</th><th>Total</th><th>Gifts</th><th>Last</th></tr></thead>
+            <thead>
+              <tr><th>Sym</th><th>Side</th><th>Amount</th><th>Traded</th><th>Filed</th><th>Lag</th><th>Filing</th></tr>
+            </thead>
             <tbody>
-              {(profile.pacs.top || []).map((p) => (
-                <tr key={p.pac} className="live" onClick={() => (p.symbol ? onFollow(`pos:${p.symbol}`) : window.open(`https://www.fec.gov/data/committee/${p.pac}/`, "_blank"))}>
-                  <td>{p.pacName}{p.symbol ? <small className="tag"> {p.symbol}</small> : null}</td><td>{p.orgType || "—"}</td><td>{usdShort(p.total)}</td><td>{p.count}</td><td>{p.last}</td>
+              {trades.slice(0, 40).map((t) => (
+                <tr key={t.id} className={`live tone-${t.side === "buy" ? "up" : t.side === "sell" ? "down" : ""}`} onClick={() => onFollow(`pos:${t.symbol}`)}>
+                  <td>{t.symbol}</td><td>{t.type}</td><td>{t.amount}</td><td>{t.traded}</td><td>{t.filed}</td><td>{t.lag == null ? "—" : `${t.lag}d`}</td>
+                  <td>{t.link ? <a className="dt-filing" href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <h3 className="member-h">Latest PAC gifts <small>given · filed · lag</small></h3>
-          <table className="dt">
-            <thead><tr><th>PAC</th><th>Amount</th><th>Given</th><th>Filed</th><th>Lag</th></tr></thead>
-            <tbody>
-              {(profile.pacs.recent || []).slice(0, 12).map((g, i) => (
-                <tr key={`${g.pac}-${g.date}-${i}`} className="live" onClick={() => g.link && window.open(g.link, "_blank")}>
-                  <td>{g.pacName}</td><td>{usdShort(g.amount)}</td><td>{g.date}</td><td>{g.filed || "—"}</td><td>{g.lag == null ? "—" : `${g.lag}d`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="note">{profile.pacs.latency}</p>
-        </>
-      ) : <p className="note">No PAC contributions matched to this member in the current FEC cycle file.</p>}
-      <h3 className="member-h">Disclosed trades <small>{trades ? trades.length : "…"}</small></h3>
-      {trades === null ? <p className="note">Loading parsed periodic transaction reports…</p> : trades.length ? (
-        <table className="dt">
-          <thead>
-            <tr><th>Sym</th><th>Side</th><th>Amount</th><th>Traded</th><th>Filed</th><th>Lag</th><th>Filing</th></tr>
-          </thead>
-          <tbody>
-            {trades.slice(0, 40).map((t) => (
-              <tr key={t.id} className={`live tone-${t.side === "buy" ? "up" : t.side === "sell" ? "down" : ""}`} onClick={() => onFollow(`pos:${t.symbol}`)}>
-                <td>{t.symbol}</td><td>{t.type}</td><td>{t.amount}</td><td>{t.traded}</td><td>{t.filed}</td><td>{t.lag == null ? "—" : `${t.lag}d`}</td>
-                <td>{t.link ? <a className="dt-filing" href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : <p className="note">No parsed trade lines in the recent House Clerk and Senate eFD window.</p>}
+        ) : <p className="note">No parsed trade lines in the recent House Clerk and Senate eFD window.</p>}
+      </CaseSection>
+      <CaseSection kind="member" title="Votes" count={profile.votes?.length || 0}>
+        <p className="member-pattern">
+          Yea {pattern.Yea || 0} · Nay {pattern.Nay || 0} · Present {pattern.Present || 0} · Not voting {pattern["Not voting"] || 0}
+        </p>
+        {(profile.votes || []).map((vote) => (
+          <button key={vote.id} className="member-vote" onClick={() => onFollow(`vote:${vote.id}`)}>
+            <b className={vote.vote === "Yea" ? "up" : vote.vote === "Nay" ? "down" : ""}>{vote.vote}</b>
+            <span>{(vote.question || vote.bill || "Roll call").replace(/<[^>]+>/g, "")}</span>
+            <small>{vote.result} · {(vote.date || "").slice(0, 10)}</small>
+          </button>
+        ))}
+      </CaseSection>
+      <CaseSection kind="member" title="Committees" count={profile.committees?.length || 0}>
+        {(profile.committees || []).length ? (profile.committees || []).map((c) => (
+          <button key={c.id} className="member-vote" onClick={() => onFollow(`committee:${c.id}`)}>
+            <b>{c.title || c.side}</b>
+            <span>{c.name}</span>
+          </button>
+        )) : <p className="note">No assignments on the current list.</p>}
+      </CaseSection>
+      <CaseSection kind="member" title="PAC money" count={profile.pacs?.cycle ? `${profile.pacs.cycle} cycle` : ""}>
+        {profile.pacs?.loading ? <p className="note">FEC bulk file still parsing. Reopen the card in a minute.</p> : profile.pacs?.count ? (
+          <>
+            <p className="member-pattern">{usdShort(profile.pacs.total || 0)} from {profile.pacs.pacs} PACs · {profile.pacs.count} contributions</p>
+            <table className="dt">
+              <thead><tr><th>PAC</th><th>Type</th><th>Total</th><th>Gifts</th><th>Last</th></tr></thead>
+              <tbody>
+                {(profile.pacs.top || []).map((p) => (
+                  <tr key={p.pac} className="live" onClick={() => (p.symbol ? onFollow(`pos:${p.symbol}`) : window.open(`https://www.fec.gov/data/committee/${p.pac}/`, "_blank"))}>
+                    <td>{p.pacName}{p.symbol ? <small className="tag"> {p.symbol}</small> : null}</td><td>{p.orgType || "—"}</td><td>{usdShort(p.total)}</td><td>{p.count}</td><td>{p.last}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <h3 className="member-h">Latest PAC gifts <small>given · filed · lag</small></h3>
+            <table className="dt">
+              <thead><tr><th>PAC</th><th>Amount</th><th>Given</th><th>Filed</th><th>Lag</th></tr></thead>
+              <tbody>
+                {(profile.pacs.recent || []).slice(0, 12).map((g, i) => (
+                  <tr key={`${g.pac}-${g.date}-${i}`} className="live" onClick={() => g.link && window.open(g.link, "_blank")}>
+                    <td>{g.pacName}</td><td>{usdShort(g.amount)}</td><td>{g.date}</td><td>{g.filed || "—"}</td><td>{g.lag == null ? "—" : `${g.lag}d`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="note">{profile.pacs.latency}</p>
+          </>
+        ) : <p className="note">No PAC contributions matched to this member in the current FEC cycle file.</p>}
+      </CaseSection>
     </div>
   );
+}
+
+/** The case header counts trades since the intel window opened (2025-01-03); say so when the card lists older ones. */
+function tradeCount(trades: Trade[] | null) {
+  if (!trades) return "…";
+  const recent = trades.filter((t) => t.traded >= "2025-01-03").length;
+  return recent === trades.length ? String(recent) : `${recent} since Jan 2025 · ${trades.length} on file`;
 }
 
 export function clampCard(card: WidgetCard): Partial<WidgetCard> {

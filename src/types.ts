@@ -98,6 +98,8 @@ export type DrawerModel = {
   blocks?: { title: string; lines: string[] }[];
   source?: string;
   watch?: string;
+  /** `ticker:NVDA` or `district:CA-11`: puts the case-file header on top of the dossier. */
+  caseKey?: string;
 };
 
 export type MarkTone = "buy" | "sell" | "file" | "earn" | "lobby" | "pac" | "gov" | "fomc" | "cpi" | "macro";

@@ -237,6 +237,7 @@ function hqDrawer(hq: Hq, all: Hq[], roster: RosterMember[], source: string): Dr
     title: `${hq.symbol} ${hq.name} · headquarters`,
     meta: hq.foreign ? `Business address outside the US · ${hq.country || hq.state}` : hq.district ? `${hq.district} · ${POSTAL_TO_NAME[state] || state}${atLarge ? " at-large" : ` district ${district}`}` : hq.note,
     watch: hq.symbol,
+    caseKey: `ticker:${hq.symbol}`,
     rows: [
       { label: "Address", value: address || "—" },
       ...(hq.foreign ? [] : [
@@ -290,6 +291,7 @@ function districtDrawer(seat: Seat, site: Site | null, sites: Site[], roster: Ro
   return {
     title: site ? site.name : `${seat.code} · ${atLarge ? "at-large" : `district ${district}`}`,
     meta: site ? site.note : `${POSTAL_TO_NAME[state] || state} · 119th Congress`,
+    caseKey: `district:${seat.code}`,
     rows,
     links,
     tables: [

@@ -1,5 +1,7 @@
 import type { DrawerModel, DrawerTable } from "../types";
 import { toggleSymbol, useWatch } from "../lib/useWatch";
+import { CaseHeader } from "../intel/CaseHeader";
+import { CaseSection } from "../intel/CaseSection";
 
 export function Drawer({
   model,
@@ -22,6 +24,7 @@ export function Drawer({
     <button className={watched ? "star on" : "star"} title={watched ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleSymbol(model.watch!)}>{watched ? "★ Watching" : "☆ Watch"}</button>
   ) : null;
   const src = model.source || source;
+  const kind = model.caseKey?.split(":")[0];
   return (
     <aside className={embedded ? "drawer embedded" : "drawer"} role="dialog" aria-label={model.title}>
       {embedded ? null : (
@@ -35,6 +38,7 @@ export function Drawer({
         </div>
       )}
       <div className="drawer-body">
+        {model.caseKey ? <CaseHeader caseKey={model.caseKey} /> : null}
         {embedded ? (star ? <p className="drawer-star">{star}</p> : null) : <h2>{model.title}</h2>}
         {model.meta ? <p className="meta">{model.meta}</p> : null}
         {model.stages ? (
@@ -67,14 +71,17 @@ export function Drawer({
             <strong>{link.value}</strong>
           </button>
         ))}
-        {model.tables?.map((table) => <DataTable key={table.title} table={table} onFollow={onFollow} />)}
+        {model.tables?.map((table) => (
+          <CaseSection key={table.title} kind={kind} title={table.title} count={table.empty ? "—" : table.rows.length}>
+            <DataTable table={table} onFollow={onFollow} />
+          </CaseSection>
+        ))}
         {model.blocks?.map((block) => (
-          <section key={block.title} className="block">
-            <h3>{block.title}</h3>
+          <CaseSection key={block.title} kind={kind} title={block.title}>
             {block.lines.length ? block.lines.map((line, index) => (
               <p key={`${index}:${line}`}>{line}</p>
             )) : <p>None on this feed.</p>}
-          </section>
+          </CaseSection>
         ))}
         {src ? <p className="drawer-src"><em>SOURCE</em> {src}</p> : null}
       </div>
@@ -85,8 +92,7 @@ export function Drawer({
 function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action: string) => void }) {
   const filings = table.rows.some((row) => row.filing);
   return (
-    <section className="block">
-      <h3>{table.title} <small>{table.empty ? "—" : table.rows.length}</small></h3>
+    <>
       {table.note ? <p className="table-note">{table.note}</p> : null}
       {table.rows.length ? (
         <div className="dt-scroll">
@@ -119,6 +125,6 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
           </table>
         </div>
       ) : <p>{table.empty || "None on this feed."}</p>}
-    </section>
+    </>
   );
 }

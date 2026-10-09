@@ -55,6 +55,7 @@ export type CaseFile = {
   stats: CaseStat[];
   asOf: string;
   sources: string[];
+  latency?: string;
 };
 
 const scopeQuery = (scope: IntelScope) => (scope.kind === "member" ? `?member=${scope.id}` : scope.kind === "symbol" ? `?symbol=${encodeURIComponent(scope.id)}` : "");

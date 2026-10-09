@@ -333,7 +333,8 @@ export async function caseFile(db, kind, rawId) {
         contractStat(c, `Contracts in ${place} · 90d`)
       ],
       asOf: tl?.asOf || new Date().toISOString(),
-      sources: ["House Clerk PTR / Senate eFD", "Congress.gov committee meetings", "USAspending place of performance"]
+      sources: ["House Clerk PTR / Senate eFD", "Congress.gov committee meetings", "USAspending place of performance"],
+      latency: "Trades filed up to 45 days after the trade; hearing index refreshed every 6 h; DoD contract actions reach USAspending about 90 days late."
     };
   }
   if (kind === "ticker") {
@@ -372,7 +373,8 @@ export async function caseFile(db, kind, rawId) {
         contract
       ],
       asOf: tradeRes.asOf || new Date().toISOString(),
-      sources: ["House Clerk PTR / Senate eFD", "SEC EDGAR Form 4", "USAspending"]
+      sources: ["House Clerk PTR / Senate eFD", "SEC EDGAR Form 4", "USAspending"],
+      latency: "Congress trades filed up to 45 days late; Form 4 due 2 business days after the trade; DoD contract actions reach USAspending about 90 days late."
     };
   }
   if (kind === "district") {
@@ -398,7 +400,8 @@ export async function caseFile(db, kind, rawId) {
         { label: `Rep. trades ${year}`, value: rep ? String(trades.filter((t) => t.traded.startsWith(year)).length) : "—", note: rep ? `${trades.length} since Jan 2025` : "" }
       ],
       asOf: new Date().toISOString(),
-      sources: ["USAspending place of performance", "SEC EDGAR business address", "House Clerk PTR"]
+      sources: ["USAspending place of performance", "SEC EDGAR business address", "House Clerk PTR"],
+      latency: "DoD contract actions reach USAspending about 90 days late; HQ is the address last filed with the SEC; trades filed up to 45 days late."
     };
   }
   return { ok: false, error: "Unknown case kind" };
