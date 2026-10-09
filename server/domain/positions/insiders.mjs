@@ -190,7 +190,7 @@ export async function insiderHistory(db, opts = {}) {
     coverage: { shortList: [], capped: tail?.coverage.capped || [] },
     otherIssuer: tail?.otherIssuer || 0,
     building: Boolean(tail?.building),
-    store: { ...store, amended: stored.amended, forms, liveForms: tail?.filings.read || 0 },
+    store: { ...store, amended: stored.amended, windowForms: forms, liveForms: tail?.filings.read || 0 },
     coverageNote: `Form 4 history: every Form 4 filed ${from || store.coveredFrom} to ${to || "today"} for ${list.length} join-table issuers — ${forms} forms from the ${STORE_SOURCE} (complete ${store.coveredFrom} to ${store.coveredThrough}, updated ${store.lastUpdate || "—"})${tail ? ` and ${tail.filings.read} filed since, read live` : ""}. No per-issuer cap; ${stored.amended} lines on 4/A amendments are left out (they restate a form already counted).${early ? ` The store starts ${store.coveredFrom}; Form 4s filed before that are not here.` : ""}`
   };
 }

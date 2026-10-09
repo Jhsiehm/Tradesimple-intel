@@ -238,6 +238,8 @@ test("insiderHistory reads the store through its coverage, live submissions afte
   assert.equal(out.items.find((r) => r.accession === "0000019617-25-000020").source, undefined, "the tail row comes from the live path");
   assert.deepEqual(out.coverage, { shortList: [], capped: [] });
   assert.equal(out.store.amended, 3, "the JPM 4/A line and the GOOG/GOOGL 4/A lines are counted, not listed");
+  assert.equal(out.store.windowForms, 4, "forms read from the store for this window");
+  assert.equal(out.store.forms, 8, "the store's own total (5 data-set forms + 3 daily) is not replaced by the window's");
   assert.match(out.source, /^SEC Insider Transactions Data Sets \(quarterly\) \+ EDGAR daily index \+ SEC EDGAR Form 4/);
   assert.match(out.coverageNote, /No per-issuer cap; 3 lines on 4\/A amendments are left out/);
   const jpmOnly = await insiderHistory(db, { from: "2025-01-01", to: "2025-03-31", symbols: ["JPM"], tickers: [JPM, GOOG], subsOf: async () => { throw new Error("no live read for a window inside the store"); }, read });

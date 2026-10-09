@@ -166,14 +166,15 @@ export function dropLease(db, owner) {
 const status = { at: 0, body: null };
 
 /**
- * What the store holds: rows, forms, date spans, quarters and days ingested, the span it covers completely
+ * What the store holds: rows, forms, date spans (trade dates before 1990 or after the filing date are filer typos
+ * and do not stretch the span), quarters and days ingested, the span it covers completely
  * (`coveredFrom`..`coveredThrough`, null until the first quarter is in), last update. Cached for a minute.
  */
 export function storeStatus(db, now = Date.now()) {
   if (!db) return null;
   if (status.body && status.db === db && now - status.at < 60_000) return status.body;
   ensureInsiderStore(db);
-  const agg = db.prepare("SELECT COUNT(*) AS rows, COUNT(DISTINCT accession) AS forms, COUNT(DISTINCT ticker) AS tickers, MIN(filed) AS minFiled, MAX(filed) AS maxFiled, MIN(traded) AS minTraded, MAX(traded) AS maxTraded FROM insider_tx").get();
+  const agg = db.prepare("SELECT COUNT(*) AS rows, COUNT(DISTINCT accession) AS forms, COUNT(DISTINCT ticker) AS tickers, MIN(filed) AS minFiled, MAX(filed) AS maxFiled, MIN(CASE WHEN traded >= '1990-01-01' THEN traded END) AS minTraded, MAX(CASE WHEN traded <= filed THEN traded END) AS maxTraded FROM insider_tx").get();
   const bySource = Object.fromEntries(db.prepare("SELECT source, COUNT(*) AS n FROM insider_tx GROUP BY source").all().map((r) => [r.source, r.n]));
   const quarters = [...doneOf(db, "quarter").keys()].sort();
   const days = [...doneOf(db, "day").keys()].sort();
