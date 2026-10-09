@@ -83,7 +83,7 @@ export const KEY = {
   hq: (symbol) => `hq:v2:${symbol}`,
 
   // Today watchlist: composed per-ticker activity, symbol headlines, delayed quote, and the symbols clients watch
-  watchActivity: (symbol) => `watch:activity:v1:${symbol}`,
+  watchActivity: (symbol) => `watch:activity:v2:${symbol}`,
   watchNews: (symbol) => `watch:news:v1:${symbol}`,
   watchQuote: (symbol) => `watch:quote:v1:${symbol}`,
   watchSet: "watch:set:v1",

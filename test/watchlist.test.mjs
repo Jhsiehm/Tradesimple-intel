@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  addSymbol, ageLabel, badgesOf, cleanTickers, congressEvent, contractEvent, filingEvent, insiderEvents, lagDays, lobbyingEvent,
+  addSymbol, ageLabel, badgesOf, cleanTickers, congressEvent, contractEvent, filingEvent, groupRepeats, insiderEvents, lagDays, lobbyingEvent,
   matchTickers, mergeEvents, moveSymbol, newsEvent, removeSymbol, stakeEvent, watchAlertRows, whaleEvent, WATCH_MAX
 } from "../shared/watchlist.mjs";
 import { alertSeverity } from "../shared/intel.mjs";
@@ -10,6 +10,27 @@ import { parseSchedule13 } from "../server/parsers/schedule13.mjs";
 import { pickFilings } from "../server/domain/watchlist/sources.mjs";
 
 const NOW = Date.parse("2026-10-09T14:00:00Z");
+
+test("House PTR 20035491 (Kevin Hern, LMT): 'S (partial)' and 'S' stay two rows and read differently; identical lines show as one 2× row", () => {
+  const row = { chamber: "house", person: "Kevin Hern", bioguide: "H001082", party: "R", state: "OK", symbol: "LMT", side: "sell", amount: "$15,001 - $50,000", amountLow: 15001, traded: "2026-09-02", filed: "2026-09-25", owner: "Joint", link: "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2026/20035491.pdf" };
+  const partial = congressEvent({ ...row, id: "h-20035491-49", type: "Sale (partial)" });
+  const full = congressEvent({ ...row, id: "h-20035491-50", type: "Sale" });
+  assert.equal(partial.title, "Kevin Hern sold (partial) $15,001 - $50,000");
+  assert.equal(full.title, "Kevin Hern sold $15,001 - $50,000");
+  assert.equal(groupRepeats([partial, full]).length, 2);
+  const twin = congressEvent({ ...row, id: "h-20035491-51", type: "Sale" });
+  const grouped = groupRepeats([partial, full, twin]);
+  assert.equal(grouped.length, 2);
+  assert.equal(grouped[1].repeat, 2);
+  assert.deepEqual(grouped[1].ids, ["trade:h-20035491-50", "trade:h-20035491-51"]);
+});
+
+test("USAspending $0 actions are labeled '$0 modification' and say no money was obligated", () => {
+  const c = contractEvent({ id: "award:CONT_AWD_80GSFC24FA046:P00006:2026-09-29", agency: "National Aeronautics and Space Administration", amount: 0, mod: "P00006", date: "2026-09-29", description: "ATHENA CRYOCOOLER", recipient: "LOCKHEED MARTIN CORPORATION", link: "https://www.usaspending.gov/award/CONT_AWD_80GSFC24FA046_8000_GS00Q14OADU323_4732" }, "LMT");
+  assert.equal(c.title, "National Aeronautics and Space Administration · $0 modification");
+  assert.equal(c.amountLabel, "$0 modification");
+  assert.match(c.detail, /mod P00006 · no money obligated by this action/);
+});
 
 test("tickers are checked against the join table, deduped, ordered, capped", () => {
   const known = new Set(["AAPL", "BRK.B", "LMT"]);

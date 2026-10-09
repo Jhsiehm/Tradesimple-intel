@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { WATCH_SOURCES, ageLabel, type WatchEvent, type WatchSourceKey } from "../../shared/watchlist.mjs";
+import { WATCH_SOURCES, ageLabel, groupRepeats, type WatchEvent, type WatchSourceKey } from "../../shared/watchlist.mjs";
 import { when } from "../lib/api";
 import { AgeLine } from "../ui/AgeLine";
 import { Lag } from "../ui/Lag";
@@ -50,6 +50,7 @@ function EventRow({ e, onFollow }: { e: WatchEvent; onFollow: (action: string) =
         <p className="watch-title">
           {e.source === "congress" && e.bioguide ? <button className="link" onClick={() => onFollow(`timeline:${e.bioguide}`)} title="Open their timeline">{e.title}</button> : e.title}
           {e.side ? <b className={e.side === "buy" ? "up" : "down"}> · {e.side}</b> : null}
+          {e.repeat && e.repeat > 1 ? <b className="watch-repeat" title={`The report lists this line ${e.repeat} times, identically; each is kept as filed.`}> · {e.repeat}×</b> : null}
         </p>
         {e.detail && e.detail !== e.title ? <p className="watch-detail">{e.detail}</p> : null}
         <F4Lines e={e} />
@@ -65,7 +66,7 @@ function EventRow({ e, onFollow }: { e: WatchEvent; onFollow: (action: string) =
 export function ActivityFeed({ symbol, days, onFollow }: { symbol: string; days: number; onFollow: (action: string) => void }) {
   const res = useTickerActivity(symbol, days);
   const [only, setOnly] = useState<WatchSourceKey | null>(null);
-  const events = useMemo(() => (res?.events || []).filter((e) => !only || e.source === only), [res, only]);
+  const events = useMemo(() => groupRepeats((res?.events || []).filter((e) => !only || e.source === only)), [res, only]);
   if (!res) return <p className="watch-note">Loading {symbol} activity…</p>;
   if (!res.ok) return <p className="watch-note">{res.error || "Activity unavailable."}</p>;
   const sections = res.sections || [];

@@ -18,6 +18,9 @@ export type WatchEvent = {
   lag: number | null;
   late: boolean;
   link: string;
+  /** Set by groupRepeats: identical lines in one report shown as one row ("2×"). */
+  repeat?: number;
+  ids?: string[];
   bioguide?: string;
   chamber?: string;
   party?: string;
@@ -74,6 +77,7 @@ export function filingEvent(f: Record<string, any>): WatchEvent;
 export function newsEvent(n: Record<string, any>, symbol: string): WatchEvent;
 
 export function mergeEvents(events: WatchEvent[]): WatchEvent[];
+export function groupRepeats(events: WatchEvent[]): WatchEvent[];
 export function withinDays(events: WatchEvent[], days: number, now?: number): WatchEvent[];
 export function badgesOf(events: WatchEvent[], days: number, now?: number): Partial<Record<WatchSourceKey, WatchBadge>>;
 export function watchAlertRows(events: WatchEvent[], since?: string, opts?: { news?: boolean }): WatchAlertRow[];

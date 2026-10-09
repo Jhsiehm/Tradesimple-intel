@@ -124,7 +124,7 @@ const num = (v) => (v == null || !Number.isFinite(v) ? "" : Math.round(v).toLoca
 export function congressEvent(t) {
   const lag = t.lag ?? lagDays(t.traded, t.filed);
   const late = lag != null && lag > LATE_DAYS;
-  const verb = t.side === "buy" ? "bought" : t.side === "sell" ? "sold" : t.type || "traded";
+  const verb = t.side === "buy" ? "bought" : t.side === "sell" ? (/partial/i.test(t.type || "") ? "sold (partial)" : "sold") : t.type || "traded";
   return {
     id: `trade:${t.id}`,
     symbol: t.symbol,
@@ -258,17 +258,18 @@ export function stakeEvent(f) {
 
 /** USAspending prime contract action (server/contracts.mjs contractFeed). USAspending gives no publish date per action. */
 export function contractEvent(a, symbol) {
+  const amount = a.amount === 0 ? "$0 modification" : usd(a.amount);
   return {
     id: `contract:${a.id}`,
     symbol,
     source: "contracts",
     feed: "USAspending.gov prime contract transactions",
-    title: `${a.agency || "Federal agency"}${a.subAgency && a.subAgency !== a.agency ? ` · ${a.subAgency}` : ""} · ${usd(a.amount)}`,
-    detail: [a.description, a.recipient, a.mod ? `mod ${a.mod}` : ""].filter(Boolean).join(" · ").slice(0, 280),
+    title: `${a.agency || "Federal agency"}${a.subAgency && a.subAgency !== a.agency ? ` · ${a.subAgency}` : ""} · ${amount}`,
+    detail: [String(a.description || "").slice(0, 240), a.recipient, a.mod ? `mod ${a.mod}` : "", a.amount === 0 ? "no money obligated by this action (USAspending reports $0: a change order, extension or administrative change)" : ""].filter(Boolean).join(" · "),
     who: a.agency || "",
     side: "",
     amount: a.amount ?? null,
-    amountLabel: usd(a.amount),
+    amountLabel: amount,
     eventAt: a.date || "",
     publishedAt: "",
     lag: null,
@@ -364,6 +365,23 @@ export function mergeEvents(events) {
     out.push(e);
   }
   return out.sort((a, b) => (msOf(shownAt(b)) || 0) - (msOf(shownAt(a)) || 0) || a.id.localeCompare(b.id));
+}
+
+/**
+ * For display: rows that say exactly the same thing from the same report (a PTR that lists one sale twice; the
+ * dedupe policy keeps identical lines within one report) become one row with `repeat` = how many, `ids` = theirs.
+ */
+export function groupRepeats(events) {
+  const out = [];
+  const at = new Map();
+  for (const e of events) {
+    const key = JSON.stringify([e.source, e.link, e.title, e.detail, e.eventAt, e.publishedAt, e.amountLabel, e.side]);
+    const i = at.get(key);
+    if (i == null || !e.link) { at.set(key, out.length); out.push(e); continue; }
+    const first = out[i];
+    out[i] = { ...first, repeat: (first.repeat || 1) + 1, ids: [...(first.ids || [first.id]), e.id] };
+  }
+  return out;
 }
 
 /** Events whose public time is within `days` of `now`. */
