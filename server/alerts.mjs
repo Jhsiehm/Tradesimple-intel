@@ -1,6 +1,7 @@
 import { congressTrades, insiderTrades } from "./positions.mjs";
 import { lobbyingBoard } from "./corporate.mjs";
 import { alertSeverity } from "../shared/intel.mjs";
+import { RESEARCH_SOURCE, researchAlerts } from "./domain/tasks/alerts.mjs";
 
 /** STOCK Act: periodic transaction reports are due within 45 days of the trade (30 from notice, 45 hard cap). */
 export const LATE_DAYS = 45;
@@ -140,17 +141,20 @@ export async function alertsFor(db, params) {
   const members = String(params.get("members") || "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]\d{6}$/.test(s)).slice(0, 100);
   const since = /^\d{4}-\d{2}-\d{2}$/.test(params.get("since") || "") ? params.get("since") : "";
   const allLate = params.get("late") === "all";
+  const watching = symbols.length || members.length || allLate;
   const [trades, insiders, lobbying] = await Promise.all([
-    congressTrades(db).catch(() => ({ items: [] })),
+    watching ? congressTrades(db).catch(() => ({ items: [] })) : { items: [] },
     symbols.length ? insiderTrades(db).catch(() => ({ items: [] })) : { items: [] },
     symbols.length ? lobbyingBoard(db).catch(() => ({ items: [] })) : { items: [] }
   ]);
   const items = buildAlerts({ trades: trades.items || [], insiders: insiders.items || [], lobbying: lobbying.items || [], symbols, members, since, allLate });
+  const research = researchAlerts(db, since);
   return {
     ok: true,
     asOf: new Date().toISOString(),
-    items: capAlerts(items, 200),
+    items: [...research, ...capAlerts(items, 200)],
     sources: [
+      ...(research.length ? [RESEARCH_SOURCE] : []),
       { label: "Congress trades", source: trades.source || "House Clerk PTRs · Senate eFD", asOf: trades.asOf, latency: "Filed up to 45 days after the trade; alert date is the filed date." },
       { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade. One row per filing; 10b5-1 planned sales are ROUTINE." },
       { label: "Lobbying", source: lobbying.source || "LDA.gov", asOf: lobbying.asOf, latency: "Quarterly LD-2 reports, due 20 days after quarter end." }

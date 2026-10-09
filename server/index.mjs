@@ -6,6 +6,7 @@ import { openDb } from "./lib/db.mjs";
 import { router } from "./routes/index.mjs";
 import { siteRegistry } from "./domain/sites.mjs";
 import { startWarm } from "./jobs/warm.mjs";
+import { startTasks } from "./jobs/tasks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv(root);
@@ -21,4 +22,5 @@ process.on("unhandledRejection", (err) => console.error("unhandled", err instanc
 server.listen(port, "127.0.0.1", () => {
   console.log(`intel api http://127.0.0.1:${port}`);
   startWarm(db);
+  startTasks(db);
 });

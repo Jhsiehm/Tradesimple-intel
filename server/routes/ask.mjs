@@ -8,6 +8,7 @@ import { createProvider } from "../ai/providers.mjs";
 import { runAsk } from "../ai/run.mjs";
 import { TOOLS, callRoute, labelOf, runTool, toolDefs } from "../ai/tools.mjs";
 import { askLog } from "../ai/log.mjs";
+import { scheduleReply } from "./tasks.mjs";
 
 export function askStatus(env = process.env) {
   const cfg = askConfig(env);
@@ -45,6 +46,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     if (!body.ok) return reply(body.status, { ok: false, error: body.error, missing: "" });
     const asked = cleanAsk(body.value);
     if (!asked.ok) return reply(400, { ok: false, error: asked.error, missing: "" });
+    if (scheduleReply(asked, res, now)) return undefined;
     const client = clientOf(req, env);
     const slot = limiter.take(client, now());
     if (!slot.ok) return reply(429, { ok: false, error: `Ask is limited to ${ASK_LIMITS.perIp} questions per ${ASK_LIMITS.perIpWindowMs / 60_000} minutes. Try again in ${Math.ceil(slot.retryMs / 60_000)} min.`, missing: "", retryMs: slot.retryMs });
