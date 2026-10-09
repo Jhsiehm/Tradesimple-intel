@@ -56,17 +56,36 @@ const join = (...xs) => [...new Set(xs.filter(Boolean))].join(" + ");
 const tool = (name, description, parameters, run, label) => ({ name, description, parameters, run, label });
 const bad = (error) => ({ ok: false, error });
 
+/**
+ * A backtest's counts under names that say what each one counts, so "117" cannot be read as tickers when it is
+ * paper filings. Absent counts are left out rather than shown as 0.
+ */
+export function countsForModel(c = {}) {
+  const out = {
+    matchedSignals: c.matched ?? c.offeredSignals,
+    signalsOnChosenSides: c.signals,
+    tradesPriced: c.used,
+    signalsNotPriced: c.skipped,
+    distinctTickersMatched: c.tickers,
+    tickersWithPriceHistory: c.priced,
+    unparsedPaperFilings: c.unparsedPaperFilings,
+    unreadElectronicReports: c.unreadElectronicReports
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => typeof v === "number"));
+}
+
 /** The compact answer a backtest gives a model: stats, the biggest names, every warning, each feed's label. */
 export function summarizeBacktest(out) {
   if (!out || out.ok === false) return out;
   const warn = (out.caveats?.items || []).filter((c) => c.level === "warn").map((c) => c.text);
   const info = (out.caveats?.items || []).filter((c) => c.level !== "warn").map((c) => c.text);
   const s = out.stats || {};
+  const c = out.counts || {};
   return {
     ok: true,
     description: out.description,
     spec: out.spec,
-    counts: out.counts,
+    counts: countsForModel(c),
     stats: {
       trades: s.trades, totalReturn: s.total, annualized: s.annualized, benchmarkReturn: s.benchmarkTotal,
       benchmarkAnnualized: s.benchmarkAnnualized, excessReturn: s.excessTotal, hitRate: s.hitRate, beatBenchmarkRate: s.beatRate,

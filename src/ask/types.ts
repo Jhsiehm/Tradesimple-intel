@@ -45,7 +45,7 @@ export type Done = {
   answer: string;
   cited: string[];
   unknown: string[];
-  grounding: { checked: number; unmatched: string[] };
+  grounding: { checked: number; unmatched: string[]; mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[] };
   uncited: boolean;
   noTools: boolean;
   greeting: boolean;

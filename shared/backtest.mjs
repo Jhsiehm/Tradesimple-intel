@@ -477,7 +477,7 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
     const shown = syms.slice(0, 12).join(", ");
     add(reason === "noPrice" || reason === "notPriced" ? "warn" : "info", `skip:${reason}`, `${n} signals ${SKIP_TEXT[reason] || reason}${syms.length ? ` (${syms.length} symbols: ${shown}${syms.length > 12 ? "…" : ""})` : ""}. They are left out, not counted as zero.`);
   }
-  if (context.paperFilings) add("warn", "paper", `${context.paperFilings} scanned paper filings in the window are not parsed, so those trades are missing from the signal set.`);
+  if (context.paperFilings) add("warn", "paper", `${context.paperFilings} scanned paper filings in the window (images the app cannot read; a count of filings, not of tickers or trades) are not parsed, so their trades are missing from the signal set.`);
   if (context.unparsed) add("warn", "unparsed", `${context.unparsed} electronic reports could not be read this run.`);
   if (rules.sides !== "buy" && trades.some((t) => t.side === "sell")) add("warn", "short", "Sells are scored as shorts of the same stock with no borrow cost, no dividends owed, and no squeeze risk. A sale by a member is often liquidity, not a view.");
   const byActor = new Map();

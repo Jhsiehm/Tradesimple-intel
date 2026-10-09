@@ -5,6 +5,7 @@
 import { cleanSpec, encodeSpec } from "./backtestSpec.mjs";
 import { PREF_FIELDS, cleanPrefs } from "./backtestAsk.mjs";
 import { cleanAttached, cleanContext, rowCount } from "./agent.mjs";
+import { mislabeledCounts } from "./countLabels.mjs";
 
 export const ASK_LIMITS = {
   question: 800,
@@ -76,6 +77,7 @@ export function systemPrompt(today) {
     "Every tool result carries a ref such as t3. Put that ref in square brackets, [t3], right after each sentence, table row, or number that comes from it. A number or fact without a ref from a result you called is not allowed.",
     "When a tool returns rows, the answer must show the actual numbers: a compact markdown table (at most 8 rows, the key columns only, a ref in the last column) followed by one or two sentences. Never answer 'here are the results' without the figures.",
     "Quote numbers as the tool returned them (a fraction such as 0.0834 may be written 8.34%). Do not do arithmetic that no tool did; if a difference matters, give the two figures with their refs.",
+    "Every count you quote must name what it counts, in the words of the field or sentence it came from: unparsedPaperFilings are paper filings the app cannot read, not tickers or trades; matchedSignals are records, not trades; distinctTickersMatched are symbols. Never put a count from one field next to another field's unit.",
     `Backtests: call run_backtest. For "the last N days", set filters.from to N days before today (30 days → ${daysBefore(today, 30)}), filters.to to ${today}, rules.openTrades to "mark" and rules.holdDays to N, because most of those positions have not reached a normal 90-day exit. "All data sources" means one run_backtest call per source in the same turn: congress, form4, and contracts (lobbying needs tickers; say so). State the spec you used in one line.`,
     "Use congress_leaders for disclosed buys ranked against SPY.",
     "If the tools cannot answer, say so plainly and say what is missing. Do not guess, do not fill gaps from memory.",
@@ -267,13 +269,20 @@ function grounded(n, pool) {
   return bases.some((b, i) => pool.some((e) => Math.abs(e - b) <= tols[i] + slack));
 }
 
-/** Numbers in the answer that no tool result contains. A warning to show, not a block. */
+const parsed = (json) => { try { return JSON.parse(json); } catch { return null; } };
+
+/**
+ * Numbers in the answer that no tool result contains, and counts whose number the tools state only as something
+ * else ("117 tickers" when 117 is `unparsedPaperFilings`). Warnings to show, not a block.
+ */
 export function groundingCheck(answer, evidence) {
-  const pool = [...new Set(evidence.filter((e) => e.ok).flatMap((e) => evidenceNumbers(e.json)))];
+  const ok = evidence.filter((e) => e.ok);
+  const pool = [...new Set(ok.flatMap((e) => evidenceNumbers(e.json)))];
   const nums = numbersIn(answer);
   const unmatched = [];
   for (const n of nums) if (!grounded(n, pool) && !unmatched.includes(n.raw)) unmatched.push(n.raw);
-  return { checked: nums.length, unmatched: unmatched.slice(0, 12) };
+  const mislabeled = mislabeledCounts(answer, ok.map((e) => parsed(e.json)).filter(Boolean));
+  return { checked: nums.length, unmatched: unmatched.slice(0, 12), mislabeled };
 }
 
 /* ---------- caveats ---------- */

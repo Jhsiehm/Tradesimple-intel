@@ -2,6 +2,7 @@ import { ASK_LIMITS, caveatsFor, citationRefs, evidenceOf, groundingCheck, syste
 import { attachedNote, contextNote, fallbackTable, figureCount, greetingText, isGreeting, retryReason } from "../../shared/agent.mjs";
 import { buildSpec, clarifyQuestions, describeValue, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
+import { mislabelNote } from "../../shared/countLabels.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
@@ -36,7 +37,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   const quick = (answer, extra = {}) => {
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
-    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
+    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
     return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
@@ -201,7 +202,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     uncited: evidence.length > 0 && cited.length === 0 && answer.length > 0,
     noTools: evidence.length === 0,
     greeting: false,
-    caveats: caveatsFor(evidence),
+    caveats: [...grounding.mislabeled.map(mislabelNote), ...caveatsFor(evidence)],
     usage: { tokens: spent, toolCalls: calls },
     ms: now() - t0,
     stopped,

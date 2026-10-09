@@ -230,6 +230,7 @@ test("summarizeBacktest keeps the stats, the warnings, and the feed labels, not 
   });
   assert.equal(out.topMembers.length, 5);
   assert.equal(out.trades, undefined);
+  assert.deepEqual(out.counts, { tradesPriced: 3 });
   assert.deepEqual(out.caveatTexts, ["paper", "lag"]);
   assert.equal(out.source, "House Clerk");
   assert.equal(out.stats.excessReturn, 0.02);

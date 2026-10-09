@@ -247,6 +247,7 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
         {done && !done.greeting && !done.clarify ? (
           <>
             {done.grounding.unmatched.length ? <p className="ask-warn">Not found in any tool result: {done.grounding.unmatched.join(", ")}. Treat as unverified.</p> : null}
+            {done.grounding.mislabeled?.length ? <p className="ask-warn">Counted as something else in the tool results: {done.grounding.mislabeled.map((m) => `“${m.raw}” is ${m.foundAs[0]}`).join("; ")}. Treat as mislabeled.</p> : null}
             {done.unknown.length ? <p className="ask-warn">Cites results that were never fetched: {done.unknown.join(", ")}.</p> : null}
             {done.noTools && !done.prefs ? <p className="ask-warn">No tool was called, so nothing here comes from the app's data.</p> : null}
             {done.stopped ? <p className="ask-warn">Stopped at the {done.stopped}; the answer may be incomplete.</p> : null}

@@ -106,7 +106,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     latency: `${feeds.map((f) => `${f.label}: ${f.latency}`).filter((s) => s.length > 10).join(" ")} Run took ${((tEngine - t0) / 1000).toFixed(1)} s.`,
     feeds,
     timing: { totalMs: tEngine - t0, signalsMs: tSignals - t0, pricesMs: tPrices - tSignals, engineMs: tEngine - tPrices },
-    counts: { ...result.counts, matched: uncapped, tickers: symbols.length, priced: Object.keys(symbolBars).length },
+    counts: { ...result.counts, matched: uncapped, tickers: symbols.length, priced: Object.keys(symbolBars).length, ...(src.context.rangeAmounts ? { unparsedPaperFilings: src.context.paperFilings || 0, unreadElectronicReports: src.context.unparsed || 0 } : {}) },
     building: !complete,
     pending: pendingSyms,
     cache: "miss",
