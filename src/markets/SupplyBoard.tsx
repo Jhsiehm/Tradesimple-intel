@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, when } from "../lib/api";
-import { signed, tone } from "./format";
+import { api } from "../lib/api";
+import { signed, tone, when } from "../lib/format";
 
 type Node = {
   symbol: string;

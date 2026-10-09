@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, when } from "../lib/api";
+import { api } from "../lib/api";
+import { usd, when } from "../lib/format";
 import type { DrawerModel } from "../types";
 import { CCY_CHART, COUNTRY_CCY, MacroStrip, useStrip, type EconEvent } from "./FxBoard";
-import { usd } from "./format";
 
 export type CalendarTab = "sessions" | "earnings" | "macro" | "lobbying" | "pacs";
 

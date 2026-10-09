@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, when } from "../lib/api";
-import { big, tone } from "./format";
+import { api } from "../lib/api";
+import { big, tone, when } from "../lib/format";
 import { toggleSymbol, useWatch } from "../lib/useWatch";
 
 type Quote = {

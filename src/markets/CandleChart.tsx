@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { api, when } from "../lib/api";
+import { api } from "../lib/api";
+import { when } from "../lib/format";
 import type { ChartMark, MarkTone } from "../types";
 
 export type ChartSpan = "1m" | "5m" | "15m" | "1h" | "1d" | "6mo" | "1y" | "5y";

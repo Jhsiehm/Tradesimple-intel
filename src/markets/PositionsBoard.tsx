@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, when } from "../lib/api";
+import { api } from "../lib/api";
+import { when } from "../lib/format";
 import { compact } from "./useMarkets";
 
 type Buyer = { person: string; bioguide: string; party: string; role: string; amount: string; traded: string; filed: string; lag: number | null; link: string };

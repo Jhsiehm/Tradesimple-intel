@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { when } from "../lib/api";
-import { usd } from "../markets/format";
+import { usd, when } from "../lib/format";
 import type { Board, Dod } from "./useContracts";
 
 type Sort = "obligations" | "share";

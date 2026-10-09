@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, when } from "../lib/api";
-import { usd } from "../markets/format";
+import { api } from "../lib/api";
+import { usd, when } from "../lib/format";
 import type { DrawerModel, ListItem, StatusLine } from "../types";
 
 export type ContractScope = { kind: "all" | "symbol" | "place" | "member"; value: string };
