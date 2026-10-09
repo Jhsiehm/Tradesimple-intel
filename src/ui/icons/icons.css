@@ -1,6 +1,7 @@
 /* Inline icon set. Sits on the text baseline so icon + label rows stay level with plain-text buttons. */
 .ic { display: inline-block; flex: none; vertical-align: -0.22em; overflow: visible; }
 .ic + .ic-lbl, .ic-lbl + .ic { margin-left: 5px; }
+.seg button:has(> .ic) { white-space: nowrap; }
 
 /* Icon-only where space is tight; the label stays in the accessible name. */
 .app.phone .ic-tight,
