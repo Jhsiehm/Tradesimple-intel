@@ -1,8 +1,8 @@
-import { budgetLevel, budgetNote, budgetSettings, callCost, monthKey } from "../../shared/spend.mjs";
+import { budgetLevel, budgetNote, budgetSettings, callCost, monthKey, webSearchCost } from "../../shared/spend.mjs";
 
 /**
  * The Ask spend ledger, in the server's cache database (`ask_spend`). One row per model call, from Ask questions
- * ("ask") and scheduled prompt tasks ("task"). Cost is OpenRouter's reported figure when the stream carries it, else
+ * ("ask") and scheduled prompt tasks ("task"), and one per web search ("web"). Cost is OpenRouter's reported figure when the stream carries it, else
  * tokens × the price table in shared/spend.mjs (and an estimate of the tokens when the provider reported none).
  * A `db` without `prepare` (tests) turns the ledger off.
  */
@@ -29,9 +29,12 @@ function ensure(db) {
   ready.add(db);
 }
 
-/** Writes one call. `{ model, input, output, cost?, estimated? }` → the row's `{ usd, priced }`. */
-export function recordSpend(db, { at, kind = "ask", askId = "", model, input = 0, output = 0, cost = null, estimated = false }) {
-  const priced = callCost({ model, input, output, cost });
+/**
+ * Writes one call. `{ model, input, output, cost?, estimated? }` → the row's `{ usd, priced }`. `priced` (a
+ * `{ usd, priced }` already worked out, e.g. by webSearchCost) skips the token pricing.
+ */
+export function recordSpend(db, { at, kind = "ask", askId = "", model, input = 0, output = 0, cost = null, estimated = false, priced: given = null }) {
+  const priced = given || callCost({ model, input, output, cost });
   if (!usable(db)) return priced;
   ensure(db);
   db.prepare("INSERT INTO ask_spend (at, month, kind, ask_id, model, input, output, usd, priced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
@@ -39,15 +42,27 @@ export function recordSpend(db, { at, kind = "ask", askId = "", model, input = 0
   return priced;
 }
 
-/** `{ spent, calls, tasks, estimated }` for one month ("YYYY-MM"). */
+/** `{ spent, calls, tasks, web, estimated }` for one month ("YYYY-MM"). */
 export function monthSpend(db, month) {
-  if (!usable(db)) return { spent: 0, calls: 0, tasks: 0, estimated: 0 };
+  if (!usable(db)) return { spent: 0, calls: 0, tasks: 0, web: 0, estimated: 0 };
   ensure(db);
   const row = db.prepare(`SELECT COALESCE(SUM(usd), 0) AS spent, COUNT(*) AS calls,
     COALESCE(SUM(CASE WHEN kind = 'task' THEN usd ELSE 0 END), 0) AS tasks,
+    COALESCE(SUM(CASE WHEN kind = 'web' THEN usd ELSE 0 END), 0) AS web,
     COALESCE(SUM(CASE WHEN priced = 'reported' THEN 0 ELSE usd END), 0) AS estimated
     FROM ask_spend WHERE month = ?`).get(month);
-  return { spent: row.spent, calls: row.calls, tasks: row.tasks, estimated: row.estimated };
+  return { spent: row.spent, calls: row.calls, tasks: row.tasks, web: row.web, estimated: row.estimated };
+}
+
+/** One web search into the ledger as kind "web". `search.spend` comes from webSearch; a search without it is free. */
+export function recordWebSearch(db, search, { at = Date.now(), askId = "" } = {}) {
+  const s = search?.spend;
+  if (!s || !usable(db)) return null;
+  try {
+    return recordSpend(db, { at, kind: "web", askId, model: `web:${s.provider}${s.model ? `:${s.model}` : ""}`, input: s.input || 0, output: s.output || 0, priced: webSearchCost(s) });
+  } catch {
+    return null;
+  }
 }
 
 /** This month against the budget (see shared/spend.mjs `Spend`). Null when there is no ledger. */
@@ -58,7 +73,7 @@ export function spendState(db, env = process.env, now = Date.now(), provider = "
   const m = monthSpend(db, month);
   const { level, pct } = budgetLevel({ spent: m.spent, budget, hardStop });
   const round = (v) => Math.round(v * 10_000) / 10_000;
-  return { month, spent: round(m.spent), budget, pct: Math.round(pct * 1000) / 1000, level, calls: m.calls, tasks: round(m.tasks), estimated: round(m.estimated), cheap, hardStop, note: budgetNote({ level, spent: m.spent, budget, cheap, month }) };
+  return { month, spent: round(m.spent), budget, pct: Math.round(pct * 1000) / 1000, level, calls: m.calls, tasks: round(m.tasks), web: round(m.web), estimated: round(m.estimated), cheap, hardStop, note: budgetNote({ level, spent: m.spent, budget, cheap, month }) };
 }
 
 const chars = (v) => { try { return JSON.stringify(v ?? "").length; } catch { return 0; } };

@@ -48,6 +48,25 @@ export function callCost({ model, input = 0, output = 0, cost } = {}) {
   return { usd, priced: p.known ? "table" : "fallback" };
 }
 
+/**
+ * List prices of one web search when the provider reports no cost: OpenRouter's web plugin bills per result ($4 per
+ * 1,000), Tavily a basic search credit (~$0.008), Brave a query ($5 per 1,000).
+ */
+export const WEB_SEARCH_USD = { openrouterPerResult: 0.004, tavily: 0.008, brave: 0.005 };
+
+/**
+ * What one web search cost. OpenRouter's reported `cost` (plugin + carrier model) wins; else its carrier tokens are
+ * priced from the table plus the per-result plugin price. `priced`: "reported" | "web-estimate".
+ */
+export function webSearchCost({ provider = "", results = 0, model = "", input = 0, output = 0, cost } = {}) {
+  if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0) return { usd: cost, priced: "reported" };
+  if (provider === "openrouter") {
+    const carrier = callCost({ model, input, output }).usd;
+    return { usd: carrier + Math.max(0, Number(results) || 0) * WEB_SEARCH_USD.openrouterPerResult, priced: "web-estimate" };
+  }
+  return { usd: WEB_SEARCH_USD[provider] ?? 0, priced: "web-estimate" };
+}
+
 /** "2026-10" for the month New York is in at `ms`. */
 export function monthKey(ms) {
   const p = etParts(ms);

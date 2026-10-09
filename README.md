@@ -325,7 +325,7 @@ On a 1 GB droplet, run it once at a quiet hour and watch `df -h /` afterwards, b
 
 - **Server**: about €4–5 a month for a Hetzner CX22, or $6 for a DigitalOcean droplet. Provider backups are optional (+20%). Bandwidth is included (20 TB at Hetzner, 1 TB at DigitalOcean), far more than one user needs.
 - **Domain**: optional, about $10–15 a year. Caddy, Let's Encrypt and sslip.io are free.
-- **OpenRouter** is the only metered cost, and an always-on server keeps scheduled tasks running. Set `ASK_MONTHLY_BUDGET_USD` in `/etc/tradesimple/env` (default 20; 0 means no cap). Answers warn from 80% of the cap. At 100%, questions fall back to `ASK_CHEAP_MODEL`, or `ASK_BUDGET_HARD_STOP=1` refuses them. Scheduled prompt tasks count toward the cap, and `TASKS_MAX_RUNS_PER_DAY` limits how many run. Web search costs about $0.01 a search. For a second stop, set a credit limit on the key itself at openrouter.ai → Keys.
+- **OpenRouter** is the only metered cost, and an always-on server keeps scheduled tasks running. Set `ASK_MONTHLY_BUDGET_USD` in `/etc/tradesimple/env` (default 20; 0 means no cap). Answers warn from 80% of the cap. At 100%, questions fall back to `ASK_CHEAP_MODEL`, or `ASK_BUDGET_HARD_STOP=1` refuses them. Scheduled prompt tasks count toward the cap, and `TASKS_MAX_RUNS_PER_DAY` limits how many run. Web search costs about $0.01–0.02 a search and counts toward the cap too (OpenRouter's reported cost per search). For a second stop, set a credit limit on the key itself at openrouter.ai → Keys.
 
 ### If there is no HTTPS
 

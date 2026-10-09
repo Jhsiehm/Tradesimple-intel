@@ -10,8 +10,9 @@ export function SpendLine({ status }: { status: AskStatus | null }) {
   const text = spendLine(spend);
   if (!spend || !text) return null;
   const title = [
-    spend.note || "Estimated Ask model spend this month (US Eastern), including scheduled tasks.",
+    spend.note || "Estimated Ask model spend this month (US Eastern), including scheduled tasks and web searches.",
     spend.tasks ? `Scheduled tasks: $${spend.tasks.toFixed(2)}.` : "",
+    spend.web ? `Web searches: $${spend.web.toFixed(2)}.` : "",
     spend.estimated ? `$${spend.estimated.toFixed(2)} priced from the price table (the provider reported no cost).` : "",
     "Set the cap with ASK_MONTHLY_BUDGET_USD."
   ].filter(Boolean).join(" ");

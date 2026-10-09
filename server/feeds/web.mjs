@@ -49,23 +49,27 @@ export function openrouterResults(body) {
 export const tavilyResults = (body) => (body?.results || []).map((r) => ({ url: r.url, title: clean(r.title).slice(0, 200), snippet: snip(r.content), ...(r.published_date ? { published: r.published_date } : {}) }));
 export const braveResults = (body) => (body?.web?.results || []).map((r) => ({ url: r.url, title: htmlToText(r.title, 200), snippet: snip(htmlToText([r.description, ...(r.extra_snippets || [])].join(" "))), ...(r.page_age ? { published: r.page_age } : {}) }));
 
+/** `{ results, spend }`; `spend` is what the search is billed on (see webSearchCost in shared/spend.mjs). */
 async function search(cfg, key, query, max, timeoutMs, fetcher, env) {
   if (cfg.provider === "openrouter") {
+    const model = clean(env.WEB_SEARCH_MODEL) || "openai/gpt-4o-mini";
     const body = await fetcher("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}`, "X-Title": "TradeSimple Intel" },
-      body: JSON.stringify({ model: clean(env.WEB_SEARCH_MODEL) || "openai/gpt-4o-mini", max_tokens: 60, plugins: [{ id: "web", max_results: max }], messages: [{ role: "user", content: `Search the web for: ${query}` }] })
+      body: JSON.stringify({ model, max_tokens: 60, plugins: [{ id: "web", max_results: max }], usage: { include: true }, messages: [{ role: "user", content: `Search the web for: ${query}` }] })
     }, timeoutMs);
-    return openrouterResults(body);
+    const results = openrouterResults(body);
+    const u = body?.usage || {};
+    return { results, spend: { provider: "openrouter", model, results: results.length || max, input: u.prompt_tokens || 0, output: u.completion_tokens || 0, ...(typeof u.cost === "number" ? { cost: u.cost } : {}) } };
   }
   if (cfg.provider === "tavily") {
     const body = await fetcher("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ query, max_results: max, search_depth: "basic" }) }, timeoutMs);
-    return tavilyResults(body);
+    return { results: tavilyResults(body), spend: { provider: "tavily" } };
   }
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", query);
   url.searchParams.set("count", String(max));
-  return braveResults(await fetcher(url, { headers: { Accept: "application/json", "X-Subscription-Token": key } }, timeoutMs));
+  return { results: braveResults(await fetcher(url, { headers: { Accept: "application/json", "X-Subscription-Token": key } }, timeoutMs)), spend: { provider: "brave" } };
 }
 
 /**
@@ -79,10 +83,11 @@ export async function webSearch(query, { env = process.env, max = WEB_CAPS.resul
   if (!cfg.provider) return { ok: false, notConfigured: true, error: cfg.error, source: "web search (not configured)", asOf: "", latency: "" };
   const started = now();
   try {
-    const results = (await search(cfg, clean(env[cfg.keyName]), q, Math.min(max, WEB_CAPS.results), timeoutMs, fetcher, env)).filter((r) => /^https?:\/\//.test(r.url)).slice(0, WEB_CAPS.results);
+    const found = await search(cfg, clean(env[cfg.keyName]), q, Math.min(max, WEB_CAPS.results), timeoutMs, fetcher, env);
+    const results = found.results.filter((r) => /^https?:\/\//.test(r.url)).slice(0, WEB_CAPS.results);
     const retrievedAt = new Date(now()).toISOString();
-    if (!results.length) return { ok: false, error: `The web search for "${q}" returned no pages.`, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `${now() - started} ms` };
-    return { ok: true, query: q, results, via: cfg.via, retrievedAt, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `Searched in ${now() - started} ms; result pages are as published, not verified by the app.` };
+    if (!results.length) return { ok: false, error: `The web search for "${q}" returned no pages.`, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `${now() - started} ms`, spend: found.spend };
+    return { ok: true, query: q, results, via: cfg.via, retrievedAt, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `Searched in ${now() - started} ms; result pages are as published, not verified by the app.`, spend: found.spend };
   } catch (err) {
     return { ok: false, error: `Web search failed (${cfg.via}): ${err?.status ? `HTTP ${err.status}` : err?.message || "error"}.`, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: "", latency: "" };
   }

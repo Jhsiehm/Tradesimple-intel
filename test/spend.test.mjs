@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { DatabaseSync } from "node:sqlite";
-import { budgetLevel, budgetNote, budgetSettings, callCost, monthKey, priceOf, spendLine } from "../shared/spend.mjs";
+import { WEB_SEARCH_USD, budgetLevel, budgetNote, budgetSettings, callCost, monthKey, priceOf, spendLine, webSearchCost } from "../shared/spend.mjs";
+import { runWebSearch } from "../server/ai/webTool.mjs";
 import { metered, monthSpend, recordSpend, spendState } from "../server/ai/spend.mjs";
 import { askStatus, makeAskHandler } from "../server/routes/ask.mjs";
 import { runPromptTask } from "../server/ai/taskAsk.mjs";
@@ -44,6 +45,30 @@ test("prices: OpenRouter's reported cost wins; else tokens × the table; unknown
   assert.deepEqual(priceOf("openai/gpt-4.1-mini"), { input: 0.4, output: 1.6, known: true });
   assert.equal(priceOf("openai/gpt-4.1").input, 2);
   assert.equal(callCost({ model: "acme/unknown-1", input: 1_000_000 }).priced, "fallback");
+});
+
+test("web searches count toward the month: OpenRouter's reported cost, else carrier tokens + per-result plugin price", async () => {
+  assert.deepEqual(webSearchCost({ provider: "openrouter", results: 5, cost: 0.0213 }), { usd: 0.0213, priced: "reported" });
+  const est = webSearchCost({ provider: "openrouter", model: "openai/gpt-4o-mini", results: 5, input: 1000, output: 60 });
+  assert.equal(est.priced, "web-estimate");
+  assert.ok(Math.abs(est.usd - (5 * WEB_SEARCH_USD.openrouterPerResult + (1000 * 0.15 + 60 * 0.6) / 1e6)) < 1e-12);
+  assert.equal(webSearchCost({ provider: "brave" }).usd, WEB_SEARCH_USD.brave);
+
+  const db = new DatabaseSync(":memory:");
+  const env = { OPENROUTER_API_KEY: "sk-or-test" };
+  const body = { choices: [{ message: { annotations: [{ type: "url_citation", url_citation: { url: "https://example.com/a", title: "A", content: "text" } }] } }], usage: { prompt_tokens: 900, completion_tokens: 40, cost: 0.0071 } };
+  let sent = null;
+  const out = await runWebSearch({ query: "taiex today" }, { db, env, fetcher: async (_url, opts) => { sent = JSON.parse(opts.body); return body; } });
+  assert.equal(out.ok, true);
+  assert.equal("spend" in out, false, "the cost never reaches the model");
+  assert.deepEqual(sent.usage, { include: true });
+  const m = monthSpend(db, monthKey(Date.now()));
+  assert.equal(m.calls, 1);
+  assert.equal(m.web, 0.0071);
+  assert.equal(m.spent, 0.0071);
+  const failed = await runWebSearch({ query: "x" }, { db, env, fetcher: async () => { throw new Error("down"); } });
+  assert.equal(failed.ok, false);
+  assert.equal(monthSpend(db, monthKey(Date.now())).calls, 1, "a search that failed in transit is not billed");
 });
 
 test("months are counted in New York time", () => {

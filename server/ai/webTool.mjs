@@ -3,9 +3,15 @@
  * into one cited step per page by the runner (shared/webAsk.mjs splitWebResults); a fetched page is one step.
  */
 import { webPage, webSearch } from "../feeds/web.mjs";
+import { recordWebSearch } from "./spend.mjs";
 import { WEB_LABEL, webStep } from "../../shared/webAsk.mjs";
 
-export const runWebSearch = (args = {}, opts = {}) => webSearch(args.query || args.q, opts);
+/** One search; its cost goes into the Ask spend ledger (kind "web") and stays out of what the model sees. */
+export async function runWebSearch(args = {}, { db = null, ...opts } = {}) {
+  const { spend, ...out } = await webSearch(args.query || args.q, opts);
+  if (spend) recordWebSearch(db, { spend });
+  return out;
+}
 
 /** One page as text with its step fields; failures keep the URL so the step says what was tried. */
 export async function runWebFetch(args = {}, opts = {}) {
