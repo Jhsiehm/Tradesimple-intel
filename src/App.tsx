@@ -535,8 +535,10 @@ export function App() {
     <div className={`app${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
-          <strong>TRADESIMPLE</strong>
-          <span>INTEL</span>
+          <button type="button" className="brand-home" aria-label="Go to Today" title="Today" onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)}>
+            <strong>TRADESIMPLE</strong>
+            <span>INTEL</span>
+          </button>
           {DEMO ? <DemoChip /> : null}
         </div>
         <nav className="nav">

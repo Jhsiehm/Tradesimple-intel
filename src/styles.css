@@ -57,6 +57,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   align-items: baseline;
   gap: 10px;
 }
+.brand-home {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0;
+}
 .brand strong {
   color: var(--amber);
   font-weight: 500;
