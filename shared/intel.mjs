@@ -129,13 +129,21 @@ export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
   return { ...base, level: "baseline", label: "BASELINE", why };
 }
 
-export const ALERT_RULE = "HIGH: filed more than 90 days after the trade, a Congress trade of $250,001+, or a Form 4 worth $1M+. ELEVATED: filed past the 45-day STOCK Act limit, a trade of $50,001+, a Form 4 of $100K+, or lobbying of $500K+. Otherwise ROUTINE.";
+export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; or a Form 4 worth $1M+. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a Form 4 of $100K+, or lobbying of $500K+. Otherwise ROUTINE.";
 
-/** Triage level for one alert row; amounts are the disclosed range floor, not the trade size. */
+/**
+ * Triage level for one alert row; amounts are the disclosed range floor, not the trade size. Unwatched
+ * late filings arrive in catch-up batches of small lines, so lateness alone does not make one HIGH.
+ */
 export function alertSeverity(a) {
   const lag = a.lag ?? 0;
   const low = a.amountLow ?? 0;
   const value = a.value ?? 0;
+  if (a.kind === "late-filing") {
+    if (low >= 250001 || lag >= 365 || (lag > 90 && low >= 50001)) return "high";
+    if (lag > 90 || low >= 15001) return "elevated";
+    return "routine";
+  }
   if (lag > 90 || low >= 250001 || (a.kind === "form4" && value >= 1e6)) return "high";
   if (a.late || lag > 45 || low >= 50001 || (a.kind === "form4" && value >= 1e5) || (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)) return "elevated";
   return "routine";

@@ -93,7 +93,13 @@ test("activitySignal flags a 30-day spike against the trailing rate", () => {
 test("alertSeverity triages lateness, size, and Form 4 value", () => {
   assert.equal(alertSeverity({ kind: "member-trade", lag: 12, amountLow: 1001 }), "routine");
   assert.equal(alertSeverity({ kind: "member-trade", lag: 50, late: true, amountLow: 1001 }), "elevated");
-  assert.equal(alertSeverity({ kind: "late-filing", lag: 120, late: true }), "high");
+  assert.equal(alertSeverity({ kind: "member-trade", lag: 120, late: true, amountLow: 1001 }), "high");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 316, late: true, amountLow: 1001 }), "elevated");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 49, late: true, amountLow: 1001 }), "routine");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 49, late: true, amountLow: 15001 }), "elevated");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 120, late: true, amountLow: 50001 }), "high");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 466, late: true, amountLow: 1001 }), "high");
+  assert.equal(alertSeverity({ kind: "late-filing", lag: 49, late: true, amountLow: 250001 }), "high");
   assert.equal(alertSeverity({ kind: "symbol-trade", lag: 5, amountLow: 250001 }), "high");
   assert.equal(alertSeverity({ kind: "form4", value: 150000 }), "elevated");
   assert.equal(alertSeverity({ kind: "form4", value: 2e6 }), "high");
