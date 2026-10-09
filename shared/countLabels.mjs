@@ -102,5 +102,5 @@ export function mislabeledCounts(answer, bodies) {
 
 /** The caveat a mislabeled count gets in the answer. */
 export function mislabelNote(m) {
-  return `The answer says “${m.raw}”, but ${m.value} in the tool results is ${m.foundAs.map((l) => `“${l}”`).join(" / ")}, not a count of ${m.unit}. Treat that figure as mislabeled.`;
+  return `The answer says “${m.raw}”, but ${m.value} in the tool results is ${m.foundAs.map((l) => `“${l.replace(/^\?/, "")}”`).join(" / ")}, not a count of ${m.unit}. Treat that figure as mislabeled.`;
 }

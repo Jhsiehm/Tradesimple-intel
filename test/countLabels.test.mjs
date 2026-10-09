@@ -60,6 +60,7 @@ test("a named count beats a generic list total: '1015 Form 4 filings' when 1015 
   const insiders = [evidenceOf("t3", "insiders", { days: 30 }, { ok: true, counts: { transactionLines: 1015, forms: 212, issuers: 88 }, items: { items: [], total: 1015, truncated: true } })];
   const g = groundingCheck("There were 1015 Form 4 filings in the period [t3].", insiders);
   assert.deepEqual(g.mislabeled.map((m) => [m.raw, m.foundAs[0]]), [["1015 Form", "counts.transactionLines"]]);
+  assert.doesNotMatch(mislabelNote(g.mislabeled[0]), /“\?/, "the generic-key marker is not shown to the user");
   assert.deepEqual(groundingCheck("1015 transaction lines on 212 Form 4 filings [t3].", insiders).mislabeled, []);
   const feed = [evidenceOf("t2", "congress_feed", { days: 30 }, { ok: true, counts: { trades: 354, reports: 61, members: 21 } })];
   assert.deepEqual(groundingCheck("354 congressional filings from 21 members [t2].", feed).mislabeled.map((m) => m.raw), ["354 congressional filings"]);
