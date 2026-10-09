@@ -1,6 +1,6 @@
 import { fetchText } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
-import { SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
+import { SENATE_HEADERS, SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
 import { congressTrades } from "./positions.mjs";
 import { memberReturns } from "./returns.mjs";
@@ -111,7 +111,7 @@ async function senateVotes(db, session, onRow) {
   const menuKey = KEY.tlSenateMenu(CONGRESS, session);
   let xml = readCache(db, menuKey)?.xml;
   if (!xml) {
-    xml = await fetchText(`https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_${CONGRESS}_${session}.xml`).catch(() => "");
+    xml = await fetchText(`https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_${CONGRESS}_${session}.xml`, SENATE_HEADERS).catch(() => "");
     if (xml) writeCache(db, menuKey, { xml }, session === SESSION ? 6 * 60 * 60 * 1000 : 365 * DAY);
   }
   const year = Number(xmlTag(xml, "congress_year")) || 2024 + session;
@@ -124,7 +124,7 @@ async function senateVotes(db, session, onRow) {
     const key = KEY.tlSenateVote(session, roll);
     let row = readCache(db, key);
     if (!row) {
-      const body = await fetchText(SENATE_VOTE(CONGRESS, session, roll)).catch(() => "");
+      const body = await fetchText(SENATE_VOTE(CONGRESS, session, roll), SENATE_HEADERS).catch(() => "");
       if (body) {
         const casts = {};
         for (const m of body.match(/<member>[\s\S]*?<\/member>/g) || []) {

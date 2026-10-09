@@ -6,11 +6,14 @@ import { memberPacs } from "./corporate.mjs";
 import { matchMembers } from "../shared/memberMatch.mjs";
 import { pool } from "./lib/pool.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
 
 const BASE = "https://api.congress.gov/v3";
 const TTL = 15 * 60 * 1000;
 export const SESSION = new Date().getUTCFullYear() % 2 === 1 ? 1 : 2;
 const SENATE_MENU = `https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_119_${SESSION}.xml`;
+/** senate.gov answers 403 to Node's default user agent. */
+export const SENATE_HEADERS = { headers: { "User-Agent": BROWSER_UA } };
 export const SENATE_VOTE = (congress, session, roll) => {
   const padded = String(roll).padStart(5, "0");
   return `https://www.senate.gov/legislative/LIS/roll_call_votes/vote${congress}${session}/vote_${congress}_${session}_${padded}.xml`;
@@ -444,7 +447,7 @@ async function listSenateVotes(db) {
   const hit = readCache(db, cacheKey);
   let xml = hit?.xml;
   if (!xml) {
-    xml = await fetchText(SENATE_MENU);
+    xml = await fetchText(SENATE_MENU, SENATE_HEADERS);
     writeCache(db, cacheKey, { xml }, TTL);
   }
   const year = Number(xmlTag(xml, "congress_year")) || new Date().getUTCFullYear();
@@ -478,7 +481,7 @@ async function senateVoteDetail(db, congress, session, roll) {
   const hit = readCache(db, cacheKey);
   let xml = hit?.xml;
   if (!xml) {
-    xml = await fetchText(url);
+    xml = await fetchText(url, SENATE_HEADERS);
     writeCache(db, cacheKey, { xml }, TTL);
   }
   const membersXml = xml.match(/<member>[\s\S]*?<\/member>/g) || [];
