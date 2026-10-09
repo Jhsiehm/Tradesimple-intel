@@ -263,7 +263,10 @@ export function planFollowUps({ question, today, priors = [], answers = {} }) {
   const notes = [
     ...(picked.length && left.length ? [`Only ${picked.map((p) => SOURCE_LABEL[p.source]).join(" and ")} re-run, as asked; ${left.join(" and ")} kept as before.`] : []),
     ...runs.flatMap((r) => r.notes),
-    ...runs.filter((r) => r.unchanged).map((r) => `${SOURCE_LABEL[r.spec.source]}: nothing in the follow-up applies, so the previous run stands and is not re-run.`)
+    ...runs.filter((r) => r.unchanged).map((r) => {
+      const same = r.locked.filter((p) => r.from[p] === "question").map((p) => describeValue(p, getPath(r.spec, p)));
+      return `${SOURCE_LABEL[r.spec.source]}: ${same.length ? `the previous run already used ${same.join(", ")}` : "nothing in the follow-up applies"}, so it stands and is not re-run.`;
+    })
   ];
   return { runs, targeted: picked.length > 0, notes };
 }

@@ -41,8 +41,15 @@ test("an exclusion that means nothing for a source is skipped there with a note,
   assert.deepEqual(by.contracts.spec.filters.excludeMembers, [], "contracts keep their previous filters");
   assert.equal(by.contracts.unchanged, true);
   assert.ok(out.notes.some((n) => /^Excluding Pelosi does not apply to .*contract.*skipped for that run\.$/i.test(n)), out.notes.join("\n"));
-  assert.ok(out.notes.some((n) => /nothing in the follow-up applies, so the previous run stands/.test(n)));
+  assert.ok(out.notes.some((n) => /nothing in the follow-up applies, so it stands and is not re-run/.test(n)));
   assert.ok(!by.contracts.locked.includes("filters.excludeMembers"));
+});
+
+test("a follow-up asking for what every run already used says so instead of 'nothing applies'", () => {
+  const priors = ["congress", "form4", "contracts"].map((source) => ({ source, filters: { from: "2026-09-09", to: TODAY }, rules: { holdDays: 30, openTrades: "mark", benchmark: "SPY" } }));
+  const out = planFollowUps({ question: "hold 30 days instead", today: TODAY, priors });
+  assert.ok(out.runs.every((r) => r.unchanged));
+  assert.deepEqual(out.notes, ["Congressional trades", "Form 4 insider trades", "Contract awards"].map((s) => `${s}: the previous run already used hold 30 days, so it stands and is not re-run.`));
 });
 
 test("cleanAsk keeps up to four previous specs and drops bad ones", () => {
