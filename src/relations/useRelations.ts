@@ -7,8 +7,8 @@ import { api } from "../lib/api";
 import type { IntelScope } from "../intel/useIntel";
 import { edgeDrawer, findEdge, listItems, nodeDrawer, status, theoryDrawer, type Loaded } from "./dossier";
 import { fan, relax, settle, type Pt } from "./layout";
-import { docOf, fromDoc, loadGraph, mergeDocs, saveGraph, takeShared } from "./store";
-import type { TheoryDoc } from "../../shared/theories.mjs";
+import { docOf, fromDoc, loadGraph, mergeDocs, saveGraph, takeShared, THEORY_SAVED } from "./store";
+import { cleanTheory, type TheoryDoc } from "../../shared/theories.mjs";
 
 export type CategoryInfo = { id: CategoryId; label: string; count: number | null; source: string; asOf: string };
 type NodeInfo = { ok: boolean; error?: string; node: NodeRef; categories: CategoryInfo[] };
@@ -61,6 +61,21 @@ export function useRelations(scope: IntelScope, selectedId: string | null, on: b
     if (!shared) return;
     setH((cur) => commit(cur, fromDoc(cur.present, mergeDocs(docOf(cur.present), shared))));
     setNotice(`Opened ${shared.theories.length} theor${shared.theories.length === 1 ? "y" : "ies"} and ${shared.notes.length} note${shared.notes.length === 1 ? "" : "s"} from a share link. Saved in this browser only.`);
+  }, []);
+
+  useEffect(() => {
+    const onSaved = (event: Event) => {
+      const theory = cleanTheory((event as CustomEvent<unknown>).detail);
+      if (!theory) return;
+      setH((cur) => {
+        const doc = docOf(cur.present);
+        const theories = [...doc.theories.filter((t) => t.id !== theory.id), theory];
+        return commit(cur, fromDoc(cur.present, { ...doc, theories }));
+      });
+      setNotice("Theory saved from Ask. Yours, in this browser only.");
+    };
+    window.addEventListener(THEORY_SAVED, onSaved);
+    return () => window.removeEventListener(THEORY_SAVED, onSaved);
   }, []);
 
   const info = useCallback(async (id: string) => {

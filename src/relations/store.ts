@@ -1,5 +1,5 @@
 import { EMPTY_GRAPH, MAX_EDGES, MAX_NODES, type Graph, type RelNode } from "../../shared/relations.mjs";
-import { THEORY_KEY, cleanDoc, decodeShare, encodeShare, mergeDocs, parseDoc, serialize, type TheoryDoc } from "../../shared/theories.mjs";
+import { THEORY_KEY, cleanDoc, cleanTheory, decodeShare, encodeShare, mergeDocs, parseDoc, serialize, type TheoryDoc } from "../../shared/theories.mjs";
 
 /** Data nodes and edges on the canvas, with where you left them. Feeds are re-asked on expand, not here. */
 const CANVAS_KEY = "intel:relations:canvas:v1";
@@ -18,6 +18,24 @@ export function loadDoc(): TheoryDoc {
 
 export function saveDoc(doc: TheoryDoc) {
   return write(THEORY_KEY, serialize(doc));
+}
+
+/** Ask writes one theory here. Not fired from saveDoc: the map saves on a timer and would loop. */
+export const THEORY_SAVED = "intel:theory-saved";
+
+/** Clean, store, and tell the open map. Theories stay in the theory document, apart from feed data. */
+export function saveTheory(raw: unknown): "saved" | "invalid" | "refused" {
+  const now = new Date().toISOString();
+  if (!raw || typeof raw !== "object") return "invalid";
+  const base: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  if (!base.created) base.created = now;
+  base.updated = now;
+  const theory = cleanTheory(base);
+  if (!theory) return "invalid";
+  const doc = loadDoc();
+  if (!saveDoc({ ...doc, theories: [...doc.theories.filter((t) => t.id !== theory.id), theory] })) return "refused";
+  window.dispatchEvent(new CustomEvent(THEORY_SAVED, { detail: theory }));
+  return "saved";
 }
 
 /** The graph as stored: canvas data plus your notes and theories. Theory endpoints missing from the canvas come back too. */
