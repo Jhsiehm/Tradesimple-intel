@@ -62,15 +62,15 @@ Pick signals (congressional trades by committee, member, party, chamber, ticker,
 
 `ASK <your question>` in the command line (`⌘K`), type a question in the top search box and choose the **Ask** row, or press **Ask** when something is on screen. Answers stream in a floating **Ask sheet** (resizable, peek / half / full): live tool steps, citation chips after each claim (`[t3]` style) that open the board they came from, a collapsible **How I got this** list with source / as-of / latency per tool call, **Data caveats**, clarifying chips when a backtest or sourcing choice is needed, inline backtest cards, and buttons to Keep the chat, copy a link, or share. History stays in this browser only.
 
-**Sourcing modes** (default: TradeSimple only — isolates the research bot to this terminal's feeds):
+**Sourcing modes** (default: in-app feeds — isolates the research bot from the open web):
 
 | Mode | What Ask may call |
 | --- | --- |
-| **TradeSimple only** (`platform`) | In-app tools only: Congress, markets, contracts, **news RSS wires**, **X pulse / posts**, world calendar, **satellite frame status**, Strait AIS/news, air, backtests, theories |
-| **TradeSimple + web** (`both`) | Everything above, plus `web_search` and `web_fetch` |
+| **In-app feeds** (`platform`) | Congress, markets, contracts, **news RSS**, **X pulse/posts**, world calendar, **satellite status**, Strait AIS/news, air, backtests, theories. World/news answers must cross-check ≥2 signal feeds and keep Records vs Signals distinct. |
+| **In-app + web** (`both`) | Everything above, plus `web_search` and `web_fetch` |
 | **Web only** (`web`) | Open web only (`web_search` / `web_fetch`); no in-app filing tools |
 
-Toggle in the Ask sheet, say it in chat (“use only TradeSimple”, “use TradeSimple and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared.
+Toggle in the Ask sheet, say it in chat (“in-app only”, “use in-app and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared. `web_fetch` refuses private/link-local hosts and does not follow redirects.
 
 **Writing styles** (specialized instruction packs per data layer are injected automatically):
 

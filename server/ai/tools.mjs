@@ -4,7 +4,7 @@
  * Web tools (web_search / web_fetch) are only offered when sourcing is `web` or `both`.
  */
 import { SOURCES, SECTOR_ETF, BENCHMARKS } from "../../shared/backtestSpec.mjs";
-import { toolsForSourcing } from "../../shared/askModes.mjs";
+import { toolsForSourcing, WEB_TOOLS } from "../../shared/askModes.mjs";
 import { handlers as system } from "../routes/system.mjs";
 import { handlers as congress } from "../routes/congress.mjs";
 import { handlers as markets } from "../routes/markets.mjs";
@@ -293,10 +293,15 @@ export const toolDefs = (sourcing = "platform") => {
 /**
  * Run one tool. Never throws: a failure is a result with `ok: false` so the model can say what went wrong.
  * `onRoute(path)` hears each in-process route the tool calls, for the live step timeline.
+ * `sourcing` is a second gate: web tools are refused when the session is platform-only even if the model asked.
  */
-export async function runTool(db, name, args, call = callRoute, onRoute = null) {
+export async function runTool(db, name, args, call = callRoute, onRoute = null, sourcing = "both") {
   const found = TOOLS.find((t) => t.name === name);
   if (!found) return { ok: false, error: `No such tool ${name}.` };
+  const allow = toolsForSourcing(sourcing);
+  if (!allow.has(name) || (WEB_TOOLS.has(name) && sourcing === "platform")) {
+    return { ok: false, error: `Tool ${name} is not available with sourcing=${sourcing}.` };
+  }
   const traced = onRoute
     ? (d, id, params = {}, query = "") => {
         try { onRoute(`GET ${fillRoute(id, params, query)}`); } catch { /* a listener never breaks a tool */ }

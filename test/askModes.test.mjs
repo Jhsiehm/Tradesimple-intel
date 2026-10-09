@@ -4,8 +4,8 @@ import {
   filterToolDefs, isModeStatement, layerPrompts, modeSystemNote, parseSourcing, parseStyle, resolveModes,
   sourcingClarify, stylePrompt, toolsForSourcing, wantsOutsideWorld, WEB_TOOLS
 } from "../shared/askModes.mjs";
-import { summarizeNews, summarizeSatellite } from "../server/ai/web.mjs";
-import { TOOLS, toolDefs } from "../server/ai/tools.mjs";
+import { cleanUrl, isPrivateIp, summarizeNews, summarizeSatellite } from "../server/ai/web.mjs";
+import { TOOLS, runTool, toolDefs } from "../server/ai/tools.mjs";
 import { systemPrompt } from "../shared/ask.mjs";
 
 test("parseSourcing: platform / web / both from plain words", () => {
@@ -72,9 +72,28 @@ test("layer and style prompts inject into the system note", () => {
   assert.ok(layerPrompts("both").some((p) => /Web layer/.test(p)));
   assert.ok(!layerPrompts("platform").some((p) => /Web layer/.test(p)));
   const sys = systemPrompt("2026-10-09", { sourcing: "both", style: "simplified" });
-  assert.match(sys, /TradeSimple feeds and the open web/);
+  assert.match(sys, /in-app feeds and the open web/i);
   assert.match(sys, /simplified plain language/);
-  assert.match(modeSystemNote({ sourcing: "platform", style: "terminal" }), /TradeSimple only/);
+  assert.match(sys, /at least two of news/);
+  assert.match(modeSystemNote({ sourcing: "platform", style: "terminal" }), /in-app feeds only/i);
+  assert.match(modeSystemNote({ sourcing: "platform", style: "terminal" }), /Records.*Signals|Signals.*Records/s);
+});
+
+test("SSRF helpers refuse loopback, link-local, and private hosts", () => {
+  assert.equal(isPrivateIp("127.0.0.1"), true);
+  assert.equal(isPrivateIp("10.0.0.1"), true);
+  assert.equal(isPrivateIp("169.254.169.254"), true);
+  assert.equal(isPrivateIp("::1"), true);
+  assert.equal(isPrivateIp("8.8.8.8"), false);
+  assert.equal(cleanUrl("http://127.0.0.1/secret"), "");
+  assert.equal(cleanUrl("http://localhost/x"), "");
+  assert.equal(cleanUrl("https://example.com/a"), "https://example.com/a");
+});
+
+test("runTool refuses web tools when sourcing is platform", async () => {
+  const out = await runTool({}, "web_search", { q: "nvda" }, async () => ({ ok: true }), null, "platform");
+  assert.equal(out.ok, false);
+  assert.match(out.error, /not available/);
 });
 
 test("summarizeNews filters and caps; summarizeSatellite drops tile templates", () => {

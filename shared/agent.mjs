@@ -92,8 +92,8 @@ export function isGreeting(question) {
 
 export function greetingText() {
   return [
-    "Hi. Default is TradeSimple-only: filings, Form 4, contracts, lobbying, prices, news wires, X pulse, satellite status — every number cited.",
-    "Say “use TradeSimple and the web” (or pick the chip) to also search the open web. Say “professional” or “simplified” to change the writing style.",
+    "Hi. Default is in-app feeds only: Records (filings, Form 4, contracts, prices) and Signals (news wires, X pulse, satellite status) — every number cited, and world questions pull more than one feed.",
+    "Say “use in-app and the web” (or pick the chip) to also search the open web. Say “professional” or “simplified” to change the writing style.",
     "",
     "Try one of these:",
     ...EXAMPLES.map((q) => `- ${q}`)

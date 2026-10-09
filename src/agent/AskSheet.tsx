@@ -138,8 +138,8 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
               <summary>Sourcing &amp; style</summary>
               <div className="ask-modes" role="group" aria-label="Sourcing">
                 {(status?.sourcing || [
-                  { id: "platform", label: "TradeSimple only" },
-                  { id: "both", label: "TradeSimple + web" },
+                  { id: "platform", label: "In-app feeds" },
+                  { id: "both", label: "In-app + web" },
                   { id: "web", label: "Web only" }
                 ]).map((m) => (
                   <button key={m.id} type="button" className="chip" aria-pressed={(ask.session.sourcing || "platform") === m.id} disabled={busy} onClick={() => ask.setSourcing(m.id)}>{m.label}</button>
@@ -155,10 +155,10 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
                 ))}
               </div>
               <p className="ask-note">
-                Default isolates the research bot to TradeSimple feeds (including news, X, satellite). Toggle here, say it in chat (“use TradeSimple and the web”, “simplified”), or answer the follow-up chip.
+                Default: in-app feeds only — Records (filings, contracts, prices) and Signals (wires, X, satellite status). Answers cite tool steps; unmatched numbers are unverified. Not advice. Say “use in-app and the web” or pick a chip to add open-web search.
                 {status?.web?.note ? ` Web search: ${status.web.note}.` : ""}
               </p>
-              {(ask.session.sourcing || ask.session.style) ? <button type="button" className="link" onClick={ask.resetSession}>Reset to TradeSimple · terminal</button> : null}
+              {(ask.session.sourcing || ask.session.style) ? <button type="button" className="link" onClick={ask.resetSession}>Reset to in-app · terminal</button> : null}
             </details>
             <details className="ask-prefs">
               <summary>Backtest preferences <small>{prefs.length ? `${prefs.length} saved` : "none"}</small></summary>

@@ -186,7 +186,7 @@ export async function runAsk({ question, history = [], context = null, attached 
       const requests = [];
       let raw;
       try {
-        raw = await execute(call.name, call.args, { onRoute: (r) => { requests.push(r); emit({ type: "step_progress", id, request: r }); } });
+        raw = await execute(call.name, call.args, { onRoute: (r) => { requests.push(r); emit({ type: "step_progress", id, request: r }); }, sourcing: modes.sourcing });
       } finally {
         clearInterval(beat);
       }

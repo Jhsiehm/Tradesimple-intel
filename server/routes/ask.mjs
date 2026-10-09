@@ -35,7 +35,7 @@ const clientOf = (req, env) => {
   return fwd || req.socket?.remoteAddress || "local";
 };
 
-const runToolTraced = (db, name, args, hooks) => runTool(db, name, args, callRoute, hooks?.onRoute || null);
+const runToolTraced = (db, name, args, hooks) => runTool(db, name, args, callRoute, hooks?.onRoute || null, hooks?.sourcing || "both");
 
 /** Everything the handler touches is injectable: env, the provider factory, the clock, the limiter, the log. */
 export function makeAskHandler({ env = process.env, makeProvider = (cfg) => createProvider(cfg, askKey(cfg, env)), now = Date.now, limiter = makeLimiter({ max: ASK_LIMITS.perIp, windowMs: ASK_LIMITS.perIpWindowMs }), log = askLog, execute = runToolTraced } = {}) {
