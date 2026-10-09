@@ -249,6 +249,17 @@ export function useAsk() {
     setAttachId("");
   }, [stop]);
 
+  /** Shows turns that are not a kept chat, such as a scheduled task's stored result. */
+  const openTurns = useCallback((list: Turn[]) => {
+    stop();
+    setTurns(list);
+    setChatId(null);
+    setKept(false);
+    setAttachId("");
+    setOpen(true);
+    setShown((n) => n + 1);
+  }, [stop]);
+
   const store = useCallback((list: SavedChat[]) => { if (saveChats(list)) setChats(list); }, []);
 
   /** Delete now; `undoForget` puts it back where it was. The open chat stays on screen, no longer kept. */
@@ -292,6 +303,7 @@ export function useAsk() {
     chats, chatId, kept, keep, openSaved, forget, undoForget, dropUndo, deleted, rename, pin, attachId, setAttachId,
     status, model, models, small, chooseModel,
     prefs, removePref, clearPrefs,
-    detached, setDetached, bindContext
+    detached, setDetached, bindContext,
+    openTurns
   };
 }

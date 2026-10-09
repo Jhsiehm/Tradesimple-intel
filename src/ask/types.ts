@@ -1,4 +1,6 @@
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
+import type { TaskDraft } from "../../shared/taskSchedule.mjs";
+import type { BtRun } from "../backtest/types";
 import type { Clarify } from "../../shared/backtestAsk.mjs";
 import type { Miscited } from "../../shared/citations.mjs";
 import type { Revision } from "../../shared/revise.mjs";
@@ -40,6 +42,8 @@ export type BacktestRef = {
   note: string;
   ok: boolean;
   open: string;
+  /** A scheduled run stores the full result, so the card shows it without running it again. */
+  run?: BtRun;
   description: string;
   counts?: Record<string, number> | null;
 };
@@ -61,6 +65,8 @@ export type Done = {
   table: FallbackTable | null;
   retried: boolean;
   backtests: BacktestRef[];
+  /** A scheduling question ("every morning at 8, …") answers with a task draft the sheet confirms. */
+  task?: TaskDraft | null;
   clarify: boolean;
   prefs: { set?: Record<string, unknown>; clear?: boolean } | null;
   revision?: Revision | null;

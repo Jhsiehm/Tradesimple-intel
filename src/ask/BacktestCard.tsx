@@ -54,9 +54,9 @@ const ROWS: [string, (r: BtRun) => string][] = [
 
 /** A backtest result inside the chat: what ran and why, the headline, the curve, top trades, formulas, caveats, Replicate. */
 export function BacktestCard({ bt, onFollow, cite }: { bt: BacktestRef; onFollow: (action: string) => void; cite?: ReactNode }) {
-  const now = useRun(bt.spec);
+  const now = useRun(bt.run ? null : bt.spec);
   const before = useRun(bt.prior);
-  const run = now?.phase === "done" ? now.run : null;
+  const run = bt.run || (now?.phase === "done" ? now.run : null);
   const prev = before?.phase === "done" ? before.run : null;
   const s = run?.stats || null;
   const formulas = useMemo(() => (run ? backtestFormulas(run) : []), [run]);

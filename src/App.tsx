@@ -5,6 +5,7 @@ import { aboutContext, itemStarters, parseAskAction, selectionKey } from "./agen
 import { ApiBanner } from "./shell/ApiBanner";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
 import { useAsk } from "./ask/useAsk";
+import { openStored } from "./tasks/ScheduledTasks";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
 import { AlertsMenu } from "./shell/AlertsMenu";
@@ -325,6 +326,7 @@ export function App() {
       setAskAbout(ctx);
       return openAsk(itemStarters(ctx)[0] || "", "half");
     }
+    if (action.startsWith("ask:research:")) { openAsk(); return void openStored(action.slice(13), ask.openTurns); }
     if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
     if (action.split(":")[0] === "ask") return openAsk();

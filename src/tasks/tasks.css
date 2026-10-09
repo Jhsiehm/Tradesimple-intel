@@ -1,0 +1,27 @@
+/* Scheduled research tasks: the list in the Ask sheet's Saved area and the "Run this every…" picker under answers. */
+.ask-tasks { margin-top: 8px; }
+.ask-tasks > summary { cursor: pointer; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.ask-tasks > summary small { margin-left: 6px; text-transform: none; letter-spacing: 0; }
+.ask-tasks ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.ask-tasks li { border-left: 2px solid var(--line); padding: 4px 0 4px 8px; }
+.ask-tasks li.off { opacity: 0.6; }
+.tk-head { display: flex; align-items: center; gap: 6px; margin: 0; }
+.tk-head b { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-toggle input { margin: 0; }
+.tk-meta { margin: 2px 0; font-size: 11px; color: var(--dim); line-height: 1.4; }
+.tk-running { display: inline-flex; align-items: center; gap: 4px; }
+.tk-last { display: block; width: 100%; text-align: left; font: inherit; font-size: 11px; line-height: 1.4; background: none; border: 0; padding: 2px 0; color: inherit; cursor: pointer; }
+.tk-last em { font-style: normal; color: var(--dim); margin-right: 4px; }
+.tk-last.sev-elevated { color: var(--amber); }
+.tk-last.tk-bad { color: var(--dim); }
+.tk-last:hover { text-decoration: underline; }
+.tk-actions { display: flex; gap: 10px; margin: 2px 0 0; font-size: 11px; }
+.tk-del { color: var(--nay); }
+.tk-cta { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; font-size: 12px; }
+.tk-cta small { color: var(--dim); font-size: 11px; }
+.tk-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; padding: 6px 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; }
+.tk-pick-what { color: var(--dim); margin-right: 4px; }
+.tk-pick select, .tk-pick input { font: inherit; font-size: 12px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 2px 4px; color-scheme: dark; }
+.tk-pick input[type="number"] { width: 4.5em; }
+.tk-pick .ask-fault { flex-basis: 100%; margin: 4px 0 0; }
+.tk-saved { margin: 6px 0 0; font-size: 12px; color: var(--dim); }

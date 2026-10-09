@@ -11,6 +11,8 @@ import { AnswerMeta } from "../ask/AnswerMeta";
 import { ModelPick } from "../ask/ModelPick";
 import { BacktestCard } from "../ask/BacktestCard";
 import { Clarify } from "../ask/Clarify";
+import { ScheduleControl } from "../tasks/ScheduleControl";
+import { ScheduledTasks } from "../tasks/ScheduledTasks";
 import { revealStep, Steps } from "../ask/Steps";
 import { hasContext, type AskApi } from "../ask/useAsk";
 import { SavedChats } from "../ask/SavedChats";
@@ -148,6 +150,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
           </div>
           <section className="ask-saved" aria-label="Saved chats">
             <SavedChats ask={ask} />
+            <ScheduledTasks openTurns={ask.openTurns} active={open} />
             <details className="ask-prefs">
               <summary>Preferences <small>{prefs.length ? `${prefs.length} saved` : "none"}</small></summary>
               {prefs.length ? (
@@ -234,6 +237,7 @@ function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: bo
         <AnswerMeta turn={turn} />
         {done?.table ? <ToolTable table={done.table} steps={turn.steps} onChip={chip} /> : null}
         {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} cite={<Chip id={b.id} steps={byId} onChip={chip} />} />)}
+        <ScheduleControl turn={turn} />
         {theory ? (
           <section className="ask-theory" style={{ ["--tint" as string]: THEORY_LOOK.color }}>
             <h3>Proposed theory</h3>

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { nyDaysAgo } from "../../shared/dates.mjs";
 import { ALERT_LEVELS, ALERT_RULE, countAlertLevels, triageAlerts, type AlertLevel } from "../../shared/intel.mjs";
+import { RESEARCH_RULE } from "../../shared/taskSchedule.mjs";
 import { api, DEMO, when } from "../lib/api";
 import { memberShareUrl } from "../lib/share";
 import { toggleMember, toggleSymbol, useWatch } from "../lib/useWatch";
 import { Icon, IconLabel } from "../ui/icons/Icon";
 
 type Pin = { kind: "member" | "symbol"; id: string; label: string; chamber?: string };
-type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; pins?: Pin[] };
+type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; asOf?: string; latency?: string; pins?: Pin[] };
 type Source = { label: string; source: string; asOf?: string; latency: string };
 type AlertsRes = { ok: boolean; asOf?: string; items: Alert[]; sources?: Source[] };
 
@@ -16,8 +17,8 @@ const DISMISSED = "intel:alerts:dismissed:v1";
 const LATE = "intel:alerts:late:v1";
 const NOTIFY = "intel:alerts:notify:v1";
 const POLL_MS = 5 * 60 * 1000;
-const KIND: Record<string, string> = { "member-trade": "MEMBER", "symbol-trade": "CONGRESS", form4: "FORM 4", lobbying: "LDA", "late-filing": "LATE" };
-const FEED: Record<string, string> = { "member-trade": "Congress trades", "symbol-trade": "Congress trades", "late-filing": "Congress trades", form4: "Form 4", lobbying: "Lobbying" };
+const KIND: Record<string, string> = { "member-trade": "MEMBER", "symbol-trade": "CONGRESS", form4: "FORM 4", lobbying: "LDA", "late-filing": "LATE", research: "RESEARCH" };
+const FEED: Record<string, string> = { "member-trade": "Congress trades", "symbol-trade": "Congress trades", "late-filing": "Congress trades", form4: "Form 4", lobbying: "Lobbying", research: "Research tasks" };
 const LEVEL_LABEL: Record<AlertLevel, string> = { high: "HIGH", elevated: "ELEVATED", routine: "ROUTINE" };
 const RULE_PARTS = ALERT_RULE.split(/(?<=\.)\s+(?=[A-Z]+:|Otherwise)/);
 const LEVEL_RULE: Record<AlertLevel, string> = {
@@ -54,7 +55,6 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
   const empty = !watch.symbols.length && !watch.members.length && !allLate;
 
   useEffect(() => {
-    if (empty) { setRes({ ok: true, items: [] }); return; }
     let cancel = false;
     const load = () => api<AlertsRes>(DEMO ? "/api/alerts?late=all" : `/api/alerts?${query}`)
       .then((body) => { if (!cancel) setRes(body); })
@@ -62,7 +62,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
     void load();
     const timer = window.setInterval(load, POLL_MS);
     return () => { cancel = true; window.clearInterval(timer); };
-  }, [query, empty]);
+  }, [query]);
 
   const items = res?.items || [];
   const unread = items.filter((a) => !seen.has(a.id) && !dismissed.has(a.id));
@@ -112,13 +112,13 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
         <header className="alerts-row-head">
           <span className={`alerts-sev sev-${lv}`} title={LEVEL_RULE[lv]}>{LEVEL_LABEL[lv]}</span>
           <span className={`alerts-kind${a.late ? " late" : ""}`}>{KIND[a.kind] || a.kind}</span>
-          <time className="alerts-date" dateTime={a.date} title="Filed / posted date">{a.date}</time>
+          <time className="alerts-date" dateTime={a.date} title={a.kind === "research" ? "Run date (ET)" : "Filed / posted date"}>{a.date}</time>
         </header>
-        <button className="alerts-title" onClick={() => follow(a)} title="Open dossier">{a.title}</button>
+        <button className="alerts-title" onClick={() => follow(a)} title={a.kind === "research" ? "Open the stored result in Ask" : "Open dossier"}>{a.title}</button>
         <p className="alerts-detail">{a.detail}</p>
-        <p className="alerts-meta" title={feed?.latency}>
+        <p className="alerts-meta" title={a.latency || feed?.latency}>
           <span>{a.source || feed?.source || "Source unknown"}</span>
-          {feed?.asOf ? <span>as of {when(feed.asOf)}</span> : null}
+          {a.asOf || feed?.asOf ? <span>as of {when(a.asOf || feed?.asOf || "")}</span> : null}
         </p>
         <div className="alerts-actions">
           {(a.pins || []).map((p) => {
@@ -179,7 +179,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
               </div>
             </div>
           ) : null}
-          {empty ? <p className="note">Star a ticker (☆ in a dossier) or a member (☆ on their card) to get alerts for new trades, Form 4s, and lobbying filings.</p> : null}
+          {empty && !items.length ? <p className="note">Star a ticker (☆ in a dossier) or a member (☆ on their card) to get alerts for new trades, Form 4s, and lobbying filings.</p> : null}
           {!empty && res && !items.length ? <p className="note">{res.ok ? "Nothing new in the last 90 days for this watchlist." : "Alerts feed unavailable."}</p> : null}
           {items.length && !queue.length ? <p className="note">No {level ? LEVEL_LABEL[level].toLowerCase() : ""} alerts left in the queue.</p> : null}
           {ALERT_LEVELS.map((lv) => {
@@ -195,7 +195,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
           {res?.sources ? (
             <p className="note alerts-src">
               {res.sources.map((s) => <span key={s.label}><b>{s.label}</b> {s.source}{s.asOf ? ` · as of ${when(s.asOf)}` : ""} · {s.latency}</span>)}
-              <span className="alerts-rule">Severity: {ALERT_RULE}</span>
+              <span className="alerts-rule">Severity: {ALERT_RULE}{feeds.has("Research tasks") ? ` ${RESEARCH_RULE}` : ""}</span>
             </p>
           ) : null}
         </div>
