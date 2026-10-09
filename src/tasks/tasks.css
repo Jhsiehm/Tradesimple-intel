@@ -1,5 +1,5 @@
 /* Scheduled research tasks: the list in the Ask sheet's Saved area and the "Run this every…" picker under answers. */
-.ask-tasks { margin-top: 8px; }
+.ask-tasks { margin-top: 8px; min-width: 0; }
 .ask-tasks > summary { cursor: pointer; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
 .ask-tasks > summary small { margin-left: 6px; text-transform: none; letter-spacing: 0; }
 .ask-tasks ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
