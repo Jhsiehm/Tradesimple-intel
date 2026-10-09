@@ -39,8 +39,11 @@ export function CongressBar(props: {
   rolls?: BillRoll[];
   rollId?: string | null;
   onRoll?: (id: string) => void;
+  mapLayer: "votes" | "filings";
+  onMapLayer: (l: "votes" | "filings") => void;
 }) {
   const rolls = props.mode === "bills" ? props.rolls || [] : [];
+  const map = props.voteView === "map";
   return (
     <>
       <span className="seg">
@@ -58,6 +61,12 @@ export function CongressBar(props: {
         <button aria-pressed={props.voteView === "floor"} onClick={() => props.onVoteView("floor")}>Floor</button>
         <button aria-pressed={props.voteView === "map"} onClick={() => props.onVoteView("map")}>Map</button>
       </span>
+      {map ? (
+        <span className="seg center-only" title="Map layer: roll-call coloring, or this week's trade filings by state">
+          <button aria-pressed={props.mapLayer === "votes"} onClick={() => props.onMapLayer("votes")}>Votes</button>
+          <button aria-pressed={props.mapLayer === "filings"} onClick={() => props.onMapLayer("filings")}>Filings</button>
+        </span>
+      ) : null}
       <PartyButtons party={props.party} onParty={props.onParty} />
       {rolls.length ? (
         <label className="theater roll-pick" title="Roll calls on this bill. Final passage is the default in each chamber.">
@@ -71,7 +80,7 @@ export function CongressBar(props: {
           </select>
         </label>
       ) : null}
-      {props.voteView === "map" ? <span className="bar-note" title={props.caption}>{props.caption}</span> : null}
+      {map && props.mapLayer === "votes" ? <span className="bar-note" title={props.caption}>{props.caption}</span> : null}
     </>
   );
 }

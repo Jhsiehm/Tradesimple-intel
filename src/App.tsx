@@ -11,6 +11,7 @@ import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
 import { CongressBar, ContractsBar, DistrictsBar, EarthBar, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
 import { FilingOverlay } from "./congress/FilingOverlay";
+import { VoteLegend } from "./congress/VoteLegend";
 import { placeFilings, useWeekFilings } from "./congress/filingMap";
 import { MODE_BLURB, SECTIONS, utcNow, type MarketView } from "./shell/sections";
 import { useRail } from "./shell/useRail";
@@ -62,6 +63,7 @@ export function App() {
   const [mode, setMode] = useState<CongressMode>("votes");
   const [party, setParty] = useState<PartyFilter>("all");
   const [voteView, setVoteView] = useState<"map" | "floor">("floor");
+  const [mapLayer, setMapLayer] = useState<"votes" | "filings">("filings");
   const [filingId, setFilingId] = useState<string | null>(null);
   const [districtLayer, setDistrictLayer] = useState<DistrictLayer>("sites");
   const [layer, setLayer] = useState<MarketLayer>("politicians");
@@ -118,7 +120,8 @@ export function App() {
   const { earth, settings: earthSettings, update: updateEarth, credit: earthCredit } = useEarth();
 
   const congress = useCongress(chamber, mode, query, section === "congress" && !today && !timelineId ? selectedId : null, party);
-  const filingMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
+  const congressMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
+  const filingMapOn = congressMapOn && mapLayer === "filings";
   const weekFilings = useWeekFilings(filingMapOn);
   const placed = useMemo(() => placeFilings(congress.states, weekFilings.rows), [congress.states, weekFilings.rows]);
   const activeFiling = weekFilings.rows.find((row) => row.id === filingId) || null;
@@ -253,6 +256,7 @@ export function App() {
     setSection("congress");
     if (side) setChamber(side);
     setMode(next);
+    if (next === "bills" || next === "votes") setMapLayer("votes");
     setSelectedId(id);
     setDossier(null);
   }
@@ -316,6 +320,7 @@ export function App() {
       setChamber(id.startsWith("senate") ? "senate" : "house");
       congress.pickRoll(id);
       setVoteView("map");
+      setMapLayer("votes");
       setDossier(null);
     },
     hq: (symbol) => {
@@ -459,6 +464,7 @@ export function App() {
     setSelectedId(id);
     if (section === "congress" && mode === "members") openMember(id, chamber);
     if (section === "congress" && mode === "bills") setVoteView("map");
+    if (section === "congress" && (mode === "bills" || mode === "votes")) setMapLayer("votes");
   }
 
   async function chooseHit(hit: SearchHit) {
@@ -575,6 +581,8 @@ export function App() {
                 rolls={congress.rolls}
                 rollId={congress.rollId}
                 onRoll={(id) => follow(`roll:${id}`)}
+                mapLayer={mapLayer}
+                onMapLayer={setMapLayer}
               />
             ) : null}
             {barFor === "districts" ? <DistrictsBar layer={districtLayer} onLayer={(l) => { setDistrictLayer(l); reset(); }} /> : null}
@@ -726,6 +734,8 @@ export function App() {
             </Suspense>
             {filingMapOn ? (
               <FilingOverlay rows={weekFilings.rows} status={weekFilings.status} selectedId={activeFiling?.id || null} onSelect={setFilingId} onFollow={follow} />
+            ) : congressMapOn ? (
+              <VoteLegend chamber={chamber} counts={congress.mapCounts} source={congress.positions.length ? congress.voteSource : null} />
             ) : null}
             {barFor === "districts" && districtLayer === "hq" && !phone ? (
               <div className="legend vote-legend">
