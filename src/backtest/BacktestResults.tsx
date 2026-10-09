@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { when } from "../lib/api";
 import { Icon } from "../ui/icons/Icon";
+import { backtestFormulas } from "../../shared/formulas.mjs";
 import { EquityChart } from "./EquityChart";
+import { Formulas } from "./Formulas";
+import { Replicate } from "./Replicate";
 import type { BtRun } from "./types";
 
 const pts = (v: number | null | undefined, digits = 1) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(digits)}%`);
@@ -55,6 +58,7 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
             <Tile label="Sharpe-ish" value={s.sharpeish == null ? "—" : s.sharpeish.toFixed(2)} sub={`vol ${pc(s.volatility)} · IR-ish ${s.infoRatioish ?? "—"}`} title={s.sharpeNote} />
           </div>
           <EquityChart curve={run.curve} benchmark={bench} />
+          <Formulas formulas={backtestFormulas(run)} />
           <p className="bt-basis">{s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not.</p>
         </>
       )}
@@ -122,6 +126,7 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
           <div><dt>Run</dt><dd><span>{run.cache === "hit" ? "Served from the 30-minute result cache. " : ""}{(run.timing.totalMs / 1000).toFixed(1)} s total: signals {run.timing.signalsMs} ms, prices {(run.timing.pricesMs / 1000).toFixed(1)} s, engine {run.timing.engineMs} ms.</span></dd></div>
         </dl>
         <button className="bt-copy" onClick={onCopy}><Icon name="link" /> {copied ? "Link copied" : "Copy link to this backtest"}</button>
+        {s ? <Replicate spec={run.spec} /> : null}
       </section>
     </div>
   );

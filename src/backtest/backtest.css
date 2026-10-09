@@ -81,3 +81,29 @@
 .app.phone .bt-feeds dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .app.phone .bt-run { width: 100%; justify-content: center; padding: 10px 16px; }
 .app.phone .bt-scroll { max-height: 360px; }
+
+/* Formulas and Replicate (board and chat) */
+.fx { font-size: 11px; color: var(--dim); }
+.fx > summary { cursor: pointer; color: var(--ink); }
+.fx > summary small { color: var(--faint); margin-left: 6px; }
+.fx dl { margin: 6px 0 0; display: grid; gap: 8px; }
+.fx-row { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr); gap: 4px 10px; }
+.fx-row dt { color: var(--ink); }
+.fx-row dd { margin: 0; min-width: 0; display: grid; gap: 3px; }
+.fx-line { overflow-x: auto; color: var(--ink); font-size: 13px; }
+.fx-worked { color: var(--cyan); }
+.fx-worked em { font-style: normal; margin-right: 8px; color: var(--faint); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; }
+.fx-raw { font-size: 10.5px; color: var(--dim); white-space: pre-wrap; overflow-wrap: anywhere; }
+.fx-note { margin: 0; color: var(--faint); line-height: 1.4; }
+@container (max-width: 520px) { .fx-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* Replicate */
+.rep { display: grid; gap: 6px; font-size: 11px; }
+.rep header { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rep ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.rep li small { color: var(--faint); }
+.rep-note { margin: 0; color: var(--dim); line-height: 1.4; }
+.rep-note.warn { color: var(--amber); }
+.rep code { color: var(--ink); }
+.bt-ask { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--dim); font-size: 12px; }
+.bt-manual > summary { cursor: pointer; color: var(--dim); font-size: 11px; margin: 4px 0; }
