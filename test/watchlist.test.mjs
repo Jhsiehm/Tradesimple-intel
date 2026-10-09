@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  addSymbol, ageLabel, badgesOf, cleanTickers, congressEvent, contractEvent, filingEvent, groupRepeats, insiderEvents, lagDays, lobbyingEvent,
+  addSymbol, ageLabel, badgesOf, cleanTickers, congressEvent, contractEvent, filingEvent, groupRepeats, insiderEvents, namesTicker, lagDays, lobbyingEvent,
   matchTickers, mergeEvents, moveSymbol, newsEvent, removeSymbol, stakeEvent, watchAlertRows, whaleEvent, WATCH_MAX
 } from "../shared/watchlist.mjs";
 import { alertSeverity } from "../shared/intel.mjs";
@@ -25,11 +25,25 @@ test("House PTR 20035491 (Kevin Hern, LMT): 'S (partial)' and 'S' stay two rows 
   assert.deepEqual(grouped[1].ids, ["trade:h-20035491-50", "trade:h-20035491-51"]);
 });
 
+test("news joins a ticker only when the headline or summary names it (Yahoo tags market-wide stories with the symbol)", () => {
+  const nvda = { symbol: "NVDA", name: "NVIDIA" };
+  assert.equal(namesTicker({ title: "Nvidia's next chip slips a quarter" }, nvda), true);
+  assert.equal(namesTicker({ title: "Chip stocks", summary: "Shares of NVDA rose 3%" }, nvda), true);
+  assert.equal(namesTicker({ title: "TransDigm Group (TDG): Fundamental Resilience Outweighs Short-Term Aftermarket Sell-Off" }, nvda), false);
+  assert.equal(namesTicker({ title: "Micron Has Evolved Into a Next Gen Player" }, nvda), false);
+  assert.equal(namesTicker({ title: "Lockheed wins a Navy award" }, { symbol: "LMT", name: "Lockheed Martin" }), true);
+  assert.equal(namesTicker({ title: "AT&T (T) raises its dividend" }, { symbol: "T", name: "AT&T" }), true);
+  assert.equal(namesTicker({ title: "T-Mobile and Verizon cut prices" }, { symbol: "T", name: "AT&T" }), false);
+  assert.equal(namesTicker({ title: "Apple's AI push" }, { symbol: "AAPL", name: "Apple" }), true);
+});
+
 test("USAspending $0 actions are labeled '$0 modification' and say no money was obligated", () => {
   const c = contractEvent({ id: "award:CONT_AWD_80GSFC24FA046:P00006:2026-09-29", agency: "National Aeronautics and Space Administration", amount: 0, mod: "P00006", date: "2026-09-29", description: "ATHENA CRYOCOOLER", recipient: "LOCKHEED MARTIN CORPORATION", link: "https://www.usaspending.gov/award/CONT_AWD_80GSFC24FA046_8000_GS00Q14OADU323_4732" }, "LMT");
   assert.equal(c.title, "National Aeronautics and Space Administration · $0 modification");
   assert.equal(c.amountLabel, "$0 modification");
   assert.match(c.detail, /mod P00006 · no money obligated by this action/);
+  const back = contractEvent({ id: "award:CONT_AWD_PBGC01CT150031:9:2026-09-30", agency: "Pension Benefit Guaranty Corporation", amount: -1_200_000, date: "2026-09-30", link: "u" }, "JPM");
+  assert.equal(back.title, "Pension Benefit Guaranty Corporation · −$1.2M deobligation");
 });
 
 test("tickers are checked against the join table, deduped, ordered, capped", () => {

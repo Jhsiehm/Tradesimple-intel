@@ -13,7 +13,7 @@ import { whaleHoldings } from "../positions/whales.mjs";
 import { congressTrades, refreshCongress } from "../positions/congress.mjs";
 import { contractFeed } from "../../contracts.mjs";
 import { lobbyingFor } from "../corporate/lobbying.mjs";
-import { congressEvent, contractEvent, filingEvent, insiderEvents, lobbyingEvent, newsEvent, stakeEvent, whaleEvent } from "../../../shared/watchlist.mjs";
+import { congressEvent, contractEvent, filingEvent, insiderEvents, lobbyingEvent, namesTicker, newsEvent, stakeEvent, whaleEvent } from "../../../shared/watchlist.mjs";
 import { dedupeHeadlines, textHash } from "../../../shared/live.mjs";
 import { nyDaysAgo } from "../../../shared/dates.mjs";
 import { hasSeen, expireCache } from "./store.mjs";
@@ -194,14 +194,15 @@ export function makeChecks(overrides = {}) {
     return { events, ok, errors, note: none.length ? `${none.join(", ")}: no LDA client in data/tickers.json` : "" };
   }
 
-  async function news({ symbols }) {
+  async function news({ db, symbols }) {
     const from = Date.now() - DAYS.news * 24 * HOUR;
     const events = [];
     const ok = [];
     const errors = [];
     for (const symbol of symbols) {
       try {
-        const items = dedupeHeadlines(await d.headlines(symbol)).filter((n) => !n.published || Date.parse(n.published) >= from);
+        const ticker = d.tickerOf(db, symbol) || { symbol };
+        const items = dedupeHeadlines(await d.headlines(symbol)).filter((n) => (!n.published || Date.parse(n.published) >= from) && namesTicker(n, ticker));
         events.push(...items.map((n) => newsEvent({ ...n, id: textHash(n.link || n.title) }, symbol)));
         ok.push(symbol);
       } catch (err) {

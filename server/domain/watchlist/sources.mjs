@@ -12,7 +12,7 @@ import { insiderHistory } from "../positions/insiders.mjs";
 import { whaleHoldings } from "../positions/whales.mjs";
 import { secSubmissions, slimSubmissions } from "../positions/submissions.mjs";
 import { lobbyingFor } from "../corporate/lobbying.mjs";
-import { congressEvent, contractEvent, filingEvent, FEED_DAYS, insiderEvents, lobbyingEvent, newsEvent, stakeEvent, whaleEvent } from "../../../shared/watchlist.mjs";
+import { congressEvent, contractEvent, filingEvent, FEED_DAYS, insiderEvents, lobbyingEvent, namesTicker, newsEvent, stakeEvent, whaleEvent } from "../../../shared/watchlist.mjs";
 
 /** Per-source windows by public date: quarterly feeds reach further back so the latest filing is never cut off. */
 const WINDOW = { congress: FEED_DAYS, insiders: FEED_DAYS, whales: 200, stakes: 400, contracts: 90, lobbying: 400, filings: FEED_DAYS, news: 30 };
@@ -188,11 +188,14 @@ export async function newsSection(db, ticker) {
     cached = { fetchedAt: new Date().toISOString(), items: parseRss(xml).slice(0, 25).map((r) => ({ id: hash(r.link || r.title), title: r.title, link: r.link, published: r.published, summary: r.summary })) };
     writeCache(db, key, cached, 15 * MINUTE);
   }
-  const events = cached.items.map((n) => newsEvent(n, ticker.symbol)).filter(after(WINDOW.news));
+  const named = cached.items.filter((n) => namesTicker(n, ticker));
+  const events = named.map((n) => newsEvent(n, ticker.symbol)).filter(after(WINDOW.news));
+  const hidden = cached.items.length - named.length;
   return status(events, {
     source: `Yahoo Finance headline RSS for ${ticker.symbol}`,
     asOf: cached.fetchedAt,
-    latency: "Publisher time stamps; Yahoo's symbol feed holds about the newest 20 headlines and can include market-wide stories that mention the ticker. Refetched every 15 min. Material company events are in the 8-K section."
+    latency: "Publisher time stamps; Yahoo's symbol feed holds about the newest 20 headlines. Refetched every 15 min. Material company events are in the 8-K section.",
+    ...(hidden ? { note: `${hidden} of ${cached.items.length} headlines Yahoo tagged ${ticker.symbol} do not name ${ticker.name || ticker.symbol} or ${ticker.symbol} in the headline or summary and are left out.` } : {})
   });
 }
 

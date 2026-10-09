@@ -117,7 +117,8 @@ export function ageLabel(iso, now = Date.now()) {
 /** The time an event became public, falling back to the event time for feeds without a separate disclosure. */
 export const shownAt = (e) => e.publishedAt || e.eventAt || "";
 
-const usd = (v) => (v == null || !Number.isFinite(v) ? "" : Math.abs(v) >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : Math.abs(v) >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`);
+const usdAbs = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`);
+const usd = (v) => (v == null || !Number.isFinite(v) ? "" : v < 0 ? `−${usdAbs(-v)}` : usdAbs(v));
 const num = (v) => (v == null || !Number.isFinite(v) ? "" : Math.round(v).toLocaleString("en-US"));
 
 /** House PTR / Senate eFD row (server/domain/positions/congress.mjs). Id matches the Alerts row so both dedupe. */
@@ -258,7 +259,7 @@ export function stakeEvent(f) {
 
 /** USAspending prime contract action (server/contracts.mjs contractFeed). USAspending gives no publish date per action. */
 export function contractEvent(a, symbol) {
-  const amount = a.amount === 0 ? "$0 modification" : usd(a.amount);
+  const amount = a.amount === 0 ? "$0 modification" : a.amount < 0 ? `${usd(a.amount)} deobligation` : usd(a.amount);
   return {
     id: `contract:${a.id}`,
     symbol,
@@ -332,6 +333,25 @@ export function filingEvent(f) {
     late: false,
     link: f.link || ""
   };
+}
+
+const NAME_TAIL = /\b(inc|corp|corporation|co|company|holdings?|group|plc|ltd|limited|the|class [a-c])\b\.?/gi;
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Whether a headline names the ticker: its symbol as a word (case-sensitive; one- and two-letter symbols only as
+ * "(T)" or "$T") or the company name from data/tickers.json. Yahoo's per-symbol feed also carries market-wide stories
+ * tagged with the symbol; those are not joined to it.
+ */
+export function namesTicker(item, { symbol = "", name = "" } = {}) {
+  const text = `${item?.title || ""} ${item?.summary || ""}`;
+  const sym = String(symbol).toUpperCase();
+  if (sym && (sym.length >= 3 ? new RegExp(`(^|[^A-Za-z0-9])${escapeRe(sym)}([^A-Za-z0-9]|$)`) : new RegExp(`[($]${escapeRe(sym)}\\b`)).test(text)) return true;
+  const base = String(name).replace(NAME_TAIL, " ").replace(/[,.&]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!base) return false;
+  const first = base.split(" ")[0];
+  const words = [base, ...(first.length >= 4 && base.split(" ").length > 1 ? [first] : [])];
+  return words.some((w) => new RegExp(`\\b${escapeRe(w)}\\b`, "i").test(text));
 }
 
 /** Headline from the publisher feed. A headline is its own event, so there is no disclosure lag. */

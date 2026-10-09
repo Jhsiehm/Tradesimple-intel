@@ -78,6 +78,7 @@ export function newsEvent(n: Record<string, any>, symbol: string): WatchEvent;
 
 export function mergeEvents(events: WatchEvent[]): WatchEvent[];
 export function groupRepeats(events: WatchEvent[]): WatchEvent[];
+export function namesTicker(item: { title?: string; summary?: string } | null | undefined, ticker: { symbol?: string; name?: string }): boolean;
 export function withinDays(events: WatchEvent[], days: number, now?: number): WatchEvent[];
 export function badgesOf(events: WatchEvent[], days: number, now?: number): Partial<Record<WatchSourceKey, WatchBadge>>;
 export function watchAlertRows(events: WatchEvent[], since?: string, opts?: { news?: boolean }): WatchAlertRow[];
