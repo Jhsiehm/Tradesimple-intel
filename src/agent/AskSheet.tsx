@@ -41,6 +41,23 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ask.shown, busy]);
 
+  useEffect(() => {
+    if (open && snap) applySnap(snap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const docked = open && snap === "peek";
+  useEffect(() => {
+    if (!docked) return;
+    const root = document.documentElement;
+    root.dataset.askDock = "peek";
+    root.style.setProperty("--ask-dock", `${box.h}px`);
+    return () => {
+      delete root.dataset.askDock;
+      root.style.removeProperty("--ask-dock");
+    };
+  }, [docked, box.h]);
+
   const last = turns.at(-1);
   useEffect(() => {
     if (open && last?.phase !== "done") log.current?.scrollTo({ top: log.current.scrollHeight });
@@ -69,11 +86,12 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
   const keep = () => setFault(ask.keep() ? "" : "This browser refused to store the chat.");
 
   return (
-    <div className="ask-scrim" onMouseDown={ask.close}>
+    <div className="ask-scrim" data-snap={snap || undefined} onMouseDown={ask.close}>
       <div
         className="ask"
         role="dialog"
-        aria-modal="true"
+        aria-modal={!docked}
+        data-snap={snap || undefined}
         aria-label="Ask"
         aria-busy={busy}
         style={{ left: box.x, top: box.y, width: box.w, height: box.h }}

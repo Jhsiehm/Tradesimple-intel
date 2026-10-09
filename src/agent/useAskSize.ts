@@ -75,14 +75,23 @@ function centerTop(w: number, h: number, m: Limits): Box {
   }, m);
 }
 
-export function snapBox(snap: Snap, m: Limits = measure()): Box {
-  if (snap === "peek") {
-    return centerTop(
-      Math.min(560, m.maxW),
-      Math.min(m.maxH, Math.max(m.minH, Math.min(380, Math.round(m.vh * 0.36)))),
-      m
-    );
+/**
+ * Peek is a short bar on the bottom edge of the center stage (the viewport on a phone), so the board above
+ * stays readable. It is below the free-box minimum height on purpose and never goes through clampBox.
+ */
+function peekBox(m: Limits): Box {
+  const stage = document.querySelector(".map-body")?.getBoundingClientRect();
+  const h = Math.round(Math.min(m.vh - m.margin * 2, Math.max(150, Math.min(220, m.vh * 0.26))));
+  if (!stage || stage.width < m.minW || stage.height < h + m.margin) {
+    const w = m.vw < 600 ? m.vw : Math.min(760, m.maxW);
+    return { x: Math.round((m.vw - w) / 2), y: m.vh - h, w, h };
   }
+  const w = Math.round(Math.min(760, stage.width - 24));
+  return { x: Math.round(stage.left + (stage.width - w) / 2), y: Math.round(stage.bottom - h), w, h };
+}
+
+export function snapBox(snap: Snap, m: Limits = measure()): Box {
+  if (snap === "peek") return peekBox(m);
   if (snap === "half") {
     return centerTop(
       Math.min(m.maxW, Math.max(m.minW, Math.round(m.vw * 0.5))),

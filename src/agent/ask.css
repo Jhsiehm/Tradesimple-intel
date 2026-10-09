@@ -63,6 +63,7 @@
 }
 .ask-sizes { display: flex; flex: none; gap: 4px; }
 .ask-sizes .panels-btn { padding: 3px 8px; flex: none; white-space: nowrap; }
+.app.phone .ask-sizes .panels-btn { display: inline-block; }
 .ask-sizes .panels-btn[aria-pressed="true"] { color: var(--amber); border-color: var(--amber); }
 .ask-head .ghost { flex: none; border: none; padding: 2px; color: var(--dim); }
 .ask-head kbd { flex: none; color: var(--faint); font-size: 10px; }
@@ -308,6 +309,16 @@
 }
 .ask-edge:hover { background: color-mix(in srgb, var(--amber) 28%, transparent); }
 .ask-edge.se.grip:hover { background: transparent; }
+
+/* Peek: a short bar on the bottom edge of the stage. No scrim, so the board above stays readable and usable. */
+.ask-scrim[data-snap="peek"] { background: transparent; pointer-events: none; }
+.ask-scrim[data-snap="peek"] .ask { pointer-events: auto; box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.5); }
+.ask[data-snap="peek"] .ask-frame { grid-template-rows: auto auto minmax(0, 1fr); }
+.ask[data-snap="peek"] :is(.ask-now, .ask-saved, .ask-foot) { display: none; }
+.ask[data-snap="peek"] .ask-head { padding: 6px 12px; }
+.ask[data-snap="peek"] .ask-log { padding-top: 8px; }
+.ask[data-snap="peek"] .ask-edge:not(.n) { display: none; }
+:root[data-ask-dock] .board-scroll { padding-bottom: calc(var(--ask-dock, 0px) + 28px); }
 
 body.ask-sizing, body.ask-sizing * { user-select: none !important; }
 body.ask-sizing-ew, body.ask-sizing-ew * { cursor: ew-resize !important; }
