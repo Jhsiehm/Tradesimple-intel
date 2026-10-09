@@ -33,7 +33,8 @@ const STATIC: Command[] = [
   { code: "MAP", label: "Map", hint: "Records in a window, lines you draw", action: "section:map" },
   { code: "CAL", label: "Calendar", hint: "Earnings, macro, lobbying, PAC", action: "calendar:" },
   { code: "ALRT", label: "Alerts", hint: "Watched members and tickers", action: "alerts:" },
-  { code: "BT", label: "Backtest", hint: "Replay filings, insider trades, contracts, or lobbying against a benchmark", action: "today:bt" }
+  { code: "BT", label: "Ask the chat to backtest…", hint: "Say what to replay in plain words; the chat states the spec, runs it, and shows the result inline", action: "ask:draft:Backtest " },
+  { code: "ASK", label: "Ask about what's on screen", hint: "This chat, tool lines, a theory you can accept", action: "ask:" }
 ];
 
 const TICKER_FN: { code: string; label: string; action: (s: string) => string }[] = [
@@ -132,7 +133,7 @@ export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean
           <input
             ref={input}
             value={text}
-            placeholder="WEEK · LMT CTR · TX-12 · Pelosi TL · WEI · CAL"
+            placeholder="WEEK · LMT CTR · TX-12 · Pelosi TL · ASK"
             spellCheck={false}
             onChange={(e) => { setText(e.target.value); setAt(0); }}
             onKeyDown={(e) => {
@@ -154,7 +155,7 @@ export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean
           ))}
           {!list.length ? <li className="cmd-empty">No match. Try a ticker, a district like TX-12, a member name, or a code like CTR.</li> : null}
         </ul>
-        <p className="cmd-foot">↑↓ choose · enter go · functions: DES dossier · GP chart · POS positions · CTR contracts · SPLC supply · TL timeline</p>
+        <p className="cmd-foot">↑↓ choose · enter go · ASK ask · DES dossier · GP chart · POS positions · CTR contracts · SPLC supply · TL timeline</p>
       </div>
     </div>
   );

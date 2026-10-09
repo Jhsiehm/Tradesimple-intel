@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { AskSheet } from "./agent/AskSheet";
+import { contextLine, screenContext } from "./agent/context";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
-import { AskDossier } from "./ask/AskDossier";
 import { useAsk } from "./ask/useAsk";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
@@ -193,11 +194,13 @@ export function App() {
       const typing = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        ask.close();
         setCmdOpen((v) => !v);
         return;
       }
       if (event.key === ":" && !typing) {
         event.preventDefault();
+        ask.close();
         setCmdOpen(true);
         return;
       }
@@ -226,6 +229,7 @@ export function App() {
         setCalendarTab(null);
         setPanelsOpen(false);
         setAlertsOpen(false);
+        ask.close();
       }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
@@ -301,8 +305,18 @@ export function App() {
     else routeAction(action);
   }
 
+  /** Every Ask entry (nav ASK, ⌘K ASK, the search Ask row, `#ask=`, ⌘K BT) opens the one sheet. */
+  function openAsk(prefill = "") {
+    setPanelsOpen(false);
+    setAlertsOpen(false);
+    setCmdOpen(false);
+    ask.show(prefill);
+  }
+
   function go(action: string, label?: string) {
-    if (action.startsWith("ask:q:")) return void ask.run(decodeURIComponent(action.slice(6)));
+    if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
+    if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
+    if (action.split(":")[0] === "ask") return openAsk();
     record(action, label);
     runAction(action);
   }
@@ -316,6 +330,7 @@ export function App() {
   }
 
   const follow = (action: string) => {
+    if (action.startsWith("ask:")) return go(action);
     if (!/^(news|meeting|roll):/.test(action)) record(action);
     routeAction(action);
   };
@@ -493,6 +508,28 @@ export function App() {
   const foot = timelineId ? (timelineStatus || TIMELINE_STATUS) : onToday ? (stageList?.status || TODAY_STATUS) : view.status;
   const footLabel = timelineId ? "TIMELINE" : onToday ? "TODAY" : rail.rail.open ? "LIST SOURCE" : "LIST (HIDDEN)";
   const reset = () => { setSelectedId(null); setDossier(null); };
+  const askTheory = boardOn && selectedId?.startsWith("theory:")
+    ? board.graph.theories.find((t) => selectedId === `theory:${t.id}`) || null
+    : null;
+  const askContext = screenContext({
+    section,
+    mode,
+    marketView,
+    selectedId,
+    timelineId,
+    today: Boolean(today),
+    calendar: calendarTab != null,
+    chartSymbol,
+    supplySymbol,
+    rowSymbol: section === "markets" && selectedId ? markets.chartFocus?.symbol || null : null,
+    caseKey: drawer?.caseKey || null,
+    watch: drawer?.watch || null,
+    theory: askTheory
+  });
+  ask.bindContext(askContext);
+  const askKey = `${askContext.node || ""}|${askContext.theory?.id || ""}`;
+  const { setDetached } = ask;
+  useEffect(() => { setDetached(false); }, [askKey, setDetached]);
 
   return (
     <div className={`app${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
@@ -514,12 +551,13 @@ export function App() {
           <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
-          <button className="go-btn panels-btn" onClick={() => setCmdOpen(true)} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes"><Icon name="command" /> GO <kbd>⌘K</kbd></button>
+          <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes"><Icon name="command" /> GO <kbd>⌘K</kbd></button>
+          <button className="panels-btn" aria-expanded={ask.open} aria-haspopup="dialog" onClick={() => (ask.open ? ask.close() : openAsk())} title={`Ask · ${contextLine(askContext)}`}>ASK</button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
-          <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) setPanelsOpen(false); }} onFollow={follow} />
+          <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) { setPanelsOpen(false); ask.close(); } }} onFollow={follow} />
           <PanelsMenu
             open={panelsOpen}
-            onOpen={(v) => { setPanelsOpen(v); if (v) setAlertsOpen(false); }}
+            onOpen={(v) => { setPanelsOpen(v); if (v) { setAlertsOpen(false); ask.close(); } }}
             section={section}
             focusSymbol={focusSymbol}
             fallbackSymbol={chartSymbol}
@@ -762,8 +800,7 @@ export function App() {
             <span className="count">{String(listItems.length).padStart(2, "0")}</span>
           </header>
           <div className="rail-pane">
-            <AskDossier ask={ask} onFollow={follow} />
-            {drawer && !ask.full ? (
+            {drawer ? (
               <Drawer
                 model={drawer}
                 onFollow={follow}
@@ -786,6 +823,7 @@ export function App() {
         <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
       <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
+      <AskSheet ask={ask} context={askContext} onFollow={follow} />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
     </div>
   );

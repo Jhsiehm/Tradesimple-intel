@@ -1,15 +1,44 @@
-/** What the server streams from POST /api/ask, and what the panel keeps. */
-export type Evidence = {
+import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
+import type { Clarify } from "../../shared/backtestAsk.mjs";
+import type { Theory } from "../../shared/relations.mjs";
+
+/** What the server streams from POST /api/ask, and what a chat keeps. */
+export type Phase = "planning" | "fetching" | "computing" | "writing";
+
+export type Step = {
   id: string;
   tool: string;
   label: string;
-  ok: boolean;
-  source: string;
-  asOf: string;
-  latency: string;
+  args: unknown;
+  phase: Phase;
+  at: string;
+  state: "running" | "ok" | "error";
   ms: number;
+  rows?: number;
+  source?: string;
+  asOf?: string;
+  latency?: string;
+  note?: string;
+  open?: string;
+  requests: string[];
+  preview?: string;
+  using?: string;
+  diff?: string[];
+};
+
+export type FallbackTable = { columns: string[]; rows: string[][]; total: number; ref: string; label: string; source: string; asOf: string };
+
+export type BacktestRef = {
+  id: string;
+  spec: BacktestSpec;
+  from: Record<string, string>;
+  diff: string[];
+  prior: BacktestSpec | null;
+  using: string;
   note: string;
+  ok: boolean;
   open: string;
+  description: string;
 };
 
 export type Done = {
@@ -19,25 +48,48 @@ export type Done = {
   grounding: { checked: number; unmatched: string[] };
   uncited: boolean;
   noTools: boolean;
+  greeting: boolean;
   caveats: string[];
   usage: { tokens: number; toolCalls: number };
   ms: number;
   stopped: string;
+  model: string;
+  theory: Theory | null;
+  table: FallbackTable | null;
+  retried: boolean;
+  backtests: BacktestRef[];
+  clarify: boolean;
+  prefs: { set?: Record<string, unknown>; clear?: boolean } | null;
 };
 
+export type ClarifyAsk = { questions: Clarify[]; spec: BacktestSpec; from: Record<string, string>; sentence: string; sources: string[]; note: string };
+
+/** One exchange: the question and everything the answer streamed. */
 export type Turn = {
+  id: string;
   question: string;
+  at: string;
   text: string;
-  evidence: Evidence[];
-  running: { id: string; label: string }[];
-  phase: "thinking" | "answering" | "done" | "error";
+  steps: Step[];
+  phase: Phase | "done" | "error";
+  notes: string[];
   done: Done | null;
+  clarify: ClarifyAsk | null;
   error: string;
-  notConfigured: boolean;
-  missing: string;
+  model: string;
+  context: string;
 };
 
-export type AskStatus = { ok: boolean; configured: boolean; provider: string; model: string; missing: string[]; notice: string; tools: string[] };
+export type SavedChat = { id: string; title: string; turns: Turn[]; updated: string };
 
-/** One saved answer. The browser keeps the last 20; nothing leaves it. */
-export type Saved = { at: string; question: string; answer: string; evidence: Evidence[]; done: Omit<Done, "answer"> | null; model: string };
+export type AskStatus = {
+  ok: boolean;
+  configured: boolean;
+  provider: string;
+  model: string;
+  small?: boolean;
+  models?: { id: string; small: boolean }[];
+  missing: string[];
+  notice: string;
+  tools: string[];
+};
