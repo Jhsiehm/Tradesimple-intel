@@ -2,10 +2,11 @@
  * Pure share-card and link-preview builders, shared by the browser (Share image) and the static page
  * generator (scripts/member-pages.mjs). Input is a /api/congress/member/:id/timeline response.
  */
+import { LATE_DAYS } from "./constants.mjs";
 
+export { LATE_DAYS };
 export const CARD_W = 1200;
 export const CARD_H = 630;
-export const LATE_DAYS = 45;
 const DAY = 86_400_000;
 const MONO = "IBM Plex Mono, Menlo, SF Mono, Consolas, Courier New, monospace";
 const C = { bg: "#07090c", panel: "#0d1115", ink: "#e4e7e6", dim: "#8a949b", faint: "#56616a", line: "#232c34", amber: "#e8a33d", buy: "#b7e38a", sell: "#e07a72", dem: "#7aa7e6", rep: "#e07a72" };

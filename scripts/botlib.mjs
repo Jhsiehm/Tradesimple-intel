@@ -4,8 +4,9 @@
  */
 import crypto from "node:crypto";
 import { amountShort, dayLabel, honorific, partyTag, verbOf } from "../shared/sentences.mjs";
+import { LATE_DAYS } from "../shared/constants.mjs";
 
-export const LATE_DAYS = 45;
+export { LATE_DAYS };
 export const LARGE_LOW = 250_001;
 export const NEAR_DAYS = 14;
 export const LIMITS = { bluesky: 300, x: 280 };
