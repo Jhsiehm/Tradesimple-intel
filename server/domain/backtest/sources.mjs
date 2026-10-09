@@ -1,7 +1,8 @@
 /** Reads the feeds a backtest's signals come from and hands the records to signals.mjs. No ranking, no joins of its own. */
 import { listTickers, tickerBySymbol } from "../../lib/db.mjs";
 import { pool } from "../../lib/pool.mjs";
-import { congressTrades, insiderTrades } from "../positions/index.mjs";
+import { congressTrades, insiderHistory } from "../positions/index.mjs";
+import { HISTORY_PER_ISSUER } from "../positions/insiders.mjs";
 import { lobbyingFor } from "../corporate/index.mjs";
 import { committees } from "../../roster.mjs";
 import { indexStatus, indexedMeetings } from "../../timeline.mjs";
@@ -66,19 +67,40 @@ export async function congressSource(db, f) {
   };
 }
 
-export async function form4Source(db, f) {
-  const res = await insiderTrades(db).catch(() => null);
-  if (!res?.items?.length) return { error: res?.errors?.[0] || "Form 4 filings are not loaded yet. Try again in a minute." };
+const FORM4_DEFAULT_DAYS = 365;
+const daysAgo = (n, now = Date.now()) => new Date(now - n * 86_400_000).toISOString().slice(0, 10);
+const few = (xs, n = 8) => `${xs.slice(0, n).join(", ")}${xs.length > n ? "…" : ""}`;
+
+/**
+ * Form 4 history for the spec's window (the board's latest eight per issuer would leave every buy inside its hold).
+ * Reads that miss `deadline` keep filling the cache; the run says how many and is not cached as complete.
+ */
+export async function form4Source(db, f, { deadline = 0, history = insiderHistory } = {}) {
+  const from = f.from || daysAgo(FORM4_DEFAULT_DAYS);
+  const res = await history(db, { from, to: f.to, deadline }).catch((err) => ({ items: [], errors: [err.message], filings: { wanted: 0, read: 0, failed: 0, pending: 0 }, coverage: { shortList: [], capped: [] } }));
+  if (!res?.items?.length) {
+    return { error: res?.filings?.pending ? `Form 4 filings are still being read from SEC EDGAR (${res.filings.read} of ${res.filings.wanted} so far). Try again in a minute.` : res?.errors?.[0] || "No Form 4 filings were found for join-table issuers in this window.", building: Boolean(res?.building) };
+  }
   const out = form4Signals({ rows: res.items, filters: f, sectorOf: sectorLookup(db) });
   const dates = res.items.map((r) => r.filed).sort();
+  const { wanted, read, failed, pending } = res.filings;
+  const { shortList, capped } = res.coverage;
   return {
     signals: out.signals,
     dropped: out.dropped,
     feeds: [feed("Signals", res)],
+    building: Boolean(res.building),
     context: {
       notes: [
-        { level: "info", id: "f4cover", text: `Form 4 rows are the latest eight filings per join-table issuer, filed ${dates[0]} to ${dates.at(-1)}. Older insider trades are not here.` },
-        { level: "info", id: "f4plan", text: `${out.dropped.plan10b5 || 0} lines flagged as 10b5-1 plan trades and ${out.dropped.notOpenMarket || 0} non-open-market lines (grants, tax withholding, exercises) are excluded.` }
+        { level: "info", id: "f4cover", text: `Form 4 history: ${read} of ${wanted} filings read for ${res.issuers} join-table issuers, filed ${dates[0]} to ${dates.at(-1)}${f.from ? "" : ` (no start date given; last ${FORM4_DEFAULT_DAYS} days)`}. Each issuer's newest ${HISTORY_PER_ISSUER} Form 4s in the window are read.` },
+        ...(res.building ? [{ level: "warn", id: "f4pending", text: `${pending} Form 4 filings were still being read from SEC EDGAR when the time budget ended and are not in this run${res.filings.listingIncomplete ? ", and some issuers' filing lists had not been read yet, so more are missing than that" : ""}. They keep loading; run again in a minute.` }] : []),
+        ...(failed ? [{ level: "warn", id: "f4failed", text: `${failed} Form 4 documents could not be read from SEC EDGAR this run.` }] : []),
+        ...(res.errors?.length ? [{ level: "warn", id: "f4issuers", text: `${res.errors.length} of ${res.issuers} issuers' SEC filing lists could not be read (${few(res.errors.map((e) => e.split(":")[0]))}); their insider trades are missing.` }] : []),
+        ...(capped.length ? [{ level: "warn", id: "f4capped", text: `${capped.length} issuers filed more than ${HISTORY_PER_ISSUER} Form 4s in the window (${few(capped)}); only their newest ${HISTORY_PER_ISSUER} are read, so their earlier insider trades are missing.` }] : []),
+        ...(shortList.length ? [{ level: "warn", id: "f4short", text: `For ${shortList.length} issuers (${few(shortList)}) SEC's recent-filings list starts after ${from}, so their earlier Form 4s are not here.` }] : []),
+        ...(res.otherIssuer ? [{ level: "info", id: "f4owner", text: `${res.otherIssuer} Form 4s listed under a join-table company were filed by it as the owner of another company's shares (for example Berkshire Hathaway buying Lennar). Those trades belong to the other issuer and are not attributed to the filer's ticker.` }] : []),
+        { level: "info", id: "f4plan", text: `${out.dropped.plan10b5 || 0} lines flagged as 10b5-1 plan trades and ${out.dropped.notOpenMarket || 0} non-open-market lines (grants, tax withholding, exercises) are excluded.` },
+        ...(out.dropped.noTicker || out.dropped.noDates ? [{ level: "warn", id: "f4rows", text: `${out.dropped.noTicker || 0} open-market lines had no join-table ticker and ${out.dropped.noDates || 0} had no trade or filing date; they are left out.` }] : [])
       ]
     }
   };

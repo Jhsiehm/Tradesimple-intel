@@ -77,7 +77,8 @@ export function BacktestCard({ bt, onFollow }: { bt: BacktestRef; onFollow: (act
       </header>
       {now?.phase === "loading" ? <p className="btc-note"><span className="st-spin" aria-hidden /> Loading the full run (cached on the server for 30 minutes)…</p> : null}
       {now?.phase === "error" ? <p className="btc-note warn">{now.error}</p> : null}
-      {run && !s ? <p className="btc-note">{run.counts.signals ? `${run.counts.signals} signals matched but none could be priced and held to an exit.` : "No signals matched this spec."}</p> : null}
+      {run && !s ? <p className="btc-note">{run.counts.signals ? run.caveats.items.find((c) => c.id === "unpriced")?.text || `${run.counts.signals} signals matched but none could be priced and held to an exit.` : "No signals matched this spec."}</p> : null}
+      {run && !s && warn.length ? <ul className="btc-note">{warn.filter((c) => c.id !== "unpriced").map((c) => <li key={c.id} className="warn">{c.text}</li>)}</ul> : null}
       {run && s ? (
         <>
           {bt.prior ? (

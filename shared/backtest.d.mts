@@ -80,6 +80,7 @@ export function lastOnOrBefore(bars: Bar[], day: number): number;
 export function median(xs: number[]): number | null;
 export function amountMid(text: string, low?: number): number;
 export function maxDrawdown(values: number[], labels?: string[]): { depth: number; from: string | number; to: string | number; peak: number; trough: number };
+export function unpricedLine(signals: number, trades: number, skipped: Record<string, number>): string;
 export function simulateTrade(signal: unknown, bars: Bar[], bench: Bar[], rules: BacktestRules, signalDay: number, sign: 1 | -1): { skip?: string; trade?: Record<string, unknown> };
 export function runBacktest(input: {
   signals?: BacktestSignal[];

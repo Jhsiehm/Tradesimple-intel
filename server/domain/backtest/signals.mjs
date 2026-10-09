@@ -138,7 +138,8 @@ export function form4Signals({ rows, filters: f, sectorOf }) {
     const side = FORM4_SIDE[r.side];
     if (!side || (r.code !== "P" && r.code !== "S")) { drop("notOpenMarket"); continue; }
     if (r.plan && !f.include10b51) { drop("plan10b5"); continue; }
-    if (!r.filed || !r.traded || !r.symbol) { drop("noDates"); continue; }
+    if (!r.symbol) { drop("noTicker"); continue; }
+    if (!r.filed || !r.traded) { drop("noDates"); continue; }
     if (f.tickers.length && !f.tickers.includes(r.symbol)) continue;
     const sector = sectorOf(r.symbol);
     if (f.sector && sector !== f.sector) continue;

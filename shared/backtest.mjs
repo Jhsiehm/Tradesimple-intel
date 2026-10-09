@@ -221,6 +221,26 @@ const SKIP_TEXT = {
   badDate: "had no usable public date",
 };
 
+const SKIP_SHORT = {
+  noPrice: "no price history",
+  notPriced: "prices still loading",
+  noBarAfterSignal: "public on or after the last price bar",
+  entryGap: "no trading day within a week",
+  beforePriceHistory: "public before the price history starts",
+  badPrice: "unusable entry price",
+  stillOpen: "hold not complete",
+  noBenchmark: "no benchmark price",
+  badDate: "no usable public date"
+};
+
+/** "3 of 67 signals became trades; 64 did not: 56 hold not complete, 8 public on or after the last price bar." */
+export function unpricedLine(signals, trades, skipped) {
+  const missed = Object.values(skipped).reduce((a, b) => a + b, 0);
+  if (!missed) return "";
+  const parts = Object.entries(skipped).map(([r, n]) => [n, SKIP_SHORT[r] || r]).sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1])).map(([n, label]) => `${n} ${label}`);
+  return `${trades} of ${signals} signals became trades; ${missed} did not: ${parts.join(", ")}.${skipped.stillOpen ? " Open positions can be marked at the last close instead (rules.openTrades = mark)." : ""}`;
+}
+
 /**
  * Run a backtest. `signals`: { id, symbol, signalDate, side, sizeHint?, sizeIsRange?, tradeDate?, actor?, actorLabel?, sector?, meta? }.
  * `bars` and `benchBars` map symbol → bars. `context` carries what the engine cannot see: notes, paper-filing counts.
@@ -443,6 +463,8 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   const items = [];
   const add = (level, id, textValue) => items.push({ level, id, text: textValue });
   const lag = lagStats(signals);
+  const missed = unpricedLine(signals.length, trades.length, skipped);
+  if (missed) add("warn", "unpriced", missed);
   if (lag) {
     add("info", "lag", `Disclosure lag on the ${lag.n} signals (original filing date minus trade date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the public date, so the run only uses what was public.`);
     if (lag.amended) add("info", "amendLag", `${lag.amended.n} signals first appear in a later amendment, a median ${lag.amended.median} days (up to ${lag.amended.max}) after the original report; they enter after the amendment date. That wait is not counted as filing lag.`);

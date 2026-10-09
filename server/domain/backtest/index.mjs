@@ -43,7 +43,8 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const t0 = Date.now();
   const deadline = t0 + budgetMs;
 
-  const src = await SOURCE_FNS[spec.source](db, spec.filters);
+  // Sources that read filings one by one (Form 4) get part of the budget; prices need the rest.
+  const src = await SOURCE_FNS[spec.source](db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
   if (src.error) return { ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) };
   const tSignals = Date.now();
 

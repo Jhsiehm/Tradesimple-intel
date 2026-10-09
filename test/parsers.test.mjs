@@ -58,6 +58,8 @@ test("Form 4 0000002488-26-000165 (AMD, Ava Hahn): 10b5-1 sale with footnoted sh
   assert.equal(f.title, "SVP, GC & Corporate Secretary");
   assert.deepEqual(f.lines, [{ date: "2026-08-18", code: "S", shares: 2993, price: 488.69, ad: "D", owned: 26623, plan: true }]);
   assert.equal(f.plan10b5, true);
+  assert.equal(f.issuerCik, "0000002488");
+  assert.equal(f.issuerSymbol, "AMD");
 });
 
 test("Form 4 10b5-1: footnote references mark lines; the checkbox covers filings without a plan footnote", () => {

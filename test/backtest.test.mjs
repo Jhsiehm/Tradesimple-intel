@@ -177,6 +177,17 @@ test("signals that cannot be priced are excluded and counted, never zeroed", () 
   const text = out.caveats.items.map((c) => c.text).join("\n");
   assert.match(text, /DEAD/);
   assert.match(text, /Survivorship/);
+  const summary = out.caveats.items.find((c) => c.id === "unpriced");
+  assert.equal(summary.level, "warn");
+  assert.match(summary.text, /^1 of 5 signals became trades; 4 did not: 1 hold not complete, 1 no price history, 1 no usable public date, 1 public on or after the last price bar\./);
+  assert.match(summary.text, /openTrades = mark/);
+});
+
+test("a run where every signal is unpriced still explains each one by reason", () => {
+  const out = run({ signals: [sig({ id: "a", symbol: "GONE" }), sig({ id: "b", signalDate: isoOf(START + 59) })], bars: { AAA: flat(60) } });
+  assert.equal(out.stats, null);
+  assert.equal(out.caveats.items[0].id, "unpriced");
+  assert.match(out.caveats.items[0].text, /^0 of 2 signals became trades; 2 did not: 1 no price history, 1 public on or after the last price bar\.$/);
 });
 
 test("open trades are marked at the last close only when asked", () => {
