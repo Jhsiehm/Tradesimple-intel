@@ -19,3 +19,11 @@ export function loadEnv(root) {
 export function warmEnabled() {
   return !process.env.INTEL_NO_WARM;
 }
+
+/**
+ * Start spacing for an upstream gate. INTEL_TEST=1 (the offline smoke test, where every fetch fails at once)
+ * drops it to 0 so failing requests are not paced; concurrency limits stay. Read at module load.
+ */
+export function gateSpacing(ms) {
+  return process.env.INTEL_TEST === "1" ? 0 : ms;
+}

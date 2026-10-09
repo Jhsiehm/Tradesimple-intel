@@ -1,8 +1,9 @@
 import { fetchJson, makeGate } from "../lib/http.mjs";
+import { gateSpacing } from "../lib/env.mjs";
 import { BROWSER_UA } from "../lib/ua.mjs";
 
 /** Every Yahoo chart call goes through one gate so boards, dossiers, and the returns warm cannot burst together. */
-export const yahooGate = makeGate(8, 60);
+export const yahooGate = makeGate(8, gateSpacing(60));
 
 export function yahooHeaders() {
   return {

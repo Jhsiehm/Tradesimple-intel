@@ -1,9 +1,10 @@
 import { fetchJsonRetry, makeGate } from "../lib/http.mjs";
+import { gateSpacing } from "../lib/env.mjs";
 
 export const USASPENDING = "https://api.usaspending.gov/api/v2";
 
 /** USAspending blocks a client's IP for a while after bursts of a few dozen requests per second. */
-export const usaspendingGate = makeGate(2, 300);
+export const usaspendingGate = makeGate(2, gateSpacing(300));
 
 /** POST a search body to `/api/v2/search/<pathname>/` through the shared gate, with retries. */
 export function usaspendingSearch(pathname, body, { timeoutMs = 45000, retries = 2, priority = false } = {}) {

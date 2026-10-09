@@ -1,8 +1,9 @@
 import { fetchJson, fetchText, makeGate } from "../lib/http.mjs";
+import { gateSpacing } from "../lib/env.mjs";
 import { SEC_UA } from "../lib/ua.mjs";
 
 /** SEC fair access allows 10 requests per second per client; one gate for every SEC call keeps us at 8. */
-export const secGate = makeGate(4, 125);
+export const secGate = makeGate(4, gateSpacing(125));
 
 const headers = (accept) => ({ headers: { "User-Agent": SEC_UA, ...(accept ? { Accept: accept } : {}) } });
 

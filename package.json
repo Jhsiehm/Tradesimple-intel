@@ -8,7 +8,7 @@
     "dev:hot": "node scripts/dev.mjs --hot",
     "start": "node server/index.mjs",
     "build": "vite build",
-    "test": "node --test \"test/*.test.mjs\"",
+    "test": "INTEL_TEST=1 node --test \"test/*.test.mjs\"",
     "snapshot": "node scripts/snapshot.mjs",
     "demo": "VITE_DEMO=1 vite",
     "build:demo": "VITE_DEMO=1 vite build",
