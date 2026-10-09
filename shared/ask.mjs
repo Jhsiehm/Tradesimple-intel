@@ -89,29 +89,35 @@ export function systemPrompt(today) {
   ].join("\n");
 }
 
-const trimNode = (v, depth, items) => {
+const trimNode = (v, depth, items, chars = 320, maxDepth = 6) => {
   if (v == null || typeof v === "number" || typeof v === "boolean") return v;
-  if (typeof v === "string") return v.length > 320 ? `${v.slice(0, 320)}…` : v;
-  if (depth > 6) return null;
+  if (typeof v === "string") return v.length > chars ? `${v.slice(0, chars)}…` : v;
+  if (depth > maxDepth) return null;
   if (Array.isArray(v)) {
-    const kept = v.slice(0, items).map((x) => trimNode(x, depth + 1, items));
+    const kept = v.slice(0, items).map((x) => trimNode(x, depth + 1, items, chars, maxDepth));
     return v.length > items ? { items: kept, total: v.length, truncated: true } : kept;
   }
   if (typeof v !== "object") return null;
   const out = {};
   for (const [k, x] of Object.entries(v)) {
     if (/^(coordinates|geometry|geojson|features|apiKey|token|password|secret|authorization)$/i.test(k)) continue;
-    out[k] = trimNode(x, depth + 1, items);
+    out[k] = trimNode(x, depth + 1, items, chars, maxDepth);
   }
   return out;
 };
 
 /** What the model sees. Long lists are cut with their true total; source, asOf, and latency always survive. */
 export function trimForModel(value, limits = ASK_LIMITS) {
+  const size = (x) => { try { return JSON.stringify(x).length; } catch { return Infinity; } };
   const out = trimNode(value, 0, limits.resultItems);
-  let json = "";
-  try { json = JSON.stringify(out); } catch { json = ""; }
-  if (json.length <= limits.resultChars) return out;
+  if (size(out) <= limits.resultChars) return out;
+  // Several lists in one result: keep fewer rows each and shorter strings before giving up on rows altogether.
+  for (const [items, chars, depth] of [[6, 120, 4], [4, 80, 3], [3, 60, 3]]) {
+    const lean = trimNode(value, 0, items, chars, depth);
+    if (size(lean) <= limits.resultChars) {
+      return lean && typeof lean === "object" && !Array.isArray(lean) ? { ...lean, note: `Lists cut to ${items} rows each to fit the model context.` } : lean;
+    }
+  }
   const src = out && typeof out === "object" && !Array.isArray(out) ? out : {};
   const slim = {};
   for (const [k, v] of Object.entries(src)) {
@@ -302,6 +308,10 @@ export function makeLimiter({ max, windowMs }) {
       hits.set(key, recent);
       if (hits.size > 5000) for (const [k, v] of hits) if (!v.some((t) => now - t < windowMs)) hits.delete(k);
       return { ok: true, retryMs: 0 };
+    },
+    refund(key) {
+      const recent = hits.get(key);
+      if (recent?.length) recent.pop();
     }
   };
 }

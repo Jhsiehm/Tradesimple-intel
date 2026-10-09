@@ -43,7 +43,8 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     if (!body.ok) return reply(body.status, { ok: false, error: body.error, missing: "" });
     const asked = cleanAsk(body.value);
     if (!asked.ok) return reply(400, { ok: false, error: asked.error, missing: "" });
-    const slot = limiter.take(clientOf(req, env), now());
+    const client = clientOf(req, env);
+    const slot = limiter.take(client, now());
     if (!slot.ok) return reply(429, { ok: false, error: `Ask is limited to ${ASK_LIMITS.perIp} questions per ${ASK_LIMITS.perIpWindowMs / 60_000} minutes. Try again in ${Math.ceil(slot.retryMs / 60_000)} min.`, missing: "", retryMs: slot.retryMs });
     if (running >= ASK_LIMITS.concurrent) return reply(429, { ok: false, error: "Ask is answering other questions. Try again in a moment.", missing: "" });
 
@@ -55,7 +56,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     const emit = (event) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify(event)}\n\n`); };
     log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached) });
     try {
-      await runAsk({
+      const out = await runAsk({
         question: asked.question,
         history: asked.history,
         context: asked.context,
@@ -74,6 +75,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         log,
         now
       });
+      if (out?.modelCalled === false) limiter.refund?.(client);
     } catch (err) {
       emit({ type: "error", code: "internal", error: err?.message || "Ask failed." });
     } finally {

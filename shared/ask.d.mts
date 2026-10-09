@@ -33,5 +33,5 @@ export function numbersIn(s: string): NumberToken[];
 export function evidenceNumbers(json: string): number[];
 export function groundingCheck(answer: string, evidence: Evidence[]): { checked: number; unmatched: string[] };
 export function caveatsFor(evidence: Evidence[]): string[];
-export function makeLimiter(opts: { max: number; windowMs: number }): { take(key: string, now: number): { ok: boolean; retryMs: number } };
+export function makeLimiter(opts: { max: number; windowMs: number }): { take(key: string, now: number): { ok: boolean; retryMs: number }; refund(key: string): void };
 export function toolProblems(tool: { name?: string; description?: string; parameters?: any }): string[];

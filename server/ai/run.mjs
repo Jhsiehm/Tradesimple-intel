@@ -37,6 +37,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
     emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
+    return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
   if (isPrefClear(question)) return quick("Cleared your backtest preferences. New backtests use the app defaults until you set new ones.", { prefs: { clear: true } });

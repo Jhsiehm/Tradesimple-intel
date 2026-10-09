@@ -501,6 +501,15 @@ test("POST validates the body, and rate-limits per client", async () => {
   assert.equal(await handler({ req: fakeReq({ question: "other ip" }, { ip: "1.1.1.1" }), res: fakeRes(), db: {} }), undefined);
 });
 
+test("replies that never reach the model (greeting, saved preference) do not use up the rate limit", async () => {
+  const limiter = makeLimiter({ max: 1, windowMs: 60_000 });
+  const handler = makeAskHandler({ env: CONFIGURED, makeProvider: () => scripted(TEXT_ROUND("ok")), limiter, log: noLog, now: () => 1000 });
+  assert.equal(await handler({ req: fakeReq({ question: "hi" }), res: fakeRes(), db: {} }), undefined);
+  assert.equal(await handler({ req: fakeReq({ question: "I usually want 90-day holds vs SPY" }), res: fakeRes(), db: {} }), undefined);
+  assert.equal(await handler({ req: fakeReq({ question: "What changed?" }), res: fakeRes(), db: {} }), undefined);
+  assert.equal((await handler({ req: fakeReq({ question: "And now?" }), res: fakeRes(), db: {} })).status, 429);
+});
+
 test("the route never puts the key in a log line or an event", async () => {
   const lines = [];
   const provider = { name: "x", model: "x", async *chat() { throw new ProviderError("The model endpoint returned 401: nope.", 401); } };
@@ -509,4 +518,16 @@ test("the route never puts the key in a log line or an event", async () => {
   await handler({ req: fakeReq({ question: "What changed this week?" }), res, db: {} });
   assert.ok(![...lines, ...res.chunks].join("").includes("sk-route"));
   assert.equal(res.events().at(-1).type, "error");
+});
+
+test("a result with several lists keeps fewer rows each instead of dropping them", async () => {
+  const { trimForModel } = await import("../shared/ask.mjs");
+  const row = (i) => ({ person: `Member ${i}`, link: "https://example.com/".padEnd(240, "x"), excess: i / 100, best: { symbol: "NVDA", excess: 0.5 } });
+  const big = { ok: true, source: "House Clerk", asOf: "2026-10-09", latency: "12 h", top: Array.from({ length: 25 }, (_, i) => row(i)), bottom: Array.from({ length: 25 }, (_, i) => row(i)), active: Array.from({ length: 25 }, (_, i) => row(i)), late: Array.from({ length: 25 }, (_, i) => row(i)) };
+  const out = trimForModel(big);
+  assert.ok(JSON.stringify(out).length <= 9_000);
+  assert.ok(out.top.items.length >= 3 && out.top.total === 25);
+  assert.equal(out.top.items[0].excess, 0);
+  assert.equal(out.source, "House Clerk");
+  assert.match(out.note, /rows each/);
 });
