@@ -23,4 +23,8 @@ export function greatCircle(a: [number, number], b: [number, number], steps?: nu
 export function bundleArcs(links: ArcLink[], opts?: { from?: number; to?: number; kinds?: Set<string> | null; cap?: number }): { arcs: ArcBundle[]; bundles: number; hidden: number; links: number; local: number };
 export function severity(prox: Proximity | null | undefined): Signal;
 export function activitySignal(dates: string[], today: string, recentDays?: number, baseDays?: number): Signal & { recent: number; prior: number; expected: number; ratio: number | null };
+export type AlertLevel = "high" | "elevated" | "routine";
+export const ALERT_LEVELS: AlertLevel[];
+export function triageAlerts<T extends { id: string; date: string; severity?: string }>(items: T[], opts?: { level?: AlertLevel | null; hide?: Set<string> | null }): T[];
+export function countAlertLevels(items: { id: string; severity?: string }[], hide?: Set<string> | null): Record<AlertLevel, number>;
 export function alertSeverity(a: { kind: string; late?: boolean; lag?: number | null; amountLow?: number | null; value?: number | null; amount?: number | null }): "high" | "elevated" | "routine";

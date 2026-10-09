@@ -140,3 +140,24 @@ export function alertSeverity(a) {
   if (a.late || lag > 45 || low >= 50001 || (a.kind === "form4" && value >= 1e5) || (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)) return "elevated";
   return "routine";
 }
+
+export const ALERT_LEVELS = ["high", "elevated", "routine"];
+
+const alertRank = (s) => {
+  const i = ALERT_LEVELS.indexOf(s);
+  return i < 0 ? ALERT_LEVELS.length - 1 : i;
+};
+
+/** Queue order for alert rows: severity high → routine (missing counts as routine), then newest date, then id. */
+export function triageAlerts(items, { level = null, hide = null } = {}) {
+  return items
+    .filter((a) => (!level || (ALERT_LEVELS.includes(a.severity) ? a.severity : "routine") === level) && !hide?.has(a.id))
+    .sort((a, b) => alertRank(a.severity) - alertRank(b.severity) || String(b.date).localeCompare(String(a.date)) || String(a.id).localeCompare(String(b.id)));
+}
+
+/** Rows per severity level, for filter counts. */
+export function countAlertLevels(items, hide = null) {
+  const out = { high: 0, elevated: 0, routine: 0 };
+  for (const a of items) if (!hide?.has(a.id)) out[ALERT_LEVELS[alertRank(a.severity)]] += 1;
+  return out;
+}

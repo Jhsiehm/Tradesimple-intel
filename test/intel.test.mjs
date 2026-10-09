@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, dayIso, dayNum, greatCircle, severity, windowSum } from "../shared/intel.mjs";
+import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
 import { buildLinks, centroidOf, memberAnchor, seatCode } from "../server/intel.mjs";
 import { buildAlerts } from "../server/alerts.mjs";
 
@@ -112,6 +112,21 @@ test("buildAlerts rows carry severity, source, and what a pin would watch", () =
   assert.deepEqual(trade.pins.map((p) => `${p.kind}:${p.id}`), ["member:B000002", "symbol:AMD"]);
   const f4 = out.find((a) => a.id === "f4:f1");
   assert.deepEqual([f4.severity, f4.source], ["elevated", "SEC EDGAR Form 4"]);
+});
+
+test("triageAlerts orders by severity then newest, filters by level, and hides dismissed", () => {
+  const rows = [
+    { id: "a", date: "2026-09-01", severity: "routine" },
+    { id: "b", date: "2026-08-01", severity: "high" },
+    { id: "c", date: "2026-09-05", severity: "elevated" },
+    { id: "d", date: "2026-09-10", severity: "high" },
+    { id: "e", date: "2026-09-20" }
+  ];
+  assert.deepEqual(triageAlerts(rows).map((a) => a.id), ["d", "b", "c", "e", "a"]);
+  assert.deepEqual(triageAlerts(rows, { level: "routine" }).map((a) => a.id), ["e", "a"], "rows without severity count as routine");
+  assert.deepEqual(triageAlerts(rows, { hide: new Set(["d"]) }).map((a) => a.id), ["b", "c", "e", "a"]);
+  assert.deepEqual(countAlertLevels(rows, new Set(["a"])), { high: 2, elevated: 1, routine: 1 });
+  assert.deepEqual(rows.map((a) => a.id), ["a", "b", "c", "d", "e"], "input is not reordered");
 });
 
 test("seatCode and memberAnchor place House seats on districts and senators on states", () => {
