@@ -289,8 +289,16 @@ function contractStat(c, label) {
 
 async function memberSignal(db, bioguide) {
   const tl = await memberTimeline(db, bioguide).catch(() => null);
-  if (!tl?.ok) return { tl: null, sig: severity(null) };
-  return { tl, sig: severity(tl.proximity) };
+  if (!tl?.ok) return { tl: null, sig: severity(null), trades: [] };
+  return { tl, sig: severity(tl.proximity), trades: (tl.trades || []).filter((t) => t.traded >= FROM) };
+}
+
+/** One hearing-proximity phrase for member and district headlines, counted over the same trades as proximity(). */
+export function proximityPhrase(trades, prox) {
+  if (!trades.length) return `no disclosed trades since ${FROM}`;
+  const n = prox?.trades ?? trades.length;
+  if (prox && !prox.baseline) return `${n} trades, no committee hearings on file to compare`;
+  return `${prox?.near ?? 0} of ${n} trades within ${NEAR_DAYS} days of a hearing${prox?.baseline != null ? ` (${pct(prox.baseline)} of all days are)` : ""}`;
 }
 
 /** Case header for a member, ticker, or district dossier: one headline, a signal tag, three stats, sources. */
@@ -304,20 +312,14 @@ export async function caseFile(db, kind, rawId) {
     const m = people.items.find((p) => p.bioguide === id);
     if (!m) return { ok: false, error: "Member is not in the current roster" };
     const place = m.chamber === "senate" || !m.district || m.district === "0" ? m.state : `${m.state}-${String(m.district).padStart(2, "0")}`;
-    const [{ tl, sig }, c] = await Promise.all([memberSignal(db, id), districtContracts(db, place)]);
-    const trades = tl?.trades || [];
+    const [{ tl, sig, trades }, c] = await Promise.all([memberSignal(db, id), districtContracts(db, place)]);
     const prox = tl?.proximity;
-    const near = prox?.near ?? 0;
     const name = `${honor(m.chamber)} ${m.name}`;
     return {
       ok: true,
       kind: "member",
       subject: "MEMBER",
-      headline: !trades.length
-        ? `${name}: no disclosed trades since ${FROM}`
-        : prox && !prox.baseline
-          ? `${name}: ${prox.trades} trades, no committee hearings on file to compare`
-          : `${name}: ${near} of ${prox?.trades ?? trades.length} trades within ${NEAR_DAYS} days of a hearing${prox?.baseline != null ? ` (${pct(prox.baseline)} of all days are)` : ""}`,
+      headline: `${name}: ${proximityPhrase(trades, prox)}`,
       sub: `${m.party}-${place} · ${m.chamber === "senate" ? "Senate" : "House"}`,
       signal: { ...sig, rule: "hearing" },
       stats: [
@@ -376,14 +378,13 @@ export async function caseFile(db, kind, rawId) {
     const rep = people.items.find((p) => p.chamber === "house" && p.state === state && (num === "AL" ? p.district === "0" || p.district === "" : Number(p.district) === Number(num)));
     const hqs = hqAll(db).items.filter((h) => h.district === code);
     const [c, repSig] = await Promise.all([districtContracts(db, code === `${state}-AL` ? state : code), rep ? memberSignal(db, rep.bioguide) : null]);
-    const trades = repSig?.tl?.trades || [];
-    const near = repSig?.tl?.proximity?.near ?? 0;
+    const trades = repSig?.trades || [];
     const sig = repSig?.sig || { level: "thin", label: "NO MEMBER", why: "No current representative on the roster." };
     return {
       ok: true,
       kind: "district",
       subject: "DISTRICT",
-      headline: `${code}: ${c.ok ? `${usd(c.sum)} in federal contract actions over 90 days` : "contract total pending"}${rep ? (trades.length ? ` · Rep. ${rep.name}: ${near} of ${trades.length} trades near a hearing` : ` · Rep. ${rep.name}: no disclosed trades`) : ""}`,
+      headline: `${code}: ${c.ok ? `${usd(c.sum)} in federal contract actions over 90 days` : "contract total pending"}${rep ? ` · Rep. ${rep.name}: ${proximityPhrase(trades, repSig?.tl?.proximity)}` : ""}`,
       sub: rep ? `Rep. ${rep.name} (${rep.party}) · signal is the representative's hearing proximity` : "Vacant or not on the roster",
       signal: { ...sig, rule: "hearing" },
       stats: [

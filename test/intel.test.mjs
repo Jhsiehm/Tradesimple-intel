@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
-import { buildLinks, centroidOf, memberAnchor, seatCode } from "../server/intel.mjs";
+import { buildLinks, centroidOf, memberAnchor, proximityPhrase, seatCode } from "../server/intel.mjs";
 import { buildAlerts } from "../server/alerts.mjs";
 
 test("bucketDays counts per kind per day and drops out-of-range or undated events", () => {
@@ -189,4 +189,11 @@ test("buildLinks joins only through real places and reports what it could not pl
   const pac = out.links.find((l) => l[1] === 2);
   assert.equal(out.places[pac[2]].label.startsWith("LMT HQ"), true, "PAC arcs start at the joined company's HQ");
   assert.equal(out.places[pac[3]].kind, "member");
+});
+
+test("proximityPhrase counts the same in-window trades as proximity() and names a missing hearing baseline", () => {
+  const trades = Array.from({ length: 32 }, (_, i) => ({ traded: "2025-02-01", id: i }));
+  assert.equal(proximityPhrase(trades, { trades: 32, near: 0, baseline: 0 }), "32 trades, no committee hearings on file to compare");
+  assert.equal(proximityPhrase(trades, { trades: 32, near: 10, baseline: 0.5 }), "10 of 32 trades within 14 days of a hearing (50% of all days are)");
+  assert.equal(proximityPhrase([], null), "no disclosed trades since 2025-01-03");
 });
