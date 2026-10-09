@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { demoFile } from "../shared/demoPath.mjs";
+import { snapshotSamples } from "../server/routes/manifest.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name, fallback) => {
@@ -130,19 +131,7 @@ async function yahooSlot(route, ms = 350) {
 const okBody = (body) => body && body.ok !== false;
 const phase = (name) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${name} · ${written.size} routes · ${(bytes / 1e6).toFixed(1)} MB`);
 
-const fixed = [
-  "/api/health", "/api/tickers", "/api/sites",
-  "/api/congress/bills", "/api/congress/roster", "/api/congress/committees", "/api/congress/calendar",
-  "/api/congress/votes?chamber=house", "/api/congress/votes?chamber=senate",
-  "/api/markets/politicians", "/api/markets/insiders", "/api/markets/whales", "/api/markets/shorts",
-  "/api/markets/positions", "/api/markets/supply", "/api/markets/board", "/api/markets/globals",
-  "/api/news", "/api/news/x", "/api/news/xpulse", "/api/strait/theaters", "/api/strait/news", "/api/strait/ais",
-  "/api/earth/imagery", "/api/earth/lanes", "/api/earth/live",
-  "/api/macro/strip", "/api/fx/board", "/api/crypto/board",
-  "/api/calendar/macro?back=0&ahead=14", "/api/calendar/macro?back=10&ahead=35",
-  "/api/calendar/earnings", "/api/calendar/lobbying", "/api/calendar/pacs", "/api/alerts?late=all",
-  "/api/congress/feed", "/api/congress/leaders"
-];
+const fixed = snapshotSamples();
 
 console.log(`snapshot from ${BASE} · members ${arg("members", "all")} · tickers ${arg("tickers", "all")} · spans ${SPANS.join(",")} · contracts ${CONTRACTS}${RESUME ? " · resume" : ""}`);
 await pool(fixed, 4, (r) => grab(r));

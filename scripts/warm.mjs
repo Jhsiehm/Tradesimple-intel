@@ -1,5 +1,7 @@
 // Warms every API cache the UI reads. Prints status and time per route, never bodies.
 // Usage: npm run warm [-- --base http://127.0.0.1:8787 --traders 50 --no-tickers]
+import { fillRoute, warmSamples } from "../server/routes/manifest.mjs";
+
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
@@ -63,69 +65,33 @@ async function main() {
     process.exit(1);
   }
 
-  // Discovery responses are reused for the per-entity phase.
-  const [politicians, tickers, committees, theaters, supply, houseVotes, senateVotes] = await Promise.all([
-    hit("/api/markets/politicians", { keep: true }),
-    hit("/api/tickers", { keep: true }),
-    hit("/api/congress/committees", { keep: true }),
-    hit("/api/strait/theaters", { keep: true }),
-    hit("/api/markets/supply", { keep: true }),
-    hit("/api/congress/votes?chamber=house", { keep: true }),
-    hit("/api/congress/votes?chamber=senate", { keep: true })
-  ]);
+  // Discovery responses are reused for the per-entity phase. Route lists come from the server's manifest.
+  const discover = warmSamples("discover");
+  const found = new Map(await Promise.all(discover.map(async (p) => [p, await hit(p, { keep: true })])));
+  const bodyOf = (id, query = "") => found.get(fillRoute(id, {}, query));
+  const politicians = bodyOf("markets.politicians");
+  const tickers = bodyOf("tickers");
+  const committees = bodyOf("congress.committees");
+  const theaters = bodyOf("strait.theaters");
+  const supply = bodyOf("markets.supply");
+  const houseVotes = bodyOf("congress.votes", "chamber=house");
+  const senateVotes = bodyOf("congress.votes", "chamber=senate");
 
   console.log("— boards");
   await pool([
-    "/api/congress/roster",
-    "/api/congress/bills",
-    "/api/congress/calendar",
-    "/api/congress/feed",
-    "/api/congress/leaders",
-    "/api/alerts?late=all",
-    "/api/markets/insiders",
-    "/api/markets/whales",
-    "/api/markets/shorts",
-    "/api/markets/positions",
-    "/api/markets/board",
-    "/api/markets/globals",
-    "/api/markets/chart?symbol=SPY&span=1d",
-    "/api/markets/events?symbol=SPY",
-    "/api/fx/board",
-    "/api/crypto/board",
-    "/api/macro/strip",
-    "/api/macro/fomc",
-    "/api/calendar/macro?back=0&ahead=14",
-    "/api/calendar/macro?back=10&ahead=35",
-    "/api/calendar/earnings",
-    "/api/calendar/lobbying",
-    "/api/calendar/pacs",
-    "/api/news",
-    "/api/news/x",
-    "/api/news/xpulse",
-    "/api/strait/news",
-    "/api/strait/ais",
-    "/api/earth/imagery",
-    "/api/earth/live",
-    "/api/earth/lanes",
-    "/api/contracts/board",
-    "/api/contracts/dod",
-    "/api/contracts/feed?sort=largest&days=30",
-    "/api/contracts/feed?sort=recent&days=30",
-    "/api/sites",
-    "/geo/states.geojson",
-    "/geo/cd119.geojson",
-    ...(theaters?.items || []).map((t) => `/api/air?theater=${enc(t.id)}`)
+    ...warmSamples("board"),
+    ...(theaters?.items || []).map((t) => fillRoute("air", {}, `theater=${enc(t.id)}`))
   ], 3);
 
   console.log("— congress detail");
   const latestVote = (chamber, list) => {
     const v = (list?.items || [])[0];
-    return v ? [`/api/congress/votes/${chamber}/${v.congress}/${v.session}/${v.roll}`] : [];
+    return v ? [fillRoute("congress.vote", { chamber, congress: v.congress, session: v.session, roll: v.roll })] : [];
   };
   await pool([
     ...latestVote("house", houseVotes),
     ...latestVote("senate", senateVotes),
-    ...(committees?.items || []).map((c) => `/api/congress/committees/${enc(c.id)}`)
+    ...(committees?.items || []).map((c) => fillRoute("congress.committee", { id: c.id }))
   ], 3);
 
   console.log(`— top ${TRADERS} traders`);
@@ -138,18 +104,18 @@ async function main() {
   }
   const top = [...counts.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, TRADERS);
   await pool(top.flatMap(([id, seat]) => [
-    `/api/congress/member/${id}?chamber=${seat.chamber}`,
-    `/api/congress/member/${id}/trades`,
-    `/api/congress/member/${id}/timeline`
+    fillRoute("congress.member", { id }, `chamber=${seat.chamber}`),
+    fillRoute("congress.memberTrades", { id }),
+    fillRoute("congress.memberTimeline", { id })
   ]), 3);
 
   console.log("— supply chains");
-  await pool((supply?.items || []).map((s) => `/api/markets/supply/${enc(s)}`), 3);
+  await pool((supply?.items || []).map((s) => fillRoute("markets.supplyChain", { symbol: s })), 3);
 
   if (TICKERS) {
     const symbols = (tickers?.items || []).map((t) => t.symbol);
     console.log(`— ${symbols.length} ticker dossiers + positions`);
-    await pool(symbols.flatMap((s) => [`/api/tickers/${enc(s)}`, `/api/markets/positions/${enc(s)}`]), 2);
+    await pool(symbols.flatMap((s) => [fillRoute("ticker", { symbol: s }), fillRoute("markets.position", { symbol: s })]), 2);
   }
 
   const total = results.length;
