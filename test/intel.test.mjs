@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, missedIn, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
-import { buildLinks, centroidOf, memberAnchor, proximityPhrase, seatCode } from "../server/intel.mjs";
+import { buildLinks, centroidOf, contractAmount, contractTotal, form4Breakdown, memberAnchor, oldestAsOf, proximityPhrase, seatCode } from "../server/intel.mjs";
 import { buildAlerts, capAlerts } from "../server/alerts.mjs";
 
 test("bucketDays counts per kind per day and drops out-of-range or undated events", () => {
@@ -230,4 +230,16 @@ test("missedIn counts unplaced links inside the window for the kinds that are on
   assert.equal(missedIn(misses, 13, 20, null), 0);
   assert.equal(missedIn(undefined, 0, 9, null), 0);
   assert.equal(missedIn([[5, 0, 40], [5, 1, 2], [9, 0]], 0, 9, new Set(["trade"])), 41, "third element is a count");
+});
+
+test("case-file contract totals say when only the top page was summed; Form 4 counts include other; as-of is the stalest feed", () => {
+  const page = Array.from({ length: 100 }, () => ({ amount: 2138000 }));
+  const capped = contractTotal({ ok: true, items: page, asOf: "2026-10-08T22:10:00Z" });
+  assert.equal(contractAmount(capped), "≥ $213.8M");
+  assert.equal(capped.capped, true);
+  assert.equal(contractAmount(contractTotal({ ok: true, items: [{ amount: 5e6 }] })), "$5.0M");
+  assert.equal(form4Breakdown([{ side: "sell" }, { side: "sell" }, { side: "tax" }, { side: "award" }]), "0 buys · 2 sells · 2 other");
+  assert.equal(form4Breakdown([{ side: "buy" }]), "1 buy · 0 sells · 0 other");
+  assert.equal(oldestAsOf("2026-10-09T05:00:00Z", "", undefined, "2026-10-01T01:00:00Z"), "2026-10-01T01:00:00Z");
+  assert.equal(oldestAsOf("", null), "");
 });

@@ -283,15 +283,40 @@ const usd = (v) => {
 };
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
+/** The contract feed returns at most this many actions, largest first; a full page means the sum is a floor. */
+const CONTRACT_PAGE = 100;
+
 async function districtContracts(db, place) {
   const res = await within(contractFeed(db, { place, days: 90, sort: "largest" }), CONTRACT_WAIT, { ok: false, items: [] });
-  const sum = (res.items || []).reduce((s, r) => s + (r.amount || 0), 0);
-  return { sum, n: (res.items || []).length, slow: Boolean(res.slow), ok: Boolean(res.ok), asOf: res.asOf || "", capped: (res.items || []).length >= 100 };
+  return contractTotal(res);
+}
+
+export function contractTotal(res) {
+  const items = res.items || [];
+  const sum = items.reduce((s, r) => s + (r.amount || 0), 0);
+  return { sum, n: items.length, slow: Boolean(res.slow), ok: Boolean(res.ok), asOf: res.asOf || "", capped: items.length >= CONTRACT_PAGE };
+}
+
+/** "$41.2M", or "≥ $213.8M" when only the largest page of actions was summed. */
+export function contractAmount(c) {
+  return `${c.capped ? "≥ " : ""}${usd(c.sum)}`;
 }
 
 function contractStat(c, label) {
   if (!c.ok) return { label, value: "—", note: c.slow ? "USAspending still answering; reopen in a minute." : "USAspending unavailable." };
-  return { label, value: usd(c.sum), note: `${c.n}${c.capped ? " largest" : ""} actions · USAspending` };
+  return { label, value: contractAmount(c), note: `${c.capped ? `top ${c.n}` : c.n} actions · USAspending` };
+}
+
+/** "0 buys · 8 sells · 7 other" over Form 4 lines; other is grants, exercises, tax withholding, gifts. */
+export function form4Breakdown(lines) {
+  const buys = lines.filter((r) => r.side === "buy").length;
+  const sells = lines.filter((r) => r.side === "sell").length;
+  return `${buys} buy${buys === 1 ? "" : "s"} · ${sells} sell${sells === 1 ? "" : "s"} · ${lines.length - buys - sells} other`;
+}
+
+/** Earliest of the given ISO times, ignoring blanks: a case file is only as fresh as its stalest feed. */
+export function oldestAsOf(...times) {
+  return times.filter(Boolean).map(String).sort()[0] || "";
 }
 
 async function memberSignal(db, bioguide) {
@@ -334,7 +359,7 @@ export async function caseFile(db, kind, rawId) {
         { label: "Hearing proximity", value: prox?.dayShare == null || !prox.baseline ? "—" : `${pct(prox.dayShare)} / ${pct(prox.baseline)}`, note: `trade days ≤${NEAR_DAYS} d of a hearing / all days` },
         contractStat(c, `Contracts in ${place} · 90d`)
       ],
-      asOf: tl?.asOf || new Date().toISOString(),
+      asOf: oldestAsOf(tl?.asOf, c.asOf) || new Date().toISOString(),
       sources: ["House Clerk PTR / Senate eFD", "Congress.gov committee meetings", "USAspending place of performance"],
       latency: "Trades filed up to 45 days after the trade; hearing index refreshed every 6 h; DoD contract actions reach USAspending about 90 days late."
     };
@@ -359,7 +384,7 @@ export async function caseFile(db, kind, rawId) {
       if (!(t.contractParents || []).length) contract = { label: "Federal contracts", value: "—", note: "No USAspending parent in data/tickers.json" };
       else {
         const res = await within(contractFeed(db, { symbol: t.symbol, days: 180, sort: "largest" }), CONTRACT_WAIT, { ok: false, items: [] });
-        contract = res.ok ? { label: "Contracts · 180d", value: usd((res.items || []).reduce((s, r) => s + r.amount, 0)), note: `${res.items.length} actions · USAspending` } : { label: "Federal contracts", value: "—", note: res.slow ? "USAspending still answering; reopen in a minute." : "USAspending unavailable." };
+        contract = contractStat(contractTotal(res), "Contracts · 180d");
       }
     }
     return {
@@ -371,10 +396,10 @@ export async function caseFile(db, kind, rawId) {
       signal: { level: sig.level, label: sig.label, why: sig.why, rule: "activity" },
       stats: [
         { label: "Congress trades · 12 mo", value: String(trades.length), note: `${new Set(trades.map((r) => r.bioguide || r.person)).size} members` },
-        { label: "Form 4 · 90d", value: String(f4.length), note: `${f4.filter((r) => r.side === "buy").length} buys · ${f4.filter((r) => r.side === "sell").length} sells` },
+        { label: "Form 4 lines · 90d", value: String(f4.length), note: form4Breakdown(f4) },
         contract
       ],
-      asOf: tradeRes.asOf || new Date().toISOString(),
+      asOf: oldestAsOf(tradeRes.asOf, insiderRes.asOf) || new Date().toISOString(),
       sources: ["House Clerk PTR / Senate eFD", "SEC EDGAR Form 4", "USAspending"],
       latency: "Congress trades filed up to 45 days late; Form 4 due 2 business days after the trade; DoD contract actions reach USAspending about 90 days late."
     };
@@ -385,7 +410,9 @@ export async function caseFile(db, kind, rawId) {
     const [state, num] = code.split("-");
     const people = await roster(db).catch(() => ({ items: [] }));
     const rep = people.items.find((p) => p.chamber === "house" && p.state === state && (num === "AL" ? p.district === "0" || p.district === "" : Number(p.district) === Number(num)));
-    const hqs = hqAll(db).items.filter((h) => h.district === code);
+    const hqIndex = hqAll(db);
+    const hqAsOf = hqIndex.asOf || "";
+    const hqs = hqIndex.items.filter((h) => h.district === code);
     const [c, repSig] = await Promise.all([districtContracts(db, code === `${state}-AL` ? state : code), rep ? memberSignal(db, rep.bioguide) : null]);
     const trades = repSig?.trades || [];
     const sig = repSig?.sig || { level: "thin", label: "NO MEMBER", why: "No current representative on the roster." };
@@ -393,7 +420,7 @@ export async function caseFile(db, kind, rawId) {
       ok: true,
       kind: "district",
       subject: "DISTRICT",
-      headline: `${code}: ${c.ok ? `${usd(c.sum)} in federal contract actions over 90 days` : "contract total pending"}${rep ? ` · Rep. ${rep.name}: ${proximityPhrase(trades, repSig?.tl?.proximity)}` : ""}`,
+      headline: `${code}: ${c.ok ? `${contractAmount(c)} in federal contract actions over 90 days${c.capped ? ` (top ${c.n} actions)` : ""}` : "contract total pending"}${rep ? ` · Rep. ${rep.name}: ${proximityPhrase(trades, repSig?.tl?.proximity)}` : ""}`,
       sub: rep ? `Rep. ${rep.name} (${rep.party}) · signal is the representative's hearing proximity` : "Vacant or not on the roster",
       signal: { ...sig, rule: "hearing" },
       stats: [
@@ -401,7 +428,7 @@ export async function caseFile(db, kind, rawId) {
         { label: "Index HQs here", value: String(hqs.length), note: hqs.length ? hqs.slice(0, 4).map((h) => h.symbol).join(", ") : "SEC business address" },
         { label: `Rep. trades ${year}`, value: rep ? String(trades.filter((t) => t.traded.startsWith(year)).length) : "—", note: rep ? `${trades.length} since Jan 2025` : "" }
       ],
-      asOf: new Date().toISOString(),
+      asOf: oldestAsOf(c.asOf, hqAsOf, repSig?.tl?.asOf) || new Date().toISOString(),
       sources: ["USAspending place of performance", "SEC EDGAR business address", "House Clerk PTR"],
       latency: "DoD contract actions reach USAspending about 90 days late; HQ is the address last filed with the SEC; trades filed up to 45 days late."
     };
