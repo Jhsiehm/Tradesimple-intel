@@ -1,7 +1,7 @@
 /**
  * Cross-site request guard. The API listens on 127.0.0.1, but any page the user has open can still POST to it
  * (a form posts text/plain without a CORS preflight), which would run backtests or spend model credits.
- * State-changing methods must come from an allowed origin (the Vite app, PUBLIC_URL, INTEL_ALLOWED_ORIGINS) or,
+ * State-changing methods must come from an allowed origin (the Vite app, INTEL_ALLOWED_ORIGINS) or,
  * with no Origin or Referer at all, from a loopback non-browser client (curl, scripts/warm.mjs); bodies must be
  * application/json. No CORS headers are sent anywhere, so other origins cannot read responses either.
  */
@@ -25,7 +25,7 @@ export function allowedOrigins(env = process.env) {
     out.add(`http://127.0.0.1:${port}`);
     out.add(`http://localhost:${port}`);
   }
-  for (const raw of [env.PUBLIC_URL, ...String(env.INTEL_ALLOWED_ORIGINS || "").split(",")]) {
+  for (const raw of String(env.INTEL_ALLOWED_ORIGINS || "").split(",")) {
     const o = raw && raw.trim() ? originOf(raw) : "";
     if (o && o !== "null") out.add(o);
   }

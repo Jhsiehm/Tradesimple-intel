@@ -4,11 +4,12 @@ import http from "node:http";
 import { allowedOrigins, crossSiteRefusal } from "../server/lib/guard.mjs";
 import { createRouter } from "../server/router.mjs";
 
-const ORIGINS = allowedOrigins({ PUBLIC_URL: "https://demo.example/intel/" });
+const ORIGINS = allowedOrigins({ INTEL_ALLOWED_ORIGINS: "https://demo.example/intel/" });
 const req = (method, headers = {}, remoteAddress = "127.0.0.1") => ({ method, headers, socket: { remoteAddress } });
 const JSON_TYPE = { "content-type": "application/json" };
 
-test("allowed origins: the Vite app on both loopback names, PUBLIC_URL, extra origins", () => {
+test("allowed origins: the Vite app on both loopback names and extra origins, never PUBLIC_URL", () => {
+  assert.ok(!allowedOrigins({ PUBLIC_URL: "https://demo.example/intel/" }).has("https://demo.example"));
   assert.deepEqual([...ORIGINS].sort(), ["http://127.0.0.1:5173", "http://localhost:5173", "https://demo.example"]);
   const extra = allowedOrigins({ VITE_PORT: "5174", INTEL_ALLOWED_ORIGINS: "http://10.0.0.5:5173, nope" });
   assert.ok(extra.has("http://127.0.0.1:5174") && extra.has("http://10.0.0.5:5173"));
