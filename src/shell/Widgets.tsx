@@ -1,5 +1,9 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { api, when } from "../lib/api";
+import { fitCard, rememberSpot, useStageBox, type Box, type Rect } from "./cardBounds";
+import { startDrag } from "./useDrag";
+import { usePhone } from "./usePhone";
+import "./widgets.css";
 import type { Chamber, DrawerModel } from "../types";
 import { Drawer } from "./Drawer";
 import { LastBuysPanel, WatchPanel, WirePanel, XPanel, type PanelKind } from "./Panels";
@@ -23,6 +27,7 @@ export type WidgetCard = {
   kind?: PanelKind;
   symbol?: string;
   min?: boolean;
+  z?: number;
 };
 
 type MemberView = {
@@ -83,10 +88,37 @@ export function WidgetLayer({
   onClose: (id: string) => void;
   onFollow: (action: string) => void;
 }) {
+  const box = useStageBox();
+  const phone = usePhone();
+  const top = Math.max(0, ...cards.map((c) => c.z || 0));
+  const raise = (card: WidgetCard) => { if ((card.z || 0) < top) onChange(card.id, { z: top + 1 }); };
+
+  if (phone) {
+    const open = cards.filter((c) => !c.min).sort((a, b) => (b.z || 0) - (a.z || 0))[0];
+    return (
+      <div className="widgets phone">
+        {open ? <div className="widget-scrim" onClick={() => onChange(open.id, { min: true })} /> : null}
+        <div className="widget-dock">
+          {cards.length > (open ? 1 : 0) ? (
+            <div className="widget-tray" role="toolbar" aria-label="Pinned cards">
+              {cards.filter((c) => c !== open).map((c) => (
+                <span key={c.id} className="widget-chip">
+                  <button className="widget-chip-open" aria-label={`Open ${c.title}`} onClick={() => onChange(c.id, { min: false })}>{c.title}</button>
+                  <button className="widget-btn" aria-label={`Close ${c.title}`} onClick={() => onClose(c.id)}>×</button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {open ? <Widget key={open.id} card={open} box={box} sheet onChange={onChange} onClose={onClose} onFollow={onFollow} onRaise={() => raise(open)} /> : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="widgets">
       {cards.map((card) => (
-        <Widget key={card.id} card={card} onChange={onChange} onClose={onClose} onFollow={onFollow} />
+        <Widget key={card.id} card={card} box={box} onChange={onChange} onClose={onClose} onFollow={onFollow} onRaise={() => raise(card)} />
       ))}
     </div>
   );
@@ -94,66 +126,92 @@ export function WidgetLayer({
 
 function Widget({
   card,
+  box,
+  sheet,
   onChange,
   onClose,
-  onFollow
+  onFollow,
+  onRaise
 }: {
   card: WidgetCard;
+  box: Box;
+  sheet?: boolean;
   onChange: (id: string, next: Partial<WidgetCard>) => void;
   onClose: (id: string) => void;
   onFollow: (action: string) => void;
+  onRaise: () => void;
 }) {
-  function drag(event: ReactPointerEvent) {
-    if ((event.target as HTMLElement).closest("button, a, input")) return;
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const origin = { x: card.x, y: card.y };
-    const move = (ev: PointerEvent) => {
-      onChange(card.id, clampCard({ ...card, x: origin.x + ev.clientX - startX, y: origin.y + ev.clientY - startY }));
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+  const [live, setLive] = useState<Rect | null>(null);
+  const r = live || fitCard(card, box, card.min);
+  const toggle = () => onChange(card.id, { min: !card.min });
+
+  function move(event: ReactPointerEvent) {
+    if (sheet || (event.target as HTMLElement).closest("button, a, input, select")) return;
+    const from = fitCard(card, box, card.min);
+    let last = from;
+    startDrag(event, (dx, dy) => {
+      last = fitCard({ ...from, x: from.x + dx, y: from.y + dy }, box, card.min);
+      setLive(last);
+    }, (moved) => {
+      setLive(null);
+      if (moved) {
+        onChange(card.id, { x: last.x, y: last.y });
+        rememberSpot(card.id, last);
+      } else if (card.min) toggle();
+    });
   }
 
   function resize(event: ReactPointerEvent, edge: "se" | "e" | "s" | "w" = "se") {
     event.stopPropagation();
     event.preventDefault();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const origin = { x: card.x, w: card.w, h: card.h };
-    const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
+    const from = fitCard(card, box);
+    let last = from;
+    startDrag(event, (dx, dy) => {
       if (edge === "w") {
-        const w = Math.max(280, origin.w - dx);
-        onChange(card.id, clampCard({ ...card, x: origin.x + origin.w - w, w }));
-        return;
+        const w = Math.max(260, Math.min(from.w - dx, from.x + from.w - box.left));
+        last = fitCard({ ...from, x: from.x + from.w - w, w }, box);
+      } else {
+        last = fitCard({
+          ...from,
+          w: edge === "s" ? from.w : Math.min(from.w + dx, box.right - from.x),
+          h: edge === "e" ? from.h : Math.min(from.h + dy, box.bottom - from.y)
+        }, box);
       }
-      onChange(card.id, clampCard({ ...card, w: edge === "s" ? origin.w : origin.w + dx, h: edge === "e" ? origin.h : origin.h + dy }));
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+      setLive(last);
+    }, (moved) => {
+      setLive(null);
+      if (!moved) return;
+      onChange(card.id, last);
+      rememberSpot(card.id, last);
+    });
   }
 
   return (
     <article
-      className={`widget${card.pinned ? " pinned" : ""}${card.min ? " min" : ""}`}
-      style={{ left: card.x, top: card.y, width: card.w, height: card.min ? undefined : card.h }}
+      className={`widget${card.pinned ? " pinned" : ""}${card.min ? " min" : ""}${sheet ? " sheet" : ""}${live ? " moving" : ""}`}
+      style={sheet ? undefined : { left: r.x, top: r.y, width: card.min ? undefined : r.w, height: card.min ? undefined : r.h, zIndex: (card.min ? 1000 : 0) + (card.z || 0) }}
+      tabIndex={-1}
+      aria-label={card.title}
+      onPointerDownCapture={onRaise}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        e.stopPropagation();
+        onClose(card.id);
+      }}
     >
-      <header className="widget-bar" onPointerDown={drag} onDoubleClick={() => onChange(card.id, { min: !card.min })}>
-        <span>{card.pinned ? "PINNED" : "CARD"}</span>
+      <header
+        className="widget-bar"
+        onPointerDown={move}
+        onDoubleClick={card.min || sheet ? undefined : toggle}
+        title={sheet ? undefined : card.min ? "Click to open · drag to move" : "Drag to move · double-click to collapse"}
+      >
+        {sheet ? null : <span className="widget-grip" aria-hidden="true">⠿</span>}
         <strong>{card.title}</strong>
-        <button className="ghost" title={card.min ? "Expand" : "Collapse to title bar"} onClick={() => onChange(card.id, { min: !card.min })}>{card.min ? "▢" : "–"}</button>
-        <button className="ghost" onClick={() => onChange(card.id, { pinned: !card.pinned })}>{card.pinned ? "Unpin" : "Pin"}</button>
-        <button className="ghost" onClick={() => onClose(card.id)}>Close</button>
+        <button className="widget-btn" aria-label={card.min ? `Expand ${card.title}` : `Collapse ${card.title}`} title={card.min ? "Expand" : "Collapse to a chip"} onClick={toggle}>{card.min ? "▢" : "–"}</button>
+        {card.min || sheet ? null : (
+          <button className="widget-btn pin" aria-pressed={card.pinned} aria-label={card.pinned ? "Unpin: drop this card when the view changes" : "Pin: keep this card across views"} title={card.pinned ? "Pinned: kept across views and reloads" : "Not pinned: closes when the view changes"} onClick={() => onChange(card.id, { pinned: !card.pinned })}>{card.pinned ? "Pinned" : "Pin"}</button>
+        )}
+        <button className="widget-btn close" aria-label={`Close ${card.title}`} title="Close (Esc)" onClick={() => onClose(card.id)}>×</button>
       </header>
       {card.min ? null : (
         <>
@@ -167,10 +225,14 @@ function Widget({
             {card.kind === "globals" ? <GlobalBoard compact onOpen={(s) => onFollow(`inst:${s}`)} /> : null}
             {card.kind === "supply" ? <SupplyBoard compact symbol={card.symbol || "AAPL"} onSymbol={(s) => onChange(card.id, { symbol: s, title: `Supply chain · ${s}` })} onOpen={onFollow} /> : null}
           </div>
-          <span className="widget-edge e" onPointerDown={(e) => resize(e, "e")} />
-          <span className="widget-edge w" onPointerDown={(e) => resize(e, "w")} />
-          <span className="widget-edge s" onPointerDown={(e) => resize(e, "s")} />
-          <button className="widget-resize" aria-label="Resize card" onPointerDown={(e) => resize(e)} />
+          {sheet ? null : (
+            <>
+              <span className="widget-edge e" onPointerDown={(e) => resize(e, "e")} />
+              <span className="widget-edge w" onPointerDown={(e) => resize(e, "w")} />
+              <span className="widget-edge s" onPointerDown={(e) => resize(e, "s")} />
+              <button className="widget-resize" aria-label={`Resize ${card.title}`} title="Drag to resize" onPointerDown={(e) => resize(e)} />
+            </>
+          )}
         </>
       )}
     </article>
@@ -306,18 +368,6 @@ function tradeCount(trades: Trade[] | null) {
   if (!trades) return "…";
   const recent = trades.filter((t) => t.traded >= "2025-01-03").length;
   return recent === trades.length ? String(recent) : `${recent} since Jan 2025 · ${trades.length} on file`;
-}
-
-export function clampCard(card: WidgetCard): Partial<WidgetCard> {
-  const margin = 12;
-  const top = 64;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const w = Math.min(Math.max(280, card.w), Math.max(280, vw - margin * 2));
-  const h = Math.min(Math.max(200, card.h), Math.max(200, vh - top - margin));
-  const x = Math.min(Math.max(margin, card.x), Math.max(margin, vw - w - margin));
-  const y = Math.min(Math.max(top, card.y), Math.max(top, vh - h - margin));
-  return { x, y, w, h };
 }
 
 function usdShort(v: number) {

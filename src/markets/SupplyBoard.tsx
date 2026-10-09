@@ -48,6 +48,7 @@ export function SupplyBoard({ symbol, onSymbol, onOpen, compact }: { symbol: str
   const [list, setList] = useState<string[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState(false);
 
   useEffect(() => {
     api<{ items: string[] }>("/api/markets/supply").then((r) => setList(r.items)).catch(() => null);
@@ -142,8 +143,18 @@ export function SupplyBoard({ symbol, onSymbol, onOpen, compact }: { symbol: str
             </select>
           </label>
         </div>
-        <p><em>SOURCE</em> {chain?.source || "Curated filings"} · <em>AS OF</em> {when(chain?.asOf)} UTC</p>
-        <p><em>NOTE</em> {chain?.latency || "Edges are curated from filings; prices are daily closes."}</p>
+        {compact ? (
+          <p className="sc-src1">
+            <span title={chain?.source}><em>AS OF</em> {when(chain?.asOf)} UTC · <em>SOURCE</em> {chain?.source || "Curated filings"}</span>
+            <button className="sc-info" aria-expanded={info} aria-label="Source and method notes" title="Source and method notes" onClick={() => setInfo((v) => !v)}>i</button>
+          </p>
+        ) : null}
+        {!compact || info ? (
+          <>
+            <p><em>SOURCE</em> {chain?.source || "Curated filings"} · <em>AS OF</em> {when(chain?.asOf)} UTC</p>
+            <p><em>NOTE</em> {chain?.latency || "Edges are curated from filings; prices are daily closes."}</p>
+          </>
+        ) : null}
       </header>
       {chain && !chain.ok ? <p className="tape-empty">{chain.error} {chain.available ? `Curated: ${chain.available.join(", ")}.` : ""}</p> : null}
       {chain?.ok ? (

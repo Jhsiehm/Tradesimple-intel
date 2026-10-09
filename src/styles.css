@@ -740,54 +740,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .drill:disabled strong { color: var(--dim); }
 .drill:not(:disabled):hover strong { text-decoration: underline; }
 .drill strong { color: var(--amber); font-weight: 500; }
-.widgets {
-  position: fixed;
-  inset: 0;
-  z-index: 9;
-  pointer-events: none;
-}
-.widget {
-  pointer-events: auto;
-  position: absolute;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 12px;
-  background: rgba(11, 15, 19, 0.97);
-  border: 1px solid var(--line);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-  min-width: 280px;
-}
-.widget.pinned { border-color: rgba(214, 168, 74, 0.55); }
-.widget-bar {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  cursor: grab;
-  color: var(--faint);
-  letter-spacing: 0.12em;
-  font-size: 10px;
-}
-.widget-bar strong {
-  color: var(--ink);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.widget-body { min-height: 0; overflow: auto; padding: 12px; }
-.widget-resize {
-  justify-self: end;
-  width: 14px;
-  height: 14px;
-  margin: 0 4px 2px 0;
-  border-right: 1px solid var(--amber);
-  border-bottom: 1px solid var(--amber);
-  cursor: nwse-resize;
-}
 .member-top { display: grid; grid-template-columns: 88px 1fr; gap: 12px; }
 .member-photo {
   width: 88px;
@@ -1137,15 +1089,6 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 .app.phone .board.timeline { padding: 10px; }
 .app.phone .tl-mark { margin-left: 0; }
 .app.phone .status { display: none; }
-.app.phone .widget:not(:last-child) { display: none; }
-.app.phone .widget {
-  inset: 0 !important; left: 0 !important; top: 0 !important;
-  width: 100% !important; height: 100% !important; min-width: 0;
-  border: none; box-shadow: none;
-}
-.app.phone .widget-edge, .app.phone .widget-resize { display: none; }
-.app.phone .widget-bar { cursor: default; }
-.app.phone .widget.min { top: auto !important; height: auto !important; border-top: 1px solid var(--line); }
 .app.phone .nav button,
 .app.phone .seg button,
 .app.phone .scope button,
@@ -1523,14 +1466,6 @@ body.dragging .map-body, body.dragging .widgets { pointer-events: none; }
 .app.phone .alerts-filter button { padding: 5px 2px; letter-spacing: 0.04em; white-space: nowrap; }
 .app.phone .alerts-actions button, .app.phone .alerts-actions a { padding: 5px 8px; }
 
-/* cards */
-.widget.min { grid-template-rows: auto; height: auto; }
-.widget-edge { position: absolute; z-index: 2; }
-.widget-edge.e { top: 30px; bottom: 12px; right: -4px; width: 8px; cursor: ew-resize; }
-.widget-edge.w { top: 30px; bottom: 12px; left: -4px; width: 8px; cursor: ew-resize; }
-.widget-edge.s { left: 12px; right: 18px; bottom: -4px; height: 8px; cursor: ns-resize; }
-.widget-edge:hover { background: rgba(232, 163, 61, 0.25); }
-.widget-body .board { height: 100%; }
 .panel { display: grid; gap: 8px; align-content: start; }
 .panel-tabs { justify-self: start; flex-wrap: wrap; }
 .panel-src, .drawer-src { margin: 8px 0 0; color: var(--faint); font-size: 10px; line-height: 1.5; letter-spacing: 0.02em; }
