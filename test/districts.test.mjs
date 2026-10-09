@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { STATES, districtFromGeoid, districtGeoid, districtName, parseDistrict } from "../shared/districts.mjs";
+import { STATES, districtFromGeoid, districtGeoid, districtName, memberPlace, parseDistrict } from "../shared/districts.mjs";
 
 test("parseDistrict reads the usual ways people type a seat", () => {
   for (const text of ["CA-11", "CA 11", "ca11", "ca-11", "California 11", "california-11", "California's 11th", "CA 11th district", "CA-CD 11"]) {
@@ -51,4 +51,14 @@ test("districtName says at-large or delegate", () => {
   assert.equal(districtName("CA-11"), "California · district 11");
   assert.equal(districtName("AK-AL"), "Alaska · at-large");
   assert.equal(districtName("DC-AL"), "District of Columbia · delegate");
+});
+
+test("memberPlace scopes House members to their seat and everyone else to the state", () => {
+  assert.equal(memberPlace({ chamber: "house", state: "NJ", district: "5" }), "NJ-05");
+  assert.equal(memberPlace({ chamber: "house", state: "CA", district: 11 }), "CA-11");
+  assert.equal(memberPlace({ chamber: "house", state: "AK", district: "0" }), "AK");
+  assert.equal(memberPlace({ chamber: "house", state: "DC", district: "" }), "DC");
+  assert.equal(memberPlace({ chamber: "house", state: "WY", district: null }), "WY");
+  assert.equal(memberPlace({ chamber: "senate", state: "TX", district: "" }), "TX");
+  assert.equal(memberPlace({ chamber: "house", state: "CA", district: "99" }), "CA", "a seat that does not exist falls back to the state");
 });

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fetchJson, makeGate } from "./lib/http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
-import { FIPS_TO_POSTAL } from "./geo.mjs";
+import { STATES, districtFromGeoid } from "../shared/districts.mjs";
 import { DAY } from "./lib/time.mjs";
 import { APP_UA } from "./lib/ua.mjs";
 import { secJson } from "./feeds/sec.mjs";
@@ -17,7 +17,7 @@ export const HQ_LATENCY = "Address as last filed with the SEC; refreshed every 3
 /** SEC asks for at most 10 requests/s; Nominatim for 1/s. */
 const censusGate = makeGate(2, 200);
 const osmGate = makeGate(1, 1100);
-const US_POSTAL = new Set(Object.values(FIPS_TO_POSTAL));
+const US_POSTAL = new Set(Object.keys(STATES));
 
 const WORDS = { ONE: "1", TWO: "2", THREE: "3", FOUR: "4", FIVE: "5", SIX: "6", SEVEN: "7", EIGHT: "8", NINE: "9", TEN: "10", ELEVEN: "11", TWELVE: "12", FIFTEEN: "15", TWENTY: "20", FIFTY: "50", HUNDRED: "100" };
 
@@ -101,13 +101,8 @@ export function districtNear(lon, lat, list = districtShapes()) {
   return { geoid: null, nudged: false };
 }
 
-/** "0617" → "CA-17"; at-large and delegate seats → "AK-AL". */
-export function districtCode(geoid) {
-  const postal = FIPS_TO_POSTAL[String(geoid).slice(0, 2)];
-  const num = String(geoid).slice(2);
-  if (!postal || !/^\d\d$/.test(num)) return null;
-  return `${postal}-${num === "00" || num === "98" ? "AL" : num}`;
-}
+/** "0617" → "CA-17"; at-large and delegate seats → "AK-AL" (shared/districts.mjs). */
+export const districtCode = districtFromGeoid;
 
 /** The ACS2025 vintage carries 119th Congress lines (layer 54); "Current" has already moved to the 120th. */
 const CENSUS = { benchmark: "Public_AR_Current", vintage: "ACS2025_Current", layers: "54", format: "json" };

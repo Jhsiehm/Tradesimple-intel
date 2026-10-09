@@ -4,6 +4,7 @@ import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs
 import { roster } from "./roster.mjs";
 import { contractsFor } from "./corporate.mjs";
 import { norm } from "../shared/names.mjs";
+import { STATES, memberPlace, parseDistrict } from "../shared/districts.mjs";
 import { HOUR, DAY } from "./lib/time.mjs";
 import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
@@ -31,13 +32,14 @@ export function keyed(items) {
   });
 }
 
-/** "TX-12" → USAspending place-of-performance filter. At-large seats use the whole state. */
+/** "TX-12" or "TX" → USAspending place-of-performance filter. At-large seats use the whole state. */
 function placeFilter(code) {
-  const m = /^([A-Z]{2})(?:-(\d{1,2}|AL))?$/.exec(String(code || "").toUpperCase());
-  if (!m) return null;
-  const loc = { country: "USA", state: m[1] };
-  if (m[2] && m[2] !== "AL" && m[2] !== "00") loc.district_current = m[2].padStart(2, "0");
-  return loc;
+  const raw = String(code || "").toUpperCase();
+  if (STATES[raw]) return { country: "USA", state: raw };
+  const seat = parseDistrict(raw);
+  if (!seat) return null;
+  const [state, num] = seat.split("-");
+  return num === "AL" ? { country: "USA", state } : { country: "USA", state, district_current: num };
 }
 
 /**
@@ -55,7 +57,7 @@ export async function contractFeed(db, params) {
     const people = await roster(db).catch(() => ({ items: [] }));
     const m = people.items.find((p) => p.bioguide === id);
     if (!m) return { ok: false, error: "Member is not in the current roster", items: [] };
-    const code = m.chamber === "senate" || !m.district || m.district === "0" ? m.state : `${m.state}-${String(m.district).padStart(2, "0")}`;
+    const code = memberPlace(m);
     scope.member = { bioguide: id, name: m.name, chamber: m.chamber, party: m.party };
     params = { ...params, place: code };
   }

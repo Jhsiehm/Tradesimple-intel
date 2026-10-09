@@ -6,8 +6,9 @@ import { contractFeed } from "./contracts.mjs";
 import { contractsFor, pacData } from "./corporate.mjs";
 import { indexStatus, indexedMeetings, indexedVotes, laneOf, memberTimeline } from "./timeline.mjs";
 import { memberCommittees, roster } from "./roster.mjs";
-import { HQ_SOURCE, districtCode, hqAll } from "./hq.mjs";
+import { HQ_SOURCE, hqAll } from "./hq.mjs";
 import { STATE_NAME_TO_POSTAL } from "./geo.mjs";
+import { districtFromGeoid, memberPlace, parseDistrict } from "../shared/districts.mjs";
 import { tickerBySymbol } from "./lib/db.mjs";
 import { ARC_KINDS, NEAR_DAYS, activitySignal, bucketDays, dayNum, severity } from "../shared/intel.mjs";
 import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
@@ -44,7 +45,7 @@ function places() {
   const districts = new Map();
   for (const f of read("cd119.geojson").features) {
     if (f.properties?.CD119 === "ZZ") continue;
-    const code = districtCode(String(f.properties.GEOID));
+    const code = districtFromGeoid(String(f.properties.GEOID));
     const at = code && centroidOf(f.geometry);
     if (at) districts.set(code, at);
   }
@@ -59,11 +60,9 @@ function places() {
   return geo;
 }
 
-/** "NJ-5" → "NJ-05"; at-large and delegate seats → "AK-AL". */
+/** "NJ-5" → "NJ-05"; at-large and delegate seats → "AK-AL"; "" when the seat does not exist (shared/districts.mjs). */
 export function seatCode(district) {
-  const m = /^([A-Z]{2})-(\d{1,2}|AL)$/.exec(String(district || "").toUpperCase());
-  if (!m) return "";
-  return m[2] === "AL" || Number(m[2]) === 0 ? `${m[1]}-AL` : `${m[1]}-${m[2].padStart(2, "0")}`;
+  return parseDistrict(district) || "";
 }
 
 /** Where a member's arcs start: the House district centroid, or the state centroid for senators and delegates. */
@@ -343,7 +342,7 @@ export async function caseFile(db, kind, rawId) {
     const people = await roster(db).catch(() => ({ items: [] }));
     const m = people.items.find((p) => p.bioguide === id);
     if (!m) return { ok: false, error: "Member is not in the current roster" };
-    const place = m.chamber === "senate" || !m.district || m.district === "0" ? m.state : `${m.state}-${String(m.district).padStart(2, "0")}`;
+    const place = memberPlace(m);
     const [{ tl, sig, trades }, c] = await Promise.all([memberSignal(db, id), districtContracts(db, place)]);
     const prox = tl?.proximity;
     const name = `${honor(m.chamber)} ${m.name}`;

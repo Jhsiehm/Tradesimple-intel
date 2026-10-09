@@ -96,6 +96,17 @@ export function parseDistrict(text) {
   return postal && !STATES[postal].seats ? `${postal}-AL` : null;
 }
 
+/**
+ * Where a member's place-based data is scoped: their House seat ("NJ-05"), or the state postal for senators,
+ * at-large and delegate seats, and seats that do not parse (the whole state is the district there).
+ */
+export function memberPlace({ chamber, state, district }) {
+  const postal = String(state || "").toUpperCase();
+  if (chamber === "senate") return postal;
+  const seat = parseDistrict(`${postal}-${String(district ?? "").trim() || "AL"}`);
+  return seat && !seat.endsWith("-AL") ? seat : postal;
+}
+
 /** "CA-11" → "California · district 11"; "AK-AL" → "Alaska · at-large"; "DC-AL" → "District of Columbia · delegate". */
 export function districtName(code) {
   const [postal, num] = String(code || "").split("-");
