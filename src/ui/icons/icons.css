@@ -19,6 +19,11 @@
 .cmd-list li[aria-selected="true"] code .ic { color: var(--amber); }
 .cmd-input b .ic { margin-right: 4px; }
 
+/* Scrubber: lanes are 13px rows, so their icons drop to 11px. */
+.scrub-labels .scrub-lane-ic { width: 11px; height: 11px; margin-right: 4px; color: var(--dim); }
+.scrub-x .ic, .scrub-arcs .ic, .scrub-feeds-btn .ic { width: 12px; height: 12px; }
+.scrub-fold .ic { vertical-align: -0.15em; }
+
 /* Phone nav: icons only, the current section keeps its name. */
 .app.phone .nav button { padding: 6px 9px; }
 .app.phone .nav button[aria-current="page"] .ic-tight { position: static; width: auto; height: auto; margin: 0 0 0 5px; clip-path: none; }

@@ -4,8 +4,11 @@ import { when } from "../lib/api";
 import { ARC_CAP, ARC_COLOR, ARC_LABEL, type ArcView } from "./arcs";
 import { LANE_COLOR, presetWindow, type DayWindow } from "./lanes";
 import type { IntelData, IntelScope } from "./useIntel";
+import { Icon, IconLabel, type IconName } from "../ui/icons/Icon";
 
 const LANE_SHORT: Record<EventKind, string> = { trade: "TRADES", hearing: "HEARINGS", roll: "ROLL CALLS", contract: "CONTRACTS", form4: "FORM 4" };
+const LANE_ICON: Record<EventKind, IconName> = { trade: "trade", hearing: "hearing", roll: "roll", contract: "contracts", form4: "form4" };
+const ARC_ICON: Record<ArcKind, IconName> = { trade: "trade", contract: "contracts", pac: "pac" };
 const PRESETS: [string, number][] = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 const MAX_BINS = 220;
 const EDGE_PX = 8;
@@ -134,11 +137,11 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
     <section className={`scrub${collapsed ? " min" : ""}`} aria-label="Time scrubber">
       <header className="scrub-head">
         <button className="scrub-fold" aria-expanded={!collapsed} onClick={() => onCollapsed(!collapsed)} title={collapsed ? "Show the time scrubber" : "Collapse to one line"}>
-          {collapsed ? "▸" : "▾"} <em>TIMELINE</em>
+          <Icon name={collapsed ? "chevron-right" : "chevron-down"} /> <em>TIMELINE</em>
         </button>
         <span className="scrub-scope" title="Scope of the lanes and arcs. Opening a member or ticker dossier scopes it.">
           <span>{loading && !data ? "Loading…" : scopeText}</span>
-          {scoped ? <button className="scrub-x" onClick={onClearScope} title="Back to all of Congress">All Congress ×</button> : null}
+          {scoped ? <button className="scrub-x" onClick={onClearScope} title="Back to all of Congress"><IconLabel icon="reset">All Congress</IconLabel></button> : null}
         </span>
         <strong className="scrub-range">{range}<small>{len ? ` · ${span} d` : ""}</small></strong>
         {collapsed ? (
@@ -156,7 +159,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           <span className="scrub-arcs" title="Arcs on the map. Hover an arc for its source and as-of.">
             <em>ARCS</em>
             {(["trade", "contract", "pac"] as ArcKind[]).map((k) => (
-              <button key={k} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={{ ["--arc" as string]: ARC_COLOR[k] }}>{ARC_LABEL[k]}</button>
+              <button key={k} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={{ ["--arc" as string]: ARC_COLOR[k] }}><IconLabel icon={ARC_ICON[k]}>{ARC_LABEL[k]}</IconLabel></button>
             ))}
           </span>
         ) : null}
@@ -170,7 +173,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           <div className="scrub-body">
             <div className="scrub-labels">
               {lanes.map((l) => (
-                <span key={l.k} title={feedTitle(l.meta)}><i style={{ background: LANE_COLOR[l.k] }} />{LANE_SHORT[l.k]}<b>{(inWindow[l.k] || 0).toLocaleString("en-US")}</b></span>
+                <span key={l.k} title={feedTitle(l.meta)}><i style={{ background: LANE_COLOR[l.k] }} /><Icon name={LANE_ICON[l.k]} className="scrub-lane-ic" />{LANE_SHORT[l.k]}<b>{(inWindow[l.k] || 0).toLocaleString("en-US")}</b></span>
               ))}
             </div>
             <div
@@ -207,7 +210,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
               {!arcs ? "Map arcs show on wider screens" : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
               {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this window couldn't be placed` : ""}
             </span>
-            <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}>Feeds {feeds ? "▴" : "▾"}</button>
+            <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}><IconLabel icon="feed">Feeds</IconLabel> <Icon name={feeds ? "chevron-down" : "chevron-right"} /></button>
             <span>{data.to}</span>
           </div>
           {feeds ? (
