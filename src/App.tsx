@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
+import { AskDossier } from "./ask/AskDossier";
+import { useAsk } from "./ask/useAsk";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
 import { AlertsMenu } from "./shell/AlertsMenu";
@@ -106,6 +108,7 @@ export function App() {
     try { return DEMO || !localStorage.getItem(TODAY_SEEN) ? "week" : null; } catch { return "week"; }
   });
   const [btSeed, setBtSeed] = useState(() => (location.hash.startsWith("#bt=") ? `token:${location.hash.slice(4)}` : ""));
+  const ask = useAsk();
   const [clock, setClock] = useState(utcNow);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [trail, setTrail] = useState<(TrailEntry & { view?: View })[]>(() => {
@@ -216,6 +219,7 @@ export function App() {
       if (SECTIONS[index]) go(`section:${SECTIONS[index].id}`);
       if (event.key === "0") go("today:week");
       if (event.key === "Escape") {
+        if (ask.open) return ask.close();
         if (timelineId) closeTimeline();
         else closeToday();
         closeDossier();
@@ -232,7 +236,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [ids, selectedId, dossier, timelineId, today]);
+  }, [ids, selectedId, dossier, timelineId, today, ask.open]);
 
   function closeDossier() {
     if (dossier) setDossier(null);
@@ -298,6 +302,7 @@ export function App() {
   }
 
   function go(action: string, label?: string) {
+    if (action.startsWith("ask:q:")) return void ask.run(decodeURIComponent(action.slice(6)));
     record(action, label);
     runAction(action);
   }
@@ -436,6 +441,7 @@ export function App() {
   }
 
   async function chooseHit(hit: SearchHit) {
+    if (hit.kind === "ask") return go(`ask:q:${encodeURIComponent(hit.id)}`);
     if (hit.kind === "ticker") {
       record(`ticker:${hit.id}`);
       showChart(hit.id, OPEN_SPAN);
@@ -756,7 +762,8 @@ export function App() {
             <span className="count">{String(listItems.length).padStart(2, "0")}</span>
           </header>
           <div className="rail-pane">
-            {drawer ? (
+            <AskDossier ask={ask} onFollow={follow} />
+            {drawer && !ask.full ? (
               <Drawer
                 model={drawer}
                 onFollow={follow}

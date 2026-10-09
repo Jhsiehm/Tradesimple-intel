@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { districtName, parseDistrict } from "../../shared/districts.mjs";
 
-export type SearchHit = { kind: "ticker" | "site" | "member" | "district"; id: string; label: string; chamber?: "house" | "senate" };
+export type SearchHit = { kind: "ticker" | "site" | "member" | "district" | "ask"; id: string; label: string; chamber?: "house" | "senate" };
 
 type Props = { query: string; onQuery: (value: string) => void; onHit: (hit: SearchHit) => void; resetOn: string };
 
@@ -47,7 +47,8 @@ export function SearchBox({ query, onQuery, onHit, resetOn }: Props) {
       ...res.tickers.map((t) => ({ kind: "ticker" as const, id: t.symbol, label: `${t.symbol} ${t.name}` })),
       ...res.sites.map((s) => ({ kind: "site" as const, id: s.id, label: `${s.district} ${s.name}` }))
     ];
-    setHits([...seat, ...others.slice(0, Math.max(3, 8 - seat.length - members.length)), ...members].slice(0, 8));
+    const asks: SearchHit[] = /\?\s*$/.test(value) || value.trim().split(/\s+/).length >= 4 ? [{ kind: "ask", id: value.trim(), label: `Ask: ${value.trim()}` }] : [];
+    setHits([...[...seat, ...others.slice(0, Math.max(3, 8 - seat.length - members.length)), ...members].slice(0, 7), ...asks]);
   }
 
   return (

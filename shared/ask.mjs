@@ -99,7 +99,7 @@ export function evidenceOf(id, tool, args, body, { ms = 0, label = "" } = {}) {
     label: text(label || tool, 120),
     source: text(src.source, 200),
     asOf: text(src.asOf, 40),
-    latency: text(src.latency, 260),
+    latency: text(src.latency, 420),
     ms,
     note: failed ? text(src.error || "Tool returned no data.", 200) : "",
     caveats: Array.isArray(src.caveatTexts) ? src.caveatTexts.slice(0, 6).map((c) => text(c, 320)) : [],

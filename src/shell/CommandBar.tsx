@@ -57,6 +57,8 @@ let tickerCache: Ticker[] | null = null;
 export function commandsFor(text: string, tickers: Ticker[], roster: Seat[]): Command[] {
   const raw = text.trim().toUpperCase();
   if (!raw) return [];
+  const asked = /^ask\s+(\S.{2,})$/i.exec(text.trim());
+  if (asked) return [{ code: "ASK", label: `Ask: ${asked[1]}`, hint: "answered from the app's own data, with sources", action: `ask:q:${encodeURIComponent(asked[1])}` }];
   const [head, fn = ""] = raw.split(/\s+/);
   const out: Command[] = [];
   const dfn = /\s(DES|CTR|REP)$/.exec(raw)?.[1] || "";

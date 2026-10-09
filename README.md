@@ -43,6 +43,34 @@ How returns are computed, and what they are not:
 
 The member timeline shows the same figure in its stats line and each trade's return against SPY in its tooltip; the share card adds a *Buys vs S&P 500* stat. API: `/api/congress/leaders`, and `returns` on `/api/congress/member/:id/timeline`.
 
+### Backtest: replay public records against a benchmark
+
+Open it with the command `BT`, **Backtest** on a member or ticker dossier, or a `#bt=…` share link (the link holds the whole spec). Pick signals (congressional trades by committee, member, party, chamber, ticker, sector, size, or nearness to a hearing; Form 4 insider buys and sells without 10b5-1 plans; contract awards by agency to joined contractors; lobbying spikes), then rules (entry, hold days, stop and take-profit, equal or range-midpoint sizing, benchmark, costs and slippage). It draws the equity curve against the benchmark held on the same days, then stats, a trade table, per-member and per-ticker breakdowns, and **Data caveats** that you should read before any number.
+
+- **No look-ahead.** A signal is dated by when the record became public (the filing date; the amendment date for amended Senate rows; the action date plus 90 days for DoD awards, 7 days for civilian awards), never the trade date. Entry is the first trading day *after* that date, at the open or the close. Tests in `test/backtest.test.mjs` fail if a price before the entry day ever changes a result.
+- **Portfolio, in calendar time.** Each trading day is the average return of the positions open that day; idle days earn zero; the benchmark holds the same positions on the same days; holidays carry the last level forward; drawdown is peak to trough on that curve. Sells are scored as shorts with no borrow cost. Congress amounts are ranges, so equal weight is the default and range midpoint (capped at $1,000,000) is an estimate.
+- **What it will not tell you.** Committee seats are the current roster applied to past trades; paper filings are not parsed (counted in the caveats); symbols with no Yahoo history (delisted, renamed) are excluded and counted, which flatters results; `^GSPC` is price only while stocks are dividend-adjusted; trades overlap, so the t-statistic overstates confidence; a single prolific member can be most of a sample (the caveats name them). The Sharpe-ish figure is labeled as rough.
+- **API.** `GET /api/backtest` returns the form options; `POST /api/backtest` with `{source, filters, rules}` (or `GET ?spec=<json or #bt token>`) runs one. Results carry source, as-of and latency per feed, are cached 30 minutes by spec hash, and at most two run at once (429 beyond that). A first run can take 15 to 40 seconds while prices load; the board retries while the server says it is still building.
+
+### Ask: questions answered from the app's own data
+
+`ASK <your question>` in the command line (`⌘K`), or type a question in the top search box and choose the **Ask** row. The answer streams into the dossier panel with a chip after each claim ([t3] style) that opens the board it came from, a collapsible **How I got this** list of every tool call with its source, as-of time, and latency, a **Data caveats** list, and buttons to open a backtest, copy a link, or share. Recent questions are kept in this browser only (last 20).
+
+The model can only call read-only tools that wrap the app's own routes (search, member profile and trades, member timeline, ticker dossier, case file for a member, ticker or district, committees and hearings, bill and roll-call votes, contracts, lobbying, PAC receipts, positions, insiders, alerts, intel scope, `run_backtest`). It never places orders and has no network tool of its own. The server enforces: at most 8 tool calls, 6 model rounds, 90 seconds, and a 60,000-token budget per question; 12 questions per 10 minutes per client address; 3 answers in flight. Tool calls (name, arguments, timing; never keys) are logged to `/tmp/intel-ask.log`.
+
+**Grounding.** The prompt requires answering only from tool results with a ref after each fact. The server then checks the final text: refs that match no tool result are reported, and every number in the answer that appears in no tool result is listed under the answer as *not found in any tool result*. This is a warning, not a proof: a number can match by coincidence, and a claim can be wrong without a number in it.
+
+**Provider.** Ask is off until `.env.local` names a provider and its key (the key never reaches the browser; GET `/api/ask` reports only whether it is configured):
+
+| `ASK_PROVIDER` | Key needed | Other settings |
+| --- | --- | --- |
+| `anthropic` | `ANTHROPIC_API_KEY` | `ASK_MODEL` (default `claude-sonnet-4-5`) |
+| `openai` | `OPENAI_API_KEY` | `ASK_MODEL` (default `gpt-4o-mini`) |
+| `compat` (OpenAI-compatible: Vercel AI Gateway, LiteLLM, vLLM, LM Studio…) | `ASK_API_KEY` | `ASK_BASE_URL` (for example `https://ai-gateway.vercel.sh/v1`) and `ASK_MODEL` (for example `anthropic/claude-sonnet-4.5`) |
+| `openrouter` | `OPENROUTER_API_KEY` | `ASK_MODEL` (default `openai/gpt-4o-mini`) |
+
+Without it the panel says *Ask is not configured — add a key to .env.local*, and the Backtest board and every other board still work. Adapters live in `server/ai/providers.mjs` and are tested with mocked fetch in `test/ask.test.mjs` (no network).
+
 ### Posting bot (Bluesky and X), dry run by default
 
 `npm run bot` finds trade lines **filed since the last run** and picks the notable ones: filed more than 45 days late, $250,001 or more, or traded within 14 days of a hearing on one of the member's committees. It keeps one post per report (noting how many other trades it holds), strongest first, at most 5 per run (`--max`). Each post is factual and links the filing, for example:
@@ -86,7 +114,7 @@ Nothing is posted without `--post` **and** keys in `.env.local` (names in `.env.
 | `1`–`6` | Switch sections |
 | `⌘K` / `Ctrl+K` / `:` | Command line |
 | `Alt+←` | Back |
-| `/` | Search tickers, members, districts |
+| `/` | Search tickers, members, districts (a question there offers **Ask**) |
 | `↑` `↓` | Move through the list |
 | `\` | Hide or show the list panel |
 | `Esc` | Close the dossier, calendar, or menus |
