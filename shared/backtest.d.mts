@@ -53,7 +53,7 @@ export type BacktestCaveats = {
 export type BacktestResult = {
   ok: true;
   rules: BacktestRules;
-  counts: { signals: number; used: number; skipped: number };
+  counts: { signals: number; offeredSignals: number; used: number; skipped: number; matched?: number; tickers?: number; priced?: number };
   trades: BacktestTrade[];
   byMember: { total: number; rows: BacktestBreakdown[] };
   byTicker: { total: number; rows: BacktestBreakdown[] };

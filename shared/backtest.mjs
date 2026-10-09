@@ -214,26 +214,31 @@ const SKIP_TEXT = {
   notPriced: "were not priced inside the time budget",
   noBarAfterSignal: "were made public after the last price bar",
   entryGap: "had no trading day within a week after the public date",
-  beforePriceHistory: "were public before the symbol's price history begins (new listing, ticker change, or older than the two-year window)",
+  beforePriceHistory: "were public before the symbol's price history begins (new listing, ticker change, or older than the three-year window)",
   badPrice: "had an unusable entry price",
   stillOpen: "have not reached their exit yet (hold not complete)",
   noBenchmark: "had no benchmark price on the entry day",
   badDate: "had no usable public date",
-  sideOff: "were on the other side than the rules select"
 };
 
 /**
  * Run a backtest. `signals`: { id, symbol, signalDate, side, sizeHint?, sizeIsRange?, tradeDate?, actor?, actorLabel?, sector?, meta? }.
  * `bars` and `benchBars` map symbol → bars. `context` carries what the engine cannot see: notes, paper-filing counts.
  */
-export function runBacktest({ signals = [], bars = {}, benchBars = {}, rules: rawRules, context = {}, calendar = null }) {
+export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {}, rules: rawRules, context = {}, calendar = null }) {
   const rules = cleanRules(rawRules);
+  let signals = allSignals;
   const skipped = {};
   const skippedSymbols = {};
   const bump = (reason, symbol) => {
     skipped[reason] = (skipped[reason] || 0) + 1;
     if (symbol) (skippedSymbols[reason] ||= new Set()).add(symbol);
   };
+  const offered = signals.length;
+  signals = signals.filter((s) => {
+    const side = s.side === "sell" ? "sell" : s.side === "buy" ? "buy" : "";
+    return side && (rules.sides === "both" || rules.sides === side);
+  });
   const sizes = signals.map((s) => Number(s.sizeHint)).filter((v) => v > 0).map((v) => Math.min(v, SIZE_CAP));
   const sizeFallback = median(sizes) || 1;
   const trades = [];
@@ -245,8 +250,7 @@ export function runBacktest({ signals = [], bars = {}, benchBars = {}, rules: ra
 
   for (const signal of signals) {
     const sym = String(signal.symbol || "").toUpperCase();
-    const side = signal.side === "sell" ? "sell" : signal.side === "buy" ? "buy" : "";
-    if (!side || (rules.sides !== "both" && rules.sides !== side)) { bump("sideOff"); continue; }
+    const side = signal.side === "sell" ? "sell" : "buy";
     const signalDay = dayOf(signal.signalDate);
     if (signalDay == null) { bump("badDate", sym); continue; }
     const series = bars[sym];
@@ -278,7 +282,7 @@ export function runBacktest({ signals = [], bars = {}, benchBars = {}, rules: ra
   const result = {
     ok: true,
     rules,
-    counts: { signals: signals.length, used: trades.length, skipped: Object.values(skipped).reduce((a, b) => a + b, 0) },
+    counts: { signals: signals.length, offeredSignals: offered, used: trades.length, skipped: Object.values(skipped).reduce((a, b) => a + b, 0) },
     trades: [],
     byMember: { total: 0, rows: [] },
     byTicker: { total: 0, rows: [] },
@@ -431,7 +435,6 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
     add("warn", "ranges", `Congress discloses dollar ranges, not amounts. ${estimated ? `${estimated} trades are sized by the range midpoint, an estimate.` : "Equal weight ignores size."}${missingSize ? ` ${missingSize} had no amount and use the median size.` : ""} Ranges are open-ended at the top; sizes are capped at $${SIZE_CAP.toLocaleString("en-US")}.`);
   }
   for (const [reason, n] of Object.entries(skipped)) {
-    if (reason === "sideOff") continue;
     const syms = [...(skippedSymbols[reason] || [])].sort();
     const shown = syms.slice(0, 12).join(", ");
     add(reason === "noPrice" || reason === "notPriced" ? "warn" : "info", `skip:${reason}`, `${n} signals ${SKIP_TEXT[reason] || reason}${syms.length ? ` (${syms.length} symbols: ${shown}${syms.length > 12 ? "…" : ""})` : ""}. They are left out, not counted as zero.`);

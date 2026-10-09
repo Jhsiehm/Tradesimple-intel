@@ -152,7 +152,8 @@ test("a short sells the stock and mirrors the benchmark", () => {
   assert.equal(out.trades[0].bench, 0.05);
   assert.equal(out.trades[0].excess, 0.05);
   assert.ok(out.caveats.items.some((c) => c.id === "short"));
-  assert.equal(out.caveats.exclusions.sideOff, 1);
+  assert.equal(out.counts.offeredSignals, 2);
+  assert.equal(out.counts.signals, 1, "only the selected side is counted");
 });
 
 test("signals that cannot be priced are excluded and counted, never zeroed", () => {

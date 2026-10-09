@@ -22,8 +22,8 @@ export function yahooChart(symbol, params, { timeoutMs = 20000, priority = false
   return yahooGate(() => fetchJson(url, yahooHeaders(), timeoutMs), { priority });
 }
 
-/** Two years of adjusted daily [day, open, close] bars for a symbol or index (^GSPC). Throws on HTTP errors; `status` is kept. */
-export async function yahooBars(symbol, { range = "2y", timeoutMs = 20000, priority = false } = {}) {
+/** Three years of adjusted daily [day, open, close] bars for a symbol or index (^GSPC). Throws on HTTP errors; `status` is kept. */
+export async function yahooBars(symbol, { range = "3y", timeoutMs = 20000, priority = false } = {}) {
   const body = await yahooChart(symbol, { interval: "1d", range, includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
   return parseBars(body);
 }
