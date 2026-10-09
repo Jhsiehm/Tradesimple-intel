@@ -4,17 +4,17 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { extractText, getDocumentProxy } from "unpdf";
-import { fetchJson, fetchText } from "./http.mjs";
-import { coreKey, listCore, listTickers, readCache, writeCache } from "./db.mjs";
+import { fetchJson, fetchText } from "./lib/http.mjs";
+import { coreKey, listCore, listTickers, readCache, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
 import { shortInterest } from "./markets.mjs";
 import { pacData } from "./corporate.mjs";
+import { HOUR, DAY, MONTH, sleep } from "./lib/time.mjs";
+import { pool } from "./lib/pool.mjs";
+import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
-const SEC_UA = "TradeSimpleIntel/0.1 (local research terminal)";
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
-const MONTH = 30 * DAY;
 const inflight = new Map();
 
 function once(key, fn) {
@@ -31,7 +31,7 @@ const HEAD_REPORTS = 110;
 const trades = { job: null, head: null, partial: null, last: null };
 
 export function congressTrades(db) {
-  const hit = readCache(db, "pos:congress:v4");
+  const hit = readCache(db, KEY.posCongress);
   if (hit) {
     trades.last = hit;
     return Promise.resolve(hit);
@@ -49,7 +49,7 @@ export function congressTrades(db) {
     .then((res) => {
       release(res);
       if (res.items.length) {
-        writeCache(db, "pos:congress:v4", res, 3 * HOUR);
+        writeCache(db, KEY.posCongress, res, 3 * HOUR);
         trades.last = res;
       }
       console.log(`congress trades: ${res.items.length} rows from ${res.progress.house.parsed} House + ${res.progress.senate.parsed} Senate reports`);
@@ -181,10 +181,10 @@ async function houseTrades(db, people, progress, rows, tick) {
 }
 
 async function clerkIndex(db, year) {
-  const key = `clerk:index:${year}`;
+  const key = KEY.clerkIndex(year);
   const hit = readCache(db, key);
   if (hit) return hit.text;
-  const res = await fetch(`https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const res = await fetch(`https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`, { headers: { "User-Agent": BROWSER_UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const zip = path.join(os.tmpdir(), `${year}FD.ZIP`);
   fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
@@ -194,11 +194,11 @@ async function clerkIndex(db, year) {
 }
 
 async function ptrLines(db, filing) {
-  const key = `ptr:doc:v2:${filing.docId}`;
+  const key = KEY.ptrDoc(filing.docId);
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const url = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const lines = await parsePtrPdf(new Uint8Array(await res.arrayBuffer()));
   writeCache(db, key, { lines }, 6 * MONTH);
@@ -278,7 +278,7 @@ async function efdReportList(session) {
     const res = await fetch("https://efdsearch.senate.gov/search/report/data/", {
       method: "POST",
       headers: {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent": BROWSER_UA,
         Referer: "https://efdsearch.senate.gov/search/",
         "X-CSRFToken": session.csrf,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -352,7 +352,7 @@ async function senateTrades(db, people, progress, rows, tick) {
 }
 
 async function efdSession() {
-  const home = await fetch("https://efdsearch.senate.gov/search/home/", { headers: { "User-Agent": "Mozilla/5.0" } });
+  const home = await fetch("https://efdsearch.senate.gov/search/home/", { headers: { "User-Agent": BROWSER_UA } });
   const jar = new Map();
   const take = (res) => {
     for (const raw of res.headers.getSetCookie?.() || []) {
@@ -370,7 +370,7 @@ async function efdSession() {
     method: "POST",
     redirect: "manual",
     headers: {
-      "User-Agent": "Mozilla/5.0",
+      "User-Agent": BROWSER_UA,
       Referer: "https://efdsearch.senate.gov/search/home/",
       "Content-Type": "application/x-www-form-urlencoded",
       Cookie: cookie()
@@ -382,11 +382,11 @@ async function efdSession() {
 }
 
 async function efdLines(db, href, session) {
-  const key = `efd:ptr:${href}`;
+  const key = KEY.efdPtr(href);
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const html = await fetchText(`https://efdsearch.senate.gov${href}`, {
-    headers: { "User-Agent": "Mozilla/5.0", Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" }
+    headers: { "User-Agent": BROWSER_UA, Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" }
   });
   const lines = parseEfd(html);
   writeCache(db, key, { lines }, 6 * MONTH);
@@ -431,7 +431,7 @@ const FORM4_CODES = {
 
 export function insiderTrades(db) {
   return once("insider-trades", async () => {
-    const key = `pos:insiders:v3:${coreKey(db)}`;
+    const key = KEY.posInsiders(coreKey(db));
     const hit = readCache(db, key);
     if (hit) return hit;
     const tickers = listCore(db).filter((t) => t.cik);
@@ -490,7 +490,7 @@ export function insiderTrades(db) {
 }
 
 async function secSubmissions(db, cik) {
-  const key = `sec:subs:${cik}`;
+  const key = KEY.secSubs(cik);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://data.sec.gov/submissions/CIK${cik}.json`, { headers: { "User-Agent": SEC_UA } });
@@ -510,7 +510,7 @@ async function secSubmissions(db, cik) {
 }
 
 async function form4(db, cik, pick) {
-  const key = `sec:f4:v2:${pick.accession}`;
+  const key = KEY.secForm4(pick.accession);
   const hit = readCache(db, key);
   if (hit) return hit;
   const raw = String(pick.doc || "").replace(/^xslF345X\d+\//, "");
@@ -553,7 +553,7 @@ function decodeXml(value) {
 
 export function whaleHoldings(db) {
   return once("whale-holdings", async () => {
-    const hit = readCache(db, "pos:whales:v3");
+    const hit = readCache(db, KEY.posWhales);
     if (hit) return hit;
     const tickers = listTickers(db);
     const names = tickers.map((t) => ({ symbol: t.symbol, keys: [t.name, ...(t.recipients || [])].map(normIssuer) }));
@@ -635,13 +635,13 @@ export function whaleHoldings(db) {
       errors,
       items: rows
     };
-    if (rows.length) writeCache(db, "pos:whales:v3", result, 6 * HOUR);
+    if (rows.length) writeCache(db, KEY.posWhales, result, 6 * HOUR);
     return result;
   });
 }
 
 async function infoTable(db, filing, keys) {
-  const key = `sec:13f:v2:${filing.acc}:${hash([...keys].sort().join("|"))}`;
+  const key = KEY.sec13f(filing.acc, hash([...keys].sort().join("|")));
   const hit = readCache(db, key);
   if (hit) return hit;
   const base = `https://www.sec.gov/Archives/edgar/data/${Number(filing.cik)}/${filing.acc.replace(/-/g, "")}`;
@@ -689,7 +689,7 @@ function normIssuer(value) {
 
 export function shortBoard(db) {
   return once("short-board", async () => {
-    const key = `pos:shorts:v2:${coreKey(db)}`;
+    const key = KEY.posShorts(coreKey(db));
     const hit = readCache(db, key);
     if (hit) return hit;
     const tickers = listCore(db);
@@ -890,17 +890,7 @@ export function warmPositions(db) {
   setInterval(() => { void run(); }, 2 * HOUR).unref();
 }
 
-async function pool(items, size, fn) {
-  const queue = [...items];
-  async function worker() {
-    while (queue.length) await fn(queue.shift());
-  }
-  await Promise.all(Array.from({ length: Math.min(size, items.length) }, () => worker()));
-}
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function usDate(value) {
   const [month, day, year] = String(value || "").split("/").map(Number);

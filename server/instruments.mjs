@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
-import { fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
 import { sessionQuote } from "./chart.mjs";
 import { globalInstrument } from "./globals.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const FX = JSON.parse(readFileSync(new URL("../data/fx.json", import.meta.url), "utf8"));
 const CRYPTO = JSON.parse(readFileSync(new URL("../data/crypto.json", import.meta.url), "utf8"));
@@ -26,7 +28,7 @@ export function cryptoDigits(price) {
 }
 
 export async function fxBoard(db) {
-  const hit = readCache(db, "board:fx:v1");
+  const hit = readCache(db, KEY.fxBoard);
   if (hit) return hit;
   const items = await quoteAll(FX, (row) => row.digits);
   const usd = { USD: 1 };
@@ -49,12 +51,12 @@ export async function fxBoard(db) {
     items,
     matrix: { ccys: majors, rows: matrix }
   };
-  if (items.length) writeCache(db, "board:fx:v1", payload, BOARD_TTL);
+  if (items.length) writeCache(db, KEY.fxBoard, payload, BOARD_TTL);
   return payload;
 }
 
 export async function cryptoBoard(db) {
-  const hit = readCache(db, "board:crypto:v1");
+  const hit = readCache(db, KEY.cryptoBoard);
   if (hit) return hit;
   const [items, gecko, global] = await Promise.all([
     quoteAll(CRYPTO, (_, last) => cryptoDigits(last)),
@@ -95,7 +97,7 @@ export async function cryptoBoard(db) {
     },
     items
   };
-  if (items.length) writeCache(db, "board:crypto:v1", payload, BOARD_TTL);
+  if (items.length) writeCache(db, KEY.cryptoBoard, payload, BOARD_TTL);
   return payload;
 }
 
@@ -116,23 +118,23 @@ async function quoteAll(rows, digitsFor) {
 }
 
 async function geckoMarkets(db) {
-  const hit = readCache(db, "gecko:markets:v1");
+  const hit = readCache(db, KEY.geckoMarkets);
   if (hit) return hit;
   const url = new URL("https://api.coingecko.com/api/v3/coins/markets");
   url.searchParams.set("vs_currency", "usd");
   url.searchParams.set("ids", CRYPTO.map((row) => row.gecko).join(","));
   url.searchParams.set("price_change_percentage", "24h,7d,30d");
-  const body = await fetchJson(url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
-  if (Array.isArray(body)) writeCache(db, "gecko:markets:v1", body, 5 * 60 * 1000);
+  const body = await fetchJson(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } });
+  if (Array.isArray(body)) writeCache(db, KEY.geckoMarkets, body, 5 * 60 * 1000);
   return Array.isArray(body) ? body : [];
 }
 
 async function geckoGlobal(db) {
-  const hit = readCache(db, "gecko:global:v1");
+  const hit = readCache(db, KEY.geckoGlobal);
   if (hit) return hit;
-  const body = await fetchJson("https://api.coingecko.com/api/v3/global", { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
+  const body = await fetchJson("https://api.coingecko.com/api/v3/global", { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } });
   const data = body?.data || null;
-  if (data) writeCache(db, "gecko:global:v1", data, 10 * 60 * 1000);
+  if (data) writeCache(db, KEY.geckoGlobal, data, 10 * 60 * 1000);
   return data;
 }
 

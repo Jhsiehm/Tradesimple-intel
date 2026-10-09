@@ -8,13 +8,13 @@ import { indexStatus, indexedMeetings, indexedVotes, laneOf, memberTimeline } fr
 import { memberCommittees, roster } from "./roster.mjs";
 import { HQ_SOURCE, districtCode, hqAll } from "./hq.mjs";
 import { STATE_NAME_TO_POSTAL } from "./geo.mjs";
-import { tickerBySymbol } from "./db.mjs";
+import { tickerBySymbol } from "./lib/db.mjs";
 import { ARC_KINDS, NEAR_DAYS, activitySignal, bucketDays, dayNum, severity } from "../shared/intel.mjs";
 import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
+import { MINUTE } from "./lib/time.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FROM = "2025-01-03";
-const MINUTE = 60 * 1000;
 const CONTRACT_WAIT = 9000;
 
 let geo = null;

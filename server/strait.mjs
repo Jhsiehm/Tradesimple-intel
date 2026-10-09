@@ -1,12 +1,13 @@
-import { fetchJson, fetchText } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson, fetchText } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const BBOX = { minLon: 117, maxLon: 122.5, minLat: 22, maxLat: 26.8 };
 const ships = new Map();
 let aisStarted = false;
 
 export async function straitNews(db) {
-  const hit = readCache(db, "gdelt-strait");
+  const hit = readCache(db, KEY.gdeltStrait);
   if (hit) return hit;
   const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
   url.searchParams.set("query", "\"Taiwan Strait\" sourcelang:eng");
@@ -36,7 +37,7 @@ export async function straitNews(db) {
     asOf: new Date().toISOString(),
     items
   };
-  writeCache(db, "gdelt-strait", result, 15 * 60 * 1000);
+  writeCache(db, KEY.gdeltStrait, result, 15 * 60 * 1000);
   return result;
 }
 
@@ -54,7 +55,7 @@ async function rssNews(db) {
   });
   items.sort((a, b) => Date.parse(b.seen) - Date.parse(a.seen));
   const result = { ok: true, source: "Google News RSS", asOf: new Date().toISOString(), items };
-  writeCache(db, "gdelt-strait", result, 15 * 60 * 1000);
+  writeCache(db, KEY.gdeltStrait, result, 15 * 60 * 1000);
   return result;
 }
 

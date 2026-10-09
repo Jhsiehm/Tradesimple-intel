@@ -1,8 +1,8 @@
 import { cleanText, congressGet, listBills } from "./congress.mjs";
 import { ladderFromActions } from "./geo.mjs";
 import { indexedVotes, indexStatus } from "./timeline.mjs";
+import { DAY } from "./lib/time.mjs";
 
-const DAY = 24 * 60 * 60 * 1000;
 
 const BILL_TYPES = /^(HR|HRES|HJRES|HCONRES|S|SRES|SJRES|SCONRES)(\d+)$/;
 const SOURCE = "House Clerk EVS roll call XML · Senate.gov LIS roll call XML · Congress.gov bill actions";

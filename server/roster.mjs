@@ -1,13 +1,14 @@
-import { fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { DAY } from "./lib/time.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const BASE = "https://unitedstates.github.io/congress-legislators";
-const DAY = 24 * 60 * 60 * 1000;
 const SOURCE = "unitedstates/congress-legislators";
 const LATENCY = "Community-maintained from official records. Changes when a seat or assignment changes, not live.";
 
 export async function roster(db) {
-  const hit = readCache(db, "roster:v4");
+  const hit = readCache(db, KEY.roster);
   if (hit) return hit;
   const raw = await fetchJson(`${BASE}/legislators-current.json`, {}, 30000);
   const items = raw.map((person) => {
@@ -42,7 +43,7 @@ export async function roster(db) {
   }).filter((row) => row.bioguide);
   items.sort((a, b) => a.last.localeCompare(b.last));
   const result = { ok: true, source: SOURCE, asOf: new Date().toISOString(), latency: LATENCY, items };
-  writeCache(db, "roster:v4", result, DAY);
+  writeCache(db, KEY.roster, result, DAY);
   return result;
 }
 
@@ -52,7 +53,7 @@ export async function lisMap(db) {
 }
 
 export async function committees(db) {
-  const hit = readCache(db, "committees:v1");
+  const hit = readCache(db, KEY.committees);
   if (hit) return hit;
   const [list, membership, people] = await Promise.all([
     fetchJson(`${BASE}/committees-current.json`, {}, 30000),
@@ -105,7 +106,7 @@ export async function committees(db) {
   });
   items.sort((a, b) => a.chamber.localeCompare(b.chamber) || a.name.localeCompare(b.name));
   const result = { ok: true, source: SOURCE, asOf: new Date().toISOString(), latency: LATENCY, items };
-  writeCache(db, "committees:v1", result, DAY);
+  writeCache(db, KEY.committees, result, DAY);
   return result;
 }
 

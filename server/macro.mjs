@@ -1,10 +1,12 @@
-import { fetchText, fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchText, fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { HOUR, DAY } from "./lib/time.mjs";
+import { pool } from "./lib/pool.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
-const NASDAQ_HEADERS = { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } };
+const NASDAQ_HEADERS = { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } };
 
 export const CCY_COUNTRIES = {
   USD: ["United States"],
@@ -34,9 +36,9 @@ const MEDIUM = /(Retail Sales|PPI|PMI|Employment Change|Trade Balance|Jobless Cl
 const NOISE = /(GDPNow|Projection|speculative|MBA|Auction|Mortgage|Baker Hughes|OPEC|Crude|Gasoline|Distillate|Heating Oil|Refinery|Cushing|Natural Gas|Rig Count|Bill|Bond|Note|Index Price|Deflator|Ex Gas|Saxony|North Rhine|Hesse|Brandenburg|Bavaria|Baden|Westphalia|GDP Sales|GDP Price|GDP External|GDP Capital|GDP Government|Private Consumption|Fixed Investment|CPI Index|n\.s\.a|Cleveland|Median CPI|Trimmed|Tokyo Ex|CPI Tokyo Ex|Tobacco)/i;
 
 export async function fomcMeetings(db) {
-  const hit = readCache(db, "macro:fomc:v1");
+  const hit = readCache(db, KEY.fomc);
   if (hit) return hit;
-  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", { headers: { "User-Agent": "Mozilla/5.0" } }, 30000);
+  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", { headers: { "User-Agent": BROWSER_UA } }, 30000);
   const meetings = [];
   const panels = html.split(/<h4><a id="\d+">/).slice(1);
   for (const panel of panels) {
@@ -83,12 +85,12 @@ export async function fomcMeetings(db) {
     latency: "Meeting schedule from federalreserve.gov. Rate move is the change in the target range upper bound across the decision day.",
     meetings
   };
-  writeCache(db, "macro:fomc:v1", result, DAY);
+  writeCache(db, KEY.fomc, result, DAY);
   return result;
 }
 
 export async function fredSeries(db, id) {
-  const key = `fred:${id}:v1`;
+  const key = KEY.fred(id);
   const hit = readCache(db, key);
   if (hit) return hit;
   const csv = await fetchText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(id)}`, {}, 30000);
@@ -101,7 +103,7 @@ export async function fredSeries(db, id) {
 }
 
 export async function macroStrip(db) {
-  const hit = readCache(db, "macro:strip:v2");
+  const hit = readCache(db, KEY.macroStrip);
   if (hit) return hit;
   const series = ["DFEDTARU", "DFEDTARL", "CPIAUCSL", "CPILFESL", "UNRATE", "DGS2", "DGS10", "PCEPILFE"];
   const data = Object.fromEntries(await Promise.all(series.map(async (id) => [id, await fredSeries(db, id).catch(() => [])])));
@@ -143,13 +145,13 @@ export async function macroStrip(db) {
       { id: "nextnfp", label: "Next payrolls", value: nextJobs ? nextJobs.date : "—", asOf: nextJobs ? `${nextJobs.time} ET` : "" }
     ]
   };
-  writeCache(db, "macro:strip:v2", result, HOUR);
+  writeCache(db, KEY.macroStrip, result, HOUR);
   return result;
 }
 
 // Nasdaq's page for ?date=D lists the previous day's events, with clock times at a fixed UTC-4.
 export async function econDay(db, page) {
-  const key = `econ:day:v2:${page}`;
+  const key = KEY.econDay(page);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://api.nasdaq.com/api/calendar/economicevents?date=${page}`, NASDAQ_HEADERS, 20000);
@@ -272,7 +274,7 @@ export async function macroMarks(db, ccys, fromMs) {
 }
 
 function cachedEconDays(db, fromMs) {
-  const rows = db.prepare("SELECT key, body FROM cache WHERE key LIKE 'econ:day:v2:%'").all();
+  const rows = db.prepare("SELECT key, body FROM cache WHERE key LIKE ?").all(`${KEY.econDayPrefix}%`);
   const out = [];
   for (const row of rows) {
     const date = row.key.slice("econ:day:v2:".length);
@@ -287,7 +289,7 @@ export async function warmMacro(db, days = 400) {
   const today = easternParts(Date.now()).date;
   for (let i = 0; i <= days; i += 1) {
     const date = shift(today, -i);
-    if (!readCache(db, `econ:day:v2:${date}`)) dates.push(date);
+    if (!readCache(db, KEY.econDay(date))) dates.push(date);
   }
   await pool(dates, 2, async (date) => {
     await econDay(db, date).catch(() => null);
@@ -345,9 +347,3 @@ function round(n, digits) {
   return Math.round(n * f) / f;
 }
 
-async function pool(items, size, fn) {
-  const queue = [...items];
-  await Promise.all(Array.from({ length: size }, async () => {
-    while (queue.length) await fn(queue.shift());
-  }));
-}

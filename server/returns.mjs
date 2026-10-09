@@ -1,10 +1,12 @@
-import { fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
 import { congressTrades } from "./positions.mjs";
 import { LATE_DAYS } from "./alerts.mjs";
+import { HOUR, DAY } from "./lib/time.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
+import { readStale } from "./lib/cache.mjs";
 
-const DAY = 86_400_000;
-const HOUR = 3_600_000;
 export const BENCHMARK = "SPY";
 export const MAX_SYMBOLS = 300;
 export const MIN_BUYS = 10;
@@ -187,10 +189,6 @@ export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_
 
 /* ---------- daily closes (Yahoo chart, adjusted), cached in sqlite ---------- */
 
-function readStale(db, key) {
-  const row = db.prepare("SELECT body FROM cache WHERE key = ?").get(key);
-  return row ? JSON.parse(row.body) : null;
-}
 
 async function fetchCloses(symbol) {
   const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
@@ -198,7 +196,7 @@ async function fetchCloses(symbol) {
   url.searchParams.set("range", "2y");
   url.searchParams.set("includeAdjustedClose", "true");
   url.searchParams.set("events", "div,splits");
-  const body = await fetchJson(url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
+  const body = await fetchJson(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } });
   const result = body?.chart?.result?.[0];
   if (!result) throw new Error(body?.chart?.error?.description || "no chart");
   const stamps = result.timestamp || [];
@@ -217,7 +215,7 @@ async function fetchCloses(symbol) {
 
 /** Fresh cache → no network. Otherwise fetch; on failure fall back to the stale copy. `fetched` says if we hit Yahoo. */
 async function closesFor(db, symbol) {
-  const key = `closes:v1:${symbol}`;
+  const key = KEY.closes(symbol);
   const hit = readCache(db, key);
   if (hit) return { series: hit, fetched: false };
   try {
@@ -225,7 +223,7 @@ async function closesFor(db, symbol) {
     if (series.length) writeCache(db, key, series, 20 * HOUR);
     return { series, fetched: true };
   } catch (err) {
-    return { series: readStale(db, key), fetched: true, error: err.message };
+    return { series: readStale(db, key)?.value ?? null, fetched: true, error: err.message };
   }
 }
 

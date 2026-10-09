@@ -1,5 +1,6 @@
-import { fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const HEADERS = { headers: { "User-Agent": "Mozilla/5.0 tradesimple-intel", Accept: "application/json" } };
 
@@ -38,18 +39,18 @@ function shape(ac, mil, now) {
 }
 
 async function militaryAll(db) {
-  const hit = readCache(db, "air:mil:v1");
+  const hit = readCache(db, KEY.airMil);
   if (hit) return hit;
   const body = await fetchJson("https://api.adsb.lol/v2/mil", HEADERS, 20000);
   const now = body?.now || Date.now();
   const items = (body?.ac || []).filter((ac) => ac.lat != null && ac.lon != null).map((ac) => shape(ac, true, now));
   const out = { now, items };
-  writeCache(db, "air:mil:v1", out, 30 * 1000);
+  writeCache(db, KEY.airMil, out, 30 * 1000);
   return out;
 }
 
 async function civilNear(db, theater) {
-  const key = `air:pt:v1:${theater.id}`;
+  const key = KEY.airTheater(theater.id);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://api.adsb.lol/v2/point/${theater.lat}/${theater.lon}/250`, HEADERS, 20000);
@@ -87,7 +88,7 @@ export async function airspace(db, theater) {
 export async function flightRoute(db, callsign) {
   const cs = String(callsign || "").trim().toUpperCase();
   if (!/^[A-Z0-9]{3,8}$/.test(cs)) return { ok: false, error: "Bad callsign" };
-  const key = `air:route:v1:${cs}`;
+  const key = KEY.airRoute(cs);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://api.adsbdb.com/v0/callsign/${cs}`, HEADERS, 12000).catch(() => null);

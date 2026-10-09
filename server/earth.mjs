@@ -1,15 +1,16 @@
 import { readFileSync } from "node:fs";
-import { fetchText } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchText } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { HOUR } from "./lib/time.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
-const HOUR = 60 * 60 * 1000;
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
 const LANES_URL = "https://raw.githubusercontent.com/newzealandpaul/Shipping-Lanes/main/data/Shipping_Lanes_v1.geojson";
 const CHOKEPOINTS = JSON.parse(readFileSync(new URL("../data/chokepoints.json", import.meta.url), "utf8"));
 
 export async function imagery(db) {
-  const hit = readCache(db, "earth:imagery:v2");
+  const hit = readCache(db, KEY.earthImagery);
   if (hit) return hit;
   const daily = await latestGibsDay();
   const result = {
@@ -76,7 +77,7 @@ export async function imagery(db) {
       }
     }
   };
-  writeCache(db, "earth:imagery:v2", result, 3 * HOUR);
+  writeCache(db, KEY.earthImagery, result, 3 * HOUR);
   return result;
 }
 
@@ -88,7 +89,7 @@ const LIVE = [
 const DAILY_ID = "VIIRS_NOAA20_CorrectedReflectance_TrueColor";
 
 export async function liveImagery(db) {
-  const hit = readCache(db, "earth:live:v1");
+  const hit = readCache(db, KEY.earthLive);
   if (hit) return hit;
   const started = Date.now();
   const xml = await fetchText(`${GIBS}/1.0.0/WMTSCapabilities.xml`, {}, 60000);
@@ -131,12 +132,12 @@ export async function liveImagery(db) {
       complete
     }
   };
-  writeCache(db, "earth:live:v1", result, 5 * 60 * 1000);
+  writeCache(db, KEY.earthLive, result, 5 * 60 * 1000);
   return result;
 }
 
 export async function shippingLanes(db) {
-  const hit = readCache(db, "earth:lanes:v1");
+  const hit = readCache(db, KEY.earthLanes);
   if (hit) return hit;
   const raw = JSON.parse(await fetchText(LANES_URL, {}, 60000));
   const lanes = {
@@ -162,7 +163,7 @@ export async function shippingLanes(db) {
       }))
     }
   };
-  writeCache(db, "earth:lanes:v1", result, 7 * 24 * HOUR);
+  writeCache(db, KEY.earthLanes, result, 7 * 24 * HOUR);
   return result;
 }
 

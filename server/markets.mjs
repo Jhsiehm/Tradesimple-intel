@@ -3,15 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchText } from "./http.mjs";
-import { listTickers, readCache, writeCache } from "./db.mjs";
+import { fetchText } from "./lib/http.mjs";
+import { listTickers, readCache, writeCache } from "./lib/db.mjs";
+import { HOUR } from "./lib/time.mjs";
+import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
-const SEC_UA = "TradeSimpleIntel/0.1 (local research terminal)";
-const DAY = 6 * 60 * 60 * 1000;
+const TTL = 6 * HOUR;
 
 export async function politicianTrades(db) {
-  const hit = readCache(db, "ptr");
+  const hit = readCache(db, KEY.ptr);
   if (hit) return hit;
   const items = [];
   const errors = ["Senate eFD has no public bulk file in this slice. House rows are Clerk periodic-report filings, not parsed trade lines."];
@@ -32,13 +34,13 @@ export async function politicianTrades(db) {
     errors,
     items: items.slice(0, 40).map(({ sort, ...row }) => row)
   };
-  if (items.length) writeCache(db, "ptr", result, DAY);
+  if (items.length) writeCache(db, KEY.ptr, result, TTL);
   return result;
 }
 
 async function clerkIndex(year) {
   const url = `https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const zip = path.join(os.tmpdir(), `${year}FD.ZIP`);
   fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
@@ -101,7 +103,7 @@ export async function whaleFilings(db) {
 export async function shortInterest(db, symbol) {
   const sym = String(symbol || "").toUpperCase();
   if (!sym) return { ok: false, error: "symbol required", items: [] };
-  const cacheKey = `finra:${sym}`;
+  const cacheKey = KEY.finra(sym);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const items = [];
@@ -147,7 +149,7 @@ export async function shortInterest(db, symbol) {
     latency: "Short interest is published twice a month, not a live tape.",
     items
   };
-  writeCache(db, cacheKey, result, DAY);
+  writeCache(db, cacheKey, result, TTL);
   return result;
 }
 
@@ -194,7 +196,7 @@ function splitCsv(line) {
 }
 
 async function edgarList(db, form, source, latency) {
-  const cacheKey = `edgar:${form}:joined`;
+  const cacheKey = KEY.edgarJoined(form);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=${encodeURIComponent(form)}&owner=include&count=20&output=atom`;

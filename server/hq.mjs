@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchJson, makeGate } from "./http.mjs";
-import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
+import { fetchJson, makeGate } from "./lib/http.mjs";
+import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { FIPS_TO_POSTAL } from "./geo.mjs";
+import { DAY } from "./lib/time.mjs";
+import { APP_UA, SEC_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FILE = path.join(root, "data", "hq.json");
-const DAY = 24 * 60 * 60 * 1000;
-const UA = "TradeSimpleIntel/0.1 (local research terminal)";
 export const HQ_SOURCE = "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
 export const HQ_LATENCY = "Address as last filed with the SEC; refreshed every 30 days. A registered office can differ from where most staff work.";
 
@@ -131,7 +132,7 @@ async function osmPoint(street, city, state, zip, freeform = false) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   const where = freeform ? { q: `${street}, ${city}, ${state} ${zip.slice(0, 5)}` } : { street, city, state, postalcode: zip.slice(0, 5) };
   url.search = new URLSearchParams({ format: "jsonv2", countrycodes: "us", limit: "1", ...where }).toString();
-  const body = await osmGate(() => fetchJson(url, { headers: { "User-Agent": UA } }, 20000));
+  const body = await osmGate(() => fetchJson(url, { headers: { "User-Agent": APP_UA } }, 20000));
   const hit = body?.[0];
   if (!hit || Number(hit.place_rank) < 26) return null;
   return { lon: Number(hit.lon), lat: Number(hit.lat), matched: hit.display_name, geocoder: "OpenStreetMap Nominatim" };
@@ -139,12 +140,12 @@ async function osmPoint(street, city, state, zip, freeform = false) {
 
 /** One company's SEC business address, geocoded and placed in a 119th district. Cached 30 days. */
 export async function lookupHq(db, ticker, { priority = false, force = false } = {}) {
-  const key = `hq:v2:${ticker.symbol}`;
+  const key = KEY.hq(ticker.symbol);
   const hit = force ? null : readCache(db, key);
   if (hit) return hit;
   const row = { symbol: ticker.symbol, name: ticker.name, cik: ticker.cik, filer: "", street: "", city: "", state: "", zip: "", foreign: false, lat: null, lon: null, geocoder: null, matched: "", geoid: null, district: null, districtBy: "", fetched: new Date().toISOString(), note: "" };
   try {
-    const subs = await secGate(() => fetchJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, { headers: { "User-Agent": UA } }, 20000), { priority });
+    const subs = await secGate(() => fetchJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, { headers: { "User-Agent": SEC_UA } }, 20000), { priority });
     const a = subs?.addresses?.business || {};
     Object.assign(row, {
       filer: subs?.name || "",
@@ -204,7 +205,7 @@ function precomputed() {
 export function hqAll(db) {
   const file = precomputed();
   const bySymbol = new Map(file.items.map((r) => [r.symbol, r]));
-  const items = listTickers(db).map((t) => readCache(db, `hq:v2:${t.symbol}`) || bySymbol.get(t.symbol)).filter(Boolean);
+  const items = listTickers(db).map((t) => readCache(db, KEY.hq(t.symbol)) || bySymbol.get(t.symbol)).filter(Boolean);
   return { ok: true, source: HQ_SOURCE, asOf: file.asOf, latency: HQ_LATENCY, items };
 }
 
@@ -212,7 +213,7 @@ export async function hqFor(db, symbol) {
   const ticker = tickerBySymbol(db, symbol);
   if (!ticker) return { ok: false, error: "Ticker is not in the join table" };
   if (!ticker.cik) return { ok: false, error: "No SEC CIK on the join row" };
-  const cached = readCache(db, `hq:v2:${ticker.symbol}`) || precomputed().items.find((r) => r.symbol === ticker.symbol);
+  const cached = readCache(db, KEY.hq(ticker.symbol)) || precomputed().items.find((r) => r.symbol === ticker.symbol);
   const item = cached || (await lookupHq(db, ticker, { priority: true }));
   return { ok: true, source: HQ_SOURCE, asOf: item.fetched, latency: HQ_LATENCY, item };
 }

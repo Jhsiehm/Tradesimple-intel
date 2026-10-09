@@ -3,15 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchJson, fetchJsonRetry, usaspendingGate } from "./http.mjs";
-import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
+import { fetchJson, fetchJsonRetry, usaspendingGate } from "./lib/http.mjs";
+import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
+import { HOUR, DAY } from "./lib/time.mjs";
+import { pool } from "./lib/pool.mjs";
+import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
-const SEC_UA = "TradeSimpleIntel/0.1 (local research terminal)";
-const NASDAQ_HEADERS = { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } };
+const NASDAQ_HEADERS = { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } };
 const MAJOR_CAP = 50e9;
 
 /* ---------- Earnings ---------- */
@@ -49,7 +50,7 @@ export async function earningsCalendar(db, back = 7, ahead = 60) {
 }
 
 async function earningsDay(db, date) {
-  const key = `earn:day:v1:${date}`;
+  const key = KEY.earningsDay(date);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://api.nasdaq.com/api/calendar/earnings?date=${date}`, NASDAQ_HEADERS, 20000);
@@ -91,7 +92,7 @@ export async function earningsHistory(db, ticker) {
 }
 
 async function secSubmissions(db, cik) {
-  const key = `sec:subs:v1:${cik}`;
+  const key = KEY.secSubsV1(cik);
   const hit = readCache(db, key);
   if (hit) return hit;
   const body = await fetchJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, { headers: { "User-Agent": SEC_UA } }, 30000);
@@ -138,7 +139,7 @@ function withLag(row) {
 }
 
 async function ldaClientYear(db, client, year) {
-  const key = `lda:v2:${client.toLowerCase()}:${year}`;
+  const key = KEY.ldaYear(client, year);
   const hit = readCache(db, key);
   if (hit) return hit;
   const want = client.toUpperCase().replace(/[.,]/g, "");
@@ -176,7 +177,7 @@ async function ldaClientYear(db, client, year) {
 }
 
 export async function lobbyingBoard(db) {
-  const hit = readCache(db, "lda:board:v2");
+  const hit = readCache(db, KEY.ldaBoard);
   if (hit) return hit;
   const tickers = listTickers(db);
   const all = [];
@@ -198,7 +199,7 @@ export async function lobbyingBoard(db) {
     items: all.slice(0, 400),
     totals
   };
-  if (all.length) writeCache(db, "lda:board:v2", result, 2 * HOUR);
+  if (all.length) writeCache(db, KEY.ldaBoard, result, 2 * HOUR);
   return result;
 }
 
@@ -216,7 +217,7 @@ export async function memberPacs(db, bioguide) {
 
 export async function pacData(db) {
   if (pacMemo && Date.now() - pacMemo.at < HOUR) return pacMemo.data;
-  const hit = readCache(db, "fec:pac:v3");
+  const hit = readCache(db, KEY.fecPac);
   if (hit) {
     pacMemo = { at: Date.now(), data: hit };
     return hit;
@@ -339,7 +340,7 @@ async function buildPacData(db) {
       }];
     }))
   };
-  writeCache(db, "fec:pac:v3", result, DAY);
+  writeCache(db, KEY.fecPac, result, DAY);
   pacMemo = { at: Date.now(), data: result };
   return result;
 }
@@ -390,7 +391,7 @@ export async function pacFor(db, symbol) {
 /* ---------- Federal contracts (USAspending) ---------- */
 
 export async function contractsFor(db, ticker, { cachedOnly = false } = {}) {
-  const key = `usa:hist:v2:${ticker.symbol}`;
+  const key = KEY.usaHistory(ticker.symbol);
   const hit = readCache(db, key);
   if (hit || cachedOnly) return hit;
   const ueis = [...new Set((ticker.contractParents || []).map((p) => p.uei).filter(Boolean))];
@@ -448,7 +449,7 @@ export async function contractsFor(db, ticker, { cachedOnly = false } = {}) {
 
 async function secRevenue(db, cik) {
   if (!cik) return null;
-  const key = `sec:rev:v1:${cik}`;
+  const key = KEY.secRevenue(cik);
   const hit = readCache(db, key);
   if (hit) return hit;
   const pad = String(cik).padStart(10, "0");
@@ -568,9 +569,3 @@ function pick(obj, keys) {
   return Object.fromEntries(keys.map((k) => [k, obj[k] || []]));
 }
 
-async function pool(items, size, fn) {
-  const queue = [...items];
-  await Promise.all(Array.from({ length: size }, async () => {
-    while (queue.length) await fn(queue.shift());
-  }));
-}

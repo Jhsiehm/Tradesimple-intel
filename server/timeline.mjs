@@ -1,12 +1,14 @@
-import { fetchText } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchText } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
 import { SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
 import { congressTrades } from "./positions.mjs";
 import { memberReturns } from "./returns.mjs";
 import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
+import { DAY } from "./lib/time.mjs";
+import { pool } from "./lib/pool.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
-const DAY = 24 * 60 * 60 * 1000;
 const CONGRESS = 119;
 const START = "2025-01-03";
 const NEAR_DAYS = 14;
@@ -24,11 +26,6 @@ const state = {
 
 const isPast = (date) => date && date.slice(0, 10) < nyDaysAgo(2);
 
-async function pool(items, size, fn) {
-  const queue = [...items];
-  const worker = async () => { while (queue.length) await fn(queue.shift()); };
-  await Promise.all(Array.from({ length: Math.min(size, items.length) }, worker));
-}
 
 async function listAll(db, path, field) {
   const first = await congressGet(db, `${path}?limit=250`, 6 * 60 * 60 * 1000);
@@ -44,7 +41,7 @@ async function listAll(db, path, field) {
 }
 
 async function meetingRow(db, chamber, eventId) {
-  const key = `tl:meet:${chamber}:${eventId}`;
+  const key = KEY.tlMeeting(chamber, eventId);
   const hit = readCache(db, key);
   if (hit) return hit;
   const detail = await congressGet(db, `/committee-meeting/${CONGRESS}/${chamber}/${eventId}`, DAY);
@@ -78,7 +75,7 @@ async function houseVotes(db, session, onRow) {
   const rows = [];
   await pool(list, 3, async (v) => {
     const roll = v.rollCallNumber;
-    const key = `tl:vote:house:${session}:${roll}`;
+    const key = KEY.tlHouseVote(session, roll);
     let row = readCache(db, key);
     if (!row) {
       const year = 2024 + session;
@@ -111,7 +108,7 @@ async function houseVotes(db, session, onRow) {
 }
 
 async function senateVotes(db, session, onRow) {
-  const menuKey = `tl:senmenu:${CONGRESS}:${session}`;
+  const menuKey = KEY.tlSenateMenu(CONGRESS, session);
   let xml = readCache(db, menuKey)?.xml;
   if (!xml) {
     xml = await fetchText(`https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_${CONGRESS}_${session}.xml`).catch(() => "");
@@ -124,7 +121,7 @@ async function senateVotes(db, session, onRow) {
   const rows = [];
   await pool(blocks, 2, async (block) => {
     const roll = Number(xmlTag(block, "vote_number"));
-    const key = `tl:vote:senate:${session}:${roll}`;
+    const key = KEY.tlSenateVote(session, roll);
     let row = readCache(db, key);
     if (!row) {
       const body = await fetchText(SENATE_VOTE(CONGRESS, session, roll)).catch(() => "");

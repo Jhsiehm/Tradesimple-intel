@@ -1,9 +1,11 @@
-import { fetchJson, fetchText } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson, fetchText } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
 import { houseGeoid, ladderFromActions } from "./geo.mjs";
 import { committees, lisMap, memberCommittees, roster } from "./roster.mjs";
 import { memberPacs } from "./corporate.mjs";
 import { matchMembers } from "../shared/memberMatch.mjs";
+import { pool } from "./lib/pool.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const BASE = "https://api.congress.gov/v3";
 const TTL = 15 * 60 * 1000;
@@ -25,7 +27,7 @@ function missing() {
 export async function congressGet(db, path, ttl = TTL) {
   const apiKey = key();
   if (!apiKey) return missing();
-  const cacheKey = `congress:${path}`;
+  const cacheKey = KEY.congress(path);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = new URL(BASE + path);
@@ -352,17 +354,10 @@ async function houseMargin(db, congress, session, roll) {
   return { yea, nay };
 }
 
-async function pool(items, size, fn) {
-  const queue = [...items];
-  async function worker() {
-    while (queue.length) await fn(queue.shift());
-  }
-  await Promise.all(Array.from({ length: Math.min(size, items.length) }, () => worker()));
-}
 
 export async function voteDetail(db, chamber, congress, session, roll) {
   if (chamber === "senate") return senateVoteDetail(db, congress, session, roll);
-  const clerk = Number(congress) === 119 ? readCache(db, `tl:vote:house:${session}:${roll}`) : null;
+  const clerk = Number(congress) === 119 ? readCache(db, KEY.tlHouseVote(session, roll)) : null;
   if (clerk?.casts && Object.keys(clerk.casts).length) return houseFromClerk(db, clerk, congress, session, roll);
   const res = await congressGet(db, `/house-vote/${congress}/${session}/${roll}`);
   if (!res.ok) return res;
@@ -445,7 +440,7 @@ async function houseFromClerk(db, row, congress, session, roll) {
 }
 
 async function listSenateVotes(db) {
-  const cacheKey = `senate:vote-menu-119-${SESSION}`;
+  const cacheKey = KEY.senateVoteMenu(SESSION);
   const hit = readCache(db, cacheKey);
   let xml = hit?.xml;
   if (!xml) {
@@ -479,7 +474,7 @@ async function listSenateVotes(db) {
 
 async function senateVoteDetail(db, congress, session, roll) {
   const url = SENATE_VOTE(congress, session, roll);
-  const cacheKey = `senate:vote:${congress}:${session}:${roll}`;
+  const cacheKey = KEY.senateVote(congress, session, roll);
   const hit = readCache(db, cacheKey);
   let xml = hit?.xml;
   if (!xml) {

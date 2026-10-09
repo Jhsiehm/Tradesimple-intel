@@ -1,11 +1,13 @@
-import { fetchJsonRetry, fetchText, usaspendingGate } from "./http.mjs";
-import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
+import { fetchJsonRetry, fetchText, usaspendingGate } from "./lib/http.mjs";
+import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
 import { contractsFor } from "./corporate.mjs";
 import { norm } from "../shared/names.mjs";
+import { HOUR, DAY } from "./lib/time.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
+import { readStale } from "./lib/cache.mjs";
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 const USA = "https://api.usaspending.gov/api/v2";
 const CONTRACT_TYPES = ["A", "B", "C", "D"];
 const LATENCY = "USAspending prime contract actions by action date. Civilian agencies report within days; DoD actions are published about 90 days after award. Negative amounts are de-obligations.";
@@ -75,7 +77,7 @@ export async function contractFeed(db, params) {
   const end = new Date();
   const start = new Date(end.getTime() - days * DAY);
   filters.time_period = [{ start_date: start.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10) }];
-  const key = `usa:feed:v1:${JSON.stringify([filters.recipient_search_text, filters.place_of_performance_locations, days, sort])}`;
+  const key = KEY.usaFeed([filters.recipient_search_text, filters.place_of_performance_locations, days, sort]);
   const hit = readCache(db, key);
   if (hit) return { ...hit, items: keyed(hit.items || []), scope };
   const t0 = Date.now();
@@ -127,17 +129,11 @@ export async function contractFeed(db, params) {
   return { ...result, scope };
 }
 
-const BOARD_KEY = "usa:board:v2";
+const BOARD_KEY = KEY.usaBoard;
 const BOARD_LATENCY = "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered.";
 const BOARD_COOLDOWN = 2 * 60 * 1000;
 const OUTAGE_STREAK = 8;
 const board = { job: null, partial: null, error: null, failedAt: 0 };
-
-/** Cache row even when expired, so a rebuild can serve the last good board instead of an empty one. */
-function readStale(db, key) {
-  const row = db.prepare("SELECT body, stored_at FROM cache WHERE key = ?").get(key);
-  return row ? { value: JSON.parse(row.body), storedAt: row.stored_at } : null;
-}
 
 /**
  * Joined S&P 500 contractors ranked by last full fiscal-year obligations, with obligations as a share of
@@ -300,16 +296,16 @@ function currentFy() {
 
 /** Department of War daily announcements of contracts ≥ $7.5M. Article text is blocked to automated clients, so this lists the days. */
 export async function dodAnnouncements(db) {
-  const hit = readCache(db, "dod:contracts:v1");
+  const hit = readCache(db, KEY.dodContracts);
   if (hit) return hit;
   const t0 = Date.now();
   const SOURCE = "War.gov (Department of Defense) daily contract announcements";
   let xml;
   try {
-    xml = await fetchText("https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20", { headers: { "User-Agent": "Mozilla/5.0" } }, 20000);
+    xml = await fetchText("https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20", { headers: { "User-Agent": BROWSER_UA } }, 20000);
   } catch (err) {
     const why = err.name === "AbortError" ? "did not answer within 20 s" : err.message;
-    const stale = readStale(db, "dod:contracts:v1");
+    const stale = readStale(db, KEY.dodContracts);
     if (stale) return { ...stale.value, note: `War.gov RSS ${why}; showing the list fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
     return { ok: false, source: SOURCE, asOf: new Date().toISOString(), latency: "Posted around 5 p.m. ET each business day for awards of $7.5 million or more.", error: `War.gov RSS ${why}.`, items: [] };
   }
@@ -326,6 +322,6 @@ export async function dodAnnouncements(db) {
     latency: `Posted around 5 p.m. ET each business day for awards of $7.5 million or more, months before the same actions reach USAspending. Fetched in ${((Date.now() - t0) / 1000).toFixed(1)} s.`,
     items
   };
-  if (items.length) writeCache(db, "dod:contracts:v1", result, HOUR);
+  if (items.length) writeCache(db, KEY.dodContracts, result, HOUR);
   return result;
 }

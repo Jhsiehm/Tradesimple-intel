@@ -1,12 +1,13 @@
-import { fetchJson } from "./http.mjs";
-import { readCache, writeCache } from "./db.mjs";
+import { fetchJson } from "./lib/http.mjs";
+import { readCache, writeCache } from "./lib/db.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const TTL = 30 * 60 * 1000;
 
 export async function lobbyingForClient(db, clientName) {
   const apiKey = process.env.LDA_API_KEY || "";
   if (!apiKey) return { ok: false, missing: "LDA_API_KEY", filings: [] };
-  const cacheKey = `lda:${clientName.toLowerCase()}`;
+  const cacheKey = KEY.lda(clientName);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = new URL("https://lda.gov/api/v1/filings/");
@@ -38,7 +39,7 @@ export async function lobbyingForClient(db, clientName) {
 export async function fecForName(db, name) {
   const apiKey = process.env.FEC_API_KEY || "";
   if (!apiKey) return { ok: false, missing: "FEC_API_KEY", committees: [] };
-  const cacheKey = `fec:${name.toLowerCase()}`;
+  const cacheKey = KEY.fec(name);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = new URL("https://api.open.fec.gov/v1/committees/");
@@ -83,7 +84,7 @@ export async function fecForCommittees(db, ids) {
   const year = new Date().getUTCFullYear();
   const cycle = year % 2 ? year + 1 : year;
   if (!ids.length) return { ok: true, source: "FEC", cycle, note: "No corporate PAC is joined to this ticker.", committees: [] };
-  const cacheKey = `fec:cmte:v1:${cycle}:${ids.join(",")}`;
+  const cacheKey = KEY.fecCommittees(cycle, ids);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const committees = [];

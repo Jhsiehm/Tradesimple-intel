@@ -1,8 +1,8 @@
 import { congressTrades } from "./positions.mjs";
 import { LATE_DAYS } from "./alerts.mjs";
 import { tradeSentence } from "../shared/sentences.mjs";
+import { DAY } from "./lib/time.mjs";
 
-const DAY = 86_400_000;
 const back = (today, days) => new Date(Date.parse(`${today}T00:00:00Z`) - days * DAY).toISOString().slice(0, 10);
 
 function row(t, refYear) {

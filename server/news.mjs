@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
-import { fetchJson, fetchText } from "./http.mjs";
-import { listTickers, readCache, writeCache } from "./db.mjs";
+import { fetchJson, fetchText } from "./lib/http.mjs";
+import { listTickers, readCache, writeCache } from "./lib/db.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
+import { KEY } from "./lib/cacheKeys.mjs";
 
 const FEEDS = [
   { id: "bbc", name: "BBC World", desk: "world", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
@@ -66,7 +68,7 @@ const X_ACCOUNTS = ["Reuters", "AP", "business", "WSJ", "FT", "BBCBreaking", "AJ
 const TTL = 5 * 60 * 1000;
 
 export async function newsWire(db) {
-  const hit = readCache(db, "news:wire:v3");
+  const hit = readCache(db, KEY.newsWire);
   if (hit) return hit;
   const tickers = listTickers(db);
   const errors = [];
@@ -75,7 +77,7 @@ export async function newsWire(db) {
   await Promise.all(FEEDS.map(async (feed) => {
     const started = Date.now();
     try {
-      const xml = await fetchText(feed.url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/rss+xml, application/xml" } }, 12000);
+      const xml = await fetchText(feed.url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/rss+xml, application/xml" } }, 12000);
       const rows = parseRss(xml).slice(0, 25);
       for (const row of rows) {
         items.push({
@@ -109,14 +111,14 @@ export async function newsWire(db) {
     feeds: status.sort((a, b) => a.name.localeCompare(b.name)),
     items: dedupe(items).slice(0, 700)
   };
-  if (items.length) writeCache(db, "news:wire:v3", result, TTL);
+  if (items.length) writeCache(db, KEY.newsWire, result, TTL);
   return result;
 }
 
 export async function xWire(db) {
   const token = process.env.X_BEARER_TOKEN || "";
   if (!token) return socialWire(db);
-  const hit = readCache(db, "news:x:v1");
+  const hit = readCache(db, KEY.newsX);
   if (hit) return hit;
   const url = new URL("https://api.x.com/2/tweets/search/recent");
   url.searchParams.set("query", `(${X_ACCOUNTS.map((a) => `from:${a}`).join(" OR ")}) -is:retweet -is:reply`);
@@ -151,7 +153,7 @@ export async function xWire(db) {
       latency: "Recent search, cached five minutes to stay inside the rate limit.",
       items
     };
-    writeCache(db, "news:x:v1", result, TTL);
+    writeCache(db, KEY.newsX, result, TTL);
     return result;
   } catch (err) {
     return { ok: false, error: `X API ${err.message}`, source: "X API v2 recent search", items: [] };
@@ -161,7 +163,7 @@ export async function xWire(db) {
 const X_GROUPS = JSON.parse(readFileSync(new URL("../data/xaccounts.json", import.meta.url), "utf8"));
 
 async function trendsFor(path) {
-  const html = await fetchText(`https://trends24.in/${path}`, { headers: { "User-Agent": "Mozilla/5.0" } }, 15000);
+  const html = await fetchText(`https://trends24.in/${path}`, { headers: { "User-Agent": BROWSER_UA } }, 15000);
   const cards = [...html.matchAll(/<h3 class=title data-timestamp=([\d.]+)>[^<]*<\/h3><ol class=trend-card__list>([\s\S]*?)<\/ol>/g)].slice(0, 3);
   const list = (block) => [...block.matchAll(/<a href="([^"]+)" class=trend-link>([^<]+)<\/a>/g)].map((m) => ({ name: decode(m[2]), url: m[1].replace("twitter.com", "x.com") }));
   const [now, prev] = cards;
@@ -178,7 +180,7 @@ function decode(s) {
 }
 
 async function xTrends(db) {
-  const hit = readCache(db, "news:xtrends:v1");
+  const hit = readCache(db, KEY.newsXTrends);
   if (hit) return hit;
   const started = Date.now();
   const tickers = listTickers(db);
@@ -199,7 +201,7 @@ async function xTrends(db) {
     us: { ...us, items: us.items.map(tag) },
     world: { ...world, items: world.items.map(tag) }
   };
-  if (out.ok) writeCache(db, "news:xtrends:v1", out, 10 * 60 * 1000);
+  if (out.ok) writeCache(db, KEY.newsXTrends, out, 10 * 60 * 1000);
   return out;
 }
 
@@ -253,7 +255,7 @@ async function bskyFeed(actor, xHandle, tickers) {
 }
 
 async function truthFeed(tickers) {
-  const xml = await fetchText("https://www.trumpstruth.org/feed", { headers: { "User-Agent": "Mozilla/5.0" } }, 12000);
+  const xml = await fetchText("https://www.trumpstruth.org/feed", { headers: { "User-Agent": BROWSER_UA } }, 12000);
   const blocks = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
   const strip = (v) => decode(String(v || "").replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
   return blocks.slice(0, 30).map((b) => {
@@ -279,7 +281,7 @@ async function truthFeed(tickers) {
 }
 
 async function socialWire(db) {
-  const hit = readCache(db, "news:social:v1");
+  const hit = readCache(db, KEY.newsSocial);
   if (hit) return hit;
   const started = Date.now();
   const tickers = listTickers(db);
@@ -314,7 +316,7 @@ async function socialWire(db) {
     trendsAsOf: trends?.us?.asOf || null,
     items
   };
-  if (items.length) writeCache(db, "news:social:v1", result, 3 * 60 * 1000);
+  if (items.length) writeCache(db, KEY.newsSocial, result, 3 * 60 * 1000);
   return result;
 }
 
