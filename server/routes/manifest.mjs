@@ -9,6 +9,7 @@ export const MANIFEST = [
   { id: "geo", path: "/geo/:name(.*)", samples: ["/geo/states.geojson", "/geo/cd119.geojson"], warm: "board" },
   { id: "health", path: "/api/health", snapshot: true },
   { id: "backtest", path: "/api/backtest" },
+  { id: "backtest.replicate", path: "/api/backtest/replicate" },
   { id: "ask", path: "/api/ask" },
   { id: "tickers", path: "/api/tickers", warm: "discover", snapshot: true },
   { id: "hq", path: "/api/hq" },

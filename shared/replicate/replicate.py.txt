@@ -1,0 +1,219 @@
+"""Re-runs a TradeSimple Intel backtest from the files next to this script.
+
+    python3 replicate.py [folder]
+
+Reads spec.json, trades.csv, prices.csv, benchmark.csv with pandas (or the csv module when pandas is not installed),
+prints the recomputed headline numbers next to the app's, and exits 1 if any differs by more than 0.0001.
+"""
+import json
+import math
+import os
+import statistics
+import sys
+from datetime import date, timedelta
+
+try:
+    import pandas as pd
+except ImportError:  # the math below does not need pandas; it only reads the CSVs
+    pd = None
+    import csv
+
+DIR = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
+ENTRY_SLACK_DAYS = 7
+EPOCH = date(1970, 1, 1)
+
+
+def read_rows(name):
+    path = os.path.join(DIR, name)
+    if pd is not None:
+        return pd.read_csv(path, dtype=str, keep_default_na=False).to_dict("records")
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def day_of(iso):
+    return (date.fromisoformat(iso[:10]) - EPOCH).days
+
+
+def round_js(v, digits):
+    # Same rounding as JavaScript's Math.round(v * 10^d) / 10^d.
+    k = 10 ** digits
+    return math.floor(v * k + 0.5) / k
+
+
+def r4(v):
+    return None if v is None or not math.isfinite(v) else round_js(v, 4)
+
+
+def r2(v):
+    return None if v is None or not math.isfinite(v) else round_js(v, 2)
+
+
+def bars_by_symbol(rows):
+    out = {}
+    for r in rows:
+        opened = None if r["open_adj"] == "" else float(r["open_adj"])
+        out.setdefault(r["symbol"], []).append((day_of(r["date"]), opened, float(r["close_adj"])))
+    for s in out:
+        out[s].sort(key=lambda b: b[0])
+    return out
+
+
+def first_after(bars, day):
+    for i, b in enumerate(bars):
+        if b[0] > day:
+            return i
+    return -1
+
+
+def last_on_or_before(bars, day):
+    i = first_after(bars, day)
+    return len(bars) - 1 if i == -1 else i - 1
+
+
+def level_on(bars, day):
+    i = last_on_or_before(bars, day)
+    return None if i < 0 else bars[i][2]
+
+
+def bench_entry(bars, day):
+    i = last_on_or_before(bars, day)
+    if i < 0:
+        return None
+    if bars[i][0] == day and bars[i][1] and bars[i][1] > 0:
+        return bars[i][1]
+    return bars[i][2]
+
+
+def simulate(series, bench, rules, signal_day, sign):
+    """Entry the first bar after the public date, exit at the hold horizon (or stop/take), costs on each side."""
+    c = (rules["costBps"] + rules["slippageBps"]) / 10_000
+    entry_at = first_after(series, signal_day)
+    if entry_at == -1 or series[entry_at][0] - signal_day > ENTRY_SLACK_DAYS:
+        return None
+    at_open = rules["entry"] == "nextOpen"
+    entry_bar = series[entry_at]
+    open_missing = at_open and not (entry_bar[1] and entry_bar[1] > 0)
+    entry_price = entry_bar[1] if at_open and not open_missing else entry_bar[2]
+    start_day = entry_bar[0]
+    horizon = start_day + rules["holdDays"]
+    first_check = entry_at if at_open and not open_missing else entry_at + 1
+    exit_at = -1
+    for j in range(first_check, len(series)):
+        pnl = sign * (series[j][2] / entry_price - 1)
+        if rules.get("stopLossPct") and pnl <= -rules["stopLossPct"] / 100:
+            exit_at = j
+            break
+        if rules.get("takeProfitPct") and pnl >= rules["takeProfitPct"] / 100:
+            exit_at = j
+            break
+        if series[j][0] >= horizon:
+            exit_at = j
+            break
+    if exit_at == -1:
+        if rules["openTrades"] == "exclude" or len(series) - 1 < first_check:
+            return None
+        exit_at = len(series) - 1
+    bench_start = bench_entry(bench, start_day) if at_open and not open_missing else level_on(bench, start_day)
+    if not bench_start or bench_start <= 0:
+        return None
+    path = []
+    prev_stock, prev_bench = entry_price, bench_start
+    for k in range(first_check, exit_at + 1):
+        close = series[k][2]
+        level = level_on(bench, series[k][0])
+        path.append([series[k][0], sign * (close / prev_stock - 1), sign * (level / prev_bench - 1)])
+        prev_stock, prev_bench = close, level
+    if not path:
+        return None
+    path[0][1] -= c
+    path[-1][1] -= c
+    ret = sign * (series[exit_at][2] / entry_price - 1) - 2 * c
+    return {"ret": ret, "bench": sign * (prev_bench / bench_start - 1), "path": path}
+
+
+def max_drawdown(values):
+    peak, worst = values[0], 0.0
+    for v in values:
+        peak = max(peak, v)
+        worst = min(worst, v / peak - 1)
+    return worst
+
+
+def replicate(spec, trades, prices, benchmarks):
+    rules = spec["rules"]
+    bars = bars_by_symbol(prices)
+    bench_bars = bars_by_symbol(benchmarks)
+    calendar_id = "SPY" if rules["benchmark"] == "SECTOR" else rules["benchmark"]
+    sims = []
+    for t in trades:
+        sim = simulate(bars.get(t["symbol"], []), bench_bars.get(t["benchmark"], []), rules, day_of(t["public_date"]), -1 if t["side"] == "sell" else 1)
+        if sim:
+            sim["weight"] = float(t["weight"] or 1)
+            sims.append(sim)
+    if not sims:
+        return {"trades": 0}
+
+    # Calendar-time portfolio: each day, the weighted average return of the positions open that day; idle days earn 0.
+    by_day = {}
+    for t in sims:
+        for d, rs, rb in t["path"]:
+            row = by_day.setdefault(d, [0.0, 0.0, 0.0])
+            row[0] += t["weight"]
+            row[1] += t["weight"] * rs
+            row[2] += t["weight"] * rb
+    first, last = min(by_day), max(by_day)
+    days = set(by_day)
+    for b in bench_bars.get(calendar_id, []):
+        if first <= b[0] <= last:
+            days.add(b[0])
+    days = sorted(days)
+    S, B, R = [1.0], [1.0], []
+    for d in days:
+        row = by_day.get(d)
+        rs = row[1] / row[0] if row else 0.0
+        rb = row[2] / row[0] if row else 0.0
+        R.append(rs)
+        S.append(S[-1] * (1 + rs))
+        B.append(B[-1] * (1 + rb))
+    span = days[-1] - days[0] + 1
+    total, btotal = S[-1] - 1, B[-1] - 1
+    annual = (1 + total) ** (365 / span) - 1 if span >= 90 and total > -1 else None
+    rets = [t["ret"] for t in sims]
+    sd = statistics.stdev(R) if len(R) > 1 else None
+    return {
+        "trades": len(sims),
+        "total": r4(total),
+        "annualized": r4(annual) if annual is not None else None,
+        "benchmarkTotal": r4(btotal),
+        "excessTotal": r4(total - btotal),
+        "hitRate": r4(sum(1 for v in rets if v > 0) / len(rets)),
+        "avgTrade": r4(statistics.fmean(rets)),
+        "medianTrade": r4(statistics.median(rets)),
+        "maxDrawdown": r4(max_drawdown(S)),
+        "sharpeish": r2(statistics.fmean(R) / sd * math.sqrt(252)) if sd else None,
+        "spanDays": span,
+    }
+
+
+def main():
+    with open(os.path.join(DIR, "spec.json"), encoding="utf-8") as f:
+        meta = json.load(f)
+    got = replicate(meta["spec"], read_rows("trades.csv"), read_rows("prices.csv"), read_rows("benchmark.csv"))
+    want = meta.get("expected", {})
+    ok = True
+    print(f"{'metric':<16}{'replicated':>14}{'app':>14}  match")
+    for k, a in got.items():
+        b = want.get(k)
+        if a is None or b is None:
+            same = a == b
+        else:
+            same = abs(a - b) <= 1e-4 + 1e-9 or (k == "sharpeish" and abs(a - b) <= 0.011)
+        ok = ok and same
+        print(f"{k:<16}{str(a):>14}{str(b):>14}  {'yes' if same else 'NO'}")
+    print(json.dumps({"replicated": got, "app": want, "match": ok}))
+    sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()
