@@ -39,7 +39,7 @@ export const DEFAULT_RULES = {
   takeProfitPct: null,
   sides: "buy",
   sizing: "equal",
-  benchmark: "^GSPC",
+  benchmark: "SPY",
   costBps: 0,
   slippageBps: 5,
   openTrades: "exclude"

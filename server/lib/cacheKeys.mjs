@@ -48,6 +48,8 @@ export const KEY = {
   chart: (symbol, span) => `chart:v3:${symbol}:${span}`,
   screener: "board:screener:v1",
   closes: (symbol) => `closes:v1:${symbol}`,
+  bars: (symbol) => `bars:v1:${symbol}`,
+  backtest: (hash) => `backtest:v1:${hash}`,
   fxBoard: "board:fx:v1",
   cryptoBoard: "board:crypto:v1",
   geckoMarkets: "gecko:markets:v1",

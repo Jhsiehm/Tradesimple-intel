@@ -1,6 +1,7 @@
 import { fetchJson, makeGate } from "../lib/http.mjs";
 import { gateSpacing } from "../lib/env.mjs";
 import { BROWSER_UA } from "../lib/ua.mjs";
+import { parseBars } from "../parsers/bars.mjs";
 
 /** Every Yahoo chart call goes through one gate so boards, dossiers, and the returns warm cannot burst together. */
 export const yahooGate = makeGate(8, gateSpacing(60));
@@ -19,6 +20,12 @@ export function yahooChart(symbol, params, { timeoutMs = 20000, priority = false
   const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   return yahooGate(() => fetchJson(url, yahooHeaders(), timeoutMs), { priority });
+}
+
+/** Two years of adjusted daily [day, open, close] bars for a symbol or index (^GSPC). Throws on HTTP errors; `status` is kept. */
+export async function yahooBars(symbol, { range = "2y", timeoutMs = 20000, priority = false } = {}) {
+  const body = await yahooChart(symbol, { interval: "1d", range, includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
+  return parseBars(body);
 }
 
 export async function sessionQuote(ticker, digitsFor = () => 2) {

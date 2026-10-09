@@ -258,7 +258,7 @@ test("spec cleaning clamps, drops unknowns, and round-trips through the share to
   assert.equal(spec.filters.minAmount, 0);
   assert.equal(spec.filters.evil, undefined);
   assert.equal(spec.rules.holdDays, 730);
-  assert.equal(spec.rules.benchmark, "^GSPC");
+  assert.equal(spec.rules.benchmark, "SPY");
   assert.equal(spec.rules.entry, "nextOpen");
   assert.equal(spec.rules.costBps, 300);
   assert.deepEqual(decodeSpec(encodeSpec(spec)), spec);
@@ -268,4 +268,18 @@ test("spec cleaning clamps, drops unknowns, and round-trips through the share to
   assert.equal(specKey({ b: 1, a: { d: 1, c: 2 } }), '{"a":{"c":2,"d":1},"b":1}');
   assert.match(describeSpec(spec), /Armed Services members/);
   assert.match(describeSpec(spec), /open after the public date/);
+});
+
+test("a one-name sample and a price-index benchmark are called out", () => {
+  const many = Array.from({ length: 6 }, (_, i) => sig({ id: `a${i}`, actor: "A", actorLabel: "Heavy Trader" }));
+  const out = runBacktest({
+    rules: { holdDays: 10, slippageBps: 0, benchmark: "^GSPC" },
+    signals: [...many, sig({ id: "b", actor: "B", actorLabel: "Light" })],
+    bars: { AAA: flat(60) },
+    benchBars: { "^GSPC": flat(60) }
+  });
+  const text = out.caveats.items.map((c) => c.id);
+  assert.ok(text.includes("concentration"));
+  assert.ok(text.includes("priceIndex"));
+  assert.match(out.caveats.items.find((c) => c.id === "concentration").text, /Heavy Trader accounts for 6 of 7/);
 });

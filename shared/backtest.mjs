@@ -214,7 +214,7 @@ const SKIP_TEXT = {
   notPriced: "were not priced inside the time budget",
   noBarAfterSignal: "were made public after the last price bar",
   entryGap: "had no trading day within a week after the public date",
-  beforePriceHistory: "were public before the two-year price window starts",
+  beforePriceHistory: "were public before the symbol's price history begins (new listing, ticker change, or older than the two-year window)",
   badPrice: "had an unusable entry price",
   stillOpen: "have not reached their exit yet (hold not complete)",
   noBenchmark: "had no benchmark price on the entry day",
@@ -439,6 +439,15 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   if (context.paperFilings) add("warn", "paper", `${context.paperFilings} scanned paper filings in the window are not parsed, so those trades are missing from the signal set.`);
   if (context.unparsed) add("warn", "unparsed", `${context.unparsed} electronic reports could not be read this run.`);
   if (rules.sides !== "buy" && trades.some((t) => t.side === "sell")) add("warn", "short", "Sells are scored as shorts of the same stock with no borrow cost, no dividends owed, and no squeeze risk. A sale by a member is often liquidity, not a view.");
+  const byActor = new Map();
+  for (const t of trades) byActor.set(t.actorLabel || t.actor, (byActor.get(t.actorLabel || t.actor) || 0) + 1);
+  const top = [...byActor.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (top && byActor.size > 1 && top[1] / trades.length >= 0.4) {
+    add("warn", "concentration", `One name drives this sample: ${top[0]} accounts for ${top[1]} of ${trades.length} trades (${Math.round((top[1] / trades.length) * 100)}%). Read the result as that person's record, not the group's.`);
+  }
+  if (rules.benchmark === "^GSPC") {
+    add("warn", "priceIndex", "^GSPC is a price index without dividends, while the stocks use dividend-adjusted prices. That tilts excess return upward by roughly the S&P yield (about 1.2%/yr). Pick SPY for a like-for-like comparison.");
+  }
   if (openFallback) add("info", "open", `${openFallback} entries had no open print and used the close.`);
   if (benchFallback) add("info", "sectorFallback", `${benchFallback} trades had no sector ETF mapped and used SPY.`);
   add("info", "costs", `Costs: ${rules.costBps} bps commission + ${rules.slippageBps} bps slippage per side (${r2(c * 2e4)} bps round trip). No taxes, no market impact, fills assumed at the quoted open or close.`);
