@@ -25,7 +25,6 @@ const KNOWN_LARGE = new Set([
   "src/styles.css",
   "src/App.tsx",
   "src/markets/CandleChart.tsx",
-  "src/markets/CalendarBoard.tsx",
   "server/positions.mjs",
   "server/congress.mjs",
 ]);

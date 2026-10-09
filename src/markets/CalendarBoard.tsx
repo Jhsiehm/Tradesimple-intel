@@ -2,25 +2,12 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { usd, when } from "../lib/format";
 import type { DrawerModel } from "../types";
-import { CCY_CHART, COUNTRY_CCY, MacroStrip, useStrip, type EconEvent } from "./FxBoard";
+import { Lag } from "../ui/Lag";
+import { COUNTRY_CCY, MacroStrip, useStrip, type EconEvent } from "./FxBoard";
+import { econModel, type CalendarTab, type Meeting } from "./calendarTypes";
 
-export type CalendarTab = "sessions" | "earnings" | "macro" | "lobbying" | "pacs";
-
-export type Meeting = {
-  id: string;
-  date: string;
-  chamber: string;
-  title: string;
-  location?: string;
-  status?: string;
-  type?: string;
-  committees?: { name: string; system: string }[];
-  bills?: { id: string; label: string }[];
-  nominations?: number;
-  documents?: { name: string; url: string }[];
-  videos?: { name: string; url: string }[];
-  link?: string;
-};
+export { Lag } from "../ui/Lag";
+export { econModel, type CalendarTab, type Meeting } from "./calendarTypes";
 
 type Feed<T> = { ok: boolean; missing?: string; error?: string; source?: string; asOf?: string; latency?: string; items: T[] };
 
@@ -462,12 +449,6 @@ function Lobbying({ items, totals, onDossier }: { items?: Filing[]; totals?: Lob
   );
 }
 
-export function Lag({ days, due }: { days?: number | null; due: number }) {
-  if (days == null) return <span className="dim">—</span>;
-  const tone = days > due * 2 ? "lag-late" : days > due ? "lag-slow" : "lag-ok";
-  return <span className={`lag ${tone}`} title={`${days} days from event to public filing`}>{days}d</span>;
-}
-
 function shortPeriod(period: string) {
   const m = period.match(/^(\d)(st|nd|rd|th) Quarter/);
   if (m) return `Q${m[1]}`;
@@ -595,32 +576,6 @@ function Pacs({ feed, onDossier }: { feed?: PacFeed; onDossier: (m: DrawerModel)
       </div>
     </>
   );
-}
-
-export function econModel(e: EconEvent): DrawerModel {
-  const code = COUNTRY_CCY[e.country];
-  const pair = code ? CCY_CHART[code] : "";
-  return {
-    title: `${e.country} · ${e.event}`,
-    meta: `${e.date} ${e.time} ET · ${e.tier === "high" ? "High impact" : "Medium impact"} · Nasdaq economic calendar`,
-    rows: [
-      { label: "Actual", value: e.actual || "Not released" },
-      { label: "Consensus", value: e.consensus || "—" },
-      { label: "Previous", value: e.previous || "—" },
-      { label: "Surprise", value: e.surprise ? `${e.surprise} consensus` : "—" },
-      { label: "Currency", value: code || "—" }
-    ],
-    blocks: e.description ? [{ title: "What it measures", lines: [e.description] }] : undefined,
-    links: [
-      ...(pair ? [{ label: "Chart", value: `${code === "USD" ? "US Dollar Index" : pair.replace("=X", "")} with Fed, CPI, and macro marks`, action: `inst:${pair}` }] : []),
-      ...(code && code !== "USD" ? [{ label: "Chart", value: "US Dollar Index (DXY)", action: "inst:DX-Y.NYB" }] : []),
-      ...(code === "USD" ? [
-        { label: "Chart", value: "EUR/USD", action: "inst:EURUSD=X" },
-        { label: "Chart", value: "USD/JPY", action: "inst:USDJPY=X" },
-        { label: "Chart", value: "Bitcoin", action: "inst:BTC-USD" }
-      ] : [])
-    ]
-  };
 }
 
 function groupBy<T>(rows: T[], key: (row: T) => string) {
