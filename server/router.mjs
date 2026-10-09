@@ -5,6 +5,7 @@
  * after writing to `ctx.res` itself.
  */
 import { sendEncoded } from "./lib/compress.mjs";
+import { allowedOrigins, crossSiteRefusal } from "./lib/guard.mjs";
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -47,9 +48,9 @@ export function queryOf(searchParams) {
 
 /**
  * `manifest` is the ordered list of { id, path } entries; `handlers` maps id → handler. Every manifest id needs a
- * handler and every handler a manifest entry.
+ * handler and every handler a manifest entry. POST/PUT/PATCH/DELETE pass lib/guard.mjs first (403 otherwise).
  */
-export function createRouter(manifest, handlers) {
+export function createRouter(manifest, handlers, { origins = allowedOrigins() } = {}) {
   const missing = manifest.filter((r) => !handlers[r.id]).map((r) => r.id);
   const extra = Object.keys(handlers).filter((id) => !manifest.some((r) => r.id === id));
   if (missing.length || extra.length) throw new Error(`route table mismatch: missing ${missing.join(",") || "-"}; extra ${extra.join(",") || "-"}`);
@@ -66,6 +67,8 @@ export function createRouter(manifest, handlers) {
   async function handle(req, res, ctx) {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
     try {
+      const refused = crossSiteRefusal(req, origins);
+      if (refused) return sendJson(res, 403, { ok: false, error: refused, missing: "" }, req);
       const found = match(url.pathname);
       if (!found) return sendJson(res, 404, { ok: false, error: "Not found" }, req);
       const out = await found.route.handler({ ...ctx, req, res, url, params: found.params, query: queryOf(url.searchParams) });
