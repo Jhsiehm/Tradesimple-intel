@@ -21,7 +21,8 @@ export const KEY = {
   ptrDoc: (docId) => `ptr:doc:v2:${docId}`,
   efdPtr: (href) => `efd:ptr:${href}`,
   posInsiders: (core) => `pos:insiders:v5:${core}`,
-  secSubs: (cik) => `sec:subs:v2:${cik}`,
+  secSubs: (cik) => `sec:subs:v3:${cik}`,
+  sec13dg: (accession) => `sec:13dg:v1:${accession}`,
   secForm4: (accession) => `sec:f4:v4:${accession}`,
   posWhales: "pos:whales:v3",
   sec13f: (accession, digest) => `sec:13f:v2:${accession}:${digest}`,
@@ -79,6 +80,12 @@ export const KEY = {
   gdeltStrait: "gdelt-strait:v1",
 
   hq: (symbol) => `hq:v2:${symbol}`,
+
+  // Today watchlist: composed per-ticker activity, symbol headlines, delayed quote, and the symbols clients watch
+  watchActivity: (symbol) => `watch:activity:v1:${symbol}`,
+  watchNews: (symbol) => `watch:news:v1:${symbol}`,
+  watchQuote: (symbol) => `watch:quote:v1:${symbol}`,
+  watchSet: "watch:set:v1",
 
   // Negative cache: the last upstream failure for another key (lib/cache.mjs throughCache)
   down: (key) => `down:v1:${key}`

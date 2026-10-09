@@ -1,4 +1,4 @@
-import { fetchJson, makeGate } from "../lib/http.mjs";
+import { fetchJson, fetchText, makeGate } from "../lib/http.mjs";
 import { gateSpacing } from "../lib/env.mjs";
 import { BROWSER_UA } from "../lib/ua.mjs";
 import { parseBars } from "../parsers/bars.mjs";
@@ -26,6 +26,14 @@ export function yahooChart(symbol, params, { timeoutMs = 20000, priority = false
 export async function yahooBars(symbol, { range = "3y", timeoutMs = 20000, priority = false } = {}) {
   const body = await yahooChart(symbol, { interval: "1d", range, includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
   return parseBars(body);
+}
+
+const rssGate = makeGate(2, gateSpacing(250));
+
+/** Yahoo Finance headline RSS for one symbol, as raw XML (newest ~20 items, publisher time stamps). */
+export function yahooHeadlines(symbol, { timeoutMs = 10000 } = {}) {
+  const url = `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(symbol)}&region=US&lang=en-US`;
+  return rssGate(() => fetchText(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/rss+xml, application/xml" } }, timeoutMs));
 }
 
 export async function sessionQuote(ticker, digitsFor = () => 2) {

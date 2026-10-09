@@ -67,6 +67,8 @@ export const MANIFEST = [
   { id: "calendar.macro", path: "/api/calendar/macro", samples: ["/api/calendar/macro?back=0&ahead=14", "/api/calendar/macro?back=10&ahead=35"], warm: "board", snapshot: true },
   { id: "calendar.earnings", path: "/api/calendar/earnings", warm: "board", snapshot: true },
   { id: "alerts", path: "/api/alerts", samples: ["/api/alerts?late=all"], warm: "board", snapshot: true },
+  { id: "watchlist.activity", path: "/api/watchlist/activity" },
+  { id: "watchlist.ticker", path: "/api/watchlist/activity/:symbol([A-Za-z.\\-]+)" },
   { id: "intel.scope", path: "/api/intel/scope" },
   { id: "intel.case", path: "/api/intel/case/:kind(member|ticker|district)/:id([A-Za-z0-9.\\-]+)" },
   { id: "relations.node", path: "/api/relations/node" },

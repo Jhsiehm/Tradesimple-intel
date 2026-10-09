@@ -20,7 +20,7 @@ export function slimSubmissions(body) {
     name: body?.name,
     listStarts: dates.length ? dates[dates.length - 1] : "",
     complete: !(body?.filings?.files || []).length,
-    filings: { recent: { form: col("form"), accessionNumber: col("accessionNumber"), filingDate: col("filingDate"), primaryDocument: col("primaryDocument") } }
+    filings: { recent: { form: col("form"), accessionNumber: col("accessionNumber"), filingDate: col("filingDate"), primaryDocument: col("primaryDocument"), acceptanceDateTime: col("acceptanceDateTime"), reportDate: col("reportDate"), items: col("items") } }
   };
 }
 

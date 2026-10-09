@@ -28,4 +28,4 @@ export type AlertLevel = "high" | "elevated" | "routine";
 export const ALERT_LEVELS: AlertLevel[];
 export function triageAlerts<T extends { id: string; date: string; severity?: string }>(items: T[], opts?: { level?: AlertLevel | null; hide?: Set<string> | null }): T[];
 export function countAlertLevels(items: { id: string; severity?: string }[], hide?: Set<string> | null): Record<AlertLevel, number>;
-export function alertSeverity(a: { kind: string; late?: boolean; lag?: number | null; amountLow?: number | null; value?: number | null; amount?: number | null; planned?: boolean }): "high" | "elevated" | "routine";
+export function alertSeverity(a: { kind: string; late?: boolean; lag?: number | null; amountLow?: number | null; value?: number | null; amount?: number | null; planned?: boolean; buy?: boolean; activist?: boolean; change?: string; items?: string[] }): "high" | "elevated" | "routine";

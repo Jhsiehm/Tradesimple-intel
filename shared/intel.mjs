@@ -143,7 +143,10 @@ export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
   return { ...base, level: "baseline", label: "BASELINE", why };
 }
 
-export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; or a Form 4 filing with $1M+ of open-market buys and sells outside a 10b5-1 plan. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a Form 4 filing with $100K+ of such trades, or lobbying of $500K+. Otherwise ROUTINE. Form 4 is one row per filing; 10b5-1 planned sales, grants, exercises, tax withholding and gifts do not count toward its value, and a filing of planned sales only is ROUTINE.";
+export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; a Form 4 filing with $1M+ of open-market buys and sells outside a 10b5-1 plan; a contract action of $100M+; or an 8-K reporting bankruptcy, a cybersecurity incident, debt acceleration or unreliable prior financials. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a watched Congress buy, a Form 4 with an open-market buy or $100K+ of such trades, lobbying of $500K+, a contract action of $10M+, a 13D (active >5% stake), a 13F new position or exit of $100M+, or an 8-K on a material agreement, acquisition, restructuring, impairment, delisting, auditor change, change in control or officer change. Otherwise ROUTINE. Form 4 is one row per filing; 10b5-1 planned sales, grants, exercises, tax withholding and gifts do not count toward its value, and a filing of planned sales only is ROUTINE. 13G (passive stakes) and other 8-K items are ROUTINE.";
+
+const ITEMS_HIGH = new Set(["1.03", "1.05", "2.04", "4.02"]);
+const ITEMS_ELEVATED = new Set(["1.01", "1.02", "2.01", "2.03", "2.05", "2.06", "3.01", "4.01", "5.01", "5.02"]);
 
 /**
  * Triage level for one alert row; amounts are the disclosed range floor, not the trade size. Unwatched
@@ -160,9 +163,17 @@ export function alertSeverity(a) {
     if (lag > 90 || low >= 15001) return "elevated";
     return "routine";
   }
+  if (a.kind === "contract") return (a.amount ?? 0) >= 1e8 ? "high" : (a.amount ?? 0) >= 1e7 ? "elevated" : "routine";
+  if (a.kind === "stake") return a.activist ? "elevated" : "routine";
+  if (a.kind === "whale") return (a.change === "new" || a.change === "exit") && value >= 1e8 ? "elevated" : "routine";
+  if (a.kind === "8-k") {
+    const items = a.items || [];
+    return items.some((i) => ITEMS_HIGH.has(i)) ? "high" : items.some((i) => ITEMS_ELEVATED.has(i)) ? "elevated" : "routine";
+  }
   if (a.kind === "form4" && a.planned) return "routine";
   if (lag > 90 || low >= 250001 || (a.kind === "form4" && value >= 1e6)) return "high";
   if (a.late || lag > 45 || low >= 50001 || (a.kind === "form4" && value >= 1e5) || (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)) return "elevated";
+  if (a.buy && (a.kind === "symbol-trade" || a.kind === "member-trade" || a.kind === "form4")) return "elevated";
   return "routine";
 }
 

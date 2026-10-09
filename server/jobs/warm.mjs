@@ -1,4 +1,5 @@
-import { HOUR } from "../lib/time.mjs";
+import { HOUR, MINUTE } from "../lib/time.mjs";
+import { refreshWatched } from "../domain/watchlist/index.mjs";
 import { warmEnabled } from "../lib/env.mjs";
 import { refreshPositions } from "../domain/positions/index.mjs";
 import { refreshTimeline } from "../timeline.mjs";
@@ -20,7 +21,8 @@ export const SCHEDULE = [
   { name: "contracts", delay: 3000, every: HOUR, run: warmContracts },
   { name: "corporate+macro", delay: 5000, every: null, run: corporateThenMacro },
   { name: "timeline", delay: 8000, every: 6 * HOUR, run: refreshTimeline },
-  { name: "returns", delay: 20000, every: 12 * HOUR, run: refreshReturns }
+  { name: "returns", delay: 20000, every: 12 * HOUR, run: refreshReturns },
+  { name: "watchlist", delay: 30000, every: 15 * MINUTE, run: refreshWatched }
 ];
 
 export function startWarm(db) {

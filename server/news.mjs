@@ -320,7 +320,7 @@ async function socialWire(db) {
   return result;
 }
 
-function parseRss(xml) {
+export function parseRss(xml) {
   const blocks = xml.match(/<item[\s>][\s\S]*?<\/item>/g) || xml.match(/<entry[\s>][\s\S]*?<\/entry>/g) || [];
   return blocks.map((block) => {
     const link = tag(block, "link") || /<link[^>]*href="([^"]+)"/.exec(block)?.[1] || tag(block, "guid");
