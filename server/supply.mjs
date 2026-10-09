@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
-import { fetchJson } from "./lib/http.mjs";
 import { readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
-import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { yahooChart } from "./feeds/yahoo.mjs";
 
 const CHAIN = JSON.parse(readFileSync(new URL("../data/supplychain.json", import.meta.url), "utf8"));
 
@@ -48,10 +47,7 @@ function linksFor(db, symbol) {
 }
 
 async function closes(symbol) {
-  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
-  url.searchParams.set("interval", "1d");
-  url.searchParams.set("range", "6mo");
-  const body = await fetchJson(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } }, 12000);
+  const body = await yahooChart(symbol, { interval: "1d", range: "6mo" }, { timeoutMs: 12000 });
   const r = body?.chart?.result?.[0];
   if (!r) return null;
   const c = r.indicators?.adjclose?.[0]?.adjclose || r.indicators?.quote?.[0]?.close || [];

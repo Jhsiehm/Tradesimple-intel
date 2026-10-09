@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
-import { fetchJson } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
-import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { yahooChart } from "./feeds/yahoo.mjs";
 
 const GLOBALS = JSON.parse(readFileSync(new URL("../data/globals.json", import.meta.url), "utf8"));
 const TTL = 2 * 60 * 1000;
@@ -19,10 +18,7 @@ export function globalInstrument(symbol) {
 }
 
 export async function metaQuote(symbol) {
-  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
-  url.searchParams.set("interval", "1d");
-  url.searchParams.set("range", "5d");
-  const body = await fetchJson(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } }, 12000);
+  const body = await yahooChart(symbol, { interval: "1d", range: "5d" }, { timeoutMs: 12000 });
   const result = body?.chart?.result?.[0];
   if (!result) return null;
   const meta = result.meta || {};

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fetchJson } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
-import { sessionQuote } from "./chart.mjs";
+import { sessionQuote } from "./feeds/yahoo.mjs";
 import { globalInstrument } from "./globals.mjs";
 import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";

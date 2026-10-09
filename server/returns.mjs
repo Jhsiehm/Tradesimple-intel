@@ -1,10 +1,9 @@
-import { fetchJson } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
 import { congressTrades } from "./positions.mjs";
 import { LATE_DAYS } from "./alerts.mjs";
 import { HOUR, DAY } from "./lib/time.mjs";
-import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { yahooChart } from "./feeds/yahoo.mjs";
 import { readStale } from "./lib/cache.mjs";
 
 export const BENCHMARK = "SPY";
@@ -191,12 +190,7 @@ export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_
 
 
 async function fetchCloses(symbol) {
-  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
-  url.searchParams.set("interval", "1d");
-  url.searchParams.set("range", "2y");
-  url.searchParams.set("includeAdjustedClose", "true");
-  url.searchParams.set("events", "div,splits");
-  const body = await fetchJson(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } });
+  const body = await yahooChart(symbol, { interval: "1d", range: "2y", includeAdjustedClose: "true", events: "div,splits" });
   const result = body?.chart?.result?.[0];
   if (!result) throw new Error(body?.chart?.error?.description || "no chart");
   const stamps = result.timestamp || [];

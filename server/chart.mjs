@@ -3,6 +3,9 @@ import { listTickers, readCache, writeCache, tickerBySymbol } from "./lib/db.mjs
 import { cryptoDigits, instrumentBySymbol } from "./instruments.mjs";
 import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { round, sessionQuote, yahooChart } from "./feeds/yahoo.mjs";
+
+export { sessionQuote };
 
 const SPANS = {
   "1m": { interval: "1m", range: "1d", note: "One-minute bars for the latest session." },
@@ -27,12 +30,12 @@ export async function priceChart(db, symbol, spanId) {
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
 
-  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker.symbol)}`);
-  url.searchParams.set("interval", spec.interval);
-  url.searchParams.set("range", spec.range);
-  url.searchParams.set("includeAdjustedClose", spec.interval === "1d" ? "true" : "false");
-  url.searchParams.set("events", "div,splits");
-  const body = await fetchJson(url, yahooHeaders());
+  const body = await yahooChart(ticker.symbol, {
+    interval: spec.interval,
+    range: spec.range,
+    includeAdjustedClose: spec.interval === "1d" ? "true" : "false",
+    events: "div,splits"
+  });
   const result = body?.chart?.result?.[0];
   const error = body?.chart?.error?.description;
   if (!result) return { ok: false, error: error || "No chart from Yahoo Finance" };
@@ -136,76 +139,4 @@ export async function quoteBoard(db) {
   };
   if (items.length) writeCache(db, KEY.screener, payload, 60 * 1000);
   return payload;
-}
-
-export async function sessionQuote(ticker, digitsFor = () => 2) {
-  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker.symbol)}`);
-  url.searchParams.set("interval", "1d");
-  url.searchParams.set("range", "5d");
-  url.searchParams.set("includeAdjustedClose", "false");
-  const body = await fetchJson(url, yahooHeaders());
-  const result = body?.chart?.result?.[0];
-  if (!result) return null;
-  const stamps = result.timestamp || [];
-  const quote = result.indicators?.quote?.[0] || {};
-  const bars = [];
-  for (let i = 0; i < stamps.length; i += 1) {
-    const close = quote.close?.[i];
-    if (close == null) continue;
-    bars.push({
-      t: stamps[i] * 1000,
-      o: quote.open?.[i],
-      h: quote.high?.[i],
-      l: quote.low?.[i],
-      c: close,
-      v: quote.volume?.[i] || 0
-    });
-  }
-  const lastBar = bars.at(-1);
-  if (!lastBar) return null;
-  const prev = bars.length > 1 ? bars[bars.length - 2].c : null;
-  const meta = result.meta || {};
-  const last = meta.regularMarketPrice ?? lastBar.c;
-  const change = prev == null ? null : last - prev;
-  const digits = digitsFor(last);
-  const r = (value) => fixed(value, digits);
-  return {
-    symbol: ticker.symbol,
-    name: ticker.name,
-    exchange: meta.exchangeName || "",
-    digits,
-    last: r(last),
-    change: r(change),
-    changePct: prev ? round((change / prev) * 100) : null,
-    open: r(lastBar.o),
-    high: r(meta.regularMarketDayHigh ?? lastBar.h),
-    low: r(meta.regularMarketDayLow ?? lastBar.l),
-    previousClose: r(prev),
-    yearHigh: r(meta.fiftyTwoWeekHigh),
-    yearLow: r(meta.fiftyTwoWeekLow),
-    spark: bars.map((bar) => bar.c),
-    volume: meta.regularMarketVolume || lastBar.v || 0,
-    asOf: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : new Date(lastBar.t).toISOString()
-  };
-}
-
-function yahooHeaders() {
-  return {
-    headers: {
-      "User-Agent": BROWSER_UA,
-      Accept: "application/json"
-    }
-  };
-}
-
-function round(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
-  return Number(n.toPrecision(8));
-}
-
-function fixed(value, digits) {
-  const n = Number(value);
-  if (value == null || !Number.isFinite(n)) return null;
-  return Number(n.toFixed(digits));
 }
