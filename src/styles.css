@@ -149,6 +149,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   white-space: nowrap;
   text-align: right;
 }
+.signout { margin: 0; display: flex; }
+.signout-btn { font-size: 11px; padding: 4px 8px; white-space: nowrap; color: var(--dim); }
 @media (max-width: 1180px) {
   .clock { display: none; }
   .search { width: 120px; }

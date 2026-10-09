@@ -8,6 +8,7 @@ import { useAsk } from "./ask/useAsk";
 import { openStored } from "./tasks/ScheduledTasks";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
+import { SignOut } from "./shell/SignOut";
 import { AlertsMenu } from "./shell/AlertsMenu";
 import { Drawer } from "./shell/Drawer";
 import { WidgetLayer } from "./shell/Widgets";
@@ -595,6 +596,7 @@ export function App() {
             showChart={(s) => showChart(s, "6mo")}
           />
           <time className="clock" dateTime={clock}>{clock.slice(11, 19)} UTC</time>
+          <SignOut />
         </div>
       </header>
       <main className="stage" style={phone ? undefined : { gridTemplateColumns: timelineId ? "minmax(0, 1fr)" : rail.columns }}>

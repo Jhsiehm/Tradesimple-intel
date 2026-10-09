@@ -1,5 +1,6 @@
 /**
- * The HTTP front in front of the route table. Order: /healthz and /api/health (open), /login and /logout, the
+ * The HTTP front in front of the route table. Order: /healthz and /api/health (open), /login and /logout,
+ * /api/session (open: `{ auth, signedIn }` so the app knows whether to show Sign out; never the cookie), the
  * sign-in gate (lib/auth.mjs), then the built app from dist/ (production or INTEL_SERVE_DIST=1) for GET/HEAD
  * outside /api and /geo, and finally the API router. In development on loopback this is a pass-through.
  */
@@ -96,6 +97,10 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
       }
       if (p === "/login") return await login(req, res, url);
       if (p === "/logout") return logout(req, res);
+      if (p === "/api/session") {
+        res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        return res.end(JSON.stringify({ ok: true, auth: needsLogin(req, cfg), signedIn: Boolean(session(req)) }));
+      }
       if (!OPEN.has(p) && needsLogin(req, cfg)) {
         const s = session(req);
         if (!s) {

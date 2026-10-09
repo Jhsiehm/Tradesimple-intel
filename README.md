@@ -279,7 +279,7 @@ Set **`ASK_MONTHLY_BUDGET_USD`** on the server (see costs below). `PUBLIC_ORIGIN
 
 ### 5. First sign-in
 
-Open the `https://…` address that the bootstrap printed and enter the password (and the 6-digit code if you set TOTP). To sign out, open `/logout`. To sign out every browser, run `npm run -s auth:hash` again and send only the new `INTEL_SESSION_SECRET` line through `tradesimple-env`.
+Open the `https://…` address that the bootstrap printed and enter the password (and the 6-digit code if you set TOTP). To sign out, use **Sign out** at the right of the top bar (shown only when sign-in is on) or open `/logout`. To sign out every browser, run `npm run -s auth:hash` again and send only the new `INTEL_SESSION_SECRET` line through `tradesimple-env`.
 
 ### Updating
 

@@ -114,6 +114,16 @@ test("sign in, use the app and the API (including a stream), sign out", async ()
   assert.match(out.headers.get("set-cookie"), /^intel_session=; .*Max-Age=0/);
 });
 
+test("/api/session tells the app whether to show Sign out, and nothing else", async () => {
+  assert.deepEqual(await (await get(`${prod}/api/session`)).json(), { ok: true, auth: true, signedIn: false });
+  const cookie = cookieOf(await loginForm(prod, PASSWORD, { origin: "http://127.0.0.1:1" }));
+  const res = await get(`${prod}/api/session`, { cookie });
+  assert.equal(res.headers.get("set-cookie"), null);
+  assert.deepEqual(await res.json(), { ok: true, auth: true, signedIn: true });
+  assert.deepEqual(await (await get(`${dev}/api/session`)).json(), { ok: true, auth: false, signedIn: false });
+  assert.equal((await get(`${prod}/api/session/../congress/feed`)).status, 401, "no path trick past the gate");
+});
+
 test("wrong password, cross-site form, forged cookie and expiry are refused", async () => {
   const wrong = await loginForm(prod, "nope", PROXY);
   assert.equal(wrong.status, 401);
