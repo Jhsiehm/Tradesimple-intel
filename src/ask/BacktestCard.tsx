@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { describeValue, PREF_FIELDS } from "../../shared/backtestAsk.mjs";
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import { backtestFormulas } from "../../shared/formulas.mjs";
@@ -53,7 +53,7 @@ const ROWS: [string, (r: BtRun) => string][] = [
 ];
 
 /** A backtest result inside the chat: what ran and why, the headline, the curve, top trades, formulas, caveats, Replicate. */
-export function BacktestCard({ bt, onFollow }: { bt: BacktestRef; onFollow: (action: string) => void }) {
+export function BacktestCard({ bt, onFollow, cite }: { bt: BacktestRef; onFollow: (action: string) => void; cite?: ReactNode }) {
   const now = useRun(bt.spec);
   const before = useRun(bt.prior);
   const run = now?.phase === "done" ? now.run : null;
@@ -69,7 +69,7 @@ export function BacktestCard({ bt, onFollow }: { bt: BacktestRef; onFollow: (act
   return (
     <article className="btc" aria-label="Backtest result">
       <header className="btc-head">
-        <p className="btc-using"><em>Using</em> {bt.using || run?.description}</p>
+        <p className="btc-using">{cite}<em>Using</em> {bt.using || run?.description}</p>
         {labeled.length ? (
           <p className="btc-from">{labeled.map(([p, from]) => <span key={p} className="tag" title={`From ${FROM_WORD[from] || from}`}>{describeValue(p, p.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], bt.spec))} · {FROM_WORD[from] || from}</span>)}</p>
         ) : null}

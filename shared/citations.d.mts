@@ -1,0 +1,13 @@
+export const REF_SOURCE: string;
+export type RefPart = { text: string; ref?: undefined } | { ref: string; text?: undefined };
+export type CitationUnit = { kind: "row" | "sentence"; text: string; refs: string[] };
+export type Miscited = { raw: string; cited: string[]; foundIn: string[] };
+export type ChipStep = { label?: string; tool?: string; source?: string; asOf?: string; latency?: string; state?: string; note?: string; open?: string };
+export function refsIn(text: string): string[];
+export function splitRefs(text: string): RefPart[];
+export function stripRefs(text: string): string;
+export function stepAnchor(turnId: string, id: string): string;
+export function chipTitle(step: ChipStep): string;
+export function citationUnits(answer: string): CitationUnit[];
+export function citationCheck(answer: string, evidence: { id: string; ok: boolean; json: string }[]): { miscited: Miscited[]; uncitedRows: string[] };
+export function miscitedNote(m: Miscited): string;

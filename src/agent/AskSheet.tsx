@@ -6,10 +6,11 @@ import { DEMO, when } from "../lib/api";
 import { Icon } from "../ui/icons/Icon";
 import { THEORY_LOOK } from "../relations/palette";
 import { saveTheory } from "../relations/store";
-import { Answer, ToolTable } from "../ask/Answer";
+import { miscitedNote } from "../../shared/citations.mjs";
+import { Answer, Chip, ToolTable } from "../ask/Answer";
 import { BacktestCard } from "../ask/BacktestCard";
 import { Clarify } from "../ask/Clarify";
-import { Steps } from "../ask/Steps";
+import { revealStep, Steps } from "../ask/Steps";
 import { hasContext, type AskApi } from "../ask/useAsk";
 import type { Step, Turn } from "../ask/types";
 import { contextLine, type AgentContext } from "./context";
@@ -222,9 +223,10 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
 function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; ask: AskApi; onFollow: (action: string) => void }) {
   const done = turn.done;
   const chip = (s: Step) => {
+    revealStep(turn.id, s.id);
     if (s.open) onFollow(s.open);
-    else document.getElementById(`st-${turn.id}-${s.id}`)?.scrollIntoView({ block: "nearest" });
   };
+  const byId = new Map(turn.steps.map((s) => [s.id, s]));
   const theory = done?.theory ? cleanTheory(done.theory) : null;
   return (
     <>
@@ -234,8 +236,8 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
         {turn.clarify ? <Clarify ask={turn.clarify} disabled={busy} onRun={(answers, acceptDefaults) => void ask.run(turn.question, { answers, acceptDefaults, turnId: turn.id })} /> : null}
         {turn.text ? <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} /> : null}
         {done?.greeting ? <div className="ask-examples">{EXAMPLES.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div> : null}
-        {done?.table ? <ToolTable table={done.table} /> : null}
-        {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} />)}
+        {done?.table ? <ToolTable table={done.table} steps={turn.steps} onChip={chip} /> : null}
+        {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} cite={<Chip id={b.id} steps={byId} onChip={chip} />} />)}
         {theory ? (
           <section className="ask-theory" style={{ ["--tint" as string]: THEORY_LOOK.color }}>
             <h3>Proposed theory</h3>
@@ -248,6 +250,9 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
           <>
             {done.grounding.unmatched.length ? <p className="ask-warn">Not found in any tool result: {done.grounding.unmatched.join(", ")}. Treat as unverified.</p> : null}
             {done.grounding.mislabeled?.length ? <p className="ask-warn">Counted as something else in the tool results: {done.grounding.mislabeled.map((m) => `“${m.raw}” is ${m.foundAs[0]}`).join("; ")}. Treat as mislabeled.</p> : null}
+            {done.grounding.miscited?.length ? <p className="ask-warn">Cited to the wrong step: {done.grounding.miscited.map(miscitedNote).join(" ")}</p> : null}
+            {done.grounding.uncitedRows?.length ? <p className="ask-warn">{done.grounding.uncitedRows.length} table row{done.grounding.uncitedRows.length === 1 ? " has" : "s have"} figures and no ref. Treat as unverified.</p> : null}
+            {done.uncited ? <p className="ask-warn">Tools ran, but the answer cites none of them. Treat its figures as unverified.</p> : null}
             {done.unknown.length ? <p className="ask-warn">Cites results that were never fetched: {done.unknown.join(", ")}.</p> : null}
             {done.noTools && !done.prefs ? <p className="ask-warn">No tool was called, so nothing here comes from the app's data.</p> : null}
             {done.stopped ? <p className="ask-warn">Stopped at the {done.stopped}; the answer may be incomplete.</p> : null}

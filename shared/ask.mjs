@@ -259,7 +259,8 @@ export function evidenceNumbers(json) {
   return [...set];
 }
 
-function grounded(n, pool) {
+/** Whether one number from `numbersIn` is in `pool`, to its stated precision. Integers up to 10 always pass. */
+export function grounded(n, pool) {
   const v = Math.abs(n.value);
   if (!n.pct && !n.bps && n.scale === 1 && Number.isInteger(v) && v <= 10) return true;
   const tol = 0.5 * 10 ** -n.decimals * n.scale;

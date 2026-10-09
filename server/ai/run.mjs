@@ -3,6 +3,7 @@ import { attachedNote, contextNote, fallbackTable, figureCount, greetingText, is
 import { buildSpec, clarifyQuestions, describeValue, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
 import { mislabelNote } from "../../shared/countLabels.mjs";
+import { citationCheck, stripRefs } from "../../shared/citations.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
@@ -37,7 +38,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   const quick = (answer, extra = {}) => {
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
-    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
+    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [], miscited: [], uncitedRows: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
     return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
@@ -61,8 +62,9 @@ export async function runAsk({ question, history = [], context = null, attached 
 
   const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? prior : null) : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
-  if (attached) messages.push({ role: "user", content: attachedNote(attached) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
-  messages.push(...history, { role: "user", content: question });
+  const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
+  if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
+  messages.push(...unref(history), { role: "user", content: question });
   let calls = 0;
   let spent = 0;
   let answer = "";
@@ -184,7 +186,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     emit({ type: "token", delta: answer });
   }
   const { cited, unknown } = citationRefs(answer, evidence);
-  const grounding = groundingCheck(answer, evidence);
+  const grounding = { ...groundingCheck(answer, evidence), ...citationCheck(answer, evidence) };
   let table = null;
   const data = evidence.filter((e) => e.ok && e.rows > 0 && e.tool !== "propose_theory");
   if (data.length && figureCount(answer) < 2) {

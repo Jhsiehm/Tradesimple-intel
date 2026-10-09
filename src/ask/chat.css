@@ -70,6 +70,10 @@
 .st-main p { margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
 .st-title b { font-weight: 500; color: var(--ink); }
 .st-ref, .st-ms, .st-rows { margin-left: 6px; color: var(--faint); }
+.st-hit { animation: st-hit 1.6s ease-out; }
+.st-hit .st-ref { color: var(--cyan); }
+@keyframes st-hit { from { background: color-mix(in srgb, var(--cyan) 18%, transparent); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .st-hit { animation: none; outline: 1px solid var(--cyan); } }
 .st-args, .st-src { color: var(--dim); }
 .st-using { color: var(--amber); }
 .st-diff { color: var(--cyan); }

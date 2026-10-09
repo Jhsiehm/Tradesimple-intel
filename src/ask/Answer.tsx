@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
+import { chipTitle, splitRefs } from "../../shared/citations.mjs";
 import type { FallbackTable, Step } from "./types";
 
-const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 const BOLD = /\*\*([^*]+)\*\*/g;
 
-/** Inline text: **bold** and [t3] refs as chips. A ref with no tool result behind it is marked unverified. */
+/** One ref as a chip. A ref with no step in this turn is marked unverified, never shown as a source. */
+export function Chip({ id, steps, onChip }: { id: string; steps: Map<string, Step>; onChip: (s: Step) => void }) {
+  const s = steps.get(id);
+  if (!s) return <span className="cite bad" title="No tool call in this answer has this ref, so it is not a source">{id}?</span>;
+  return <button type="button" className={s.state === "error" ? "cite fail" : "cite"} title={chipTitle(s)} onClick={() => onChip(s)}>{id}</button>;
+}
+
+/** Inline text: **bold** and [t3] refs as chips. */
 function Inline({ text, steps, onChip }: { text: string; steps: Map<string, Step>; onChip: (s: Step) => void }) {
   const out: ReactNode[] = [];
   let k = 0;
@@ -17,20 +24,10 @@ function Inline({ text, steps, onChip }: { text: string; steps: Map<string, Step
     }
     out.push(s.slice(last));
   };
-  let last = 0;
-  for (const m of text.matchAll(REF)) {
-    bolded(text.slice(last, m.index));
-    for (const id of m[1].split(/\s*,\s*/)) {
-      const s = steps.get(id);
-      out.push(s ? (
-        <button key={k++} type="button" className={s.state === "error" ? "cite fail" : "cite"} title={`${s.label} · ${s.source || "no source"}${s.asOf ? ` · as of ${s.asOf}` : ""}${s.open ? " · opens the board" : ""}`} onClick={() => onChip(s)}>{id}</button>
-      ) : (
-        <span key={k++} className="cite bad" title="No tool result has this ref, so it is not a source">{id}?</span>
-      ));
-    }
-    last = (m.index ?? 0) + m[0].length;
+  for (const part of splitRefs(text)) {
+    if (part.ref) out.push(<Chip key={k++} id={part.ref} steps={steps} onChip={onChip} />);
+    else bolded(part.text ?? "");
   }
-  bolded(text.slice(last));
   return <>{out}</>;
 }
 
@@ -82,16 +79,21 @@ const cellText = (col: string, v: unknown) => {
   return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n * 100).toFixed(1)}%`;
 };
 
+const latencyOf = (steps: Step[], ref: string) => {
+  const latency = steps.find((s) => s.id === ref)?.latency;
+  return latency ? ` · ${latency}` : "";
+};
+
 /** When the answer carried no figures, the tool's own rows, labeled with where they came from. Return-like columns hold fractions. */
-export function ToolTable({ table }: { table: FallbackTable }) {
+export function ToolTable({ table, steps, onChip }: { table: FallbackTable; steps: Step[]; onChip: (s: Step) => void }) {
   return (
     <section className="ans-fallback" aria-label="Tool rows">
-      <h4>{table.label} <span className="cite">{table.ref}</span></h4>
+      <h4>{table.label} <Chip id={table.ref} steps={new Map(steps.map((s) => [s.id, s]))} onChip={onChip} /></h4>
       <div className="ans-table"><table>
         <thead><tr>{table.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>{table.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{cellText(table.columns[j], c)}</td>)}</tr>)}</tbody>
       </table></div>
-      <p className="ans-src">{table.source || "no source"}{table.asOf ? ` · as of ${table.asOf}` : ""}{table.total > table.rows.length ? ` · ${table.rows.length} of ${table.total} rows` : ""}</p>
+      <p className="ans-src">{table.source || "no source reported"}{table.asOf ? ` · as of ${table.asOf}` : ""}{latencyOf(steps, table.ref)}{table.total > table.rows.length ? ` · ${table.rows.length} of ${table.total} rows` : ""}</p>
     </section>
   );
 }

@@ -1,5 +1,19 @@
+import { stepAnchor } from "../../shared/citations.mjs";
 import { when } from "../lib/api";
 import type { Step, Turn } from "./types";
+
+/** Opens a finished turn's collapsed timeline, scrolls to one step, and marks it briefly. */
+export function revealStep(turnId: string, id: string) {
+  const row = document.getElementById(stepAnchor(turnId, id));
+  if (!row) return false;
+  const box = row.closest("details");
+  if (box) box.open = true;
+  row.scrollIntoView({ block: "nearest" });
+  row.classList.remove("st-hit");
+  void row.offsetWidth;
+  row.classList.add("st-hit");
+  return true;
+}
 
 const PHASES = ["planning", "fetching", "computing", "writing"] as const;
 const PHASE_WORD = { planning: "Planning", fetching: "Fetching", computing: "Computing", writing: "Writing" };
@@ -20,7 +34,7 @@ function StepRow({ s, turnId }: { s: Step; turnId: string }) {
   const icon = s.state === "running" ? <span className="st-spin" aria-label="running" /> : s.state === "ok" ? <span className="st-ok" aria-label="done">✓</span> : <span className="st-bad" aria-label="failed">×</span>;
   const args = argLine(s.args);
   return (
-    <li id={`st-${turnId}-${s.id}`} className={`st-row ${s.state}`}>
+    <li id={stepAnchor(turnId, s.id)} className={`st-row ${s.state}`}>
       {icon}
       <div className="st-main">
         <p className="st-title"><b>{s.label}</b> <span className="st-ref">{s.id}</span> <span className="st-ms">{secs(s.ms)}</span>{s.state !== "running" && s.rows ? <span className="st-rows">{s.rows} row{s.rows === 1 ? "" : "s"}</span> : null}</p>

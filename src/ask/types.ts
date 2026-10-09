@@ -1,5 +1,6 @@
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { Clarify } from "../../shared/backtestAsk.mjs";
+import type { Miscited } from "../../shared/citations.mjs";
 import type { Theory } from "../../shared/relations.mjs";
 
 /** What the server streams from POST /api/ask, and what a chat keeps. */
@@ -45,7 +46,7 @@ export type Done = {
   answer: string;
   cited: string[];
   unknown: string[];
-  grounding: { checked: number; unmatched: string[]; mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[] };
+  grounding: { checked: number; unmatched: string[]; mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[]; miscited?: Miscited[]; uncitedRows?: string[] };
   uncited: boolean;
   noTools: boolean;
   greeting: boolean;

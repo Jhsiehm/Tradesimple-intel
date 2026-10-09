@@ -1,4 +1,5 @@
 import { cleanPrefs, mergePrefs, PREFS_KEY, type Prefs } from "../../shared/backtestAsk.mjs";
+import { stripRefs } from "../../shared/citations.mjs";
 import type { SavedChat, Step, Turn } from "./types";
 
 /** Chats kept in this browser. v2 holds the step trace; v1 sheet chats and the old answer history migrate in once. */
@@ -87,11 +88,11 @@ export const removeChat = (chats: SavedChat[], chatId: string) => chats.filter((
 export const chatTitle = (turns: Turn[]) => (turns[0]?.question.replace(/\s+/g, " ").trim() || "Untitled").slice(0, 80);
 export const newChatId = id;
 
-/** Prior turns as model history: question and answer text only. */
+/** Prior turns as model history: question and answer text only, without refs (each turn numbers its tools from t1). */
 export function historyOf(turns: Turn[]) {
   return turns.filter((t) => t.done && !t.done.clarify).flatMap((t) => [
     { role: "user" as const, content: t.question },
-    { role: "assistant" as const, content: (t.done?.answer || t.text).slice(0, 1200) }
+    { role: "assistant" as const, content: stripRefs(t.done?.answer || t.text).slice(0, 1200) }
   ]).slice(-6);
 }
 

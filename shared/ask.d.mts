@@ -31,6 +31,7 @@ export function citationRefs(answer: string, evidence: Pick<Evidence, "id">[]): 
 export type NumberToken = { raw: string; value: number; decimals: number; pct: boolean; bps: boolean; scale: number };
 export function numbersIn(s: string): NumberToken[];
 export function evidenceNumbers(json: string): number[];
+export function grounded(n: NumberToken, pool: number[]): boolean;
 export function groundingCheck(answer: string, evidence: Evidence[]): { checked: number; unmatched: string[] };
 export function caveatsFor(evidence: Evidence[]): string[];
 export function makeLimiter(opts: { max: number; windowMs: number }): { take(key: string, now: number): { ok: boolean; retryMs: number }; refund(key: string): void };
