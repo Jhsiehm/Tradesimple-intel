@@ -8,6 +8,8 @@ import { THEORY_LOOK } from "../relations/palette";
 import { saveTheory } from "../relations/store";
 import { miscitedNote } from "../../shared/citations.mjs";
 import { Answer, Chip, ToolTable } from "../ask/Answer";
+import { AnswerMeta } from "../ask/AnswerMeta";
+import { ModelPick } from "../ask/ModelPick";
 import { BacktestCard } from "../ask/BacktestCard";
 import { Clarify } from "../ask/Clarify";
 import { revealStep, Steps } from "../ask/Steps";
@@ -112,7 +114,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
                 <strong>{hasContext(ctx) ? <>Screen not attached <button type="button" className="link" onClick={() => ask.setDetached(false)}>attach</button></> : "Nothing attached"}</strong>
               )}
               <small title={ask.model}>
-                {DEMO ? "needs the local server" : ask.model || status?.notice || "…"}
+                {DEMO ? "needs the local server" : ask.model === "auto" ? "Auto" : ask.model || status?.notice || "…"}
                 {ask.small ? <span className="ask-small" title="A small model may skip tools or numbers. Pick a larger one, or set ASK_MODEL.">small model</span> : null}
               </small>
             </div>
@@ -130,14 +132,7 @@ export function AskSheet({ ask, context: ctx, onFollow }: { ask: AskApi; context
               <em className="ask-kicker">This chat</em>
               <strong>{title}</strong>
             </p>
-            {ask.models.length ? (
-              <label className="ask-pick ask-model">
-                Model
-                <select aria-label="Model" value={ask.model} disabled={busy} onChange={(e) => ask.chooseModel(e.target.value)}>
-                  {ask.models.map((m) => <option key={m.id} value={m.id}>{m.id}{m.id === status?.model ? " · default" : ""}{m.small ? " · small" : ""}</option>)}
-                </select>
-              </label>
-            ) : null}
+            <ModelPick ask={ask} busy={busy} />
           </div>
           <section className="ask-saved" aria-label="Saved chats">
             <h2>Saved</h2>
@@ -236,6 +231,7 @@ function TurnView({ turn, busy, ask, onFollow }: { turn: Turn; busy: boolean; as
         {turn.clarify ? <Clarify ask={turn.clarify} disabled={busy} onRun={(answers, acceptDefaults) => void ask.run(turn.question, { answers, acceptDefaults, turnId: turn.id })} /> : null}
         {turn.text ? <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} /> : null}
         {done?.greeting ? <div className="ask-examples">{EXAMPLES.map((q) => <button key={q} type="button" className="chip" onClick={() => void ask.run(q)}>{q}</button>)}</div> : null}
+        <AnswerMeta turn={turn} />
         {done?.table ? <ToolTable table={done.table} steps={turn.steps} onChip={chip} /> : null}
         {done?.backtests?.filter((b) => b.ok).map((b) => <BacktestCard key={b.id} bt={b} onFollow={onFollow} cite={<Chip id={b.id} steps={byId} onChip={chip} />} />)}
         {theory ? (

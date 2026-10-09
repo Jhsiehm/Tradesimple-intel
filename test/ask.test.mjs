@@ -487,7 +487,7 @@ test("POST streams SSE events from the loop, through the real tool list with an 
   assert.equal(res.head.status, 200);
   assert.match(res.head.headers["Content-Type"], /text\/event-stream/);
   assert.equal(res.ended, true);
-  assert.deepEqual(kinds(res.events()), ["step_start", "step_end", "token", "citation", "done"]);
+  assert.deepEqual(kinds(res.events()), ["model", "step_start", "step_end", "token", "citation", "done"]);
 });
 
 test("POST validates the body, and rate-limits per client", async () => {

@@ -20,11 +20,10 @@ export function smallModel(id) {
   return /(?:^|[-/:.])(mini|nano|haiku|flash|lite|small|tiny)(?:$|[-/:.\d])|\b\d{1,2}b\b/i.test(String(id || ""));
 }
 
-/** Models the sheet may offer: the server's own, plus the menu when the provider is OpenRouter. */
+/** Models the sheet may offer: the server's own and its strong model, plus the menu when the provider is OpenRouter. */
 export function modelOptions(cfg) {
-  const own = String(cfg?.model || "").trim();
-  if (cfg?.provider !== "openrouter") return own ? [own] : [];
-  return [...new Set([own, ...OPENROUTER_MENU].filter(Boolean))];
+  const own = [cfg?.model, cfg?.strong].map((m) => String(m || "").trim()).filter(Boolean);
+  return [...new Set(cfg?.provider === "openrouter" ? [...own, ...OPENROUTER_MENU] : own)];
 }
 
 /** A requested id is used only when it is one of the options; anything else falls back to the server's model. */

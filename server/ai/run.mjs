@@ -9,6 +9,8 @@ import { MARKET_NOTE, marketTail, wantsMarkets } from "../../shared/marketAsk.mj
 import { WORLD_NOTE, worldRegions, worldTail } from "../../shared/worldMarkets.mjs";
 import { COVERAGE_NOTE, WEB_CAPS, WEB_CAVEAT, WEB_NOTE, splitWebResults, wantsWeb, webCallLabel, webQuery, webTail } from "../../shared/webAsk.mjs";
 import { followUpOutcome, handOffNote } from "../../shared/followUpReply.mjs";
+import { heavyReason } from "../../shared/modelRoute.mjs";
+import { revisePass } from "./revise.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
@@ -35,8 +37,12 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  * Backtest questions are planned first (shared/backtestAsk.mjs): preferences, the previous run (`prior`; `priors` when the
  * previous turn ran several sources, which a follow-up re-runs before the model writes), chip
  * `answers`; ambiguous result-changing fields end the turn with `clarify`, and every run_backtest call runs the plan.
+ * Under Auto (`auto`, the user pinned no model) a heavy turn and the revision pass use `strong` ({ model, provider });
+ * `model { model, auto, reason }` says which model answers. A flagged answer gets one revision pass (server/ai/revise.mjs):
+ *   revise        { state: "start", note } / { state: "end" }    the answer is being checked; done.answer replaces it
+ *   done.revision { status, reason, fixed, changes, removed, added, model } or null
  */
-export async function runAsk({ question, history = [], context = null, attached = null, model = "", prefs = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
+export async function runAsk({ question, history = [], context = null, attached = null, model = "", auto = false, strong = null, prefs = null, prior = null, priors = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
   const t0 = now();
   const evidence = [];
   const bodies = new Map();
@@ -45,7 +51,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   const quick = (answer, extra = {}) => {
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
-    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [], miscited: [], uncitedRows: [], scope: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
+    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [], mislabeled: [], miscited: [], uncitedRows: [], scope: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, revision: null, ...extra });
     return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
@@ -88,6 +94,11 @@ export async function runAsk({ question, history = [], context = null, attached 
   const regions = free && has("world_markets") ? worldRegions(question) : [];
   const webFirst = free && has("web_search") && wantsWeb(question);
   const market = free && !regions.length && wantsMarkets(question) && has("market_snapshot");
+  const heavy = heavyReason({ question, backtest: Boolean(plan || reruns.length), web: Boolean(regions.length || webFirst) });
+  const strongProvider = strong ? strong.provider || provider : null;
+  if (auto && heavy && strong) { provider = strongProvider; model = strong.model; }
+  const reviser = auto && strong ? { provider: strongProvider, model: strong.model } : { provider, model };
+  if (auto) emit({ type: "model", model, auto, reason: strong ? heavy : "" });
   const system = [systemPrompt(today), COVERAGE_NOTE, contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
@@ -235,7 +246,7 @@ export async function runAsk({ question, history = [], context = null, attached 
       evidence.push(ev);
       bodies.set(id, body);
       if (call.name === "propose_theory" && ev.ok && raw?.theory) theory = raw.theory;
-      if (call.name === "run_backtest") backtests.push({ ...(bt || { id, spec: raw?.spec || call.args?.spec, from: {}, diff: [], prior: null, using: raw?.description || "", note: "" }), ok: ev.ok, open: ev.open, stats: raw?.stats || null, description: raw?.description || "" });
+      if (call.name === "run_backtest") backtests.push({ ...(bt || { id, spec: raw?.spec || call.args?.spec, from: {}, diff: [], prior: null, using: raw?.description || "", note: "" }), ok: ev.ok, open: ev.open, stats: raw?.stats || null, counts: raw?.counts || null, description: raw?.description || "" });
       log({ event: "tool", id, tool: call.name, args: call.args, ok: ev.ok, ms, rows: ev.rows, source: ev.source });
       const { json, ...pub } = ev;
       emit({ type: "step_end", ...pub });
@@ -257,6 +268,17 @@ export async function runAsk({ question, history = [], context = null, attached 
     answer = "I ran out of room before I could write an answer. The tool results are listed in the steps above.";
     emit({ type: "token", delta: answer });
   }
+  const checkAnswer = (a) => {
+    const { cited, unknown } = citationRefs(a, evidence);
+    const grounding = { ...groundingCheck(a, evidence), ...citationCheck(a, evidence), scope: scopeCheck(a, evidence) };
+    return { cited, unknown, grounding, uncited: evidence.length > 0 && cited.length === 0 && a.length > 0 };
+  };
+  const revised = await revisePass({ question, answer, evidence, bodies, check: checkAnswer, provider: reviser.provider, model: reviser.model, limits, spent, msLeft: timeLeft, signal, emit, log });
+  if (abort()) return;
+  if (revised) {
+    answer = revised.answer;
+    spent += revised.spent;
+  }
   const snap = evidence.find((e) => e.tool === "market_snapshot");
   const world = evidence.find((e) => e.tool === "world_markets");
   const webbed = evidence.some((e) => e.ok && (e.tool === "web_result" || e.tool === "web_fetch"));
@@ -265,8 +287,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     answer += tail;
     emit({ type: "token", delta: tail });
   }
-  const { cited, unknown } = citationRefs(answer, evidence);
-  const grounding = { ...groundingCheck(answer, evidence), ...citationCheck(answer, evidence), scope: scopeCheck(answer, evidence) };
+  const { cited, unknown, grounding, uncited } = checkAnswer(answer);
   let table = null;
   const data = evidence.filter((e) => e.ok && e.rows > 0 && e.tool !== "propose_theory");
   if (data.length && figureCount(answer) < 2) {
@@ -281,7 +302,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     cited,
     unknown,
     grounding,
-    uncited: evidence.length > 0 && cited.length === 0 && answer.length > 0,
+    uncited,
     noTools: evidence.length === 0,
     greeting: false,
     caveats: [...grounding.mislabeled.map(mislabelNote), ...grounding.scope.map((s) => s.note), ...caveatsFor(evidence), ...(webbed ? [WEB_CAVEAT] : [])],
@@ -294,6 +315,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     retried,
     backtests: backtests.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1))),
     clarify: false,
-    prefs: null
+    prefs: null,
+    revision: revised?.revision || null
   });
 }

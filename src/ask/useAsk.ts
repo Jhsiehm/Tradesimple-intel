@@ -6,6 +6,7 @@ import {
   newChatId, removeChat, saveChats, saveModelChoice, savePrefs, upsertChat
 } from "./chats";
 import { readEvents } from "./stream";
+import { AUTO } from "../../shared/modelRoute.mjs";
 import type { AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn } from "./types";
 
 export type AskApi = ReturnType<typeof useAsk>;
@@ -54,8 +55,9 @@ export function useAsk() {
   }, []);
 
   const models = status?.models || [];
-  const model = models.some((m) => m.id === choice) ? choice : status?.model || "";
-  const small = models.find((m) => m.id === model)?.small ?? Boolean(status?.small);
+  /** "auto" unless the user pinned a model the server offers; a new user starts on Auto. */
+  const model: string = choice !== AUTO && models.some((m) => m.id === choice) ? choice : AUTO;
+  const small = model !== AUTO && Boolean(models.find((m) => m.id === model)?.small);
   const chooseModel = useCallback((next: string) => { setChoice(next); saveModelChoice(next); }, []);
 
   const persist = useCallback((next: Turn[]) => {
@@ -94,8 +96,8 @@ export function useAsk() {
       finish();
       return;
     }
-    const used = s.choice && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : cfg.model;
-    patch((t) => ({ ...t, model: used }));
+    const used = s.choice && s.choice !== AUTO && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : AUTO;
+    patch((t) => ({ ...t, model: used === AUTO ? "" : used }));
     const attached = s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
     const bts = lastBacktests(prior);
     const bt = bts.at(-1) || null;
@@ -144,6 +146,12 @@ export function useAsk() {
             break;
           case "plan_note":
             patch((t) => ({ ...t, notes: [...t.notes, String(e.note || "")] }));
+            break;
+          case "model":
+            patch((t) => ({ ...t, model: String(e.model || t.model), notes: e.reason ? [...t.notes, `Auto: ${String(e.reason)} → ${String(e.model)}`] : t.notes }));
+            break;
+          case "revise":
+            patch((t) => ({ ...t, revising: e.state === "start" ? String(e.note || "Checking figures…") : "" }));
             break;
           case "clarify":
             patch((t) => ({ ...t, clarify: e as unknown as ClarifyAsk }));

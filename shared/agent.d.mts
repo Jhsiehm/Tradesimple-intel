@@ -2,7 +2,7 @@ import type { Theory } from "./relations.mjs";
 
 export const OPENROUTER_MENU: string[];
 export function smallModel(id: string): boolean;
-export type ModelCfg = { provider: string; model: string };
+export type ModelCfg = { provider: string; model: string; strong?: string };
 export function modelOptions(cfg: ModelCfg): string[];
 export function resolveModel(requested: unknown, cfg: ModelCfg): string;
 

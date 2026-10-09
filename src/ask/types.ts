@@ -1,6 +1,7 @@
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { Clarify } from "../../shared/backtestAsk.mjs";
 import type { Miscited } from "../../shared/citations.mjs";
+import type { Revision } from "../../shared/revise.mjs";
 import type { Theory } from "../../shared/relations.mjs";
 
 /** What the server streams from POST /api/ask, and what a chat keeps. */
@@ -40,6 +41,7 @@ export type BacktestRef = {
   ok: boolean;
   open: string;
   description: string;
+  counts?: Record<string, number> | null;
 };
 
 export type Done = {
@@ -61,6 +63,7 @@ export type Done = {
   backtests: BacktestRef[];
   clarify: boolean;
   prefs: { set?: Record<string, unknown>; clear?: boolean } | null;
+  revision?: Revision | null;
 };
 
 export type ClarifyAsk = { questions: Clarify[]; spec: BacktestSpec; from: Record<string, string>; sentence: string; sources: string[]; note: string };
@@ -79,6 +82,8 @@ export type Turn = {
   error: string;
   model: string;
   context: string;
+  /** Set while the revision pass checks the answer's figures ("Checking figures… 3 flagged"). */
+  revising?: string;
 };
 
 export type SavedChat = { id: string; title: string; turns: Turn[]; updated: string };
@@ -89,6 +94,7 @@ export type AskStatus = {
   provider: string;
   model: string;
   small?: boolean;
+  strong?: string;
   models?: { id: string; small: boolean }[];
   missing: string[];
   notice: string;

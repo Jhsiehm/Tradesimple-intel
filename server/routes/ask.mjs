@@ -1,7 +1,8 @@
 import { reply } from "../router.mjs";
 import { readJson } from "../lib/body.mjs";
 import { ASK_LIMITS, NOT_CONFIGURED, cleanAsk, makeLimiter } from "../../shared/ask.mjs";
-import { modelOptions, resolveModel, smallModel } from "../../shared/agent.mjs";
+import { modelOptions, smallModel } from "../../shared/agent.mjs";
+import { routeModel } from "../../shared/modelRoute.mjs";
 import { askConfig, askKey } from "../ai/config.mjs";
 import { createProvider } from "../ai/providers.mjs";
 import { runAsk } from "../ai/run.mjs";
@@ -17,6 +18,7 @@ export function askStatus(env = process.env) {
     provider: cfg.provider,
     model: cfg.configured ? cfg.model : "",
     small: cfg.configured ? smallModel(cfg.model) : false,
+    strong: cfg.configured ? cfg.strong : "",
     models: models.map((id) => ({ id, small: smallModel(id) })),
     missing: cfg.missing,
     notice: cfg.configured ? "" : cfg.error || NOT_CONFIGURED,
@@ -48,13 +50,15 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     if (!slot.ok) return reply(429, { ok: false, error: `Ask is limited to ${ASK_LIMITS.perIp} questions per ${ASK_LIMITS.perIpWindowMs / 60_000} minutes. Try again in ${Math.ceil(slot.retryMs / 60_000)} min.`, missing: "", retryMs: slot.retryMs });
     if (running >= ASK_LIMITS.concurrent) return reply(429, { ok: false, error: "Ask is answering other questions. Try again in a moment.", missing: "" });
 
-    const model = resolveModel(asked.model, cfg);
+    const route = routeModel(asked.model, cfg);
+    const model = route.model;
+    const strong = route.auto && cfg.strong ? { model: cfg.strong, provider: cfg.strong === model ? null : makeProvider({ ...cfg, model: cfg.strong }) } : null;
     running += 1;
     const ctl = new AbortController();
     res.on("close", () => ctl.abort());
     res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     const emit = (event) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify(event)}\n\n`); };
-    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached) });
+    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, auto: route.auto, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached) });
     try {
       const out = await runAsk({
         question: asked.question,
@@ -68,6 +72,8 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         acceptDefaults: asked.acceptDefaults,
         model,
         provider: makeProvider({ ...cfg, model }),
+        auto: route.auto,
+        strong,
         tools: toolDefs(),
         execute: (name, args, hooks) => execute(db, name, args, hooks),
         labelOf,

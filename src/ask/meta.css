@@ -1,0 +1,12 @@
+.ask-checking { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--dim); font-size: 11px; }
+.ask-confidence { margin: 0; padding: 3px 8px; border-left: 2px solid var(--line); color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ask-confidence[data-tone="amber"] { border-left-color: var(--amber); color: var(--amber); }
+.ask-revised, .ask-revised-note { margin: 0; color: var(--dim); font-size: 11px; }
+.ask-revised summary { cursor: pointer; color: var(--ink); }
+.ask-revised ul { margin: 4px 0; padding-left: 16px; }
+.ask-revised li[data-status="still flagged"] b { color: var(--amber); }
+.ask-diff { display: grid; gap: 2px; margin-top: 4px; }
+.ask-diff code { display: block; padding: 1px 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 10.5px; }
+.ask-diff .del { color: var(--nay); background: color-mix(in srgb, var(--nay) 8%, transparent); }
+.ask-diff .add { color: var(--green); background: color-mix(in srgb, var(--green) 8%, transparent); }
+.ask-nudge { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; padding: 4px 8px; border-left: 2px solid var(--amber); color: var(--dim); font-size: 11px; }
