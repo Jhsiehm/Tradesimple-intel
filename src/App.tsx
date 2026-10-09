@@ -449,6 +449,7 @@ export function App() {
   }
 
   const newsGlobe = section === "news" && newsView === "globe";
+  const lanesOn = section === "strait" || newsGlobe;
   const showMap = section === "strait" || section === "districts" || newsGlobe || (section === "congress" && voteView === "map");
   const time = useMapClock({ mapOn: showMap && !calendarTab && !today && !timelineId, base: earthSettings.base, newsGlobe, headlines: news.all, clock, mapTime });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
@@ -591,7 +592,7 @@ export function App() {
               </label>
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
-            {showMap && !calendarTab && !today && !timelineId && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} /> : null}
+            {showMap && !calendarTab && !today && !timelineId && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
@@ -668,7 +669,7 @@ export function App() {
                   live={time.liveLayers}
                   dailyTiles={time.dailyLayer?.tiles}
                   flash={newsGlobe ? time.globe.flash : null}
-                  lanes={section === "strait" || newsGlobe}
+                  lanes={lanesOn}
                   arcs={arcs}
                   onArc={follow}
                   onSelect={(id) => {

@@ -217,7 +217,8 @@ export function StraitBar(props: { feed: StraitFeed; onFeed: (f: StraitFeed) => 
   );
 }
 
-export function EarthBar({ settings, update, onBase }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void }) {
+/** `lanes` is false on views that never draw shipping lanes, so the toggle is not offered there. */
+export function EarthBar({ settings, update, onBase, lanes = true }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void; lanes?: boolean }) {
   return (
     <>
       <span className="seg" title="Projection">
@@ -234,7 +235,7 @@ export function EarthBar({ settings, update, onBase }: { settings: EarthSettings
       </span>
       <span className="seg">
         <button aria-pressed={settings.labels} onClick={() => update({ labels: !settings.labels })}>Labels</button>
-        <button aria-pressed={settings.lanes} onClick={() => update({ lanes: !settings.lanes })}>Lanes</button>
+        {lanes ? <button aria-pressed={settings.lanes} onClick={() => update({ lanes: !settings.lanes })}>Lanes</button> : null}
       </span>
     </>
   );
