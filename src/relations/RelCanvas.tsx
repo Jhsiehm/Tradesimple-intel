@@ -1,9 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { CATEGORY_IDS, neighborhood, type CategoryId, type Graph, type RelEdge, type RelNode, type Theory } from "../../shared/relations.mjs";
-import { PATHS } from "../ui/icons/paths";
-import type { IconName } from "../ui/icons/names";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK } from "./palette";
 import { edgeSel, theoryId } from "./dossier";
+import { MAX_K, MIN_K, drawIcon, radius, segDist, shape } from "./canvasDraw";
 import type { Pt } from "./layout";
 
 export type CanvasHandle = { fit: () => void; zoom: (f: number) => void; center: () => Pt; focus: (id: string) => void };
@@ -34,47 +33,6 @@ type Gesture =
   | { mode: "pinch"; d: number; cx: number; cy: number; view: View }
   | null;
 
-const ICONS = new Map<IconName, { path: Path2D; fill: boolean }[]>();
-function glyph(name: IconName) {
-  if (!ICONS.has(name)) ICONS.set(name, PATHS[name].map((p) => (typeof p === "string" ? { path: new Path2D(p), fill: false } : { path: new Path2D(p.d), fill: true })));
-  return ICONS.get(name)!;
-}
-
-const radius = (n: RelNode, degree: number) => (n.user ? 13 : 10 + Math.min(9, Math.sqrt(degree) * 1.6));
-const MIN_K = 0.12;
-const MAX_K = 3.5;
-
-function shape(ctx: CanvasRenderingContext2D, kind: string, x: number, y: number, r: number) {
-  ctx.beginPath();
-  if (kind === "square") ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8);
-  else if (kind === "diamond") { ctx.moveTo(x, y - r * 1.15); ctx.lineTo(x + r * 1.15, y); ctx.lineTo(x, y + r * 1.15); ctx.lineTo(x - r * 1.15, y); ctx.closePath(); }
-  else if (kind === "hex") { for (let i = 0; i < 6; i += 1) { const a = Math.PI / 6 + (i * Math.PI) / 3; ctx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05); } ctx.closePath(); }
-  else ctx.arc(x, y, r, 0, Math.PI * 2);
-}
-
-function drawIcon(ctx: CanvasRenderingContext2D, name: IconName, x: number, y: number, size: number, color: string) {
-  ctx.save();
-  ctx.translate(x - size / 2, y - size / 2);
-  ctx.scale(size / 16, size / 16);
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  for (const part of glyph(name)) {
-    if (part.fill) ctx.fill(part.path);
-    ctx.stroke(part.path);
-  }
-  ctx.restore();
-}
-
-function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const l2 = dx * dx + dy * dy || 1;
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
 
 /** Relationship canvas. Draws on demand; your theories animate only while any are on screen. */
 export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(props, ref) {
