@@ -100,6 +100,9 @@ export type DrawerModel = {
   watch?: string;
   /** `ticker:NVDA` or `district:CA-11`: puts the case-file header on top of the dossier. */
   caseKey?: string;
+  /** Kind icon and its palette color beside the title (relationship map). */
+  icon?: import("./ui/icons/names").IconName;
+  tint?: string;
 };
 
 export type MarkTone = "buy" | "sell" | "file" | "earn" | "lobby" | "pac" | "gov" | "fomc" | "cpi" | "macro";

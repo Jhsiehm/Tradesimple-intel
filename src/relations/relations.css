@@ -1,0 +1,105 @@
+/* Relationship map. Colors come from palette.ts through --tint; nothing here picks a category color. */
+.relmap { position: absolute; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); background: #0d1115; outline: none; }
+.relmap-canvas { position: relative; min-height: 0; grid-row: 3; }
+.relmap-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; outline: none; }
+.relmap-canvas canvas:focus-visible { box-shadow: inset 0 0 0 1px var(--amber); }
+.relmap.drawing .relmap-canvas canvas { cursor: crosshair; }
+
+.relmap-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: rgba(6, 8, 11, 0.9); z-index: 3; }
+.relmap-bar .seg button:disabled { opacity: 0.35; cursor: default; }
+.relmap-bar .seg button[aria-pressed="true"] { color: var(--amber); }
+.relmap-theory-btn[aria-pressed="true"] { color: var(--tint) !important; box-shadow: inset 0 -2px 0 var(--tint); }
+.relmap-search { position: relative; display: flex; align-items: center; gap: 6px; flex: 1 1 220px; max-width: 340px; padding: 0 8px; border: 1px solid var(--line); background: #07090c; color: var(--dim); }
+.relmap-search input { flex: 1; min-width: 0; padding: 6px 0; background: transparent; border: none; outline: none; color: var(--ink); font-size: 12px; }
+.relmap-search:focus-within { border-color: var(--amber); }
+.relmap-search ul { position: absolute; z-index: 20; top: calc(100% + 2px); left: -1px; right: -1px; margin: 0; padding: 2px 0; list-style: none; background: #0b0f13; border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); max-height: 320px; overflow: auto; }
+.relmap-search li { display: grid; grid-template-columns: 18px auto minmax(0, 1fr); align-items: baseline; gap: 6px; padding: 6px 8px; cursor: pointer; }
+.relmap-search li[aria-selected="true"] { background: rgba(255, 193, 74, 0.08); }
+.relmap-search li b { font-weight: 500; color: var(--ink); white-space: nowrap; }
+.relmap-search li small { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.relmap-more { position: relative; margin-left: auto; }
+.relmap-more > .ghost { padding: 5px 8px; }
+
+.relmap-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px 10px; border-bottom: 1px solid var(--line); background: rgba(6, 8, 11, 0.75); z-index: 2; }
+.relmap-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--tint) 45%, transparent); color: var(--tint); font-size: 11px; background: color-mix(in srgb, var(--tint) 8%, transparent); }
+.relmap-chip b { font-weight: 500; color: var(--ink); }
+.relmap-chip[aria-pressed="false"] { color: var(--faint); border-color: var(--line); background: transparent; text-decoration: line-through; }
+.relmap-chip[aria-pressed="false"] b { color: var(--faint); }
+.relmap-chip.theory { border-style: dashed; }
+
+.relmap-tip { position: absolute; z-index: 6; max-width: 300px; padding: 7px 9px; background: rgba(7, 9, 12, 0.96); border: 1px solid var(--line); color: var(--ink); font-size: 11px; line-height: 1.4; pointer-events: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+.relmap-tip b { font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; margin-right: 4px; }
+.relmap-tip span { display: block; margin-top: 3px; }
+.relmap-tip small { display: block; margin-top: 3px; color: var(--dim); }
+
+.relmap-menu, .relmap-pop { position: absolute; z-index: 10; width: 288px; background: #0b0f13; border: 1px solid var(--line); border-top: 2px solid var(--tint, var(--line)); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6); font-size: 12px; }
+.relmap-menu header, .relmap-pop header { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 9px 10px 8px; border-bottom: 1px solid var(--line); }
+.relmap-menu header strong, .relmap-pop header strong { display: block; font-weight: 500; color: var(--ink); line-height: 1.25; }
+.relmap-menu header small, .relmap-pop header small { display: block; margin-top: 2px; color: var(--dim); line-height: 1.3; }
+.relmap-menu header .ghost, .relmap-pop header .ghost { border: none; padding: 2px; color: var(--dim); }
+.relmap-menu-h { margin: 0; padding: 7px 10px 3px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.relmap-cat > button { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto 64px; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; text-align: left; border-left: 2px solid var(--tint); }
+.relmap-cat > button:hover:not(:disabled) { background: color-mix(in srgb, var(--tint) 10%, transparent); }
+.relmap-cat > button:disabled { cursor: default; }
+.relmap-cat > button:disabled .relmap-cat-lbl, .relmap-cat > button:disabled .relmap-cat-act { opacity: 0.55; }
+.relmap-cat-ic { color: var(--tint); display: inline-flex; }
+.relmap-cat-n { color: var(--ink); font-variant-numeric: tabular-nums; }
+.relmap-cat-act { color: var(--tint); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; white-space: nowrap; }
+.relmap-cat-err { display: block; padding: 0 10px 6px 38px; color: var(--nay); font-size: 11px; }
+.relmap-menu-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; text-align: left; color: var(--dim); }
+.relmap-menu-row:hover { background: rgba(255, 255, 255, 0.03); color: var(--ink); }
+.relmap-menu-row kbd { margin-left: auto; font-size: 10px; color: var(--faint); }
+.relmap-menu > :last-child { margin-bottom: 4px; }
+
+.relmap-pop { padding-bottom: 8px; }
+.relmap-pop label { display: grid; gap: 4px; padding: 8px 10px 0; color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+.relmap-pop input, .relmap-pop textarea { width: 100%; padding: 6px 7px; background: #07090c; border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; letter-spacing: 0; text-transform: none; resize: vertical; }
+.relmap-pop input:focus, .relmap-pop textarea:focus { outline: none; border-color: var(--tint); }
+.relmap-pop .seg { margin: 8px 10px 0; }
+.relmap-pop .seg button[aria-pressed="true"] { color: var(--tint); }
+.relmap-pop footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 0; }
+.relmap-pop footer small { color: var(--faint); font-size: 10px; line-height: 1.35; }
+.relmap-pop .danger { color: var(--nay); white-space: nowrap; padding: 4px 8px; }
+.relmap-primary { padding: 6px 10px; border: 1px solid var(--tint); color: var(--tint); margin-left: auto; }
+.relmap-primary:disabled { opacity: 0.4; }
+.relmap-theory { right: 12px; top: 96px; }
+.relmap-note { left: 12px; top: 96px; }
+.relmap-more-pop { right: 0; top: calc(100% + 4px); width: 280px; padding: 4px 0; }
+.relmap-more-pop button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; text-align: left; color: var(--dim); }
+.relmap-more-pop button:hover { color: var(--ink); background: rgba(255, 255, 255, 0.03); }
+
+.relmap-hint { position: absolute; z-index: 4; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: min(560px, calc(100% - 24px)); margin: 0; padding: 7px 12px; color: var(--ink); font-size: 11px; background: rgba(7, 9, 12, 0.94); border: 1px dashed var(--tint); }
+.relmap-hint .ic { color: var(--tint); margin-right: 4px; }
+.relmap-hint b { color: var(--tint); font-weight: 500; }
+.relmap-notice { position: absolute; z-index: 9; right: 12px; bottom: 14px; max-width: 360px; margin: 0; padding: 8px 12px; background: rgba(7, 9, 12, 0.96); border: 1px solid var(--line); border-left: 2px solid var(--amber); color: var(--ink); font-size: 11px; line-height: 1.4; }
+.relmap-empty { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -40%); display: grid; justify-items: center; gap: 10px; max-width: 420px; padding: 18px; text-align: center; color: var(--dim); pointer-events: none; }
+.relmap-empty p { margin: 0; line-height: 1.55; font-size: 12px; }
+.relmap-starts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: auto; }
+.relmap-starts button { padding: 5px 10px; border: 1px solid var(--line); color: var(--amber); }
+.relmap-starts button:hover { border-color: var(--amber); }
+
+.relmap-legend { position: absolute; z-index: 4; left: 10px; bottom: 12px; max-width: 280px; padding: 4px 8px 6px; background: rgba(7, 9, 12, 0.9); border: 1px solid var(--line); font-size: 11px; }
+.relmap-legend-h { padding: 2px 0; color: var(--dim); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+.relmap-legend ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.relmap-legend li { display: grid; grid-template-columns: 28px 16px minmax(0, 1fr); align-items: center; gap: 4px; }
+.relmap-legend li span { color: var(--ink); }
+.relmap-legend li.theory span { color: inherit; }
+.relmap-legend-sep { height: 1px; background: var(--line); margin: 3px 0; }
+.relmap-shape { justify-self: center; width: 10px; height: 10px; border: 1.5px solid currentColor; }
+.relmap-shape.circle { border-radius: 50%; }
+.relmap-shape.diamond { transform: rotate(45deg) scale(0.85); }
+.relmap-shape.hex { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: currentColor; opacity: 0.8; border: none; }
+.relmap-shape.mine { border-style: dashed; }
+
+.drawer h2 .drawer-kind { display: inline-flex; vertical-align: -1px; margin-right: 8px; }
+
+/* Phone: the canvas sits above the list and dossier; menus fill the width. */
+.app.phone .map-body:has(.relmap) { display: block; height: 62dvh; }
+.app.phone .relmap-bar { padding: 6px; }
+.app.phone .relmap-search { flex-basis: 100%; max-width: none; }
+.app.phone .relmap-bar .seg button { padding: 8px 10px; }
+.app.phone .relmap-menu, .app.phone .relmap-pop { left: 6px !important; right: 6px; width: auto; top: auto !important; bottom: 6px; max-height: 70%; overflow: auto; }
+.app.phone .relmap-more-pop { position: fixed; top: auto; bottom: 8px; }
+.app.phone .relmap-cat > button { padding: 10px; }
+.app.phone .relmap-legend { bottom: 6px; left: 6px; }
+.app.phone .relmap-hint { bottom: 46px; }

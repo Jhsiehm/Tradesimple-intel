@@ -2,7 +2,7 @@ import type { DrawerModel, DrawerTable } from "../types";
 import { toggleSymbol, useWatch } from "../lib/useWatch";
 import { CaseHeader } from "../intel/CaseHeader";
 import { CaseSection } from "../intel/CaseSection";
-import { IconLabel } from "../ui/icons/Icon";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 import { actionIcon } from "../ui/icons/commandIcon";
 
 export function Drawer({
@@ -41,7 +41,7 @@ export function Drawer({
       )}
       <div className="drawer-body">
         {model.caseKey ? <CaseHeader caseKey={model.caseKey} /> : null}
-        {embedded ? (star ? <p className="drawer-star">{star}</p> : null) : <h2>{model.title}</h2>}
+        {embedded ? (star ? <p className="drawer-star">{star}</p> : null) : <h2>{model.icon ? <span className="drawer-kind" style={{ color: model.tint }}><Icon name={model.icon} size={16} /></span> : null}{model.title}</h2>}
         {model.meta ? <p className="meta">{model.meta}</p> : null}
         {model.stages ? (
           <ol className="ladder">
