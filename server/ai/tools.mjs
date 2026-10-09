@@ -13,6 +13,9 @@ import { handlers as backtest } from "../routes/backtest.mjs";
 import { fillRoute } from "../routes/manifest.mjs";
 import { queryOf } from "../router.mjs";
 import { runMarketSnapshot } from "./marketTool.mjs";
+import { runWorldMarkets } from "./worldTool.mjs";
+import { runWebFetch, runWebSearch } from "./webTool.mjs";
+import { REGION_IDS } from "../../shared/worldMarkets.mjs";
 
 const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest };
 
@@ -307,6 +310,12 @@ export const TOOLS = [
     return leadersForModel(out);
   }, "Leaders"),
   tool("market_snapshot", "How US markets are doing now: S&P 500, Nasdaq Composite, Dow, Russell 2000, VIX, benchmark and sector ETFs (last, change % from the previous close), and the 10-year and 2-year Treasury yields. Delayed Yahoo Finance quotes and FRED yields, each with as-of. Call it for any question about how the market, stocks overall, indices, volatility, or yields are doing today. Ends with a disclaimer sentence to quote.", obj({}), (db, _a, call) => runMarketSnapshot(db, call), "Markets"),
+  tool("world_markets", "International stock indices from Yahoo Finance (delayed): last level, change % from the previous close, and whether each exchange is open now, with the last trade time in exchange time and ET. Regions: taiwan (TAIEX), japan (Nikkei 225), hongkong (Hang Seng), china (Shanghai, Shenzhen), korea (KOSPI), india (Nifty 50, Sensex), uk (FTSE 100), germany (DAX), france (CAC 40), europe (Euro Stoxx 50 + DAX, FTSE, CAC), australia (ASX 200), canada (TSX), brazil (Ibovespa), mexico (IPC), asia, global. symbols takes any Yahoo symbol the user names (e.g. 2330.TW); Yahoo says if it does not exist. Call it for any question about a non-US market.", obj({
+    regions: { type: "array", items: { type: "string", enum: REGION_IDS }, description: "Regions to quote" },
+    symbols: { type: "array", items: { type: "string" }, description: "Extra Yahoo symbols the user named, such as 2330.TW or 7203.T" }
+  }), (_db, a) => runWorldMarkets(a), "World markets"),
+  tool("web_search", "Search the public web (not a TradeSimple feed) for news and context the app's own tools do not hold: non-US markets, macro events, central banks, company news. Each result comes back with its own ref, URL, title and a text excerpt; cite the result's ref. Use TradeSimple tools first; at most 3 searches per question.", obj({ query: str("Search query, specific: names, places, dates") }, ["query"]), (_db, a) => runWebSearch(a), "Web search"),
+  tool("web_fetch", "Read one public web page as plain text (scripts and markup stripped, first 6,000 characters), usually a URL from web_search. Not a TradeSimple feed. At most 3 pages per question.", obj({ url: str("http(s) URL") }, ["url"]), (_db, a) => runWebFetch(a), "Web page"),
   tool("alerts", "Late filings and anything on a watch list of tickers or members.", obj({ symbols: str("Comma-separated tickers"), members: str("Comma-separated bioguides"), late: { type: "string", enum: ["all", ""] } }), (db, a, call) => call(db, "alerts", {}, qs({
     symbols: String(a.symbols || "").slice(0, 200),
     members: String(a.members || "").slice(0, 200),

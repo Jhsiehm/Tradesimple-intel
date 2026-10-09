@@ -6,9 +6,13 @@ import { mislabelNote } from "../../shared/countLabels.mjs";
 import { citationCheck, stripRefs } from "../../shared/citations.mjs";
 import { scopeCheck } from "../../shared/claimScope.mjs";
 import { MARKET_NOTE, marketTail, wantsMarkets } from "../../shared/marketAsk.mjs";
+import { WORLD_NOTE, worldRegions, worldTail } from "../../shared/worldMarkets.mjs";
+import { COVERAGE_NOTE, WEB_CAPS, WEB_CAVEAT, WEB_NOTE, splitWebResults, wantsWeb, webCallLabel, webQuery, webTail } from "../../shared/webAsk.mjs";
+import { followUpOutcome, handOffNote } from "../../shared/followUpReply.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
+const WEB = new Set(["web_search", "web_fetch"]);
 const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
 /**
@@ -56,11 +60,16 @@ export async function runAsk({ question, history = [], context = null, attached 
   const priorList = priors?.length ? priors : prior ? [prior] : [];
   const lastPrior = priorList.at(-1) || null;
   const follow = isFollowUp(question, lastPrior);
-  const multi = follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
-  const reruns = multi ? multi.runs.filter((r) => !r.unchanged) : [];
+  const planned = follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
+  // A follow-up that sets no spec field ("why did contracts do better?") goes to the model; one that changes nothing says which value already matched.
+  const outcome = planned ? followUpOutcome(planned) : null;
+  const handOff = Boolean(outcome && !outcome.understood);
+  const multi = handOff ? null : planned;
+  // A hand-off re-runs the previous specs unchanged, so a "why did X do better" answer has the figures with refs.
+  const reruns = multi ? multi.runs.filter((r) => !r.unchanged) : handOff ? planned.runs : [];
+  if (multi && !reruns.length) return quick(outcome.text);
   for (const note of multi?.notes || []) emit({ type: "plan_note", note });
-  if (multi && !reruns.length) return quick(`Nothing to re-run. ${multi.notes.join(" ")}`);
-  const plan = multi ? (reruns.length === 1 ? reruns[0] : null) : wantsBacktest(question) || follow ? buildSpec({ question, today, prefs, prior: lastPrior, answers }) : null;
+  const plan = handOff ? null : multi ? (reruns.length === 1 ? reruns[0] : null) : wantsBacktest(question) || follow ? buildSpec({ question, today, prefs, prior: lastPrior, answers }) : null;
   if (plan && !multi) {
     const questions = clarifyQuestions({ question, today, prefs, prior: lastPrior, answers, acceptDefaults });
     if (questions.length) {
@@ -71,15 +80,22 @@ export async function runAsk({ question, history = [], context = null, attached 
   }
   const backtests = [];
 
-  const rerunNote = reruns.length > 1 ? followUpsNote(reruns, reruns.map((_, i) => `t${i + 1}`), multi.notes) : "";
+  const rerunNote = reruns.length > 1 && !handOff ? followUpsNote(reruns, reruns.map((_, i) => `t${i + 1}`), multi.notes) : "";
   // Market overviews fetch market_snapshot before the model writes, so a small model cannot answer without the data.
-  const market = !plan && !reruns.length && wantsMarkets(question) && tools.some((t) => t.name === "market_snapshot");
-  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, market ? MARKET_NOTE : ""].filter(Boolean).join("\n");
+  const has = (name) => tools.some((t) => t.name === name);
+  const free = !plan && !reruns.length && !handOff;
+  // Non-US market questions fetch world_markets (and the web for context) first, so a small model answers from data.
+  const regions = free && has("world_markets") ? worldRegions(question) : [];
+  const webFirst = free && has("web_search") && wantsWeb(question);
+  const market = free && !regions.length && wantsMarkets(question) && has("market_snapshot");
+  const system = [systemPrompt(today), COVERAGE_NOTE, contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, handOff ? handOffNote(priorList, reruns.map((_, i) => `t${i + 1}`)) : "", market ? MARKET_NOTE : "", regions.length ? WORLD_NOTE : "", webFirst ? WEB_NOTE : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
   if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
   messages.push(...unref(history), { role: "user", content: question });
   let calls = 0;
+  let seq = 0;
+  const webUsed = { web_search: 0, web_fetch: 0 };
   let spent = 0;
   let answer = "";
   let stopped = "";
@@ -88,7 +104,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
 
-  if (reruns.length > 1) {
+  if (reruns.length > 1 || (handOff && reruns.length)) {
     emit({ type: "step_progress", phase: "computing" });
     const pending = reruns.map((r, i) => ({ id: `rerun_${i + 1}`, name: "run_backtest", args: { spec: r.spec } }));
     await runCalls("", pending, Object.fromEntries(pending.map((c, i) => [c.id, reruns[i]])));
@@ -97,6 +113,14 @@ export async function runAsk({ question, history = [], context = null, attached 
   if (market) {
     emit({ type: "step_progress", phase: "fetching" });
     await runCalls("", [{ id: "market_1", name: "market_snapshot", args: {} }]);
+    if (abort()) return;
+  }
+  if (regions.length || webFirst) {
+    emit({ type: "step_progress", phase: "fetching" });
+    await runCalls("", [
+      ...(regions.length ? [{ id: "world_1", name: "world_markets", args: { regions } }] : []),
+      ...(webFirst ? [{ id: "web_1", name: "web_search", args: { query: webQuery(question, today) } }] : [])
+    ]);
     if (abort()) return;
   }
 
@@ -168,12 +192,14 @@ export async function runAsk({ question, history = [], context = null, attached 
     messages.push({ role: "assistant", content: text, toolCalls: pending.map((c) => ({ id: c.id, name: c.name, args: c.args || {} })) });
     const jobs = pending.map((call) => {
       const known = tools.some((t) => t.name === call.name);
-      if (calls >= limits.toolCalls || !known || call.args == null) {
-        const refused = !known ? `No such tool ${call.name}.` : call.args == null ? "Arguments were not valid JSON." : "Tool-call limit reached for this question.";
+      const webCapped = WEB.has(call.name) && webUsed[call.name] >= WEB_CAPS[call.name];
+      if (calls >= limits.toolCalls || !known || call.args == null || webCapped) {
+        const refused = !known ? `No such tool ${call.name}.` : call.args == null ? "Arguments were not valid JSON." : webCapped ? `${call.name} limit reached (${WEB_CAPS[call.name]} per question); answer from the results you have.` : "Tool-call limit reached for this question.";
         return { call, refused };
       }
       calls += 1;
-      return { call, id: `t${calls}`, label: labelOf(call.name, call.args || {}) };
+      if (WEB.has(call.name)) webUsed[call.name] += 1;
+      return { call, id: `t${++seq}`, label: webCallLabel(call.name, call.args || {}) || labelOf(call.name, call.args || {}) };
     });
     const results = await Promise.all(jobs.map(async (job) => {
       if (job.refused) return { job, content: JSON.stringify({ ok: false, error: job.refused }) };
@@ -201,7 +227,9 @@ export async function runAsk({ question, history = [], context = null, attached 
       } finally {
         clearInterval(beat);
       }
-      const body = trimForModel(raw, limits);
+      // A search becomes one cited step per result page; web text is already capped, so it is not cut to 320 characters.
+      const split = call.name === "web_search" ? splitWebResults(raw, () => `t${++seq}`) : null;
+      const body = WEB.has(call.name) ? (split ? split.parent : raw) : trimForModel(raw, limits);
       const ms = now() - started;
       const ev = evidenceOf(id, call.name, call.args, body, { ms, label, raw, requests });
       evidence.push(ev);
@@ -211,6 +239,14 @@ export async function runAsk({ question, history = [], context = null, attached 
       log({ event: "tool", id, tool: call.name, args: call.args, ok: ev.ok, ms, rows: ev.rows, source: ev.source });
       const { json, ...pub } = ev;
       emit({ type: "step_end", ...pub });
+      for (const child of split?.children || []) {
+        const cev = evidenceOf(child.id, "web_result", { url: child.body.url }, child.body, { ms: 0, label: child.step.label });
+        evidence.push(cev);
+        bodies.set(child.id, child.body);
+        emit({ type: "step_start", id: child.id, tool: "web_result", label: child.step.label, args: { url: child.body.url }, phase: "fetching", at: child.step.asOf });
+        const { json: _j, ...cpub } = cev;
+        emit({ type: "step_end", ...cpub });
+      }
       return { job, content: toolMessage(ev, body) };
     }));
     evidence.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
@@ -222,7 +258,9 @@ export async function runAsk({ question, history = [], context = null, attached 
     emit({ type: "token", delta: answer });
   }
   const snap = evidence.find((e) => e.tool === "market_snapshot");
-  const tail = snap ? marketTail(answer, bodies.get(snap.id)) : "";
+  const world = evidence.find((e) => e.tool === "world_markets");
+  const webbed = evidence.some((e) => e.ok && (e.tool === "web_result" || e.tool === "web_fetch"));
+  const tail = snap ? marketTail(answer, bodies.get(snap.id)) : world ? worldTail(answer, bodies.get(world.id), { web: webbed }) : webbed ? webTail(answer) : "";
   if (tail) {
     answer += tail;
     emit({ type: "token", delta: tail });
@@ -246,7 +284,7 @@ export async function runAsk({ question, history = [], context = null, attached 
     uncited: evidence.length > 0 && cited.length === 0 && answer.length > 0,
     noTools: evidence.length === 0,
     greeting: false,
-    caveats: [...grounding.mislabeled.map(mislabelNote), ...grounding.scope.map((s) => s.note), ...caveatsFor(evidence)],
+    caveats: [...grounding.mislabeled.map(mislabelNote), ...grounding.scope.map((s) => s.note), ...caveatsFor(evidence), ...(webbed ? [WEB_CAVEAT] : [])],
     usage: { tokens: spent, toolCalls: calls },
     ms: now() - t0,
     stopped,
