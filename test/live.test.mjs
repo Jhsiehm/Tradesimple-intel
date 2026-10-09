@@ -56,6 +56,8 @@ test("latency math: filing lag, detection lag by publish precision, durations", 
   assert.equal(filingLagLabel({ source: "congress", lag: 21 }), "filed 21d after the trade");
   assert.equal(filingLagLabel({ source: "whales", lag: 44 }), "filed 44d after quarter end");
   assert.equal(filingLagLabel({ source: "lobbying", lag: 18 }), "posted 18d after the period ended");
+  assert.equal(filingLagLabel({ source: "lobbying", lag: 14, detail: "3rd Quarter - Report · Defense" }), "posted 14d after the period ended");
+  assert.equal(filingLagLabel({ source: "lobbying", lag: 106, detail: "2nd Quarter - Amendment · Taxation/Internal Revenue Code" }), "", "a stored amendment row from before the fix");
   assert.equal(filingLagLabel({ source: "news", lag: null }), "");
 });
 

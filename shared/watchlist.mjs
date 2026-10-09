@@ -94,6 +94,12 @@ const dayOf = (v) => {
   return Number.isFinite(t) ? Math.floor(t / DAY_MS) : null;
 };
 
+/**
+ * True for LDA quarterly reports and terminations, whose posted-minus-period-end is a filing delay (due in 20 days).
+ * An amendment re-files an old quarter and a registration is not due at a quarter end, so neither has a lag.
+ */
+export const ldaLagApplies = (typeLabel) => !/amendment|registration/i.test(String(typeLabel || ""));
+
 /** Whole calendar days (UTC) from the event to its disclosure; null when either date is missing. */
 export function lagDays(eventAt, publishedAt) {
   const a = dayOf(eventAt);
@@ -296,7 +302,7 @@ export function lobbyingEvent(l, symbol) {
     amountLabel: usd(l.amount),
     eventAt: l.periodEnd || "",
     publishedAt: l.posted || "",
-    lag: l.lag ?? lagDays(l.periodEnd, l.posted),
+    lag: ldaLagApplies(l.typeLabel) ? l.lag ?? lagDays(l.periodEnd, l.posted) : null,
     late: false,
     link: l.link || ""
   };

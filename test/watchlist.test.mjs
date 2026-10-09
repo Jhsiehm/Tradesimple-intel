@@ -137,6 +137,11 @@ test("13F, 13D/13G, contract, lobbying, 8-K and news rows carry event time, publ
   const l = lobbyingEvent({ id: "lda:u1", registrant: "VENABLE LLP", amount: 30000, typeLabel: "3rd Quarter - Report", issues: ["Defense", "Budget"], periodEnd: "2026-09-30", posted: "2026-10-08", lag: 8 }, "LMT");
   assert.equal(l.id, "lda:lda:u1", "same id as the Alerts lobbying row");
   assert.equal(l.lag, 8);
+  const amended = lobbyingEvent({ id: "lda:9eb9", registrant: "FGS GLOBAL (US) LLC", amount: 40000, typeLabel: "2nd Quarter - Amendment", period: "2nd Quarter (Apr 1 - June 30)", periodEnd: "2025-06-30", posted: "2025-10-14" }, "AAPL");
+  assert.equal(amended.lag, null, "an amendment re-files an old quarter; 106 days is not a filing delay");
+  assert.equal(amended.eventAt, "2025-06-30");
+  assert.equal(lobbyingEvent({ id: "r", typeLabel: "Registration", periodEnd: "2026-09-30", posted: "2026-09-16", lag: -14 }, "AAPL").lag, null);
+  assert.equal(lobbyingEvent({ id: "t", typeLabel: "3rd Quarter - Termination", periodEnd: "2026-09-30", posted: "2026-10-14" }, "AAPL").lag, 14);
 
   const k = filingEvent({ symbol: "LMT", form: "8-K", accession: "0001193125-26-371750", items: "1.01,9.01", reportDate: "2026-08-24", accepted: "2026-08-27T23:31:09.000Z", link: "k" });
   assert.equal(k.title, "8-K · Material agreement");

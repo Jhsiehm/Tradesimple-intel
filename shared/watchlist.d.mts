@@ -63,6 +63,7 @@ export function addSymbol(list: string[], symbol: string, max?: number): string[
 export function removeSymbol(list: string[], symbol: string): string[];
 export function moveSymbol(list: string[], symbol: string, delta: number): string[];
 export function matchTickers<T extends { symbol: string; name?: string }>(tickers: T[], query: string, n?: number): T[];
+export function ldaLagApplies(typeLabel: string | null | undefined): boolean;
 export function lagDays(eventAt: string | null | undefined, publishedAt: string | null | undefined): number | null;
 export function ageLabel(iso: string | null | undefined, now?: number): string;
 export function shownAt(e: { publishedAt?: string; eventAt?: string }): string;

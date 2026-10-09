@@ -377,7 +377,7 @@ function Lobbying({ items, totals, onDossier }: { items?: Filing[]; totals?: Lob
       meta: `${f.typeLabel || "LD-2"} · ${f.period} ${f.year} · posted ${f.posted}`,
       rows: [
         { label: "Ticker", value: f.symbol },
-        { label: "Filing lag", value: f.lag != null ? `${f.lag} days · period ended ${f.periodEnd}, posted ${f.posted}${f.lag > 20 ? " · past the 20-day deadline" : ""}` : "No reporting period (registration or amendment)" },
+        { label: "Filing lag", value: f.lag != null ? `${f.lag} days · period ended ${f.periodEnd}, posted ${f.posted}${f.lag > 20 ? " · past the 20-day deadline" : ""}` : f.periodEnd ? `None · ${/registration/i.test(f.typeLabel) ? "a registration" : "an amendment"} for the period ended ${f.periodEnd}, posted ${f.posted}; only quarterly reports have a 20-day deadline` : "No reporting period (registration or amendment)" },
         { label: "Amount", value: f.amount ? usd(f.amount) : /registration/i.test(f.typeLabel) ? "None · registrations carry no amount" : "Under $5,000 or not reported" },
         { label: "Basis", value: f.inHouse ? "In-house expenses" : "Outside firm fee income" },
         { label: "Issues", value: f.issues.join(", ") || "—" },

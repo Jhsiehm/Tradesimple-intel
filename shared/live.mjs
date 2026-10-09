@@ -5,6 +5,7 @@
  */
 import { alertSeverity } from "./intel.mjs";
 import { amountShort } from "./sentences.mjs";
+import { ldaLagApplies } from "./watchlist.mjs";
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -117,6 +118,8 @@ const LAG_WORDS = {
 /** "filed 12d after the trade", or "" when the source has no separate event and publish dates. */
 export function filingLagLabel(ev) {
   if (ev.lag == null || !LAG_WORDS[ev.source]) return "";
+  // Lobbying rows stored before amendments lost their lag still carry one; the filing type leads `detail`.
+  if (ev.source === "lobbying" && !ldaLagApplies(ev.detail)) return "";
   const verb = ev.source === "lobbying" ? "posted" : "filed";
   return `${verb} ${ev.lag}d ${LAG_WORDS[ev.source]}`;
 }

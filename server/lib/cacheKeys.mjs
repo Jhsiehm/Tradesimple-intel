@@ -34,7 +34,7 @@ export const KEY = {
   earningsDay: (date) => `earn:day:v1:${date}`,
   secSubsV1: (cik) => `sec:subs:v1:${cik}`,
   ldaYear: (client, year) => `lda:v2:${client.toLowerCase()}:${year}`,
-  ldaBoard: "lda:board:v2",
+  ldaBoard: "lda:board:v3",
   fecPac: "fec:pac:v3",
   usaHistory: (symbol) => `usa:hist:v2:${symbol}`,
   secRevenue: (cik) => `sec:rev:v1:${cik}`,
@@ -83,7 +83,7 @@ export const KEY = {
   hq: (symbol) => `hq:v2:${symbol}`,
 
   // Today watchlist: composed per-ticker activity, symbol headlines, delayed quote, and the symbols clients watch
-  watchActivity: (symbol) => `watch:activity:v4:${symbol}`,
+  watchActivity: (symbol) => `watch:activity:v5:${symbol}`,
   watchNews: (symbol) => `watch:news:v1:${symbol}`,
   watchQuote: (symbol) => `watch:quote:v1:${symbol}`,
   watchSet: "watch:set:v1",

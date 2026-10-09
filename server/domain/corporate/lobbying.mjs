@@ -5,6 +5,7 @@ import { HOUR, DAY } from "../../lib/time.mjs";
 import { pool } from "../../lib/pool.mjs";
 import { KEY } from "../../lib/cacheKeys.mjs";
 import { LDA_DOWN_MS, ldaDownLabel } from "../../lobby.mjs";
+import { ldaLagApplies } from "../../../shared/watchlist.mjs";
 
 const PAGE_TIMEOUT = 30000;
 
@@ -46,6 +47,7 @@ function withLag(row) {
   const end = PERIOD_END.find(([re]) => re.test(`${row.period} ${row.typeLabel}`))?.[1];
   if (!end || !row.posted) return { ...row, periodEnd: "", lag: null };
   const periodEnd = `${row.year}-${end}`;
+  if (!ldaLagApplies(row.typeLabel)) return { ...row, periodEnd, lag: null };
   return { ...row, periodEnd, lag: Math.round((Date.parse(row.posted) - Date.parse(periodEnd)) / DAY) };
 }
 
