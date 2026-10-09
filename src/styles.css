@@ -1145,6 +1145,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 }
 .app.phone .widget-edge, .app.phone .widget-resize { display: none; }
 .app.phone .widget-bar { cursor: default; }
+.app.phone .widget.min { top: auto !important; height: auto !important; border-top: 1px solid var(--line); }
 .app.phone .nav button,
 .app.phone .seg button,
 .app.phone .scope button,

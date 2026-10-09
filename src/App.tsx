@@ -272,6 +272,7 @@ export function App() {
     if (p.scope) { setIntelScope(scopeOf(p.scope)); if (p.scope !== "all") setScrubMin(false); }
     if (p.dropCards) cards.dropUnpinned();
     if (p.rail) rail.show();
+    if (phone) cards.collapseAll();
   }
 
   /** Command-line and trail actions: the dossier link kinds plus section, mode, view, layer, calendar, alerts. */
@@ -408,6 +409,7 @@ export function App() {
       if (hit?.action) follow(hit.action);
       return;
     }
+    if (phone) cards.collapseAll();
     setDossier(null);
     setSelectedId(id);
     if (section === "congress" && mode === "members") openMember(id, chamber);
