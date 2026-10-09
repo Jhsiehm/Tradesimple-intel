@@ -304,7 +304,7 @@ function MemberCard({ bioguide, chamber, onFollow }: { bioguide: string; chamber
               {trades.slice(0, 40).map((t) => (
                 <tr key={t.id} className={`live tone-${t.side === "buy" ? "up" : t.side === "sell" ? "down" : ""}`} onClick={() => onFollow(`pos:${t.symbol}`)}>
                   <td>{t.symbol}</td><td>{t.type}</td><td>{t.amount}</td><td>{t.traded}</td><td>{t.filed}</td><td>{t.lag == null ? "—" : `${t.lag}d`}</td>
-                  <td>{t.link ? <a className="dt-filing" href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}</td>
+                  <td>{t.link ? <a className="dt-filing" href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure"><IconLabel icon="external">View</IconLabel></a> : "—"}</td>
                 </tr>
               ))}
             </tbody>

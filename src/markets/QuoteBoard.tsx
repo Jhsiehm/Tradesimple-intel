@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { big, tone, when } from "../lib/format";
 import { toggleSymbol, useWatch } from "../lib/useWatch";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 
 type Quote = {
   symbol: string;
@@ -113,9 +114,9 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
           <span className="scope toggle">
             <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>All 500</button>
             <button aria-pressed={scope === "core"} onClick={() => setScope("core")}>Curated joins</button>
-            <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}>★ Watchlist</button>
+            <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}><IconLabel icon="star-on">Watchlist</IconLabel></button>
           </span>
-          {onMap ? <button className="go-btn" onClick={onMap} title="Every constituent's SEC business address on the district map, with counts per district">HQ map</button> : null}
+          {onMap ? <button className="go-btn" onClick={onMap} title="Every constituent's SEC business address on the district map, with counts per district"><IconLabel icon="hq">HQ map</IconLabel></button> : null}
           <input className="board-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter symbol, name, industry" aria-label="Filter" />
         </div>
         <p className="breadth">
@@ -158,7 +159,7 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
             {rows.map((q) => (
               <tr key={q.symbol} onClick={() => onOpen(q.symbol)}>
                 <td>
-                  <button className={hasSymbol(q.symbol) ? "star on" : "star"} title={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"} onClick={(e) => { e.stopPropagation(); toggleSymbol(q.symbol); }}>{hasSymbol(q.symbol) ? "★" : "☆"}</button>
+                  <button className={hasSymbol(q.symbol) ? "star on" : "star"} title={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"} onClick={(e) => { e.stopPropagation(); toggleSymbol(q.symbol); }} aria-label={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"}><Icon name={hasSymbol(q.symbol) ? "star-on" : "star"} size={12} /></button>
                   {q.symbol}{q.core ? <small className="tag"> JOIN</small> : null}
                 </td>
                 <td className="board-name">{q.name}</td>

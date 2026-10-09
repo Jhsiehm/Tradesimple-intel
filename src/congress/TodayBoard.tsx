@@ -45,7 +45,7 @@ export function TradeLine({ t, refYear, onFollow }: { t: FeedRow; refYear: numbe
         {late ? <b className="late"> · filed {t.lag! - LATE} days past the {LATE}-day limit</b> : null}
         {t.more ? <> · +{t.more} more in this filing</> : null}
       </small>
-      {t.link ? <a href={t.link} target="_blank" rel="noopener noreferrer" title="Open the original filing">filing ↗</a> : null}
+      {t.link ? <a href={t.link} target="_blank" rel="noopener noreferrer" title="Open the original filing">filing <Icon name="external" size={12} /></a> : null}
     </li>
   );
 }

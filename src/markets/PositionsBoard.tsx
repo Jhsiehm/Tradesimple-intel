@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { when } from "../lib/format";
 import { compact } from "./useMarkets";
+import { Icon } from "../ui/icons/Icon";
 
 type Buyer = { person: string; bioguide: string; party: string; role: string; amount: string; traded: string; filed: string; lag: number | null; link: string };
 
@@ -152,7 +153,7 @@ export function PositionsBoard({ onOpen, onMember }: { onOpen: (symbol: string) 
                           <button className="expander" aria-expanded={expanded} title="Show recent buyers" onClick={(e) => {
                             e.stopPropagation();
                             setOpen((cur) => { const next = new Set(cur); if (next.has(row.symbol)) next.delete(row.symbol); else next.add(row.symbol); return next; });
-                          }}>{expanded ? "▾" : "▸"}</button>
+                          }}><Icon name={expanded ? "chevron-down" : "chevron-right"} size={12} /></button>
                         ) : null}
                         {buyer?.bioguide ? (
                           <button className="linkish" title={`${buyer.amount} · traded ${buyer.traded} · filed ${buyer.filed}`} onClick={(e) => { e.stopPropagation(); onMember(buyer.bioguide); }}>{String(value)}</button>

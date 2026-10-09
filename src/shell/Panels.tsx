@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, when } from "../lib/api";
 import { toggleMember, toggleSymbol, useWatch } from "../lib/useWatch";
 import { signed, tone } from "../markets/format";
+import { Icon } from "../ui/icons/Icon";
 
 export type PanelKind = "watch" | "x" | "lastbuy" | "wire" | "globals" | "supply";
 
@@ -99,7 +100,7 @@ export function WatchPanel({ onFollow }: { onFollow: (action: string) => void })
                     <td>{when(q?.asOf || x?.asOf).slice(11)}</td>
                     <td className="row-acts">
                       <button className="ghost" title="Positions" onClick={(e) => { e.stopPropagation(); onFollow(`pos:${s}`); }}>Pos</button>
-                      <button className="ghost" title="Remove" onClick={(e) => { e.stopPropagation(); toggleSymbol(s); }}>×</button>
+                      <button className="ghost" title="Remove" aria-label={`Remove ${s} from watchlist`} onClick={(e) => { e.stopPropagation(); toggleSymbol(s); }}><Icon name="close" size={12} /></button>
                     </td>
                   </tr>
                 );
@@ -123,7 +124,7 @@ export function WatchPanel({ onFollow }: { onFollow: (action: string) => void })
                     <td className={t?.side === "buy" ? "up" : t?.side === "sell" ? "down" : ""}>{t === undefined ? "…" : t ? `${t.symbol} ${t.type} ${t.amount}` : "none parsed"}</td>
                     <td>{t?.traded || "—"}</td>
                     <td>{t?.lag == null ? "—" : `${t.lag}d`}</td>
-                    <td className="row-acts"><button className="ghost" onClick={(e) => { e.stopPropagation(); toggleMember(m); }}>×</button></td>
+                    <td className="row-acts"><button className="ghost" title="Remove" aria-label={`Remove ${m.name} from watchlist`} onClick={(e) => { e.stopPropagation(); toggleMember(m); }}><Icon name="close" size={12} /></button></td>
                   </tr>
                 );
               })}

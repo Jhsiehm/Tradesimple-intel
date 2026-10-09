@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, when } from "../lib/api";
 import type { StageList } from "../types";
+import { Icon } from "../ui/icons/Icon";
 
 type Seat = { bioguide: string; person: string; party: string; state: string; chamber: string };
 type Scored = Seat & {
@@ -155,7 +156,7 @@ export function LeadersBoard({ onFollow, onList }: { onFollow: (action: string) 
                   <td className="amber">{m.lateReports}</td>
                   <td>{m.late}<small>/{m.trades}</small></td>
                   <td>
-                    {m.maxLagLink ? <a href={m.maxLagLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={`${m.maxLagSymbol} · open the filing`}>{m.maxLag}d ↗</a> : `${m.maxLag ?? "—"}d`}
+                    {m.maxLagLink ? <a href={m.maxLagLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={`${m.maxLagSymbol} · open the filing`}>{m.maxLag}d <Icon name="external" size={12} /></a> : `${m.maxLag ?? "—"}d`}
                   </td>
                   <td>{m.medianLag == null ? "—" : `${Math.round(m.medianLag)}d`}</td>
                 </tr>

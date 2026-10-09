@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { usd, when } from "../lib/format";
 import type { Board, Dod } from "./useContracts";
+import { Icon } from "../ui/icons/Icon";
 
 type Sort = "obligations" | "share";
 
@@ -103,7 +104,7 @@ export function ContractsBoard({ board, dod, onSymbol }: { board: Board | null; 
           <ul>
             {(dod?.items || []).map((d) => (
               <li key={d.id}>
-                <a href={d.link} target="_blank" rel="noreferrer">{d.title.replace(/^Contracts for /, "")} ↗</a>
+                <a href={d.link} target="_blank" rel="noreferrer">{d.title.replace(/^Contracts for /, "")} <Icon name="external" size={12} /></a>
                 <span>{when(d.published)} UTC</span>
               </li>
             ))}

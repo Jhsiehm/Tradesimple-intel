@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { CASE_OPEN_KEY, isOpen, parseOpen, sectionId, withOpen, type OpenState } from "../../shared/caseState.mjs";
 import "./case.css";
+import { Icon } from "../ui/icons/Icon";
 
 function readOpen(): OpenState {
   try { return parseOpen(localStorage.getItem(CASE_OPEN_KEY)); } catch { return {}; }
@@ -20,7 +21,7 @@ export function CaseSection({ kind, title, count, children }: { kind?: string; t
     <section className={open ? "case-sec" : "case-sec shut"}>
       <h3 className="case-sec-h">
         <button aria-expanded={open} onClick={toggle} title={open ? "Fold this section" : "Show this section"}>
-          <i aria-hidden="true">{open ? "▾" : "▸"}</i>
+          <i aria-hidden="true"><Icon name={open ? "chevron-down" : "chevron-right"} size={12} /></i>
           <span>{title}</span>
           {count != null && count !== "" ? <small>{count}</small> : null}
         </button>
