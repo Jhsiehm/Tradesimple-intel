@@ -64,8 +64,8 @@ test("every wired icon uses a valid name", () => {
       ...[...text.matchAll(/<Icon\b[^>]*?\bname="([^"]+)"/g)].map((m) => m[1]),
       ...[...text.matchAll(/<IconLabel\b[^>]*?\bicon="([^"]+)"/g)].map((m) => m[1]),
       ...[...text.matchAll(/\bicon:\s*"([^"]+)"/g)].map((m) => m[1]),
-      // Conditional names: every string literal inside name={…} / icon={…}.
-      ...[...text.matchAll(/<(?:Icon\b[^>]*?\bname|IconLabel\b[^>]*?\bicon)=\{([^}]*)\}/g)].flatMap((m) => [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]))
+      // Conditional names: the result literals of name={a ? "x" : "y"} / icon={…}, not the tested values.
+      ...[...text.matchAll(/<(?:Icon\b[^>]*?\bname|IconLabel\b[^>]*?\bicon)=\{([^}]*)\}/g)].flatMap((m) => [...m[1].matchAll(/(?:^|[?:])\s*"([^"]+)"/g)].map((x) => x[1]))
     ];
     for (const n of used) {
       wired++;
