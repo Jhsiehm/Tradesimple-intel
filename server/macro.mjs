@@ -219,14 +219,31 @@ export async function econCalendar(db, back = 3, ahead = 21) {
       failed.push(page);
     }
   });
-  items.sort((a, b) => a.t - b.t);
+  items.sort((a, b) => a.t - b.t || a.event.localeCompare(b.event));
   return {
     ok: true,
     source: "Nasdaq economic calendar",
     asOf: new Date().toISOString(),
     latency: `Times are US Eastern (converted from Nasdaq's fixed UTC-4 clock). Filtered to rate decisions, inflation, jobs, growth, and activity prints.${failed.length ? ` ${failed.length} days did not load.` : ""}`,
-    items
+    items: uniqueEconIds(items)
   };
+}
+
+/**
+ * Nasdaq lists distinct prints whose names differ only by case ("PCE price index" MoM, "PCE Price index" YoY),
+ * which slug() folds onto one id. Exact repeats across pages are dropped; the rest get a numeric suffix.
+ */
+export function uniqueEconIds(items) {
+  const seen = new Map();
+  const out = [];
+  for (const e of items) {
+    const prior = seen.get(e.id) || [];
+    if (prior.some((p) => p.event === e.event && p.t === e.t && p.country === e.country)) continue;
+    prior.push(e);
+    seen.set(e.id, prior);
+    out.push(prior.length === 1 ? e : { ...e, id: `${e.id}:${prior.length}` });
+  }
+  return out;
 }
 
 export async function macroMarks(db, ccys, fromMs) {
