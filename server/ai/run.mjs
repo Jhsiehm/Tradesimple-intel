@@ -4,6 +4,7 @@ import { buildSpec, clarifyQuestions, describeValue, followUpsNote, isFollowUp, 
 import { describeSpec } from "../../shared/backtestSpec.mjs";
 import { mislabelNote } from "../../shared/countLabels.mjs";
 import { citationCheck, stripRefs } from "../../shared/citations.mjs";
+import { MARKET_NOTE, marketTail, wantsMarkets } from "../../shared/marketAsk.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
 const COMPUTE = new Set(["run_backtest"]);
@@ -70,7 +71,9 @@ export async function runAsk({ question, history = [], context = null, attached 
   const backtests = [];
 
   const rerunNote = reruns.length > 1 ? followUpsNote(reruns, reruns.map((_, i) => `t${i + 1}`), multi.notes) : "";
-  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote].filter(Boolean).join("\n");
+  // Market overviews fetch market_snapshot before the model writes, so a small model cannot answer without the data.
+  const market = !plan && !reruns.length && wantsMarkets(question) && tools.some((t) => t.name === "market_snapshot");
+  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote, market ? MARKET_NOTE : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   const unref = (turns) => turns.map((t) => ({ ...t, content: stripRefs(t.content) }));
   if (attached) messages.push({ role: "user", content: attachedNote({ ...attached, turns: unref(attached.turns || []) }) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
@@ -88,6 +91,11 @@ export async function runAsk({ question, history = [], context = null, attached 
     emit({ type: "step_progress", phase: "computing" });
     const pending = reruns.map((r, i) => ({ id: `rerun_${i + 1}`, name: "run_backtest", args: { spec: r.spec } }));
     await runCalls("", pending, Object.fromEntries(pending.map((c, i) => [c.id, reruns[i]])));
+    if (abort()) return;
+  }
+  if (market) {
+    emit({ type: "step_progress", phase: "fetching" });
+    await runCalls("", [{ id: "market_1", name: "market_snapshot", args: {} }]);
     if (abort()) return;
   }
 
@@ -211,6 +219,12 @@ export async function runAsk({ question, history = [], context = null, attached 
   if (!answer.trim()) {
     answer = "I ran out of room before I could write an answer. The tool results are listed in the steps above.";
     emit({ type: "token", delta: answer });
+  }
+  const snap = evidence.find((e) => e.tool === "market_snapshot");
+  const tail = snap ? marketTail(answer, bodies.get(snap.id)) : "";
+  if (tail) {
+    answer += tail;
+    emit({ type: "token", delta: tail });
   }
   const { cited, unknown } = citationRefs(answer, evidence);
   const grounding = { ...groundingCheck(answer, evidence), ...citationCheck(answer, evidence) };

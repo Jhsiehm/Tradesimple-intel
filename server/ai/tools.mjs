@@ -12,6 +12,7 @@ import { handlers as relations } from "../routes/relations.mjs";
 import { handlers as backtest } from "../routes/backtest.mjs";
 import { fillRoute } from "../routes/manifest.mjs";
 import { queryOf } from "../router.mjs";
+import { runMarketSnapshot } from "./marketTool.mjs";
 
 const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest };
 
@@ -225,6 +226,7 @@ export const TOOLS = [
   plain("insiders", "Recent Form 4 insider transactions.", "markets.insiders", "Insiders"),
   plain("congress_feed", "This week's congressional trade disclosures: newest filings, late filings, biggest, most-traded tickers.", "congress.feed", "Congress feed"),
   plain("congress_leaders", "Disclosed buys ranked against SPY. Equal-weighted, not a portfolio.", "congress.leaders", "Leaders"),
+  tool("market_snapshot", "How US markets are doing now: S&P 500, Nasdaq Composite, Dow, Russell 2000, VIX, benchmark and sector ETFs (last, change % from the previous close), and the 10-year and 2-year Treasury yields. Delayed Yahoo Finance quotes and FRED yields, each with as-of. Call it for any question about how the market, stocks overall, indices, volatility, or yields are doing today. Ends with a disclaimer sentence to quote.", obj({}), (db, _a, call) => runMarketSnapshot(db, call), "Markets"),
   tool("alerts", "Late filings and anything on a watch list of tickers or members.", obj({ symbols: str("Comma-separated tickers"), members: str("Comma-separated bioguides"), late: { type: "string", enum: ["all", ""] } }), (db, a, call) => call(db, "alerts", {}, qs({
     symbols: String(a.symbols || "").slice(0, 200),
     members: String(a.members || "").slice(0, 200),
