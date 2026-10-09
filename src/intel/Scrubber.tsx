@@ -196,7 +196,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
             <span>{data.from}</span>
             <span className="scrub-cov" title={`${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}>
               {!arcs ? "Map arcs show on wider screens" : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
-              {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} couldn't be placed` : ""}
+              {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this scope couldn't be placed` : ""}
             </span>
             <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}>Feeds {feeds ? "▴" : "▾"}</button>
             <span>{data.to}</span>
