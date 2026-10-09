@@ -1,8 +1,7 @@
-import { fetchJson } from "./lib/http.mjs";
 import { listTickers, readCache, writeCache, tickerBySymbol } from "./lib/db.mjs";
 import { cryptoDigits, instrumentBySymbol } from "./instruments.mjs";
-import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { nasdaqJson } from "./feeds/nasdaq.mjs";
 import { round, sessionQuote, yahooChart } from "./feeds/yahoo.mjs";
 
 export { sessionQuote };
@@ -99,9 +98,7 @@ export async function quoteBoard(db) {
   const hit = readCache(db, KEY.screener);
   if (hit) return hit;
   const started = Date.now();
-  const body = await fetchJson("https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true", {
-    headers: { "User-Agent": BROWSER_UA, Accept: "application/json" }
-  }, 30000);
+  const body = await nasdaqJson("screener/stocks?tableonly=true&limit=10000&download=true", 30000);
   const bySymbol = new Map((body?.data?.rows || []).map((r) => [String(r.symbol).trim().replace(/[/.^]/g, "-"), r]));
   const num = (v) => {
     const n = Number(String(v ?? "").replace(/[$,%]/g, ""));

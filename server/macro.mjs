@@ -1,12 +1,12 @@
-import { fetchText, fetchJson } from "./lib/http.mjs";
+import { fetchText } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
 import { HOUR, DAY } from "./lib/time.mjs";
 import { pool } from "./lib/pool.mjs";
 import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { nasdaqJson } from "./feeds/nasdaq.mjs";
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
-const NASDAQ_HEADERS = { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } };
 
 export const CCY_COUNTRIES = {
   USD: ["United States"],
@@ -154,7 +154,7 @@ export async function econDay(db, page) {
   const key = KEY.econDay(page);
   const hit = readCache(db, key);
   if (hit) return hit;
-  const body = await fetchJson(`https://api.nasdaq.com/api/calendar/economicevents?date=${page}`, NASDAQ_HEADERS, 20000);
+  const body = await nasdaqJson(`calendar/economicevents?date=${page}`, 20000);
   const rows = body?.data?.rows || [];
   const prior = shift(page, -1);
   const grouped = new Map();

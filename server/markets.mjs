@@ -3,10 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchText } from "./lib/http.mjs";
+import { fetchBytes, fetchResponse } from "./lib/http.mjs";
+import { secText } from "./feeds/sec.mjs";
 import { listTickers, readCache, writeCache } from "./lib/db.mjs";
 import { HOUR } from "./lib/time.mjs";
-import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -40,10 +41,9 @@ export async function politicianTrades(db) {
 
 async function clerkIndex(year) {
   const url = `https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`;
-  const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const bytes = await fetchBytes(url, { headers: { "User-Agent": BROWSER_UA } }, 120000);
   const zip = path.join(os.tmpdir(), `${year}FD.ZIP`);
-  fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
+  fs.writeFileSync(zip, bytes);
   const { stdout } = await execFileAsync("unzip", ["-p", zip, `${year}FD.txt`]);
   return stdout;
 }
@@ -108,7 +108,7 @@ export async function shortInterest(db, symbol) {
   if (hit) return hit;
   const items = [];
   for (const date of settlementDates()) {
-    const res = await fetch("https://api.finra.org/data/group/otcMarket/name/consolidatedShortInterest", {
+    const res = await fetchResponse("https://api.finra.org/data/group/otcMarket/name/consolidatedShortInterest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -118,7 +118,7 @@ export async function shortInterest(db, symbol) {
         ],
         limit: 1
       })
-    });
+    }, 20000);
     const text = await res.text();
     if (!res.ok || text.startsWith("{")) continue;
     const row = parseCsv(text)[0];
@@ -200,7 +200,7 @@ async function edgarList(db, form, source, latency) {
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
   const url = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=${encodeURIComponent(form)}&owner=include&count=20&output=atom`;
-  const xml = await fetchText(url, { headers: { "User-Agent": SEC_UA, Accept: "application/atom+xml" } });
+  const xml = await secText(url, { accept: "application/atom+xml" });
   const tickers = listTickers(db);
   const items = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map((m, i) => {
     const block = m[1];

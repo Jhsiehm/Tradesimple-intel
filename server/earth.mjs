@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fetchText } from "./lib/http.mjs";
+import { fetchResponse, fetchText } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
 import { HOUR } from "./lib/time.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
@@ -171,7 +171,7 @@ async function latestGibsDay() {
   for (const back of [1, 2, 3]) {
     const day = new Date(Date.now() - back * 24 * HOUR).toISOString().slice(0, 10);
     try {
-      const res = await fetch(`${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${day}/GoogleMapsCompatible_Level9/3/3/2.jpg`, { signal: AbortSignal.timeout(8000) });
+      const res = await fetchResponse(`${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${day}/GoogleMapsCompatible_Level9/3/3/2.jpg`, {}, 8000);
       const size = Number(res.headers.get("content-length") || (await res.arrayBuffer()).byteLength);
       if (res.ok && size > 8000) return day;
     } catch {

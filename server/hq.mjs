@@ -5,7 +5,8 @@ import { fetchJson, makeGate } from "./lib/http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { FIPS_TO_POSTAL } from "./geo.mjs";
 import { DAY } from "./lib/time.mjs";
-import { APP_UA, SEC_UA } from "./lib/ua.mjs";
+import { APP_UA } from "./lib/ua.mjs";
+import { secJson } from "./feeds/sec.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -14,7 +15,6 @@ export const HQ_SOURCE = "SEC EDGAR submissions (business address) · US Census 
 export const HQ_LATENCY = "Address as last filed with the SEC; refreshed every 30 days. A registered office can differ from where most staff work.";
 
 /** SEC asks for at most 10 requests/s; Nominatim for 1/s. */
-const secGate = makeGate(2, 150);
 const censusGate = makeGate(2, 200);
 const osmGate = makeGate(1, 1100);
 const US_POSTAL = new Set(Object.values(FIPS_TO_POSTAL));
@@ -145,7 +145,7 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
   if (hit) return hit;
   const row = { symbol: ticker.symbol, name: ticker.name, cik: ticker.cik, filer: "", street: "", city: "", state: "", zip: "", foreign: false, lat: null, lon: null, geocoder: null, matched: "", geoid: null, district: null, districtBy: "", fetched: new Date().toISOString(), note: "" };
   try {
-    const subs = await secGate(() => fetchJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, { headers: { "User-Agent": SEC_UA } }, 20000), { priority });
+    const subs = await secJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, { timeoutMs: 20000, priority });
     const a = subs?.addresses?.business || {};
     Object.assign(row, {
       filer: subs?.name || "",

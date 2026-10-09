@@ -1,4 +1,5 @@
-import { fetchJsonRetry, fetchText, usaspendingGate } from "./lib/http.mjs";
+import { fetchText } from "./lib/http.mjs";
+import { usaspendingSearch } from "./feeds/usaspending.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
 import { contractsFor } from "./corporate.mjs";
@@ -8,7 +9,6 @@ import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 import { readStale } from "./lib/cache.mjs";
 
-const USA = "https://api.usaspending.gov/api/v2";
 const CONTRACT_TYPES = ["A", "B", "C", "D"];
 const LATENCY = "USAspending prime contract actions by action date. Civilian agencies report within days; DoD actions are published about 90 days after award. Negative amounts are de-obligations.";
 const FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "Action Date", "Transaction Amount", "Transaction Description", "Awarding Agency", "Awarding Sub Agency", "Mod", "generated_internal_id", "Primary Place of Performance", "NAICS"];
@@ -83,11 +83,7 @@ export async function contractFeed(db, params) {
   const t0 = Date.now();
   let body;
   try {
-    body = await fetchJsonRetry(`${USA}/search/spending_by_transaction/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" })
-    }, { timeoutMs: 45000, retries: 1, gate: usaspendingGate, priority: true });
+    body = await usaspendingSearch("spending_by_transaction", { filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" }, { timeoutMs: 45000, retries: 1, priority: true });
   } catch (err) {
     const stale = readStale(db, key);
     if (stale) return { ...stale.value, items: keyed(stale.value.items || []), scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };

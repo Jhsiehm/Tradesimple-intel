@@ -4,14 +4,15 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { extractText, getDocumentProxy } from "unpdf";
-import { fetchJson, fetchText } from "./lib/http.mjs";
+import { fetchBytes, fetchResponse, fetchText } from "./lib/http.mjs";
+import { secJson, secText } from "./feeds/sec.mjs";
 import { coreKey, listCore, listTickers, readCache, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
 import { shortInterest } from "./markets.mjs";
 import { pacData } from "./corporate.mjs";
-import { HOUR, DAY, MONTH, sleep } from "./lib/time.mjs";
+import { HOUR, DAY, MONTH } from "./lib/time.mjs";
 import { pool } from "./lib/pool.mjs";
-import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
+import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -184,10 +185,9 @@ async function clerkIndex(db, year) {
   const key = KEY.clerkIndex(year);
   const hit = readCache(db, key);
   if (hit) return hit.text;
-  const res = await fetch(`https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`, { headers: { "User-Agent": BROWSER_UA } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const bytes = await fetchBytes(`https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`, { headers: { "User-Agent": BROWSER_UA } }, 120000);
   const zip = path.join(os.tmpdir(), `${year}FD.ZIP`);
-  fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
+  fs.writeFileSync(zip, bytes);
   const { stdout } = await execFileAsync("unzip", ["-p", zip, `${year}FD.txt`], { maxBuffer: 64 * 1024 * 1024 });
   writeCache(db, key, { text: stdout }, 6 * HOUR);
   return stdout;
@@ -198,9 +198,7 @@ async function ptrLines(db, filing) {
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const url = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
-  const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const lines = await parsePtrPdf(new Uint8Array(await res.arrayBuffer()));
+  const lines = await parsePtrPdf(await fetchBytes(url, { headers: { "User-Agent": BROWSER_UA } }, 60000));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
 }
@@ -275,7 +273,7 @@ async function efdReportList(session) {
       last_name: "",
       csrfmiddlewaretoken: session.csrf
     });
-    const res = await fetch("https://efdsearch.senate.gov/search/report/data/", {
+    const res = await fetchResponse("https://efdsearch.senate.gov/search/report/data/", {
       method: "POST",
       headers: {
         "User-Agent": BROWSER_UA,
@@ -285,7 +283,7 @@ async function efdReportList(session) {
         Cookie: session.cookie
       },
       body
-    });
+    }, 30000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const page = await res.json();
     out.push(...(page.data || []));
@@ -352,7 +350,7 @@ async function senateTrades(db, people, progress, rows, tick) {
 }
 
 async function efdSession() {
-  const home = await fetch("https://efdsearch.senate.gov/search/home/", { headers: { "User-Agent": BROWSER_UA } });
+  const home = await fetchResponse("https://efdsearch.senate.gov/search/home/", { headers: { "User-Agent": BROWSER_UA } }, 30000);
   const jar = new Map();
   const take = (res) => {
     for (const raw of res.headers.getSetCookie?.() || []) {
@@ -366,7 +364,7 @@ async function efdSession() {
   const token = /name="csrfmiddlewaretoken" value="([^"]+)"/.exec(html)?.[1];
   if (!token) throw new Error("No eFD form token");
   const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
-  const agree = await fetch("https://efdsearch.senate.gov/search/home/", {
+  const agree = await fetchResponse("https://efdsearch.senate.gov/search/home/", {
     method: "POST",
     redirect: "manual",
     headers: {
@@ -376,7 +374,7 @@ async function efdSession() {
       Cookie: cookie()
     },
     body: new URLSearchParams({ prohibition_agreement: "1", csrfmiddlewaretoken: token })
-  });
+  }, 30000);
   take(agree);
   return { cookie: cookie(), csrf: jar.get("csrftoken") || token };
 }
@@ -493,7 +491,7 @@ async function secSubmissions(db, cik) {
   const key = KEY.secSubs(cik);
   const hit = readCache(db, key);
   if (hit) return hit;
-  const body = await fetchJson(`https://data.sec.gov/submissions/CIK${cik}.json`, { headers: { "User-Agent": SEC_UA } });
+  const body = await secJson(`https://data.sec.gov/submissions/CIK${cik}.json`);
   const slim = {
     name: body.name,
     filings: {
@@ -515,8 +513,7 @@ async function form4(db, cik, pick) {
   if (hit) return hit;
   const raw = String(pick.doc || "").replace(/^xslF345X\d+\//, "");
   const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${pick.accession.replace(/-/g, "")}/${raw}`;
-  await sleep(120);
-  const xml = await fetchText(url, { headers: { "User-Agent": SEC_UA } });
+  const xml = await secText(url);
   const parsed = parseForm4(xml);
   writeCache(db, key, parsed, 6 * MONTH);
   return parsed;
@@ -645,22 +642,19 @@ async function infoTable(db, filing, keys) {
   const hit = readCache(db, key);
   if (hit) return hit;
   const base = `https://www.sec.gov/Archives/edgar/data/${Number(filing.cik)}/${filing.acc.replace(/-/g, "")}`;
-  await sleep(120);
-  const index = await fetchJson(`${base}/index.json`, { headers: { "User-Agent": SEC_UA } });
+  const index = await secJson(`${base}/index.json`);
   const files = (index.directory?.item || []).map((f) => f.name);
   const tableFile = files.find((f) => /\.xml$/i.test(f) && !/primary_doc/i.test(f));
   const primary = files.find((f) => /primary_doc\.xml$/i.test(f));
   let period = "";
   if (primary) {
-    await sleep(120);
-    const doc = await fetchText(`${base}/${primary}`, { headers: { "User-Agent": SEC_UA } }).catch(() => "");
+    const doc = await secText(`${base}/${primary}`).catch(() => "");
     const raw = /<periodOfReport>([^<]+)<\/periodOfReport>/.exec(doc)?.[1] || "";
     period = isoDate(raw);
   }
   let holdings = [];
   if (tableFile) {
-    await sleep(120);
-    const xml = await fetchText(`${base}/${tableFile}`, { headers: { "User-Agent": SEC_UA } }, 120000);
+    const xml = await secText(`${base}/${tableFile}`, { timeoutMs: 120000 });
     holdings = (xml.match(/<(?:\w+:)?infoTable>[\s\S]*?<\/(?:\w+:)?infoTable>/g) || []).map((block) => ({
       issuer: nsVal(block, "nameOfIssuer"),
       cls: nsVal(block, "titleOfClass"),

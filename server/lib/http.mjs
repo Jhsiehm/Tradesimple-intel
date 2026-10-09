@@ -63,9 +63,6 @@ export function makeGate(concurrency, spacingMs) {
   });
 }
 
-/** USAspending blocks a client's IP for a while after bursts of a few dozen requests per second. */
-export const usaspendingGate = makeGate(2, 300);
-
 /** fetchJson with retries. Errors carry a readable message naming the host and attempts. */
 export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, retries = 2, gate = null, priority = false } = {}) {
   let last;
@@ -86,6 +83,22 @@ export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, ret
   const err = new Error(`${host} ${why} after ${tries}`);
   err.status = last?.status;
   throw err;
+}
+
+/** fetch with a timeout that covers headers and body; the caller reads the Response (cookies, bytes, status). */
+export function fetchResponse(url, options = {}, timeoutMs = 20000) {
+  return fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) });
+}
+
+/** Response body as bytes; a non-2xx status throws `HTTP <status>`. */
+export async function fetchBytes(url, options = {}, timeoutMs = 60000) {
+  const res = await fetchResponse(url, options, timeoutMs);
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 export async function fetchText(url, options = {}, timeoutMs = 20000) {

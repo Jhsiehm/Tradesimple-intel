@@ -3,16 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fetchJson, fetchJsonRetry, usaspendingGate } from "./lib/http.mjs";
+import { fetchJson, fetchResponse } from "./lib/http.mjs";
+import { secJson } from "./feeds/sec.mjs";
+import { nasdaqJson } from "./feeds/nasdaq.mjs";
+import { usaspendingSearch } from "./feeds/usaspending.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
 import { roster } from "./roster.mjs";
 import { HOUR, DAY } from "./lib/time.mjs";
 import { pool } from "./lib/pool.mjs";
-import { SEC_UA, BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 
 const execFileAsync = promisify(execFile);
-const NASDAQ_HEADERS = { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } };
 const MAJOR_CAP = 50e9;
 
 /* ---------- Earnings ---------- */
@@ -53,7 +54,7 @@ async function earningsDay(db, date) {
   const key = KEY.earningsDay(date);
   const hit = readCache(db, key);
   if (hit) return hit;
-  const body = await fetchJson(`https://api.nasdaq.com/api/calendar/earnings?date=${date}`, NASDAQ_HEADERS, 20000);
+  const body = await nasdaqJson(`calendar/earnings?date=${date}`, 20000);
   const rows = (body?.data?.rows || []).map((r) => ({
     id: `earn:${date}:${r.symbol}`,
     date,
@@ -95,7 +96,7 @@ async function secSubmissions(db, cik) {
   const key = KEY.secSubsV1(cik);
   const hit = readCache(db, key);
   if (hit) return hit;
-  const body = await fetchJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, { headers: { "User-Agent": SEC_UA } }, 30000);
+  const body = await secJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, { timeoutMs: 30000 });
   const slim = { name: body.name, filings: { recent: pick(body.filings?.recent || {}, ["form", "items", "accessionNumber", "filingDate", "reportDate"]) } };
   writeCache(db, key, slim, 12 * HOUR);
   return slim;
@@ -361,7 +362,7 @@ export async function fecBulk(name, cycle, inner) {
   const zip = path.join(os.tmpdir(), `fec-${name}.zip`);
   const fresh = fs.existsSync(zip) && Date.now() - fs.statSync(zip).mtimeMs < (cycle >= new Date().getUTCFullYear() ? DAY : 7 * DAY);
   if (!fresh) {
-    const res = await fetch(`https://www.fec.gov/files/bulk-downloads/${cycle}/${name}.zip`, { redirect: "follow", signal: AbortSignal.timeout(180000) });
+    const res = await fetchResponse(`https://www.fec.gov/files/bulk-downloads/${cycle}/${name}.zip`, { redirect: "follow" }, 180000);
     if (!res.ok) throw new Error(`FEC ${name} HTTP ${res.status}`);
     fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
   }
@@ -402,11 +403,7 @@ export async function contractsFor(db, ticker, { cachedOnly = false } = {}) {
   const start = new Date(Date.now() - 5 * 365 * DAY).toISOString().slice(0, 10);
   const filters = { recipient_search_text: ueis, award_type_codes: ["A", "B", "C", "D"], time_period: [{ start_date: start, end_date: end }] };
   const failures = [];
-  const usa = (pathname, body) => fetchJsonRetry(`https://api.usaspending.gov/api/v2/search/${pathname}/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  }, { timeoutMs: 45000, retries: 2, gate: usaspendingGate }).catch((err) => { failures.push(err.message); return null; });
+  const usa = (pathname, body) => usaspendingSearch(pathname, body, { timeoutMs: 45000, retries: 2 }).catch((err) => { failures.push(err.message); return null; });
   const [top, overTime, revenue] = await Promise.all([
     usa("spending_by_award", { filters, fields: ["Award ID", "Recipient Name", "Award Amount", "Description", "Start Date", "Awarding Agency", "Awarding Sub Agency", "generated_internal_id"], limit: 25, page: 1, sort: "Award Amount", order: "desc" }),
     usa("spending_over_time", { group: "fiscal_year", filters }),
@@ -455,7 +452,7 @@ async function secRevenue(db, cik) {
   const pad = String(cik).padStart(10, "0");
   let best = null;
   for (const concept of ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet"]) {
-    const body = await fetchJson(`https://data.sec.gov/api/xbrl/companyconcept/CIK${pad}/us-gaap/${concept}.json`, { headers: { "User-Agent": SEC_UA } }, 20000).catch(() => null);
+    const body = await secJson(`https://data.sec.gov/api/xbrl/companyconcept/CIK${pad}/us-gaap/${concept}.json`, { timeoutMs: 20000 }).catch(() => null);
     const annual = (body?.units?.USD || []).filter((u) => u.form === "10-K" && u.fp === "FY" && u.frame && /^CY\d{4}$/.test(u.frame));
     const last = annual.sort((a, b) => a.frame.localeCompare(b.frame)).at(-1);
     if (last && (!best || last.frame > best.frame)) best = { value: last.val, fy: Number(last.frame.slice(2)), frame: last.frame, concept };
