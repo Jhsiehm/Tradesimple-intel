@@ -18,7 +18,7 @@ export function dayNum(iso: string): number;
 export function dayIso(n: number): string;
 export function bucketDays(events: { kind: string; date: string }[], from: string, to: string): { start: number; len: number; days: Record<string, number[]>; dropped: number };
 export function windowSum(counts: number[] | undefined, a: number, b: number): number;
-export function missedIn(misses: [day: number, kind: number][] | undefined, a: number, b: number, kinds?: Set<string> | null): number;
+export function missedIn(misses: [day: number, kind: number, count?: number][] | undefined, a: number, b: number, kinds?: Set<string> | null): number;
 export function binCounts(counts: number[] | undefined, bins: number): number[];
 export function greatCircle(a: [number, number], b: [number, number], steps?: number): [number, number][];
 export function bundleArcs(links: ArcLink[], opts?: { from?: number; to?: number; kinds?: Set<string> | null; cap?: number }): { arcs: ArcBundle[]; bundles: number; hidden: number; links: number; local: number };

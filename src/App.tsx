@@ -129,7 +129,7 @@ export function App() {
     if (filingId && weekFilings.rows.some((row) => row.id === filingId)) return;
     setFilingId(weekFilings.rows[0].id);
   }, [filingMapOn, weekFilings.rows, filingId]);
-  const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party);
+  const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party, section === "markets");
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
   const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil, section === "strait");

@@ -225,7 +225,9 @@ export async function intelScope(db, params) {
   const hq = hqAll(db);
   const arcs = buildLinks({ trades, contracts: contracts.items, pacs, hq: hq.items, people: people.items || [] });
   arcs.links = arcs.links.map((l) => [l[0] - buckets.start, ...l.slice(1)]);
-  arcs.misses = arcs.misses.map(([d, k]) => [d - buckets.start, k]);
+  const missCount = new Map();
+  for (const [d, k] of arcs.misses) missCount.set(`${d - buckets.start}:${k}`, (missCount.get(`${d - buckets.start}:${k}`) || 0) + 1);
+  arcs.misses = [...missCount].map(([key, n]) => [...key.split(":").map(Number), n]);
   const g = places();
   const idx = indexStatus();
   const latencies = {

@@ -229,4 +229,5 @@ test("missedIn counts unplaced links inside the window for the kinds that are on
   assert.equal(missedIn(misses, 5, 9, new Set(["trade", "pac"])), 2);
   assert.equal(missedIn(misses, 13, 20, null), 0);
   assert.equal(missedIn(undefined, 0, 9, null), 0);
+  assert.equal(missedIn([[5, 0, 40], [5, 1, 2], [9, 0]], 0, 9, new Set(["trade"])), 41, "third element is a count");
 });

@@ -4,6 +4,8 @@
  * A handler returns the JSON body (sent as 200), `reply(status, body)` for another status, or `undefined`
  * after writing to `ctx.res` itself.
  */
+import { sendEncoded } from "./lib/compress.mjs";
+
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function compile(path) {
@@ -29,12 +31,9 @@ export function reply(status, body) {
   return { [REPLY]: true, status, body };
 }
 
-export function sendJson(res, status, body) {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store"
-  });
-  res.end(JSON.stringify(body));
+/** JSON response; brotli or gzip when `req` accepts it (see lib/compress.mjs). */
+export function sendJson(res, status, body, req = null) {
+  sendEncoded(req, res, status, { "Content-Type": "application/json", "Cache-Control": "no-store" }, JSON.stringify(body), body);
 }
 
 /** Query helpers bound to one request's search params. */
@@ -68,13 +67,13 @@ export function createRouter(manifest, handlers) {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
     try {
       const found = match(url.pathname);
-      if (!found) return sendJson(res, 404, { ok: false, error: "Not found" });
+      if (!found) return sendJson(res, 404, { ok: false, error: "Not found" }, req);
       const out = await found.route.handler({ ...ctx, req, res, url, params: found.params, query: queryOf(url.searchParams) });
       if (out === undefined) return;
-      if (out?.[REPLY]) return sendJson(res, out.status, out.body);
-      sendJson(res, 200, out);
+      if (out?.[REPLY]) return sendJson(res, out.status, out.body, req);
+      sendJson(res, 200, out, req);
     } catch (err) {
-      sendJson(res, 500, { ok: false, error: err.message || "Request failed" });
+      sendJson(res, 500, { ok: false, error: err.message || "Request failed" }, req);
     }
   }
 

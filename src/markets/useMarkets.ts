@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, DEMO } from "../lib/api";
 import { money, when } from "../lib/format";
 import type { ChartMark, DrawerModel, DrawerLink, DrawerTable, ListItem, MarketLayer, PartyFilter, StatusLine } from "../types";
@@ -29,12 +29,17 @@ export const CODE_LABEL: Record<string, string> = {
   X: "Option exercise"
 };
 
-export function useMarkets(layer: MarketLayer, query: string, selectedId: string | null, party: PartyFilter) {
+/** `enabled` is false outside the Markets section; a layer's feed (Congress trades is ~5 MB) loads the first time it is shown. */
+export function useMarkets(layer: MarketLayer, query: string, selectedId: string | null, party: PartyFilter, enabled = true) {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [empty, setEmpty] = useState("Loading filings…");
+  const loaded = useRef<MarketLayer | null>(null);
 
   useEffect(() => {
+    if (!enabled || loaded.current === layer) return;
+    loaded.current = layer;
     let cancel = false;
+    let done = false;
     setFeed(null);
     setEmpty(layer === "politicians"
       ? "Parsing House Clerk PDFs and Senate eFD reports. The first load takes about a minute."
@@ -42,6 +47,7 @@ export function useMarkets(layer: MarketLayer, query: string, selectedId: string
     api<Feed>(`/api/markets/${layer}`)
       .then((res) => {
         if (cancel) return;
+        done = true;
         setFeed(res);
         if (res.missing) setEmpty(`Set ${res.missing} to load this feed. ${res.detail || ""}`.trim());
         else if (!res.items?.length) setEmpty(res.error || res.errors?.[0] || "No rows on this feed.");
@@ -49,11 +55,12 @@ export function useMarkets(layer: MarketLayer, query: string, selectedId: string
       })
       .catch((err: Error) => {
         if (cancel) return;
+        done = true;
         setEmpty(err.message);
         setFeed(null);
       });
-    return () => { cancel = true; };
-  }, [layer]);
+    return () => { cancel = true; if (!done) loaded.current = null; };
+  }, [layer, enabled]);
 
   const rows = useMemo(() => {
     const all = feed?.items || [];
