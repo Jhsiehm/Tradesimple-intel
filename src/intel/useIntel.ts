@@ -35,6 +35,8 @@ export type IntelData = {
     places: IntelPlace[];
     actions: string[];
     links: ArcLink[];
+    /** Unplaced links as [day, ARC_KINDS index], so the scrubber can count them per window. */
+    misses?: [number, number][];
     coverage: Record<ArcKind, Coverage>;
     sources: Record<ArcKind, string>;
     hq: { source: string; asOf: string; placed: number; total: number };

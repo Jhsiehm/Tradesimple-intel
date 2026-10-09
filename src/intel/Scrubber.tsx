@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { binCounts, dayIso, dayNum, windowSum, EVENT_KINDS, type ArcKind, type EventKind } from "../../shared/intel.mjs";
+import { binCounts, dayIso, dayNum, missedIn, windowSum, EVENT_KINDS, type ArcKind, type EventKind } from "../../shared/intel.mjs";
 import { when } from "../lib/api";
 import { ARC_CAP, ARC_COLOR, ARC_LABEL, type ArcView } from "./arcs";
 import { LANE_COLOR, presetWindow, type DayWindow } from "./lanes";
@@ -9,6 +9,8 @@ const LANE_SHORT: Record<EventKind, string> = { trade: "TRADES", hearing: "HEARI
 const PRESETS: [string, number][] = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 const MAX_BINS = 220;
 const EDGE_PX = 8;
+/** Pointer travel before a press on the track becomes a new window instead of a click. */
+const DRAG_PX = 4;
 
 type Props = {
   /** The scope asked for; `data.scope` lags it while loading and is absent on errors. */
@@ -72,9 +74,11 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
     const at = dayAt(event.clientX);
     const edge = EDGE_PX / pxPerDay();
     const mode = Math.abs(at - w[0]) <= edge ? "a" : Math.abs(at - w[1]) <= edge ? "b" : at > w[0] && at < w[1] ? "move" : "new";
-    const origin = { at, w };
-    if (mode === "new") onWindow([at, at]);
+    const origin = { at, w, x: event.clientX };
+    let dragged = false;
     const move = (ev: PointerEvent) => {
+      if (!dragged && Math.abs(ev.clientX - origin.x) < DRAG_PX) return;
+      dragged = true;
       const d = dayAt(ev.clientX);
       if (mode === "move") {
         const span = origin.w[1] - origin.w[0];
@@ -85,6 +89,11 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
       else onWindow([Math.min(origin.at, d), Math.max(origin.at, d)]);
     };
     const up = () => {
+      if (!dragged && mode === "new") {
+        const span = origin.w[1] - origin.w[0];
+        const a = Math.max(0, Math.min(len - 1 - span, origin.at - Math.round(span / 2)));
+        onWindow([a, a + span]);
+      }
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
       el.removeEventListener("pointercancel", up);
@@ -119,7 +128,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
   const scopeText = data?.ok ? data.scope.label : scoped ? (scope.kind === "member" ? `Member ${scope.id}` : scope.id) : "All Congress";
   const cov = data?.ok ? data.arcs.coverage : null;
   const unplaced = cov ? (["trade", "contract", "pac"] as ArcKind[]).map((k) => `${ARC_LABEL[k]}: ${cov[k].placed.toLocaleString("en-US")} of ${cov[k].total.toLocaleString("en-US")} placed (${cov[k].noFrom} no origin, ${cov[k].noTo} no SEC HQ or ticker join)`).join("\n") : "";
-  const missed = cov ? [...kinds].reduce((n, k) => n + Math.max(0, cov[k].total - cov[k].placed), 0) : 0;
+  const missed = data?.ok && data.arcs.misses ? missedIn(data.arcs.misses, w[0], w[1], kinds) : null;
 
   return (
     <section className={`scrub${collapsed ? " min" : ""}`} aria-label="Time scrubber">
@@ -169,7 +178,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
               className="scrub-track"
               role="slider"
               tabIndex={0}
-              aria-label="Time window. Drag to select, drag inside to move, drag an edge to resize, arrow keys shift by a day."
+              aria-label="Time window. Click to center it, drag to select, drag inside to move, drag an edge to resize, arrow keys shift by a day."
               aria-valuemin={0}
               aria-valuemax={len - 1}
               aria-valuenow={w[0]}
@@ -194,9 +203,9 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           </div>
           <div className="scrub-scale">
             <span>{data.from}</span>
-            <span className="scrub-cov" title={`${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}>
+            <span className="scrub-cov" title={`Whole scope since ${data.from}:\n${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}>
               {!arcs ? "Map arcs show on wider screens" : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
-              {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this scope couldn't be placed` : ""}
+              {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this window couldn't be placed` : ""}
             </span>
             <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}>Feeds {feeds ? "▴" : "▾"}</button>
             <span>{data.to}</span>

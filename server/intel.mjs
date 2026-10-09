@@ -10,6 +10,7 @@ import { HQ_SOURCE, districtCode, hqAll } from "./hq.mjs";
 import { STATE_NAME_TO_POSTAL } from "./geo.mjs";
 import { tickerBySymbol } from "./db.mjs";
 import { ARC_KINDS, NEAR_DAYS, activitySignal, bucketDays, dayNum, severity } from "../shared/intel.mjs";
+import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FROM = "2025-01-03";
@@ -115,10 +116,12 @@ export function buildLinks({ trades = [], contracts = [], pacs = [], hq = [], pe
     return a ? { lon: a.lon, lat: a.lat, label: `${a.short} HQ · ${a.address}`, kind: "agency", action: "" } : null;
   });
   const links = [];
+  const misses = [];
   const coverage = Object.fromEntries(ARC_KINDS.map((k) => [k, { total: 0, placed: 0, noFrom: 0, noTo: 0 }]));
   const push = (kind, date, f, t, amount, action) => {
     const c = coverage[kind];
     c.total += 1;
+    if (f < 0 || t < 0) misses.push([dayNum(date), ARC_KINDS.indexOf(kind)]);
     if (f < 0) { c.noFrom += 1; return; }
     if (t < 0) { c.noTo += 1; return; }
     c.placed += 1;
@@ -140,7 +143,7 @@ export function buildLinks({ trades = [], contracts = [], pacs = [], hq = [], pe
     const f = hqPlace(p.symbol);
     push("pac", p.date, f, f >= 0 && m ? memberPlace(m) : -1, p.amount, `member:${p.bioguide}`);
   }
-  return { places: placesOut, actions, links, coverage };
+  return { places: placesOut, actions, links, misses, coverage };
 }
 
 function title(s) {
@@ -181,7 +184,7 @@ export async function intelScope(db, params) {
   const hit = memo.get(key);
   if (hit && Date.now() - hit.at < 10 * MINUTE && !hit.body.partial) return hit.body;
   const t0 = Date.now();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nyDate();
   const [tradeRes, insiderRes, people, pacRes, contracts, seats] = await Promise.all([
     congressTrades(db).catch(() => ({ items: [] })),
     insiderTrades(db).catch(() => ({ items: [] })),
@@ -222,6 +225,7 @@ export async function intelScope(db, params) {
   const hq = hqAll(db);
   const arcs = buildLinks({ trades, contracts: contracts.items, pacs, hq: hq.items, people: people.items || [] });
   arcs.links = arcs.links.map((l) => [l[0] - buckets.start, ...l.slice(1)]);
+  arcs.misses = arcs.misses.map(([d, k]) => [d - buckets.start, k]);
   const g = places();
   const idx = indexStatus();
   const latencies = {
@@ -253,6 +257,7 @@ export async function intelScope(db, params) {
       places: arcs.places,
       actions: arcs.actions,
       links: arcs.links,
+      misses: arcs.misses,
       coverage: arcs.coverage,
       sources: {
         trade: `Member district (state for senators) → SEC EDGAR HQ · ${tradeRes.source || "House Clerk · Senate eFD"} · as of ${String(tradeRes.asOf || "").slice(0, 16).replace("T", " ")}`,
@@ -303,7 +308,7 @@ export function proximityPhrase(trades, prox) {
 
 /** Case header for a member, ticker, or district dossier: one headline, a signal tag, three stats, sources. */
 export async function caseFile(db, kind, rawId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nyDate();
   const year = today.slice(0, 4);
   if (kind === "member") {
     const id = String(rawId).toUpperCase();
@@ -334,8 +339,8 @@ export async function caseFile(db, kind, rawId) {
   if (kind === "ticker") {
     const t = tickerBySymbol(db, String(rawId).toUpperCase());
     if (!t) return { ok: false, error: "Ticker is not in data/tickers.json" };
-    const since = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
-    const f4since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const since = nyDaysAgo(365);
+    const f4since = nyDaysAgo(90);
     const [tradeRes, insiderRes, hist] = await Promise.all([
       congressTrades(db).catch(() => ({ items: [] })),
       insiderTrades(db).catch(() => ({ items: [] })),

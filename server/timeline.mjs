@@ -4,6 +4,7 @@ import { SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenu
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
 import { congressTrades } from "./positions.mjs";
 import { memberReturns } from "./returns.mjs";
+import { nyDate, nyDaysAgo } from "../shared/dates.mjs";
 
 const DAY = 24 * 60 * 60 * 1000;
 const CONGRESS = 119;
@@ -21,7 +22,7 @@ const state = {
   running: false
 };
 
-const isPast = (date) => date && date.slice(0, 10) < new Date(Date.now() - 2 * DAY).toISOString().slice(0, 10);
+const isPast = (date) => date && date.slice(0, 10) < nyDaysAgo(2);
 
 async function pool(items, size, fn) {
   const queue = [...items];
@@ -322,7 +323,7 @@ export async function memberTimeline(db, bioguide) {
   const trades = (board.items || []).filter((r) => r.bioguide === id);
   const person = people.items.find((p) => p.bioguide === id) || {};
   const chamber = person.chamber === "senate" ? "senate" : "house";
-  const body = buildTimeline({ trades, seats, meetings: state.meetings, votes: state.votes[chamber], bioguide: id, today: new Date().toISOString().slice(0, 10) });
+  const body = buildTimeline({ trades, seats, meetings: state.meetings, votes: state.votes[chamber], bioguide: id, today: nyDate() });
   const rets = memberReturns(id);
   body.trades = body.trades.map((t) => {
     const r = rets.byTrade.get(t.id);

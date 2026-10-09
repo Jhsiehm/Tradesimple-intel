@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
+import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, missedIn, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
 import { buildLinks, centroidOf, memberAnchor, proximityPhrase, seatCode } from "../server/intel.mjs";
 import { buildAlerts, capAlerts } from "../server/alerts.mjs";
 
@@ -192,6 +192,7 @@ test("buildLinks joins only through real places and reports what it could not pl
   assert.deepEqual(out.coverage.trade, { total: 3, placed: 1, noFrom: 1, noTo: 1 });
   assert.deepEqual(out.coverage.contract, { total: 2, placed: 1, noFrom: 1, noTo: 0 }, "unjoined recipients are not counted as arcs");
   assert.deepEqual(out.coverage.pac, { total: 1, placed: 1, noFrom: 0, noTo: 0 });
+  assert.deepEqual(out.misses, [[dayNum("2026-09-25"), 0], [dayNum("2026-09-25"), 0], [dayNum("2026-07-01"), 1]], "every unplaced link keeps its day and kind");
   assert.equal(out.links.length, 3);
   const [d, kind, f, t, amount, a] = out.links[0];
   assert.equal(d, dayNum("2026-09-25"));
@@ -217,4 +218,13 @@ test("capAlerts keeps watched rows when newer late filings would fill the cap, i
   const watched = { id: "trade:1", kind: "member-trade", date: "2026-07-01" };
   const out = capAlerts([...late, watched], 3);
   assert.deepEqual(out.map((a) => a.id), ["late:0", "late:1", "trade:1"]);
+});
+
+test("missedIn counts unplaced links inside the window for the kinds that are on", () => {
+  const misses = [[0, 0], [5, 0], [5, 1], [9, 2], [12, 0]];
+  assert.equal(missedIn(misses, 0, 12, null), 5);
+  assert.equal(missedIn(misses, 5, 9, null), 3);
+  assert.equal(missedIn(misses, 5, 9, new Set(["trade", "pac"])), 2);
+  assert.equal(missedIn(misses, 13, 20, null), 0);
+  assert.equal(missedIn(undefined, 0, 9, null), 0);
 });

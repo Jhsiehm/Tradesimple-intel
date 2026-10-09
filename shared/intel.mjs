@@ -30,6 +30,14 @@ export function windowSum(counts, a, b) {
   return n;
 }
 
+/** Unplaced links ([day, ARC_KINDS index]) inside days a..b for the arc kinds switched on. */
+export function missedIn(misses, a, b, kinds) {
+  if (!misses) return 0;
+  let n = 0;
+  for (const [d, k] of misses) if (d >= a && d <= b && (!kinds || kinds.has(ARC_KINDS[k]))) n += 1;
+  return n;
+}
+
 /** Folds daily counts into `bins` equal-width bins for drawing; each bin sums its days. */
 export function binCounts(counts, bins) {
   const out = new Array(Math.max(0, bins)).fill(0);
