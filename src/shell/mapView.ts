@@ -16,16 +16,23 @@ type Sources = {
   news: { globe: boolean; region: string; markers: Marker[] };
   districts: { geojson?: GeoJSON.FeatureCollection; markers: Marker[]; selected?: { lon: number; lat: number; zoom?: number } | null };
   congress: { geojson?: GeoJSON.FeatureCollection; voted: boolean; markers?: Marker[] };
+  city?: { markers: Marker[]; focus: { lon: number; lat: number; zoom: number } | null };
 };
 
 /** What the center map shows for the current section. */
-export function mapView({ section, chamber, strait, news, districts, congress }: Sources): MapView {
+export function mapView({ section, chamber, strait, news, districts, congress, city }: Sources): MapView {
   if (section === "strait" && strait.theater) {
     return { markers: strait.air ? strait.airMarkers : strait.markers, center: [strait.theater.lon, strait.theater.lat], zoom: strait.theater.zoom };
   }
   if (news.globe) {
     const region = REGIONS.find((r) => r.id === news.region) || REGIONS[0];
     return { markers: news.markers, center: region.center, zoom: region.zoom };
+  }
+  if (section === "map" && city?.focus) {
+    return { markers: city.markers, center: [city.focus.lon, city.focus.lat], zoom: city.focus.zoom };
+  }
+  if (section === "map") {
+    return { markers: [], center: [-96, 38], zoom: 3.2 };
   }
   if (section === "districts") {
     const site = districts.selected;

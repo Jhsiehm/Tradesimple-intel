@@ -9,7 +9,8 @@ import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
-import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
+import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NewsBar, StraitBar, StraitPicture, type StraitFeed } from "./shell/MapBar";
+import { RelationsMap, useRelations } from "./relations/RelationsMap";
 import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
 import { placeFilings, useWeekFilings } from "./congress/filingMap";
@@ -133,6 +134,11 @@ export function App() {
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
   const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil, section === "strait");
+  const boardOn = section === "map" && !today && !timelineId && !calendarTab;
+  const recordsOn = !today && !timelineId && !calendarTab && (section === "districts" || (section === "congress" && voteView === "map" && mapLayer !== "filings"));
+  const intelOn = boardOn || recordsOn;
+  const intel = useIntelScope(intelScope, intelOn);
+  const board = useRelations(intelScope, section === "map" ? selectedId : null, boardOn);
 
   const contracts = useContracts(contractScope, contractSort, contractDays, query, section === "contracts" ? selectedId : null, section === "contracts", congress.roster);
 
@@ -141,7 +147,7 @@ export function App() {
     items: straitFeed === "air" ? strait.airItems : straitFeed === "news" ? strait.newsItems : strait.items,
     empty: straitFeed === "air" ? strait.airEmpty : straitFeed === "news" ? (strait.newsItems.length ? "" : "No recent strait headlines.") : strait.empty
   };
-  const view = { congress, markets, contracts, news, districts, strait: straitView }[section];
+  const view = { congress, markets, contracts, news, districts, strait: straitView, map: board }[section];
   const items = view.items;
   const onToday = Boolean(today) && !timelineId;
   const listItems = onToday ? (stageList?.items ?? []) : items;
@@ -281,7 +287,8 @@ export function App() {
   function runAction(action: string) {
     const [kind, ...rest] = action.split(":");
     const v = rest.join(":");
-    if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
+    if (kind === "map") apply(viewFor("section:map", { intelOn })!);
+    else if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
     else if (kind === "today") openToday(v === "leaders" ? "leaders" : "week");
     else if (kind === "alerts") { setPanelsOpen(false); setAlertsOpen(true); }
     else routeAction(action);
@@ -453,14 +460,12 @@ export function App() {
   }
 
   const newsGlobe = section === "news" && newsView === "globe";
-  const lanesOn = section === "strait" || newsGlobe;
-  const showMap = section === "strait" || section === "districts" || newsGlobe || (section === "congress" && voteView === "map");
+  const lanesOn = section === "strait";
+  const showMap = section === "strait" || section === "districts" || section === "map" || newsGlobe || (section === "congress" && voteView === "map");
   const look = mapLook(nav.view, { onMap: showMap && !calendarTab && !today && !timelineId, scoped: intelScope.kind !== "all", settings: earthSettings });
   const earthCredit = look.imagery ? imageryCredit : "";
-  const time = useMapClock({ mapOn: look.imagery, base: look.earth.base, newsGlobe, headlines: news.all, clock, mapTime });
+  const time = useMapClock({ mapOn: look.imagery, base: section === "strait" && earthSettings.base === "live" ? "live" : look.earth.base, newsGlobe, headlines: news.all, clock, mapTime });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
-  const intelOn = look.records === "window";
-  const intel = useIntelScope(intelScope, intelOn);
   const lagWindow = useDeferredValue(intelWindow);
   const arcs = useMemo(() => {
     if (!intelOn || phone || !intel.data?.ok) return null;
@@ -480,7 +485,7 @@ export function App() {
       geojson: filingMapOn ? placed.geojson : congress.geojson,
       voted: filingMapOn ? false : congress.positions.length > 0,
       markers: filingMapOn ? placed.markers : []
-    }
+    },
   });
   const active = SECTIONS.find((item) => item.id === section)!;
   const barFor: Section | null = calendarTab || (today && !timelineId) ? null : section;
@@ -596,12 +601,14 @@ export function App() {
               </label>
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
+            {barFor === "strait" ? <StraitPicture live={earthSettings.base === "live"} onLive={(live) => updateEarth({ base: live ? "live" : "dark", view: "2d" })} /> : null}
             {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
-            {look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
+            {look.data && look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
+            {barFor === "map" ? <span className="bar-note">Click a node for relationships from the feeds · Theory (T) draws your own · hover a line for its source and lag</span> : null}
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
-            {phone && !timelineId && !today ? null : timelineId ? (
+            {phone && !timelineId && !today && section !== "map" ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
             ) : today ? (
               <TodayBoard tab={today} onTab={(t) => go(`today:${t}`)} onFollow={follow} onClose={closeToday} onList={reportList} />
@@ -660,6 +667,8 @@ export function App() {
                   });
                 }}
               />
+            ) : section === "map" ? (
+              <RelationsMap rel={board} selectedId={selectedId} onSelect={(id) => { setDossier(null); setSelectedId(id); if (id) rail.show(); }} onFollow={follow} />
             ) : (
               <>
                 <MapFrame
@@ -668,7 +677,7 @@ export function App() {
                   fill={look.fill}
                   markers={map.markers}
                   earth={earth}
-                  settings={look.earth}
+                  settings={newsGlobe ? { ...earthSettings, view: "globe", lanes: false } : section === "strait" ? { ...earthSettings, view: "2d", base: earthSettings.base === "live" ? "live" : "dark" } : look.earth}
                   center={map.center}
                   zoom={map.zoom}
                   selectedId={filingMapOn ? (activeFiling?.state || null) : section === "congress" ? null : selectedId}
@@ -691,7 +700,7 @@ export function App() {
                   }}
                 />
                 <div className="map-frame" />
-                {earthCredit ? <p className="map-cred" title={earthCredit}><em>IMAGERY</em>{earthCredit}</p> : null}
+                {earthCredit && (section === "strait" || newsGlobe || look.data) ? <p className="map-cred" title={earthCredit}><em>{section === "strait" ? "STRAIT" : newsGlobe ? "GLOBE" : "IMAGERY"}</em>{earthCredit}</p> : null}
                 {newsGlobe ? (
                   <p className="map-outlets">
                     <em>{REGIONS.find((r) => r.id === newsRegion)?.label.toUpperCase()}</em>
@@ -733,6 +742,7 @@ export function App() {
               onKinds={setArcKinds}
               arcs={arcs}
               mapArcs={look.arcs}
+              board={section === "map"}
               onMapArcs={nav.setArcs}
               onClearScope={() => setIntelScope(ALL_SCOPE)}
               collapsed={scrubMin}

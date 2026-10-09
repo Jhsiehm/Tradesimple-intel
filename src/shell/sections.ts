@@ -6,7 +6,8 @@ export const SECTIONS: { id: Section; label: string; blurb: string }[] = [
   { id: "contracts", label: "Contracts", blurb: "Federal contract actions · by agency, ticker, district, or member" },
   { id: "news", label: "News", blurb: "Global wires and X" },
   { id: "districts", label: "Districts", blurb: "Plants and headquarters on the map" },
-  { id: "strait", label: "Strait", blurb: "Ships, news, and open imagery" }
+  { id: "strait", label: "Strait", blurb: "Ships, news, and open imagery" },
+  { id: "map", label: "Map", blurb: "Records in a window · draw a line between two of them" }
 ];
 
 export const MODE_BLURB: Record<CongressMode, string> = {

@@ -28,6 +28,8 @@ type Props = {
   arcs: ArcView | null;
   /** Arcs are drawn on the map. A member or ticker scope always draws them. */
   mapArcs: boolean;
+  /** The relationship board always draws its links, so the map toggle stays off that bar. */
+  board?: boolean;
   onMapArcs: (on: boolean) => void;
   onClearScope: () => void;
   collapsed: boolean;
@@ -40,7 +42,7 @@ type Props = {
  * Bottom-of-map time scrubber. One tick lane per feed, a draggable window that filters the map arcs,
  * and each lane's source, as-of, and latency on hover and under "Feeds".
  */
-export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, onKinds, arcs, mapArcs, onMapArcs, onClearScope, collapsed, onCollapsed, phone, onFollow }: Props) {
+export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, onKinds, arcs, mapArcs, onMapArcs, board, onClearScope, collapsed, onCollapsed, phone, onFollow }: Props) {
   const [feeds, setFeeds] = useState(false);
   const track = useRef<HTMLDivElement>(null);
   const len = data?.ok ? data.len : 0;
@@ -161,7 +163,7 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
         {!collapsed ? (
           <span className="scrub-arcs" title="Arcs on the map. Hover an arc for its source and as-of.">
             <em>ARCS</em>
-            {arcs ? (
+            {arcs && !board ? (
               <button className="scrub-onmap" style={{ ["--arc" as string]: "var(--amber)" }} aria-pressed={mapArcs} disabled={scoped} onClick={() => onMapArcs(!mapArcs)} title={scoped ? "A member or ticker scope always draws its arcs. Clear the scope to hide them." : "Draw trade, contract, and PAC arcs over the map"}><IconLabel icon="arc">On map</IconLabel></button>
             ) : null}
             {(["trade", "contract", "pac"] as ArcKind[]).map((k) => (

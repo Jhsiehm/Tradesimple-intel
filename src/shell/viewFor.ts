@@ -64,7 +64,9 @@ export function viewFor(action: string, at: { intelOn: boolean }): ViewPatch | n
   const v = rest.join(":");
   switch (kind) {
     case "section":
-      return { ...leave(v as Section), selectedId: null, scope: "all", dropCards: true };
+      return v === "map"
+        ? { ...leave("map"), selectedId: null, dropCards: true }
+        : { ...leave(v as Section), selectedId: null, scope: "all", dropCards: true };
     case "mode":
       return { ...viewFor("section:congress", at), mode: v as CongressMode };
     case "view":
@@ -161,7 +163,7 @@ export function trailLabel(action: string, who: (bioguide: string) => string): s
   if (kind === "district") return `${v} · district dossier`;
   const label: Record<string, string> = {
     section: SECTION_LABEL[v] || v,
-    map: "Map · city",
+    map: "Relationships",
     ticker: `${v} dossier`,
     chart: `${v} chart`,
     inst: `${v} chart`,

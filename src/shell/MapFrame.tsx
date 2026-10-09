@@ -25,6 +25,8 @@ type Props = {
   lanes?: boolean;
   arcs?: { lines: GeoJSON.FeatureCollection; ends: GeoJSON.FeatureCollection } | null;
   onArc?: (action: string) => void;
+  /** Dark ground, pitched camera, block buildings. No satellite. */
+  massing?: boolean;
 };
 
 type Sky = Parameters<maplibregl.Map["setSky"]>[0];
@@ -43,6 +45,25 @@ const SKY = {
   "fog-ground-blend": 0.2,
   "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0]
 } as unknown as Sky;
+
+function trackIcon() {
+  const size = 32;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const g = canvas.getContext("2d");
+  if (!g) return { width: size, height: size, data: new Uint8Array(size * size * 4) };
+  g.clearRect(0, 0, size, size);
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.moveTo(16, 3);
+  g.lineTo(26, 28);
+  g.lineTo(16, 22);
+  g.lineTo(6, 28);
+  g.closePath();
+  g.fill();
+  return { width: size, height: size, data: g.getImageData(0, 0, size, size).data };
+}
 
 function webgl2Ok() {
   try {
@@ -70,7 +91,8 @@ export function MapFrame({
   flash,
   lanes = true,
   arcs,
-  onArc
+  onArc,
+  massing = false
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -95,6 +117,7 @@ export function MapFrame({
         center,
         zoom,
         maxPitch: 75,
+        canvasContextAttributes: { antialias: true },
         attributionControl: { compact: true },
         style: {
           version: 8,
@@ -153,10 +176,12 @@ export function MapFrame({
         });
       });
       map.addSource("marks", { type: "geojson", data: EMPTY });
+      map.addImage("track", trackIcon(), { sdf: true });
       map.addLayer({
         id: "marks",
         type: "circle",
         source: "marks",
+        filter: ["!", ["has", "bearing"]],
         paint: {
           "circle-radius": ["coalesce", ["get", "size"], 5],
           "circle-color": ["coalesce", ["get", "color"], "#e2b657"],
@@ -181,15 +206,32 @@ export function MapFrame({
         },
         paint: { "text-color": "#f3e2ae", "text-halo-color": "#06080b", "text-halo-width": 1.4 }
       });
-      map.on("mouseenter", "marks", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "marks", () => { map.getCanvas().style.cursor = "crosshair"; });
+      map.addLayer({
+        id: "marks-track",
+        type: "symbol",
+        source: "marks",
+        filter: ["has", "bearing"],
+        layout: {
+          "icon-image": "track",
+          "icon-size": ["case", ["get", "hot"], 0.72, 0.5],
+          "icon-rotate": ["get", "bearing"],
+          "icon-rotation-alignment": "map",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true
+        },
+        paint: { "icon-color": ["coalesce", ["get", "color"], "#3df0ff"], "icon-halo-color": "#06080b", "icon-halo-width": 1 }
+      });
+      ["marks", "marks-track"].forEach((id) => {
+        map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", id, () => { map.getCanvas().style.cursor = "crosshair"; });
+        map.on("click", id, (event) => {
+          const idHit = event.features?.[0]?.properties?.id;
+          if (idHit) onSelectRef.current?.(String(idHit));
+        });
+      });
       map.on("click", "base-fill", (event) => {
         if (map.queryRenderedFeatures(event.point, { layers: ["arcs", "arc-ends"] }).length) return;
         const id = event.features?.[0]?.properties?.[idPropRef.current];
-        if (id) onSelectRef.current?.(String(id));
-      });
-      map.on("click", "marks", (event) => {
-        const id = event.features?.[0]?.properties?.id;
         if (id) onSelectRef.current?.(String(id));
       });
       map.getCanvas().style.cursor = "crosshair";
@@ -211,29 +253,31 @@ export function MapFrame({
   }, [failed]);
 
   const [lon, lat] = center;
-  const markersKey = markers.map((m) => `${m.id}:${m.lon},${m.lat}:${m.size}:${m.color}:${m.hot}:${m.label}`).join("|");
+  const markersKey = markers.map((m) => `${m.id}:${m.lon},${m.lat}:${m.bearing ?? ""}:${m.size}:${m.color}:${m.hot}:${m.label}`).join("|");
   const pushedGeojson = useRef<GeoJSON.FeatureCollection | undefined | null>(null);
 
-  const camera = useRef<{ view: string; lon: number; lat: number; zoom: number } | null>(null);
+  const camera = useRef<{ view: string; massing: boolean; lon: number; lat: number; zoom: number } | null>(null);
 
   useEffect(() => {
     const map = loadedMap();
     if (!map || !earth) return;
     addEarth(map, earth);
-    const imagery = settings.base !== "dark";
-    BASES.forEach((base) => map.setLayoutProperty(`img-${base}`, "visibility", settings.base === base || (base === "daily" && settings.base === "live") ? "visible" : "none"));
-    LIVE_ORDER.forEach((key) => { if (map.getLayer(`live-${key}`)) map.setLayoutProperty(`live-${key}`, "visibility", settings.base === "live" ? "visible" : "none"); });
-    map.setLayoutProperty("labels", "visibility", settings.labels && imagery ? "visible" : "none");
-    map.setLayoutProperty("roads", "visibility", settings.labels && settings.base === "sat" ? "visible" : "none");
-    map.setLayoutProperty("dark-labels", "visibility", settings.labels && !imagery ? "visible" : "none");
-    map.setPaintProperty("base-fill", "fill-opacity", fill ?? (colorProp ? (imagery ? 0.42 : 0.8) : 1));
+    const imagery = !massing && settings.base !== "dark";
+    BASES.forEach((base) => map.setLayoutProperty(`img-${base}`, "visibility", !massing && (settings.base === base || (base === "daily" && settings.base === "live")) ? "visible" : "none"));
+    LIVE_ORDER.forEach((key) => { if (map.getLayer(`live-${key}`)) map.setLayoutProperty(`live-${key}`, "visibility", !massing && settings.base === "live" ? "visible" : "none"); });
+    map.setLayoutProperty("labels", "visibility", !massing && settings.labels && imagery ? "visible" : "none");
+    map.setLayoutProperty("roads", "visibility", !massing && settings.labels && settings.base === "sat" ? "visible" : "none");
+    map.setLayoutProperty("dark-labels", "visibility", !massing && settings.labels && !imagery && settings.base === "dark" ? "visible" : "none");
+    map.setPaintProperty("base-fill", "fill-opacity", massing ? 0 : fill ?? (colorProp ? (imagery ? 0.42 : 0.8) : 1));
+    map.setPaintProperty("bg", "background-color", massing ? "#101418" : "#06080b");
     map.setPaintProperty("base-line", "line-color", "#9aa7b2");
     map.setPaintProperty("base-line", "line-width", 1);
     map.setPaintProperty("base-line", "line-opacity", 1);
     ["lanes-minor", "lanes-middle", "lanes-major", "choke-dot", "choke-label"].forEach((id) => {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", settings.lanes && lanes ? "visible" : "none");
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", !massing && settings.lanes && lanes ? "visible" : "none");
     });
-  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp, fill]);
+    if (map.getLayer("hillshade") && massing) map.setLayoutProperty("hillshade", "visibility", "none");
+  }, [ready, earth, settings.base, settings.labels, settings.lanes, live?.length, lanes, colorProp, fill, massing]);
 
   useEffect(() => {
     const map = loadedMap();
@@ -289,33 +333,36 @@ export function MapFrame({
     const map = loadedMap();
     if (!map || !earth) return;
     addEarth(map, earth);
-    const relief = settings.view === "3d";
+    const relief = massing || settings.view === "3d";
     // MapLibre cannot fog terrain on the globe projection, so relief runs on mercator.
-    map.setProjection({ type: settings.view === "globe" ? "globe" : "mercator" });
-    if (settings.view === "2d") map.setSky({ "atmosphere-blend": 0 } as unknown as Sky);
+    map.setProjection({ type: !massing && settings.view === "globe" ? "globe" : "mercator" });
+    if (!massing && settings.view === "2d") map.setSky({ "atmosphere-blend": 0 } as unknown as Sky);
     else map.setSky(SKY);
-    map.setTerrain(relief ? { source: "dem", exaggeration: 1.6 } : null);
-    map.setLayoutProperty("hillshade", "visibility", relief ? "visible" : "none");
+    map.setTerrain(!massing && relief ? { source: "dem", exaggeration: 1.6 } : null);
+    map.setLayoutProperty("hillshade", "visibility", !massing && relief ? "visible" : "none");
     if (map.getLayer("buildings-3d")) map.setLayoutProperty("buildings-3d", "visibility", relief ? "visible" : "none");
-  }, [ready, earth, settings.view]);
+    ["city-water", "city-park", "city-roads"].forEach((id) => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", massing ? "visible" : "none");
+    });
+  }, [ready, earth, settings.view, massing]);
 
   /** One camera move per change: a new target flies there; a view toggle only pitches; leaving the globe restores the target. */
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const prev = camera.current;
-    camera.current = { view: settings.view, lon, lat, zoom };
-    const relief = settings.view === "3d";
-    const globe = settings.view === "globe";
-    const target = !prev || prev.lon !== lon || prev.lat !== lat || prev.zoom !== zoom || (prev.view === "globe" && !globe);
+    camera.current = { view: settings.view, massing, lon, lat, zoom };
+    const relief = massing || settings.view === "3d";
+    const globe = !massing && settings.view === "globe";
+    const target = !prev || prev.massing !== massing || prev.lon !== lon || prev.lat !== lat || prev.zoom !== zoom || (prev.view === "globe" && !globe);
     map.easeTo({
       ...(target ? { center: [lon, lat] as [number, number] } : {}),
-      pitch: relief ? 64 : 0,
-      bearing: relief ? map.getBearing() : 0,
+      pitch: massing ? 46 : relief ? 64 : 0,
+      bearing: massing ? -18 : relief ? map.getBearing() : 0,
       zoom: target ? zoom : globe ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
       duration: 700
     });
-  }, [ready, settings.view, lon, lat, zoom]);
+  }, [ready, settings.view, massing, lon, lat, zoom]);
 
   useEffect(() => {
     const map = loadedMap();
@@ -340,7 +387,7 @@ export function MapFrame({
       type: "FeatureCollection",
       features: markers.map((m) => ({
         type: "Feature",
-        properties: { id: m.id, label: m.label, size: m.size ?? 5, color: m.color ?? "#e2b657", hot: !!m.hot },
+        properties: { id: m.id, label: m.label, size: m.size ?? 5, color: m.color ?? "#e2b657", hot: !!m.hot, ...(m.bearing == null ? {} : { bearing: m.bearing }) },
         geometry: { type: "Point", coordinates: [m.lon, m.lat] }
       }))
     });
@@ -388,17 +435,46 @@ function addBuildings(map: maplibregl.Map, layer: Earth["layers"]["buildings"]) 
       paint: {
         "fill-extrusion-color": [
           "interpolate", ["linear"], ["coalesce", ["get", "render_height"], 8],
-          0, "#3a4652",
-          24, "#5c7384",
-          80, "#8ea6b6",
-          200, "#d5e2ea"
+          0, "#8b98a3",
+          28, "#c5ced6",
+          100, "#e7eef3"
         ],
         "fill-extrusion-height": ["case", [">", ["coalesce", ["get", "render_height"], 0], 0], ["get", "render_height"], 8],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.45, 14.5, 0.92],
-        "fill-extrusion-vertical-gradient": true
+        "fill-extrusion-opacity": 1,
+        "fill-extrusion-vertical-gradient": false
       }
     }, "marks");
+    const under = "buildings-3d";
+    map.addLayer({
+      id: "city-water",
+      type: "fill",
+      source: "osm-buildings",
+      "source-layer": "water",
+      layout: { visibility: "none" },
+      paint: { "fill-color": "#10181c" }
+    }, under);
+    map.addLayer({
+      id: "city-park",
+      type: "fill",
+      source: "osm-buildings",
+      "source-layer": "landuse",
+      filter: ["in", ["get", "class"], ["literal", ["park", "grass", "cemetery"]]],
+      layout: { visibility: "none" },
+      paint: { "fill-color": "#161c18" }
+    }, under);
+    map.addLayer({
+      id: "city-roads",
+      type: "line",
+      source: "osm-buildings",
+      "source-layer": "transportation",
+      minzoom: 12,
+      layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+      paint: {
+        "line-color": "#3c4854",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.3, 14, 0.8, 16, 2.2]
+      }
+    }, under);
   } catch {
     /* Skyline tiles are optional. The map still pitches. */
   }

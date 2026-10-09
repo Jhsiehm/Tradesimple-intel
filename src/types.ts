@@ -1,4 +1,4 @@
-export type Section = "congress" | "markets" | "contracts" | "news" | "districts" | "strait";
+export type Section = "congress" | "markets" | "contracts" | "news" | "districts" | "strait" | "map";
 export type Chamber = "house" | "senate";
 export type MarketLayer = "politicians" | "insiders" | "whales" | "shorts";
 export type CongressMode = "votes" | "bills" | "members" | "committees";
@@ -47,6 +47,8 @@ export type Marker = {
   size?: number;
   color?: string;
   hot?: boolean;
+  /** Degrees clockwise from north. Drawn as a heading mark instead of a dot. */
+  bearing?: number;
 };
 
 export type LiveLayer = {

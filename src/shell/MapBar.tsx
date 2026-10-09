@@ -4,13 +4,23 @@ import { BASE_TITLE, type MarketView } from "./sections";
 import type { ContractScope, ContractSort } from "../contracts/useContracts";
 import type { BillRoll } from "../congress/useCongress";
 import type { DistrictLayer } from "../districts/useDistricts";
-import { IconLabel, type IconName } from "../ui/icons/Icon";
+import { Icon, IconLabel, type IconName } from "../ui/icons/Icon";
 
 export function DistrictsBar({ layer, onLayer }: { layer: DistrictLayer; onLayer: (l: DistrictLayer) => void }) {
   return (
     <span className="seg" title="What the list and map show">
       <button aria-pressed={layer === "sites"} onClick={() => onLayer("sites")}><IconLabel icon="sites">Sites</IconLabel></button>
       <button aria-pressed={layer === "hq"} onClick={() => onLayer("hq")}><IconLabel icon="hq">S&amp;P 500 HQ</IconLabel></button>
+    </span>
+  );
+}
+
+/** Strait's picture. Dark keeps the ships readable. Live is the GOES and Himawari clock. */
+export function StraitPicture({ live, onLive }: { live: boolean; onLive: (live: boolean) => void }) {
+  return (
+    <span className="seg" title="Picture under the ships. Live scrubs GOES and Himawari on the clock.">
+      <button aria-pressed={!live} onClick={() => onLive(false)}><IconLabel icon="map">Dark</IconLabel></button>
+      <button aria-pressed={live} onClick={() => onLive(true)}><IconLabel icon="live">Live</IconLabel></button>
     </span>
   );
 }
@@ -227,28 +237,39 @@ export function StraitBar(props: { feed: StraitFeed; onFeed: (f: StraitFeed) => 
   );
 }
 
+export function CityBar({ cities, id, onPick }: { cities: { id: string; label: string }[]; id: string | null; onPick: (id: string) => void }) {
+  return (
+    <span className="seg" title="Cities are part of the 3D view. Click the selected city again to leave the skyline.">
+      <em className="seg-label"><Icon name="city" /> City</em>
+      {cities.map((city) => (
+        <button key={city.id} aria-pressed={id === city.id} onClick={() => onPick(city.id)}>{city.label}</button>
+      ))}
+    </span>
+  );
+}
+
 const BASE_ICON: Record<EarthBase, IconName> = { dark: "map", sat: "satellite", live: "live", daily: "daily", night: "night" };
 
 /** `lanes` is false on views that never draw shipping lanes, so the toggle is not offered there. */
-export function EarthBar({ settings, update, onBase, lanes = true }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void; lanes?: boolean }) {
+export function EarthBar({ settings, update, onBase, imagery = true, lanes = true }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void; imagery?: boolean; lanes?: boolean }) {
   return (
     <>
-      <span className="seg" title="Projection">
+      <span className="seg" title="View">
         {(["2d", "globe", "3d"] as EarthView[]).map((v) => (
-          <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Pitch the camera. Zoom into a city for the building skyline." : undefined} onClick={() => update({ view: v })}>
+          <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Pitch the camera. On Map, pick a city for the block skyline and live aircraft." : undefined} onClick={() => update({ view: v })}>
             <IconLabel icon={v === "2d" ? "view2d" : v === "globe" ? "globe" : "cube"}>{v === "2d" ? "2D" : v === "globe" ? "Globe" : "3D"}</IconLabel>
           </button>
         ))}
       </span>
-      <span className="seg" title="Imagery">
+      {imagery ? <span className="seg" title="Imagery">
         {([["dark", "Map"], ["sat", "Mosaic"], ["live", "Live"], ["daily", "Daily"], ["night", "Night"]] as [EarthBase, string][]).map(([b, label]) => (
           <button key={b} aria-pressed={settings.base === b} onClick={() => { update({ base: b }); onBase(); }} title={BASE_TITLE[b]}><IconLabel icon={BASE_ICON[b]} hide>{label}</IconLabel></button>
         ))}
-      </span>
-      <span className="seg">
+      </span> : null}
+      {imagery ? <span className="seg">
         <button aria-pressed={settings.labels} onClick={() => update({ labels: !settings.labels })} title="Place and border labels"><IconLabel icon="labels" hide>Labels</IconLabel></button>
         {lanes ? <button aria-pressed={settings.lanes} onClick={() => update({ lanes: !settings.lanes })} title="Shipping lanes"><IconLabel icon="lanes" hide>Lanes</IconLabel></button> : null}
-      </span>
+      </span> : null}
     </>
   );
 }

@@ -30,6 +30,7 @@ const STATIC: Command[] = [
   { code: "NEWS", label: "News · board", hint: "Wires and X", action: "section:news" },
   { code: "DIST", label: "Districts", hint: "Plants and HQs on the map", action: "section:districts" },
   { code: "STRT", label: "Strait", hint: "Ships, aircraft, imagery", action: "section:strait" },
+  { code: "MAP", label: "Map", hint: "Records in a window, lines you draw", action: "section:map" },
   { code: "CAL", label: "Calendar", hint: "Earnings, macro, lobbying, PAC", action: "calendar:" },
   { code: "ALRT", label: "Alerts", hint: "Watched members and tickers", action: "alerts:" }
 ];
