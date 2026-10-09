@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  filterToolDefs, layerPrompts, modeSystemNote, parseSourcing, parseStyle, resolveModes,
+  filterToolDefs, isModeStatement, layerPrompts, modeSystemNote, parseSourcing, parseStyle, resolveModes,
   sourcingClarify, stylePrompt, toolsForSourcing, wantsOutsideWorld, WEB_TOOLS
 } from "../shared/askModes.mjs";
 import { summarizeNews, summarizeSatellite } from "../server/ai/web.mjs";
@@ -22,6 +22,14 @@ test("parseStyle: professional / simplified / terminal", () => {
   assert.equal(parseStyle("explain in plain language"), "simplified");
   assert.equal(parseStyle("figures first, terminal style"), "terminal");
   assert.equal(parseStyle("NVDA contracts"), "");
+});
+
+test("isModeStatement: short toggles save prefs; research questions do not", () => {
+  assert.equal(isModeStatement("use only TradeSimple"), true);
+  assert.equal(isModeStatement("switch to professional"), true);
+  assert.equal(isModeStatement("use TradeSimple and the web from now on"), true);
+  assert.equal(isModeStatement("use TradeSimple and the web: what is moving NVDA today?"), false);
+  assert.equal(isModeStatement("simplified: latest headlines on semis"), false);
 });
 
 test("resolveModes: answers beat question beat session beat default", () => {
