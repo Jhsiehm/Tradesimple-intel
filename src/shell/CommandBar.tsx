@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { matchMembers } from "../../shared/memberMatch.mjs";
 import { districtName, parseDistrict } from "../../shared/districts.mjs";
+import { Icon } from "../ui/icons/Icon";
+import { commandIcon } from "../ui/icons/commandIcon";
 
 export type TrailEntry = { label: string; action: string };
 type Seat = { bioguide: string; name: string; first?: string; last?: string; nickname?: string; party: string; state: string; district: string; chamber: string };
@@ -120,7 +122,7 @@ export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean
     <div className="cmd-scrim" onMouseDown={onClose}>
       <div className="cmd" role="dialog" aria-label="Command line" onMouseDown={(e) => e.stopPropagation()}>
         <div className="cmd-input">
-          <b>GO</b>
+          <b><Icon name="command" />GO</b>
           <input
             ref={input}
             value={text}
@@ -139,7 +141,7 @@ export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean
         <ul className="cmd-list" role="listbox">
           {list.map((c, i) => (
             <li key={`${c.code}:${c.action}:${i}`} role="option" aria-selected={i === at} onMouseEnter={() => setAt(i)} onClick={() => run(c)}>
-              <code>{c.code}</code>
+              <code><Icon name={commandIcon(c.code)} />{c.code}</code>
               <span>{c.label}</span>
               <em>{c.hint}</em>
             </li>

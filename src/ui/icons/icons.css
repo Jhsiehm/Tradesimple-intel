@@ -15,6 +15,10 @@
 }
 .app.phone .ic + .ic-tight, .ic-compact .ic + .ic-tight { margin-left: 0; }
 
+.cmd-list code .ic { margin-right: 7px; color: var(--dim); }
+.cmd-list li[aria-selected="true"] code .ic { color: var(--amber); }
+.cmd-input b .ic { margin-right: 4px; }
+
 /* Phone nav: icons only, the current section keeps its name. */
 .app.phone .nav button { padding: 6px 9px; }
 .app.phone .nav button[aria-current="page"] .ic-tight { position: static; width: auto; height: auto; margin: 0 0 0 5px; clip-path: none; }

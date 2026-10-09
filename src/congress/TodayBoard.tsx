@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { api, when } from "../lib/api";
 import { amountShort, dayLabel, honorific, partyTag, verbOf } from "../../shared/sentences.mjs";
 import type { StageList } from "../types";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 
 const LeadersBoard = lazy(() => import("./LeadersBoard").then((m) => ({ default: m.LeadersBoard })));
 
@@ -103,10 +104,10 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
         <div className="board-title">
           <strong>{tab === "week" ? "THIS WEEK IN CONGRESS TRADING" : "LEADERBOARDS"}</strong>
           <span className="scope">
-            <button className={tab === "week" ? "on" : ""} onClick={() => onTab("week")}>This week</button>
-            <button className={tab === "leaders" ? "on" : ""} onClick={() => onTab("leaders")}>Leaderboards</button>
+            <button className={tab === "week" ? "on" : ""} onClick={() => onTab("week")}><IconLabel icon="today">This week</IconLabel></button>
+            <button className={tab === "leaders" ? "on" : ""} onClick={() => onTab("leaders")}><IconLabel icon="leaders">Leaderboards</IconLabel></button>
           </span>
-          <button className="tl-close" onClick={onClose} aria-label="Close" title="Close (esc)">×</button>
+          <button className="tl-close" onClick={onClose} aria-label="Close" title="Close (esc)"><Icon name="close" /></button>
         </div>
         {tab === "week" ? (
           <>

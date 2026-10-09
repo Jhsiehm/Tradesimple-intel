@@ -2,6 +2,8 @@ import type { DrawerModel, DrawerTable } from "../types";
 import { toggleSymbol, useWatch } from "../lib/useWatch";
 import { CaseHeader } from "../intel/CaseHeader";
 import { CaseSection } from "../intel/CaseSection";
+import { IconLabel } from "../ui/icons/Icon";
+import { actionIcon } from "../ui/icons/commandIcon";
 
 export function Drawer({
   model,
@@ -21,7 +23,7 @@ export function Drawer({
   const { hasSymbol } = useWatch();
   const watched = model.watch ? hasSymbol(model.watch) : false;
   const star = model.watch ? (
-    <button className={watched ? "star on" : "star"} title={watched ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleSymbol(model.watch!)}>{watched ? "★ Watching" : "☆ Watch"}</button>
+    <button className={watched ? "star on" : "star"} title={watched ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleSymbol(model.watch!)}><IconLabel icon={watched ? "star-on" : "star"}>{watched ? "Watching" : "Watch"}</IconLabel></button>
   ) : null;
   const src = model.source || source;
   const kind = model.caseKey?.split(":")[0];
@@ -32,8 +34,8 @@ export function Drawer({
           <span>DOSSIER</span>
           <span className="drawer-actions">
             {star}
-            {onPin ? <button className="ghost" onClick={onPin}>Pin</button> : null}
-            <button className="ghost" onClick={onClose}>Close</button>
+            {onPin ? <button className="ghost" onClick={onPin} title="Pin as a card that stays across views"><IconLabel icon="pin" hide>Pin</IconLabel></button> : null}
+            <button className="ghost" onClick={onClose} title="Close (Esc)"><IconLabel icon="close" hide>Close</IconLabel></button>
           </span>
         </div>
       )}
@@ -62,12 +64,12 @@ export function Drawer({
         ) : null}
         {model.links?.map((link, index) => link.href ? (
           <a key={`${index}:${link.href}`} className="drill" href={link.href} target="_blank" rel="noreferrer">
-            <span>{link.label}</span>
+            <span><IconLabel icon="external">{link.label}</IconLabel></span>
             <strong>{link.value}</strong>
           </a>
         ) : (
           <button key={`${index}:${link.action}`} className="drill" disabled={!link.action} onClick={() => link.action && onFollow?.(link.action)}>
-            <span>{link.label}</span>
+            <span><IconLabel icon={actionIcon(link.action)}>{link.label}</IconLabel></span>
             <strong>{link.value}</strong>
           </button>
         ))}
@@ -115,7 +117,7 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
                     {row.cells.map((cell, i) => <td key={i}>{cell}</td>)}
                     {filings ? (
                       <td>
-                        {row.filing ? <a className="dt-filing" href={row.filing} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure">View ↗</a> : "—"}
+                        {row.filing ? <a className="dt-filing" href={row.filing} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure"><IconLabel icon="external">View</IconLabel></a> : "—"}
                       </td>
                     ) : null}
                   </tr>

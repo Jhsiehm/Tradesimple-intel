@@ -4,6 +4,7 @@ import { ALERT_LEVELS, ALERT_RULE, countAlertLevels, triageAlerts, type AlertLev
 import { api, DEMO, when } from "../lib/api";
 import { memberShareUrl } from "../lib/share";
 import { toggleMember, toggleSymbol, useWatch } from "../lib/useWatch";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 
 type Pin = { kind: "member" | "symbol"; id: string; label: string; chamber?: string };
 type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; pins?: Pin[] };
@@ -124,15 +125,15 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
             const on = p.kind === "member" ? hasMember(p.id) : hasSymbol(p.id);
             return (
               <button key={`${p.kind}:${p.id}`} aria-pressed={on} onClick={() => pin(p)} title={on ? "Remove from watchlist" : "Add to watchlist"}>
-                {on ? "★" : "☆"} {p.label}
+                <IconLabel icon={on ? "star-on" : "star"}>{p.label}</IconLabel>
               </button>
             );
           })}
-          <button onClick={() => share(a)}>{copied === a.id ? "Copied" : "Share"}</button>
-          {a.link ? <a href={a.link} target="_blank" rel="noreferrer" onClick={() => markRead([a.id])}>Filing ↗</a> : null}
+          <button onClick={() => share(a)} title="Copy a share line with the source link"><IconLabel icon={copied === a.id ? "check" : "share"} hide>{copied === a.id ? "Copied" : "Share"}</IconLabel></button>
+          {a.link ? <a href={a.link} target="_blank" rel="noreferrer" onClick={() => markRead([a.id])} title="Open the original filing"><IconLabel icon="external" hide>Filing</IconLabel></a> : null}
           <span className="alerts-end">
-            {!seen.has(a.id) && !gone ? <button onClick={() => markRead([a.id])}>Mark read</button> : null}
-            {gone ? <button onClick={() => restore(a.id)}>Restore</button> : <button onClick={() => dismiss(a.id)}>Dismiss</button>}
+            {!seen.has(a.id) && !gone ? <button onClick={() => markRead([a.id])} title="Mark read"><IconLabel icon="check" hide>Mark read</IconLabel></button> : null}
+            {gone ? <button onClick={() => restore(a.id)} title="Restore"><IconLabel icon="restore" hide>Restore</IconLabel></button> : <button onClick={() => dismiss(a.id)} title="Dismiss"><IconLabel icon="dismiss" hide>Dismiss</IconLabel></button>}
           </span>
         </div>
       </article>
@@ -142,8 +143,8 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
   const total = counts.high + counts.elevated + counts.routine;
   return (
     <>
-      <button className={`ghost panels-btn alerts-btn${unread.length ? " hot" : ""}`} aria-expanded={open} onClick={() => onOpen(!open)}>
-        Alerts{unread.length ? ` · ${unread.length}` : ""}
+      <button className={`ghost panels-btn alerts-btn${unread.length ? " hot" : ""}`} aria-expanded={open} onClick={() => onOpen(!open)} title="Watchlist alerts">
+        <Icon name="bell" /><span className="ic-lbl">Alerts{unread.length ? ` · ${unread.length}` : ""}</span>
       </button>
       {open ? (
         <div className="panels-menu alerts-menu" role="dialog" aria-label="Alerts">
@@ -161,7 +162,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
           {items.length ? (
             <div className="alerts-bar">
               <div className="alerts-filter" role="group" aria-label="Filter by severity">
-                <button aria-pressed={level === null} onClick={() => setLevel(null)}>All <b>{total}</b></button>
+                <button aria-pressed={level === null} onClick={() => setLevel(null)}><Icon name="filter" /> All <b>{total}</b></button>
                 {ALERT_LEVELS.map((lv) => (
                   <button key={lv} className={`sev-${lv}`} aria-pressed={level === lv} onClick={() => setLevel(level === lv ? null : lv)} title={LEVEL_RULE[lv]}>
                     {LEVEL_LABEL[lv]} <b>{counts[lv]}</b>
@@ -169,7 +170,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
                 ))}
               </div>
               <div className="alerts-bulk">
-                <button disabled={!unread.length} onClick={() => markRead(items.map((a) => a.id))}>Mark all read{unread.length ? ` · ${unread.length}` : ""}</button>
+                <button disabled={!unread.length} onClick={() => markRead(items.map((a) => a.id))}><IconLabel icon="checks">Mark all read{unread.length ? ` · ${unread.length}` : ""}</IconLabel></button>
                 {dismissed.size ? (
                   <button aria-pressed={showDismissed} onClick={() => setShowDismissed(!showDismissed)}>
                     {showDismissed ? "Hide dismissed" : "Show dismissed"}

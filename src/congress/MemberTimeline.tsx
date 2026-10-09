@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, DEMO, when } from "../lib/api";
 import { downloadMemberCard, memberShareUrl, PUBLIC_URL } from "../lib/share";
 import type { StatusLine } from "../types";
+import { Icon, IconLabel } from "../ui/icons/Icon";
 
 type Near = { id: string; date: string; title: string; lane: string; laneName: string; link: string; gap: number };
 type Trade = {
@@ -160,7 +161,7 @@ export function MemberTimeline({ bioguide, onClose, onFollow, onStatus }: { biog
     return (
       <div className="board timeline">
         <p className="stage-loading">{res.missing ? `Set ${res.missing} to build member timelines.` : res.error || "No timeline."}</p>
-        <button className="tl-close" onClick={onClose} aria-label="Close timeline">×</button>
+        <button className="tl-close" onClick={onClose} aria-label="Close timeline"><Icon name="close" /></button>
       </div>
     );
   }
@@ -211,10 +212,10 @@ export function MemberTimeline({ bioguide, onClose, onFollow, onStatus }: { biog
           {(["trades", "all", "1y", "6m", "90d"] as Span[]).map((s) => (
             <button key={s} className={span === s ? "on" : ""} onClick={() => setSpan(s)}>{s.toUpperCase()}</button>
           ))}
-          <button onClick={() => onFollow(`member:${m.bioguide}`)}>Card</button>
-          <button onClick={share} title={PUBLIC_URL && DEMO ? "Link to this member's share page (with a preview image)" : "Link to this timeline"}>{copied ? "Copied" : "Copy link"}</button>
-          <button onClick={shareImage} disabled={Boolean(drawing)} title="Download a 1200×630 PNG summary card of this timeline">{drawing || "Share image"}</button>
-          <button className="tl-close" onClick={onClose} aria-label="Close timeline">×</button>
+          <button onClick={() => onFollow(`member:${m.bioguide}`)} title="Member card"><IconLabel icon="dossier" hide>Card</IconLabel></button>
+          <button onClick={share} title={PUBLIC_URL && DEMO ? "Link to this member's share page (with a preview image)" : "Link to this timeline"}><IconLabel icon={copied ? "check" : "link"} hide>{copied ? "Copied" : "Copy link"}</IconLabel></button>
+          <button onClick={shareImage} disabled={Boolean(drawing)} title="Download a 1200×630 PNG summary card of this timeline"><IconLabel icon="share" hide>{drawing || "Share image"}</IconLabel></button>
+          <button className="tl-close" onClick={onClose} aria-label="Close timeline" title="Close (Esc)"><Icon name="close" /></button>
         </div>
         <p className="tl-stats">
           <b>{view.trades.length}</b> disclosed trades
