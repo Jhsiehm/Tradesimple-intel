@@ -20,6 +20,8 @@ import { useCards } from "./shell/useCards";
 import { useMapClock } from "./shell/useMapClock";
 import { mapView } from "./shell/mapView";
 import { route } from "./shell/follow";
+import { trailLabel as labelFor, viewFor, viewOnly, type View, type ViewPatch } from "./shell/viewFor";
+import { useDossierScope, useView } from "./shell/useView";
 import { useCongress } from "./congress/useCongress";
 import { STATE_NAME_TO_POSTAL } from "./congress/states";
 import { meetingModel } from "./congress/meeting";
@@ -28,8 +30,7 @@ import type { CalendarTab, Meeting } from "./markets/CalendarBoard";
 import { loadDossier, loadLobby, loadPositions, tickerShell, useMarkets, withLobby } from "./markets/useMarkets";
 import { useNews } from "./news/useNews";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
-import { districtCode, useDistricts, type DistrictLayer } from "./districts/useDistricts";
-import { districtGeoid, parseDistrict } from "../shared/districts.mjs";
+import { districtCode, useDistricts } from "./districts/useDistricts";
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
@@ -39,7 +40,7 @@ import { Scrubber } from "./intel/Scrubber";
 import { presetWindow, type DayWindow } from "./intel/lanes";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import type { ArcKind } from "../shared/intel.mjs";
-import type { Chamber, ChartMark, CongressMode, DrawerModel, MarketLayer, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
+import type { Chamber, ChartMark, DrawerModel, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
 const MapFrame = lazy(() => import("./shell/MapFrame").then((m) => ({ default: m.MapFrame })));
 const FloorMap = lazy(() => import("./congress/FloorMap").then((m) => ({ default: m.FloorMap })));
@@ -59,25 +60,18 @@ const TIMELINE_STATUS: StatusLine = { source: "House Clerk PTR PDFs / Senate eFD
 type TodayTab = "week" | "leaders";
 
 export function App() {
-  const [section, setSection] = useState<Section>("congress");
+  const nav = useView();
+  const { section, chamber, mode, voteView, mapLayer, districtLayer, marketView, layer, newsView, selectedId } = nav.view;
+  const { setSection, setChamber, setMode, setVoteView, setMapLayer, setDistrictLayer, setMarketView, setLayer, setNewsView, setSelectedId } = nav;
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [chamber, setChamber] = useState<Chamber>("house");
-  const [mode, setMode] = useState<CongressMode>("votes");
   const [party, setParty] = useState<PartyFilter>("all");
-  const [voteView, setVoteView] = useState<"map" | "floor">("floor");
-  const [mapLayer, setMapLayer] = useState<"votes" | "filings">("filings");
   const [filingId, setFilingId] = useState<string | null>(null);
-  const [districtLayer, setDistrictLayer] = useState<DistrictLayer>("sites");
-  const [layer, setLayer] = useState<MarketLayer>("politicians");
-  const [marketView, setMarketView] = useState<MarketView>("board");
   const [chartSymbol, setChartSymbol] = useState("AAPL");
   const [chartSpan, setChartSpan] = useState<ChartSpan>(OPEN_SPAN);
   const [chartMarks, setChartMarks] = useState<ChartMark[]>([]);
   const [chartFrom, setChartFrom] = useState<MarketView>("board");
   const [supplySymbol, setSupplySymbol] = useState("AAPL");
   const [newsDesk, setNewsDesk] = useState<NewsDesk>("all");
-  const [newsView, setNewsView] = useState<"board" | "globe">("board");
   const [newsRegion, setNewsRegion] = useState("all");
   const [mapTime, setMapTime] = useState<number | null>(null);
   const [theaterId, setTheaterId] = useState("taiwan-strait");
@@ -109,7 +103,7 @@ export function App() {
   });
   const [clock, setClock] = useState(utcNow);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [trail, setTrail] = useState<TrailEntry[]>(() => {
+  const [trail, setTrail] = useState<(TrailEntry & { view?: View })[]>(() => {
     try { return JSON.parse(localStorage.getItem(TRAIL_KEY) || "[]"); } catch { return []; }
   });
   const trailRef = useRef(trail);
@@ -152,13 +146,16 @@ export function App() {
   const drawer = onToday || timelineId ? null : (dossier || view.drawer);
   const ids = useMemo(() => listItems.map((item) => item.id), [listItems]);
   const dossierScope = drawer?.watch ? `symbol:${drawer.watch}` : section === "districts" ? drawer?.links?.find((l) => l.label === "Representative")?.action || "" : "";
-  useEffect(() => { if (dossierScope) setIntelScope(scopeOf(dossierScope)); }, [dossierScope]);
+  useDossierScope(dossierScope, setIntelScope);
+  const recordRef = useRef((action: string) => record(action));
+  recordRef.current = (action) => record(action);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
     const onHash = () => {
       const id = location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null;
       const board = location.hash.match(/^#(week|leaders)$/)?.[1] as TodayTab | undefined;
+      if (id || board) recordRef.current(id ? `timeline:${id}` : `today:${board}`);
       if (id) { setSection("congress"); setCalendarTab(null); }
       if (board) { setCalendarTab(null); setToday(board); }
       setTimelineId(id);
@@ -205,8 +202,8 @@ export function App() {
         return;
       }
       const index = Number(event.key) - 1;
-      if (SECTIONS[index]) pick(SECTIONS[index].id);
-      if (event.key === "0") openToday("week");
+      if (SECTIONS[index]) go(`section:${SECTIONS[index].id}`);
+      if (event.key === "0") go("today:week");
       if (event.key === "Escape") {
         if (timelineId) closeTimeline();
         else closeToday();
@@ -257,46 +254,31 @@ export function App() {
     setMarketView("supply");
   }
 
-  function goCongress(next: CongressMode, id: string, side?: Chamber) {
-    closeStage();
-    setSection("congress");
-    if (side) setChamber(side);
-    setMode(next);
-    if (next === "bills" || next === "votes") setMapLayer("votes");
-    setSelectedId(id);
-    setDossier(null);
-  }
+  const trailLabel = (action: string) => labelFor(action, (id) => congress.roster.find((m) => m.bioguide === id)?.name || id);
 
-  function trailLabel(action: string) {
-    const [kind, ...rest] = action.split(":");
-    const v = rest.join(":");
-    const who = (id: string) => congress.roster.find((m) => m.bioguide === id)?.name || id;
-    if (kind === "member") return `${who(v)} · card`;
-    if (kind === "timeline") return `${who(v)} · timeline`;
-    if (kind === "scope") return `Map scope · ${v.startsWith("member:") ? who(v.slice(7)) : v.slice(7) || "all Congress"}`;
-    if (kind === "contracts") {
-      const [k, val] = v.split(":");
-      return k === "member" ? `Contracts · ${who(val)} district` : k === "all" || !val ? "Contracts · all agencies" : `Contracts · ${val}`;
-    }
-    if (kind === "district") return `${v} · district dossier`;
-    const label: Record<string, string> = { section: SECTIONS.find((s) => s.id === v)?.label || v, ticker: `${v} dossier`, chart: `${v} chart`, inst: `${v} chart`, pos: `${v} positions`, supply: `${v} supply chain`, bill: `Bill ${v}`, vote: `Roll call ${v}`, committee: `Committee ${v}`, mode: `Congress · ${v}`, view: `Markets · ${v}`, layer: `Markets · ${v}`, calendar: "Calendar", alerts: "Alerts", today: v === "leaders" ? "Leaderboards" : "This week in Congress trading" };
-    return label[kind] || action;
-  }
-
+  /** The leaving entry keeps the view as it was left, so back restores toggles changed after arriving. */
   function record(action: string, label?: string) {
     const entry = { action, label: label || trailLabel(action) };
-    setTrail((t) => [entry, ...t.filter((e) => e.action !== action)].slice(0, 12));
+    const left = viewOnly(nav.current.current);
+    setTrail(([head, ...t]) => [entry, ...(head ? [{ ...head, view: left }, ...t] : []).filter((e) => e.action !== action)].slice(0, 12));
+  }
+
+  /** Apply a navigation patch from `viewFor`: the view fields plus stage, dossier, scope, contracts, cards, rail. */
+  function apply(p: ViewPatch) {
+    if (p.stage) { closeStage(); setCalendarTab(null); }
+    nav.applyPatch(p);
+    if (p.dossier === null) setDossier(null);
+    if (p.contracts) { setContractScope(p.contracts); if (p.contracts.kind !== "all") setContractSort("recent"); }
+    if (p.scope) { setIntelScope(scopeOf(p.scope)); if (p.scope !== "all") setScrubMin(false); }
+    if (p.dropCards) cards.dropUnpinned();
+    if (p.rail) rail.show();
   }
 
   /** Command-line and trail actions: the dossier link kinds plus section, mode, view, layer, calendar, alerts. */
   function runAction(action: string) {
     const [kind, ...rest] = action.split(":");
     const v = rest.join(":");
-    if (kind === "section") pick(v as Section);
-    else if (kind === "mode") { pick("congress"); setMode(v as CongressMode); }
-    else if (kind === "view") { pick("markets"); setMarketView(v as MarketView); }
-    else if (kind === "layer") { pick("markets"); setLayer(v as MarketLayer); }
-    else if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
+    if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
     else if (kind === "today") openToday(v === "leaders" ? "leaders" : "week");
     else if (kind === "alerts") { setPanelsOpen(false); setAlertsOpen(true); }
     else routeAction(action);
@@ -312,6 +294,7 @@ export function App() {
     if (t.length < 2) return;
     setTrail(t.slice(1));
     runAction(t[1].action);
+    if (t[1].view) nav.applyPatch(t[1].view);
   }
 
   const follow = (action: string) => {
@@ -319,65 +302,32 @@ export function App() {
     routeAction(action);
   };
 
-  const routeAction = (action: string) => route(action, {
-    bill: (id) => goCongress("bills", id),
-    vote: (id) => goCongress("votes", id, id.startsWith("senate") ? "senate" : "house"),
-    roll: (id) => {
-      if (section !== "congress" || mode !== "bills") return;
-      setChamber(id.startsWith("senate") ? "senate" : "house");
-      congress.pickRoll(id);
-      setVoteView("map");
-      setMapLayer("votes");
-      setDossier(null);
-    },
-    hq: (symbol) => {
-      closeStage();
-      setCalendarTab(null);
-      setSection("districts");
-      setDistrictLayer("hq");
-      setSelectedId(symbol ? `hq:${symbol.toUpperCase()}` : null);
-      setDossier(null);
-      rail.show();
-    },
-    district: (code) => openDistrict(code),
-    member: (id) => openMember(id),
-    news: (id) => { setDossier(null); setSelectedId(id); },
-    committee: (id) => goCongress("committees", id, id.startsWith("HS") ? "house" : id.startsWith("SS") ? "senate" : undefined),
-    meeting: (id) => { const meeting = calendar.find((m) => m.id === id); if (meeting) setDossier(meetingModel(meeting)); },
-    ticker: (symbol) => { showChart(symbol, OPEN_SPAN); setSelectedId(null); setDossier(null); },
-    inst: (symbol) => showChart(symbol, "6mo"),
-    chart: (symbol) => {
-      showChart(symbol, "6mo", chartSymbol === symbol ? chartMarks : []);
-      loadPositions(symbol).then((res) => { if (res?.marks.length) setChartMarks(res.marks); }).catch(() => null);
-    },
-    pos: (symbol) => void cards.openPositions(symbol),
-    supply: openSupply,
-    timeline: openTimeline,
-    contracts: (value) => {
-      const [kind, ...rest] = value.split(":");
-      openContracts(["symbol", "place", "member"].includes(kind) ? { kind: kind as ContractScope["kind"], value: rest.join(":").toUpperCase() } : { kind: "all", value: "" });
-    },
-    scope: (value) => {
-      setIntelScope(scopeOf(value));
-      setScrubMin(false);
-      if (!intelOn) {
-        closeStage();
-        setCalendarTab(null);
-        setSection("congress");
+  const routeAction = (action: string) => {
+    const patch = viewFor(action, { intelOn });
+    if (patch) apply(patch);
+    else route(action, {
+      roll: (id) => {
+        if (section !== "congress" || mode !== "bills") return;
+        setChamber(id.startsWith("senate") ? "senate" : "house");
+        congress.pickRoll(id);
         setVoteView("map");
-      }
-    }
-  });
-
-  function openContracts(scope: ContractScope) {
-    closeStage();
-    setCalendarTab(null);
-    setSection("contracts");
-    setContractScope(scope);
-    if (scope.kind !== "all") setContractSort("recent");
-    setSelectedId(null);
-    setDossier(null);
-  }
+        setMapLayer("votes");
+        setDossier(null);
+      },
+      member: (id) => openMember(id),
+      news: (id) => { setDossier(null); setSelectedId(id); },
+      meeting: (id) => { const meeting = calendar.find((m) => m.id === id); if (meeting) setDossier(meetingModel(meeting)); },
+      ticker: (symbol) => { showChart(symbol, OPEN_SPAN); setSelectedId(null); void openTickerDossier(symbol, ""); },
+      inst: (symbol) => showChart(symbol, "6mo"),
+      chart: (symbol) => {
+        showChart(symbol, "6mo", chartSymbol === symbol ? chartMarks : []);
+        loadPositions(symbol).then((res) => { if (res?.marks.length) setChartMarks(res.marks); }).catch(() => null);
+      },
+      pos: (symbol) => void cards.openPositions(symbol),
+      supply: openSupply,
+      timeline: openTimeline
+    });
+  };
 
   function openTimeline(bioguide: string) {
     if (!/^[A-Z]\d{6}$/.test(bioguide)) return;
@@ -438,15 +388,6 @@ export function App() {
     });
   }
 
-  function pick(next: Section) {
-    closeStage();
-    setCalendarTab(null);
-    setSection(next);
-    setSelectedId(null);
-    setDossier(null);
-    cards.dropUnpinned();
-  }
-
   async function openCalendar() {
     closeStage();
     setCalendarTab((open) => (open ? null : "earnings"));
@@ -491,30 +432,18 @@ export function App() {
     setDossier((d) => (still(d) ? withLobby(d!, lines) : d));
   }
 
-  /** Same dossier and fly-to as clicking the seat on the Districts map: selection is the cd119 GEOID. */
-  function openDistrict(code: string) {
-    const geoid = districtGeoid(parseDistrict(code));
-    if (!geoid) return;
-    closeStage();
-    setCalendarTab(null);
-    setSection("districts");
-    setSelectedId(geoid);
-    setDossier(null);
-    rail.show();
-  }
-
   async function chooseHit(hit: SearchHit) {
     if (hit.kind === "ticker") {
+      record(`ticker:${hit.id}`);
       showChart(hit.id, OPEN_SPAN);
       setSelectedId(null);
       await openTickerDossier(hit.id, hit.label.slice(hit.id.length + 1));
     } else if (hit.kind === "district") {
       go(`district:${hit.id}`);
     } else if (hit.kind === "site") {
-      setSection("districts");
-      setSelectedId(hit.id);
-      rail.show();
+      go(`site:${hit.id}`);
     } else if (/^[A-Za-z]\d{6}$/.test(hit.id)) {
+      record(`member:${hit.id}`);
       openMember(hit.id, hit.chamber);
     }
   }
@@ -694,7 +623,7 @@ export function App() {
                 onFollow={follow}
               />
             ) : section === "contracts" ? (
-              <ContractsBoard board={contracts.board} dod={contracts.dod} onSymbol={(s) => openContracts({ kind: "symbol", value: s })} />
+              <ContractsBoard board={contracts.board} dod={contracts.dod} onSymbol={(s) => follow(`contracts:symbol:${s}`)} />
             ) : section === "news" && !newsGlobe ? (
               <NewsBoard
                 wire={news.wire}
@@ -855,7 +784,7 @@ export function App() {
         <span title={foot.source}><em>{footLabel}</em><strong>{foot.source}</strong></span>
         <span title={foot.asOf}><em>AS OF</em>{foot.asOf || "—"}</span>
         <span title={foot.latency}><em>NOTE</em>{foot.latency || "—"}</span>
-        <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>6</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
+        <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
       <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
