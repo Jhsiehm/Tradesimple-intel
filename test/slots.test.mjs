@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MISSING, SLOT_NOTE, formatValue, lookup, parsePath, renderSlots, slotEvidence, slotStream, missingNote, columnLabel } from "../shared/slots.mjs";
 import { groundingCheck, ASK_LIMITS } from "../shared/ask.mjs";
+import { citationCheck } from "../shared/citations.mjs";
 import { runAsk } from "../server/ai/run.mjs";
 import { toolDefs } from "../server/ai/tools.mjs";
 
@@ -127,6 +128,18 @@ test("slot values join their ref's grounding pool, so code-filled rows past the 
   const ev = [{ id: "t1", ok: true, json: JSON.stringify(BODY) }];
   assert.notDeepEqual(groundingCheck(out.text, ev).unmatched, []);
   assert.deepEqual(groundingCheck(out.text, slotEvidence(ev, out.used)).unmatched, []);
+});
+
+test("a slot filled from t1 in a sentence cited to t2 is flagged as miscited; cited to t1 it is clean", () => {
+  const two = { evidence: [{ id: "t1", ok: true }, { id: "t2", ok: true }], bodies: new Map([["t1", BODY], ["t2", { ok: true, count: 7 }]]), raws: new Map([["t1", RAW]]) };
+  const ev = [{ id: "t1", ok: true, json: JSON.stringify(BODY) }, { id: "t2", ok: true, json: JSON.stringify({ ok: true, count: 7 }) }];
+  const wrong = renderSlots("Buys beat SPY by {{t1.stats.excess|spct}} [t2].", two);
+  assert.equal(wrong.text, "Buys beat SPY by +4.1% [t2].");
+  const flagged = citationCheck(wrong.text, slotEvidence(ev, wrong.used)).miscited;
+  assert.equal(flagged.length, 1);
+  assert.deepEqual([flagged[0].cited, flagged[0].foundIn], [["t2"], ["t1"]]);
+  const right = renderSlots("Buys beat SPY by {{t1.stats.excess|spct}} [t1].", two);
+  assert.deepEqual(citationCheck(right.text, slotEvidence(ev, right.used)).miscited, []);
 });
 
 test("streaming: text before an open slot goes at once, the slot when it closes, an unclosed one as typed", () => {
