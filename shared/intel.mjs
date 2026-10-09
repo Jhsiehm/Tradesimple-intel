@@ -38,7 +38,10 @@ export function binCounts(counts, bins) {
   return out;
 }
 
-/** Points along the great circle between two [lon, lat] pairs. Identical endpoints return []. */
+/**
+ * Points along the great circle between two [lon, lat] pairs. Identical endpoints return []. Longitudes are
+ * unwrapped past ±180 so a path crossing the antimeridian stays one short line instead of spanning the map.
+ */
 export function greatCircle(a, b, steps = 32) {
   const rad = Math.PI / 180;
   const [l1, p1] = [a[0] * rad, a[1] * rad];
@@ -53,7 +56,10 @@ export function greatCircle(a, b, steps = 32) {
     const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2);
     const y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2);
     const z = A * Math.sin(p1) + B * Math.sin(p2);
-    out.push([Math.atan2(y, x) / rad, Math.atan2(z, Math.sqrt(x * x + y * y)) / rad]);
+    let lon = Math.atan2(y, x) / rad;
+    const prev = out.length ? out[out.length - 1][0] : a[0];
+    lon += 360 * Math.round((prev - lon) / 360);
+    out.push([lon, Math.atan2(z, Math.sqrt(x * x + y * y)) / rad]);
   }
   return out;
 }

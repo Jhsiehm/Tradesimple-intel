@@ -42,6 +42,14 @@ test("greatCircle ends on both endpoints and bows north between US points", () =
   assert.deepEqual(greatCircle(sf, sf), []);
 });
 
+test("greatCircle keeps longitudes continuous across the antimeridian", () => {
+  const guam = [144.8, 13.4];
+  const dc = [-77.0, 38.9];
+  const pts = greatCircle(guam, dc, 32);
+  for (let i = 1; i < pts.length; i += 1) assert.ok(Math.abs(pts[i][0] - pts[i - 1][0]) < 30, `jump at ${i}`);
+  assert.ok(Math.abs(pts.at(-1)[0] - (dc[0] + 360)) < 1e-6, "ends on DC unwrapped east of 180");
+});
+
 test("bundleArcs groups by kind and endpoints inside the window, caps, and counts same-place links", () => {
   const links = [
     [10, 0, 1, 2, 1000, 0],
