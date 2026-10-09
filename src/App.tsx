@@ -131,7 +131,7 @@ export function App() {
   const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party);
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
-  const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil);
+  const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil, section === "strait");
 
   const contracts = useContracts(contractScope, contractSort, contractDays, query, section === "contracts" ? selectedId : null, section === "contracts", congress.roster);
 

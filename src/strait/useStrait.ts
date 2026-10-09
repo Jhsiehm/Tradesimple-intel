@@ -17,7 +17,8 @@ export type Aircraft = { id: string; hex: string; callsign: string; reg: string;
 type AirFeed = { ok: boolean; source: string; asOf: string; latency: string; milWorld: number; items: Aircraft[] };
 type Route = { ok: boolean; source: string; airline?: string; flight?: string; origin?: { iata: string; name: string; city: string; country: string }; destination?: { iata: string; name: string; city: string; country: string }; note?: string; error?: string };
 
-export function useStrait(theaterId: string, selectedId: string | null, feed: "ships" | "news" | "air" = "ships", milOnly = false) {
+/** `enabled` is false while the Strait view is off screen, so ship and aircraft positions stop polling. */
+export function useStrait(theaterId: string, selectedId: string | null, feed: "ships" | "news" | "air" = "ships", milOnly = false, enabled = true) {
   const [air, setAir] = useState<AirFeed | null>(null);
   const [airError, setAirError] = useState("");
   const [route, setRoute] = useState<Route | null>(null);
@@ -35,6 +36,7 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!theater?.live) {
       setShips([]);
       setNews([]);
@@ -62,10 +64,10 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
     pull();
     const timer = window.setInterval(pull, 15000);
     return () => window.clearInterval(timer);
-  }, [theater?.id, theater?.live, theater?.name]);
+  }, [enabled, theater?.id, theater?.live, theater?.name]);
 
   useEffect(() => {
-    if (feed !== "air" || !theater) return;
+    if (!enabled || feed !== "air" || !theater) return;
     let cancel = false;
     const pull = () => api<AirFeed>(`/api/air?theater=${theater.id}`)
       .then((res) => { if (!cancel) { setAir(res); setAirError(""); } })
@@ -73,7 +75,7 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
     void pull();
     const timer = window.setInterval(pull, 30000);
     return () => { cancel = true; window.clearInterval(timer); };
-  }, [feed, theater?.id]);
+  }, [enabled, feed, theater?.id]);
 
   const planes = (air?.items || []).filter((a) => !milOnly || a.mil);
   const plane = planes.find((a) => a.id === selectedId);
