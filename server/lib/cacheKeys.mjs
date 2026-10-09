@@ -75,5 +75,8 @@ export const KEY = {
   earthLanes: "earth:lanes:v1",
   gdeltStrait: "gdelt-strait:v1",
 
-  hq: (symbol) => `hq:v2:${symbol}`
+  hq: (symbol) => `hq:v2:${symbol}`,
+
+  // Negative cache: the last upstream failure for another key (lib/cache.mjs throughCache)
+  down: (key) => `down:v1:${key}`
 };

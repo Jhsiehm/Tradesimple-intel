@@ -400,14 +400,16 @@ export async function loadPositions(symbol: string): Promise<{ model: DrawerMode
 }
 
 const LOBBY_TITLE = "Lobbying (LDA)";
-type Lobby = { missing?: string; error?: string; deferred?: boolean; client?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
+type Lobby = { missing?: string; error?: string; unavailable?: boolean; note?: string; deferred?: boolean; client?: string; filings?: { registrant: string; income: number | null; expenses: number | null; posted: string }[] };
 
 function lobbyLines(lobby: Lobby | undefined) {
   if (lobby?.missing) return [`Set ${lobby.missing}`];
   if (lobby?.deferred) return ["Loading LDA.gov filings… LDA.gov takes 10–30 s on a cold client query."];
+  if (lobby?.unavailable && lobby.error) return [lobby.error];
   if (lobby?.error) return [`LDA.gov ${lobby.error}`];
   const filings = lobby?.filings || [];
-  return filings.length ? filings.slice(0, 4).map((f) => `${f.registrant} · income ${money(f.income)} · expenses ${money(f.expenses)}`) : ["No LDA filings this year for this client."];
+  const lines = filings.length ? filings.slice(0, 4).map((f) => `${f.registrant} · income ${money(f.income)} · expenses ${money(f.expenses)}`) : ["No LDA filings this year for this client."];
+  return lobby?.note ? [...lines, lobby.note] : lines;
 }
 
 /** Instant dossier for `symbol` while `/api/tickers/:symbol` loads: header, case file, and the links that need only the symbol. */

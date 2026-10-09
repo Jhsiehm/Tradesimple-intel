@@ -1,18 +1,26 @@
 import { fetchJson } from "../../lib/http.mjs";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
+import { readStale, throughCache } from "../../lib/cache.mjs";
 import { HOUR, DAY } from "../../lib/time.mjs";
 import { pool } from "../../lib/pool.mjs";
 import { KEY } from "../../lib/cacheKeys.mjs";
+import { LDA_DOWN_MS, ldaDownLabel } from "../../lobby.mjs";
+
+const PAGE_TIMEOUT = 30000;
 
 export async function lobbyingFor(db, ticker, years = 5) {
   const apiKey = process.env.LDA_API_KEY || "";
   if (!apiKey) return { ok: false, missing: "LDA_API_KEY", filings: [] };
   const now = new Date().getUTCFullYear();
   const filings = [];
+  const gaps = [];
+  let asOf = "";
   for (const client of ticker.ldaClients || []) {
     for (let y = now; y > now - years; y -= 1) {
-      const rows = await ldaClientYear(db, client, y).catch(() => []);
-      filings.push(...rows.map((row) => withLag({ ...row, symbol: ticker.symbol })));
+      const res = await ldaClientYear(db, client, y);
+      if (res.down) gaps.push({ client, year: y, stale: Boolean(res.rows), down: res.down });
+      if (res.storedAt && (!asOf || res.storedAt < asOf)) asOf = res.storedAt;
+      filings.push(...(res.rows || []).map((row) => withLag({ ...row, symbol: ticker.symbol })));
     }
   }
   const seen = new Set();
@@ -23,8 +31,9 @@ export async function lobbyingFor(db, ticker, years = 5) {
   return {
     ok: true,
     source: "LDA.gov (Senate / House Lobbying Disclosure Act filings)",
-    asOf: new Date().toISOString(),
+    asOf: asOf || new Date().toISOString(),
     latency: "Quarterly LD-2 reports are due 20 days after quarter end; lag shows posted date minus period end. Amount is fee income for outside firms or expenses for in-house filers.",
+    ...(gaps.length ? { unavailable: gaps.map((g) => `${g.client} ${g.year}: ${ldaDownLabel(g.down)}${g.stale ? " (showing the last stored copy)" : ""}`) } : {}),
     byYear,
     filings: unique
   };
@@ -39,15 +48,29 @@ function withLag(row) {
   return { ...row, periodEnd, lag: Math.round((Date.parse(row.posted) - Date.parse(periodEnd)) / DAY) };
 }
 
+/**
+ * `{ rows, storedAt }` for one client-year, or `{ rows: stale | null, down }` when LDA.gov failed within LDA_DOWN_MS.
+ * `storedAt` is when the rows were fetched (ISO).
+ */
 async function ldaClientYear(db, client, year) {
   const key = KEY.ldaYear(client, year);
-  const hit = readCache(db, key);
-  if (hit) return hit;
+  const now = new Date().getUTCFullYear();
+  const { value, staleAt, down } = await throughCache(db, key, {
+    ttlMs: year < now - 1 ? 30 * DAY : 12 * HOUR,
+    downMs: LDA_DOWN_MS,
+    timeoutMs: PAGE_TIMEOUT,
+    load: () => fetchClientYear(client, year)
+  });
+  const stored = down ? staleAt : readStale(db, key)?.storedAt;
+  return { rows: value, storedAt: stored ? new Date(stored).toISOString() : "", down };
+}
+
+async function fetchClientYear(client, year) {
   const want = client.toUpperCase().replace(/[.,]/g, "");
   const rows = [];
   let url = `https://lda.gov/api/v1/filings/?client_name=${encodeURIComponent(client)}&filing_year=${year}&page_size=25`;
   for (let page = 0; url && page < 8; page += 1) {
-    const body = await fetchJson(url, { headers: { Authorization: `Token ${process.env.LDA_API_KEY}` } }, 30000);
+    const body = await fetchJson(url, { headers: { Authorization: `Token ${process.env.LDA_API_KEY}` } }, PAGE_TIMEOUT);
     for (const f of body.results || []) {
       const name = String(f.client?.name || "").toUpperCase().replace(/[.,]/g, "");
       if (!name.startsWith(want) && !name.includes(want)) continue;
@@ -72,8 +95,6 @@ async function ldaClientYear(db, client, year) {
     }
     url = body.next;
   }
-  const now = new Date().getUTCFullYear();
-  writeCache(db, key, rows, year < now - 1 ? 30 * DAY : 12 * HOUR);
   return rows;
 }
 

@@ -1,39 +1,50 @@
 import { fetchJson } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
+import { etTime, throughCache } from "./lib/cache.mjs";
+import { HOUR } from "./lib/time.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 
 const TTL = 30 * 60 * 1000;
+const LDA_TIMEOUT = 45000;
+/** After an LDA.gov failure for a query, callers get the stale copy or the "unavailable" label for this long. */
+export const LDA_DOWN_MS = 6 * HOUR;
 
 export async function lobbyingForClient(db, clientName) {
   const apiKey = process.env.LDA_API_KEY || "";
   if (!apiKey) return { ok: false, missing: "LDA_API_KEY", filings: [] };
-  const cacheKey = KEY.lda(clientName);
-  const hit = readCache(db, cacheKey);
-  if (hit) return hit;
-  const url = new URL("https://lda.gov/api/v1/filings/");
-  url.searchParams.set("client_name", clientName);
-  url.searchParams.set("filing_year", String(new Date().getUTCFullYear()));
-  const body = await fetchJson(url, { headers: { Authorization: `Token ${apiKey}` } }, 45000);
-  const filings = (body.results || []).map((f) => ({
-    id: f.filing_uuid,
-    client: f.client?.name || clientName,
-    registrant: f.registrant?.name || "",
-    income: f.income,
-    expenses: f.expenses,
-    type: f.filing_type_display || f.filing_type || "",
-    posted: f.dt_posted || "",
-    year: f.filing_year
-  }));
-  filings.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
-  filings.splice(8);
-  const result = {
-    ok: true,
-    source: "LDA.gov",
-    asOf: new Date().toISOString(),
-    filings
-  };
-  writeCache(db, cacheKey, result, TTL);
-  return result;
+  const { value, staleAt, down } = await throughCache(db, KEY.lda(clientName), {
+    ttlMs: TTL,
+    downMs: LDA_DOWN_MS,
+    timeoutMs: LDA_TIMEOUT,
+    load: async () => {
+      const url = new URL("https://lda.gov/api/v1/filings/");
+      url.searchParams.set("client_name", clientName);
+      url.searchParams.set("filing_year", String(new Date().getUTCFullYear()));
+      const body = await fetchJson(url, { headers: { Authorization: `Token ${apiKey}` } }, LDA_TIMEOUT);
+      const filings = (body.results || []).map((f) => ({
+        id: f.filing_uuid,
+        client: f.client?.name || clientName,
+        registrant: f.registrant?.name || "",
+        income: f.income,
+        expenses: f.expenses,
+        type: f.filing_type_display || f.filing_type || "",
+        posted: f.dt_posted || "",
+        year: f.filing_year
+      }));
+      filings.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
+      filings.splice(8);
+      return { ok: true, source: "LDA.gov", asOf: new Date().toISOString(), filings };
+    }
+  });
+  if (!down) return value;
+  const label = ldaDownLabel(down);
+  if (value) return { ...value, stale: true, note: `${label}; showing filings fetched ${staleAt.slice(0, 16).replace("T", " ")} UTC` };
+  return { ok: false, source: "LDA.gov", unavailable: true, error: label, retryAt: down.retryAt, filings: [] };
+}
+
+/** "lobbying unavailable — LDA.gov timed out after 45 s at 01:23 ET; next try after 07:23 ET". */
+export function ldaDownLabel(down) {
+  return `lobbying unavailable — LDA.gov ${down.why} at ${etTime(down.at)}; next try after ${etTime(down.retryAt)}`;
 }
 
 export async function fecForName(db, name) {

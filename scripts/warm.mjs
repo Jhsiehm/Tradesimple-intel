@@ -11,6 +11,7 @@ const BASE = flag("base", process.env.INTEL_API || "http://127.0.0.1:8787").repl
 const TRADERS = Number(flag("traders", 50));
 const TICKERS = !args.includes("--no-tickers");
 const TIMEOUT = Number(flag("timeout", 180)) * 1000;
+const LOBBY_CONCURRENCY = 2;
 
 const results = [];
 
@@ -113,9 +114,16 @@ async function main() {
   await pool((supply?.items || []).map((s) => fillRoute("markets.supplyChain", { symbol: s })), 3);
 
   if (TICKERS) {
-    const symbols = (tickers?.items || []).map((t) => t.symbol);
-    console.log(`— ${symbols.length} ticker dossiers + positions`);
-    await pool(symbols.flatMap((s) => [fillRoute("ticker", { symbol: s }), fillRoute("markets.position", { symbol: s })]), 2);
+    const rows = tickers?.items || [];
+    const symbols = rows.map((t) => t.symbol);
+    // Same split as the UI: the dossier skips LDA.gov (?lobby=0) and /api/lobby?client= loads it on its own.
+    // LDA.gov can hang for 45 s per client, so its warm runs beside the dossiers instead of inside them.
+    const clients = [...new Set(rows.map((t) => t.ldaClients?.[0] || t.name).filter(Boolean))];
+    console.log(`— ${symbols.length} ticker dossiers + positions · ${clients.length} LDA clients alongside`);
+    await Promise.all([
+      pool(symbols.flatMap((s) => [fillRoute("ticker", { symbol: s }, "lobby=0"), fillRoute("markets.position", { symbol: s })]), 2),
+      pool(clients.map((c) => fillRoute("lobby", {}, `client=${enc(c)}`)), LOBBY_CONCURRENCY)
+    ]);
   }
 
   const total = results.length;
