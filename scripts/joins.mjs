@@ -3,7 +3,7 @@
 //   node scripts/joins.mjs [--count 75] [--refresh]
 import fs from "node:fs";
 import { fecBulk } from "../server/corporate.mjs";
-import { districtCode, ldaMatches, norm, pacsByOrg } from "./joins-match.mjs";
+import { districtCode, ldaMatches, norm, pacsByOrg } from "../shared/names.mjs";
 
 const FILE = new URL("../data/tickers.json", import.meta.url);
 const ENV = new URL("../.env.local", import.meta.url);

@@ -2,7 +2,7 @@ import { fetchJsonRetry, fetchText, usaspendingGate } from "./http.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./db.mjs";
 import { roster } from "./roster.mjs";
 import { contractsFor } from "./corporate.mjs";
-import { norm } from "../scripts/joins-match.mjs";
+import { norm } from "../shared/names.mjs";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;

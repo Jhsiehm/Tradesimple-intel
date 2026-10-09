@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contractParentMatch, districtCode, ldaMatches, norm, pacsByOrg } from "../scripts/joins-match.mjs";
+import { contractParentMatch, districtCode, ldaMatches, norm, pacsByOrg } from "../shared/names.mjs";
 import { matchSeats } from "../server/congress.mjs";
 import { coverage } from "../server/positions.mjs";
 

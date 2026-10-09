@@ -17,9 +17,7 @@ const FORBIDDEN = {
 };
 
 // Known violations awaiting a fix. Entries may only be removed.
-const ALLOWLIST = new Set([
-  "server/contracts.mjs -> scripts/joins-match.mjs",
-]);
+const ALLOWLIST = new Set([]);
 
 // Files already over the line budget. This set may only shrink.
 const MAX_LINES = 600;

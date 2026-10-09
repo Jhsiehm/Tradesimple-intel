@@ -3,7 +3,7 @@
 // Tokens come from each row's existing recipients, its company name, and the curated ALIASES below.
 //   node scripts/contract-parents.mjs [--only LMT,RTX]
 import fs from "node:fs";
-import { contractParentMatch, norm } from "./joins-match.mjs";
+import { contractParentMatch, norm } from "../shared/names.mjs";
 
 const FILE = new URL("../data/tickers.json", import.meta.url);
 const args = process.argv.slice(2);
