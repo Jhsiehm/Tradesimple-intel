@@ -10,6 +10,7 @@ export const MANIFEST = [
   { id: "health", path: "/api/health", snapshot: true },
   { id: "backtest", path: "/api/backtest" },
   { id: "backtest.replicate", path: "/api/backtest/replicate" },
+  { id: "backtest.search", path: "/api/backtest/search" },
   { id: "ask", path: "/api/ask" },
   { id: "tasks", path: "/api/tasks" },
   { id: "tasks.result", path: "/api/tasks/runs/:id(rn_[a-z0-9]+)" },

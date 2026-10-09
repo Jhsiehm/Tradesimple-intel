@@ -63,8 +63,19 @@ export const DEFAULT_FILTERS = {
   contractLagDays: 0,
   include10b51: false,
   excludeMembers: [],
-  spikePct: 50
+  spikePct: 50,
+  maxAmount: 0,
+  planOnly: false,
+  role: "",
+  clusterMin: 0,
+  awardWithinDays: 0
 };
+
+/** Form 4 insider roles the role filter understands, matched against the filer's title. */
+export const ROLES = { ceo: /chief executive|\bceo\b/i, cfo: /chief financial|\bcfo\b/i, director: /\bdirector\b/i };
+export const ROLE_LABEL = { ceo: "CEO", cfo: "CFO", director: "director" };
+/** Cluster buys: distinct insiders buying the same issuer within this many days, counted by filing date. */
+export const CLUSTER_DAYS = 30;
 
 const num = (v, lo, hi, fallback) => {
   const n = Number(v);
@@ -121,7 +132,12 @@ export function cleanFilters(raw) {
     contractLagDays: Math.round(num(f.contractLagDays, 0, 365, 0)),
     include10b51: Boolean(f.include10b51),
     excludeMembers: [...new Set((Array.isArray(f.excludeMembers) ? f.excludeMembers : String(f.excludeMembers || "").split(/[,;]+/)).map((x) => text(x, 60)).filter(Boolean))].slice(0, 10),
-    spikePct: Math.round(num(f.spikePct, 1, 10000, DEFAULT_FILTERS.spikePct))
+    spikePct: Math.round(num(f.spikePct, 1, 10000, DEFAULT_FILTERS.spikePct)),
+    maxAmount: Math.round(num(f.maxAmount, 0, LIMITS.minAmount, 0)),
+    planOnly: Boolean(f.planOnly),
+    role: pick(f.role, Object.keys(ROLES), ""),
+    clusterMin: Math.round(num(f.clusterMin, 0, 20, 0)),
+    awardWithinDays: Math.round(num(f.awardWithinDays, 0, 365, 0))
   };
 }
 
@@ -212,6 +228,13 @@ export function describeSpec(spec) {
     f.tickers.length ? `tickers ${f.tickers.slice(0, 6).join(", ")}${f.tickers.length > 6 ? "…" : ""}` : "",
     f.sector,
     f.minAmount ? `≥ ${fmtUsd(f.minAmount)}` : "",
+    f.maxAmount ? `< ${fmtUsd(f.maxAmount)}` : "",
+    f.maxLagDays ? `filed within ${f.maxLagDays} d of the trade` : "",
+    f.minLagDays ? `filed ${f.minLagDays}+ d after the trade` : "",
+    spec.source === "form4" && f.planOnly ? "10b5-1 plan trades only" : "",
+    spec.source === "form4" && f.role ? `${ROLE_LABEL[f.role]}s only` : "",
+    spec.source === "form4" && f.clusterMin ? `cluster buys (≥ ${f.clusterMin} insiders within ${CLUSTER_DAYS} d)` : "",
+    spec.source === "congress" && f.awardWithinDays ? `followed by a contract award to the company within ${f.awardWithinDays} d (award public by the disclosure)` : "",
     f.nearHearingDays ? `within ${f.nearHearingDays} d of a hearing` : "",
     f.excludeMembers?.length ? `excluding ${f.excludeMembers.join(", ")}` : "",
     spec.source === "form4" && f.include10b51 ? "10b5-1 plan trades included" : "",

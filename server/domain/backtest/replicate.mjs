@@ -24,6 +24,7 @@ export async function replicateSpec(db, raw, { run = runSpec } = {}) {
     spec: out.spec,
     description: out.description,
     stats: out.stats,
+    reality: out.reality || null,
     counts: out.counts,
     trades,
     calendarId,

@@ -1,6 +1,7 @@
 export const EXPECTED_KEYS: string[];
 export function toCsv(head: string[], rows: unknown[][]): string;
 export function expectedOf(stats: unknown): Record<string, number | null>;
+export function expectedRealityOf(reality: unknown): Record<string, number | null> | null;
 export type ReplicateFile = { name: string; mime: string; text: string };
 export function replicateFiles(rep: unknown): ReplicateFile[];
 export function methodsMd(rep: unknown): string;

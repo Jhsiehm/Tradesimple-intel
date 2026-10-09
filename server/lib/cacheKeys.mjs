@@ -51,6 +51,7 @@ export const KEY = {
   closes: (symbol) => `closes:v1:${symbol}`,
   bars: (symbol) => `bars:v2:${symbol}`,
   backtest: (hash) => `backtest:v5:${hash}`,
+  signalSearch: (hash) => `search:v1:${hash}`,
   fxBoard: "board:fx:v1",
   cryptoBoard: "board:crypto:v1",
   geckoMarkets: "gecko:markets:v1",

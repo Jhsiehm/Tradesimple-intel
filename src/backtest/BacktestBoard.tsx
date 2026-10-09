@@ -5,6 +5,7 @@ import type { StageList } from "../types";
 import { Icon } from "../ui/icons/Icon";
 import { BacktestForm } from "./BacktestForm";
 import { BacktestResults } from "./BacktestResults";
+import { SignalSearch } from "./SignalSearch";
 import { btHash, recentSpecs, seedSpec } from "./seed";
 import { useBacktest } from "./useBacktest";
 import "./backtest.css";
@@ -18,6 +19,7 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
   const [recent, setRecent] = useState<BacktestSpec[]>(() => recentSpecs());
   const bt = useBacktest();
   const started = useRef(false);
+  const scrollTop = useRef<HTMLDivElement>(null);
   const run = bt.run;
 
   const go = useCallback((next: BacktestSpec) => {
@@ -69,7 +71,7 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
         </div>
         <p className="bt-sentence" aria-live="polite">{describeSpec(spec)}</p>
       </header>
-      <div className="board-scroll bt-body">
+      <div className="board-scroll bt-body" ref={scrollTop}>
         <div className="bt-ask">
           <span>Backtests are asked in the chat; this board is the expanded view of a run.</span>
           <button className="panels-btn" onClick={() => onFollow("ask:draft:Backtest ")}>Ask the chat to backtest…</button>
@@ -86,6 +88,7 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
         {done ? <BacktestResults run={done} onFollow={(a) => { if (a) onFollow(a); }} onCopy={copy} copied={copied} /> : bt.state.phase === "idle" ? (
           <p className="bt-empty">Pick signals and rules, then run. Nothing here is an order, a recommendation, or a forecast.</p>
         ) : null}
+        <SignalSearch holdDays={spec.rules.holdDays} benchmark={spec.rules.benchmark} onOpen={(next) => { setSpec(next); go(next); scrollTop.current?.scrollTo({ top: 0, behavior: "smooth" }); }} />
       </div>
     </div>
   );

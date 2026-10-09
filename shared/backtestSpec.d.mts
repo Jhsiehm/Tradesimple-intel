@@ -30,6 +30,12 @@ export type BacktestFilters = {
   include10b51: boolean;
   excludeMembers: string[];
   spikePct: number;
+  /** Upper bound (exclusive) on the disclosed amount's low end (congress) or the Form 4 value; 0 = none. */
+  maxAmount: number;
+  planOnly: boolean;
+  role: "" | "ceo" | "cfo" | "director";
+  clusterMin: number;
+  awardWithinDays: number;
 };
 export type BacktestSpec = { source: BacktestSource; filters: BacktestFilters; rules: BacktestRules };
 
@@ -42,6 +48,9 @@ export const BENCHMARK_LABEL: Record<string, string>;
 export const LIMITS: { holdDays: [number, number]; pct: [number, number]; bps: [number, number]; hearingDays: [number, number]; signals: number; tickers: number; minAmount: number };
 export const DEFAULT_RULES: BacktestRules;
 export const DEFAULT_FILTERS: BacktestFilters;
+export const ROLES: Record<"ceo" | "cfo" | "director", RegExp>;
+export const ROLE_LABEL: Record<"ceo" | "cfo" | "director", string>;
+export const CLUSTER_DAYS: number;
 export function cleanRules(raw: unknown): BacktestRules;
 export function cleanFilters(raw: unknown): BacktestFilters;
 export function cleanSpec(raw: unknown): { ok: true; spec: BacktestSpec } | { ok: false; error: string };

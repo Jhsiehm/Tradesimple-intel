@@ -4,6 +4,7 @@
  */
 import { amountMid, dayOf, isoOf } from "../../../shared/backtest.mjs";
 import { publicDateOf } from "../../../shared/disclosures.mjs";
+import { CLUSTER_DAYS, ROLES } from "../../../shared/backtestSpec.mjs";
 
 const inRange = (date, f) => (!f.from || date >= f.from) && (!f.to || date <= f.to);
 const lc = (v) => String(v || "").toLowerCase();
@@ -75,7 +76,15 @@ function excluded(f, person, bioguide) {
   });
 }
 
-export function congressSignals({ trades, filters: f, sectorOf, committee = null, lanes = new Map(), hearings = null }) {
+/**
+ * True when `symbol` got a contract action within `days` after the trade AND that action was public (action date plus
+ * the feed's posting lag) by the day the trade itself became public, so the rule could have been followed then.
+ */
+export function awardFollowed(awards, symbol, tradeDay, publicDay, days) {
+  return (awards?.get(symbol) || []).some((a) => a.day > tradeDay && a.day <= tradeDay + days && a.publicDay <= publicDay);
+}
+
+export function congressSignals({ trades, filters: f, sectorOf, committee = null, lanes = new Map(), hearings = null, awards = null }) {
   const dropped = {};
   const drop = (why) => { dropped[why] = (dropped[why] || 0) + 1; };
   const member = lc(f.member).trim();
@@ -96,6 +105,8 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     const publicDate = t.public || publicDateOf(t);
     if (!inRange(publicDate, f)) continue;
     if (f.minAmount && !(t.amountLow >= f.minAmount)) continue;
+    if (f.maxAmount && !(t.amountLow < f.maxAmount)) continue;
+    if (f.awardWithinDays && !awardFollowed(awards, t.symbol, dayOf(t.traded), dayOf(publicDate), f.awardWithinDays)) { drop("noAwardAfter"); continue; }
     if (f.minLagDays && !(t.lag >= f.minLagDays)) continue;
     if (f.maxLagDays && !(t.lag <= f.maxLagDays)) continue;
     let near = null;
@@ -127,6 +138,25 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
 
 const FORM4_SIDE = { buy: "buy", sell: "sell" };
 
+/** symbol → discretionary open-market buys as { day: filing day, person }. */
+function clusterIndex(rows) {
+  const out = new Map();
+  for (const r of rows) {
+    if (r.code !== "P" || r.plan || !r.symbol || !r.person) continue;
+    const day = dayOf(r.filed);
+    if (day == null) continue;
+    (out.get(r.symbol) || out.set(r.symbol, []).get(r.symbol)).push({ day, person: lc(r.person) });
+  }
+  return out;
+}
+
+/** Distinct insiders with a discretionary buy of `symbol` filed in the CLUSTER_DAYS up to and including `day`. */
+export function insidersBuying(index, symbol, day) {
+  const people = new Set();
+  for (const b of index.get(symbol) || []) if (b.day <= day && b.day > day - CLUSTER_DAYS) people.add(b.person);
+  return people.size;
+}
+
 /** Open-market Form 4 purchases and sales. Rows flagged as a 10b5-1 plan are left out: they were scheduled, not decided. */
 export function form4Signals({ rows, filters: f, sectorOf }) {
   const dropped = {};
@@ -134,10 +164,15 @@ export function form4Signals({ rows, filters: f, sectorOf }) {
   const member = lc(f.member).trim();
   const seen = new Set();
   const signals = [];
+  const buyers = f.clusterMin ? clusterIndex(rows) : null;
   for (const r of rows) {
     const side = FORM4_SIDE[r.side];
     if (!side || (r.code !== "P" && r.code !== "S")) { drop("notOpenMarket"); continue; }
-    if (r.plan && !f.include10b51) { drop("plan10b5"); continue; }
+    if (f.planOnly && !r.plan) continue;
+    if (r.plan && !f.include10b51 && !f.planOnly) { drop("plan10b5"); continue; }
+    if (f.role && !ROLES[f.role].test(r.title || "")) continue;
+    if (f.maxAmount && !(r.value < f.maxAmount)) continue;
+    if (buyers && !(side === "buy" && insidersBuying(buyers, r.symbol, dayOf(r.filed)) >= f.clusterMin)) continue;
     if (!r.symbol) { drop("noTicker"); continue; }
     if (!r.filed || !r.traded) { drop("noDates"); continue; }
     if (f.tickers.length && !f.tickers.includes(r.symbol)) continue;

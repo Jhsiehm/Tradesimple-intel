@@ -71,6 +71,33 @@ export function backtestFormulas(run) {
     "\\text{Sharpe} \\approx \\frac{\\overline{R}}{\\sigma_R} \\sqrt{252},\\qquad \\sigma_R = \\sqrt{\\tfrac{1}{T-1} \\sum_t (R_t - \\overline{R})^2}",
     s.dailySd ? `\\frac{${fix(s.dailyMean, 6)}}{${fix(s.dailySd, 6)}} \\times ${fix(Math.sqrt(252), 4)} = ${fix(s.sharpeish, 2)}` : "\\text{n/a}",
     "Risk-free rate taken as 0; a rough score on a short, overlapping sample.");
+  const q = run.reality;
+  if (q?.bootstrap) {
+    const b = q.bootstrap;
+    add("bootstrap", "Block-bootstrap 95% interval",
+      "\\bar e^{*(b)} = \\frac{\\sum_{j=1}^{W} \\sum_{i \\in w^{*}_{j}} e_i}{\\sum_{j=1}^{W} |w^{*}_{j}|},\\quad w^{*}_{j} \\sim \\text{Uniform}\\{w_1,\\dots,w_W\\},\\qquad \\text{CI} = \\big[\\bar e^{*}_{(0.025)},\\ \\bar e^{*}_{(0.975)}\\big]",
+      `W = ${b.blocks}\\ \\text{entry weeks},\\ B = ${b.iters}:\\ \\bar r \\in [${pct(b.meanTrade.lo)}, ${pct(b.meanTrade.hi)}],\\ \\bar e \\in [${pct(b.meanExcess.lo)}, ${pct(b.meanExcess.hi)}]`,
+      `Whole entry weeks (Monday-based) are resampled with replacement, so trades bunched in one week stay together. Seed ${q.seed} (mulberry32); the Replicate scripts draw the same sequence.`);
+  }
+  if (q?.placebo) {
+    const p = q.placebo;
+    const span = p.window?.tradingDays;
+    add("placebo", "Random-entry placebo",
+      "p = \\frac{1 + \\#\\{k : \\bar e^{\\text{rand}}_k \\ge \\bar e\\}}{K + 1},\\qquad \\text{pct} = \\frac{\\#\\{k : \\bar e^{\\text{rand}}_k < \\bar e\\}}{K}",
+      `\\bar e = ${pct(p.actual)},\\ K = ${p.iters},\\ \\text{placebo mean } ${pct(p.placeboMean)}\\ \\Rightarrow\\ \\text{pct} = ${pct(p.pct, 1)},\\ p = ${fix(p.p)}`,
+      `Each trade keeps its ticker, side, benchmark and exit rules; its public date is redrawn from the ${span} trading days between the first and last real public date (up to 10 draws until the trade completes). Prices end at the last real exit. Seed ${p.seed}.`);
+  }
+  if (q?.cluster && q.cluster.t != null) {
+    const c = q.cluster;
+    add("cluster", "t-statistic clustered by member",
+      "\\text{SE}_{\\text{cl}} = \\frac{1}{N} \\sqrt{\\frac{G}{G-1} \\sum_{g=1}^{G} \\Big( \\sum_{i \\in g} (e_i - \\bar e) \\Big)^2},\\qquad t = \\frac{\\bar e}{\\max(\\text{SE}_{\\text{cl}},\\, \\text{SE}_{\\text{iid}})},\\ \\ \\text{df} = G - 1",
+      `G = ${c.members},\\ \\text{SE}_{\\text{cl}} = ${fix(c.seCluster ?? c.se)},\\ \\text{SE}_{\\text{iid}} = ${fix(c.seIid)}:\\ t = \\frac{${fix(q.bootstrap?.meanExcess.mean ?? null)}}{${fix(c.se)}} = ${fix(c.t, 2)},\\ p_{\\text{two-sided}} = ${fix(c.pTwo)}`,
+      "Trades by the same person are not independent; this standard error lets them move together. With few or very unequal members the clustered SE can come out too small, so the larger of the two is used. With few members the t distribution is wide.");
+    add("neff", "Effective sample size",
+      "N_{\\text{eff}} = \\min_{c \\in \\{\\text{member},\\,\\text{week}\\}} N \\left( \\frac{\\text{SE}_{\\text{iid}}}{\\text{SE}_{c}} \\right)^{2},\\qquad \\text{SE}_{\\text{iid}} = \\frac{s_e}{\\sqrt N}",
+      `N = ${q.n},\\ \\text{SE}_{\\text{iid}} = ${fix(c.seIid)} \\Rightarrow N_{\\text{eff}} \\approx ${c.nEff ?? "n/a"}`,
+      `${c.members} members and ${c.weeks} entry weeks. A design-effect estimate: how many independent trades would carry the same information.`);
+  }
   return out;
 }
 

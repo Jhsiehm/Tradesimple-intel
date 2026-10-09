@@ -16,6 +16,7 @@ import { runMarketSnapshot } from "./marketTool.mjs";
 import { runWorldMarkets } from "./worldTool.mjs";
 import { runWebFetch, runWebSearch } from "./webTool.mjs";
 import { REGION_IDS } from "../../shared/worldMarkets.mjs";
+import { searchSignalsTool } from "./searchTool.mjs";
 
 const handlers = { ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest };
 
@@ -103,7 +104,8 @@ export function summarizeBacktest(out) {
     source: (out.feeds || []).map((f) => f.source).filter(Boolean).join(" · ") || out.source,
     asOf: out.asOf,
     latency: out.latency,
-    cache: out.cache
+    cache: out.cache,
+    isItReal: out.reality ? { verdict: out.reality.verdict?.text, excessCI95Lo: out.reality.bootstrap?.meanExcess.lo ?? null, excessCI95Hi: out.reality.bootstrap?.meanExcess.hi ?? null, placeboBeatShare: out.reality.placebo?.pct ?? null, placeboP: out.reality.placebo?.p ?? null, clusteredT: out.reality.cluster?.t ?? null, effectiveTrades: out.reality.cluster?.nEff ?? null } : null
   };
 }
 
@@ -341,6 +343,7 @@ export const TOOLS = [
     const out = await btSlot(() => call(db, "backtest", {}, qs({ spec: JSON.stringify(a.spec) })));
     return summarizeBacktest(out);
   }, "Backtest"),
+  searchSignalsTool,
   tool("propose_theory", "Propose a link between two things as the user's own theory. Writes nothing: the user sees it and may accept it into their map. Not a filing and not evidence.", obj({
     a: endpoint,
     b: endpoint,

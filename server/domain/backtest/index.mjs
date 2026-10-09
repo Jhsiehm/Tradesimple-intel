@@ -1,4 +1,5 @@
 import { runBacktest } from "../../../shared/backtest.mjs";
+import { REALITY, realityCheck } from "../../../shared/backtestStats.mjs";
 import { BENCHMARKS, BENCHMARK_LABEL, DEFAULT_FILTERS, DEFAULT_RULES, LIMITS, SECTOR_ETF, SOURCES, SOURCE_LABEL, cleanSpec, describeSpec, specHash } from "../../../shared/backtestSpec.mjs";
 import { readCache, writeCache } from "../../lib/db.mjs";
 import { KEY } from "../../lib/cacheKeys.mjs";
@@ -30,30 +31,14 @@ export async function backtestOptions(db) {
 const iso = (ms) => new Date(ms).toISOString();
 
 /**
- * Run one spec. Cached by spec hash (30 min) only when every price was in hand. Capped signals, a symbol cap,
- * and a wall-clock budget bound the run; what did not finish is counted in the caveats, never dropped silently.
+ * The run's caps: the LIMITS.signals most recently public signals on the traded side(s), then the MAX_SYMBOLS
+ * tickers with the most signals. Untraded sides go first so (mostly) insider sells cannot fill a buys-only cap.
  */
-export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = loadBars, now = Date.now() } = {}) {
-  const cleaned = cleanSpec(raw);
-  if (!cleaned.ok) return { ok: false, error: cleaned.error, missing: "" };
-  const spec = cleaned.spec;
-  const hash = specHash(spec);
-  const hit = readCache(db, KEY.backtest(hash));
-  if (hit) return { ...hit, cache: "hit" };
-  const t0 = Date.now();
-  const deadline = t0 + budgetMs;
-
-  // Sources that read filings one by one (Form 4) get part of the budget; prices need the rest.
-  const src = await SOURCE_FNS[spec.source](db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
-  if (src.error) return { ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) };
-  const tSignals = Date.now();
-
-  let signals = src.signals;
-  const uncapped = signals.length;
-  signals = [...signals].sort((a, b) => String(b.signalDate).localeCompare(String(a.signalDate))).slice(0, LIMITS.signals);
-  const notes = [...(src.context.notes || [])];
-  if (uncapped > signals.length) notes.push({ level: "warn", id: "cap", text: `${uncapped} signals matched; only the ${signals.length} most recently made public are run (cap ${LIMITS.signals}).` });
-
+export function capSignals(input, sides = "both") {
+  const notes = [];
+  const all = sides === "both" ? input : input.filter((s) => s.side === sides);
+  let signals = [...all].sort((a, b) => String(b.signalDate).localeCompare(String(a.signalDate))).slice(0, LIMITS.signals);
+  if (all.length > signals.length) notes.push({ level: "warn", id: "cap", text: `${all.length} signals matched; only the ${signals.length} most recently made public are run (cap ${LIMITS.signals}).` });
   const counts = new Map();
   for (const s of signals) counts.set(s.symbol, (counts.get(s.symbol) || 0) + 1);
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([s]) => s);
@@ -63,6 +48,33 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     signals = signals.filter((s) => !dropSet.has(s.symbol));
     notes.push({ level: "warn", id: "symcap", text: `${ranked.length} distinct tickers matched; the ${MAX_SYMBOLS} with the most signals are priced (${dropSet.size} dropped).` });
   }
+  return { signals, symbols, notes };
+}
+
+/**
+ * Run one spec. Cached by spec hash (30 min) only when every price was in hand. Capped signals, a symbol cap,
+ * and a wall-clock budget bound the run; what did not finish is counted in the caveats, never dropped silently.
+ */
+export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = loadBars, now = Date.now() } = {}) {
+  const cleaned = cleanSpec(raw);
+  if (!cleaned.ok) return { ok: false, error: cleaned.error, missing: "" };
+  const spec = cleaned.spec;
+  const hash = specHash(spec);
+  const hit = readCache(db, KEY.backtest(hash));
+  if (hit && hit.realityVersion === REALITY.version) return { ...hit, cache: "hit" };
+  const t0 = Date.now();
+  const deadline = t0 + budgetMs;
+
+  // Sources that read filings one by one (Form 4) get part of the budget; prices need the rest.
+  const src = await SOURCE_FNS[spec.source](db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
+  if (src.error) return { ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) };
+  const tSignals = Date.now();
+
+  const uncapped = src.signals.length;
+  const capped = capSignals(src.signals, spec.rules.sides);
+  const signals = capped.signals;
+  const symbols = capped.symbols;
+  const notes = [...(src.context.notes || []), ...capped.notes];
   const benchIds = new Set(spec.rules.benchmark === "SECTOR" ? ["SPY", ...new Set(signals.map((s) => SECTOR_ETF[s.sector]).filter(Boolean))] : [spec.rules.benchmark]);
   const need = [...new Set([...symbols, ...benchIds])];
   const priced = await loadBarsFn(db, need, { deadline });
@@ -84,6 +96,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     rules: spec.rules,
     context: { ...src.context, notes, unpriced: pendingSyms }
   });
+  const reality = result.stats ? realityCheck({ trades: result.trades, bars: symbolBars, benchBars, rules: result.rules }) : null;
   const tEngine = Date.now();
   const last = lastBarDay({ ...symbolBars, ...benchBars });
   const feeds = [
@@ -99,6 +112,8 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const complete = !pendingSyms.length && !src.building;
   const body = {
     ...result,
+    reality,
+    realityVersion: REALITY.version,
     spec,
     description: describeSpec(spec),
     source: feeds.map((f) => f.source).filter(Boolean).join(" · "),

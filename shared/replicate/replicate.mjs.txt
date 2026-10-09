@@ -66,8 +66,14 @@ function barsBySymbol(rows) {
 
 /** First bar strictly after `day`, or -1. */
 function firstAfter(bars, day) {
-  const i = bars.findIndex((b) => b[0] > day);
-  return i;
+  let lo = 0;
+  let hi = bars.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (bars[mid][0] <= day) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo < bars.length ? lo : -1;
 }
 function lastOnOrBefore(bars, day) {
   const i = firstAfter(bars, day);
@@ -196,19 +202,190 @@ function replicate({ spec, trades, prices, benchmarks }) {
   };
 }
 
+/* ---------- "Is it real?": block bootstrap, random-entry placebo, clustered t (same seed, same draws as the app) ---------- */
+
+function mulberry32(seed) {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const weekOf = (day) => Math.floor((day + 3) / 7);
+function groupsOf(keys) {
+  const by = new Map();
+  keys.forEach((k, i) => { if (!by.has(k)) by.set(k, []); by.get(k).push(i); });
+  return [...by.values()];
+}
+
+/** Resample whole entry weeks with replacement; pooled mean of each series; 95% percentile interval. */
+function blockBootstrap(series, keys, iters, seed, alpha) {
+  const groups = groupsOf(keys);
+  const G = groups.length;
+  const sums = groups.map((idx) => series.map((xs) => sum(idx.map((i) => xs[i]))));
+  const rnd = mulberry32(seed);
+  const draws = series.map(() => []);
+  for (let b = 0; b < iters; b += 1) {
+    const acc = series.map(() => 0);
+    let n = 0;
+    for (let j = 0; j < G; j += 1) {
+      const k = Math.floor(rnd() * G);
+      for (let s = 0; s < series.length; s += 1) acc[s] += sums[k][s];
+      n += groups[k].length;
+    }
+    for (let s = 0; s < series.length; s += 1) draws[s].push(acc[s] / n);
+  }
+  return draws.map((d) => {
+    const s = [...d].sort((x, y) => x - y);
+    return { lo: s[Math.floor((alpha / 2) * iters)], hi: s[Math.ceil((1 - alpha / 2) * iters) - 1] };
+  });
+}
+
+const LANCZOS = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+function lnGamma(z) {
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  const x0 = z - 1;
+  let x = LANCZOS[0];
+  for (let i = 1; i < 9; i += 1) x += LANCZOS[i] / (x0 + i);
+  const t = x0 + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (x0 + 0.5) * Math.log(t) - t + Math.log(x);
+}
+function betaCf(a, b, x) {
+  const TINY = 1e-300;
+  let c = 1;
+  let d = 1 - ((a + b) * x) / (a + 1);
+  if (Math.abs(d) < TINY) d = TINY;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= 300; m += 1) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((a + m2 - 1) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+    c = 1 + aa / c; if (Math.abs(c) < TINY) c = TINY;
+    d = 1 / d; h *= d * c;
+    aa = (-(a + m) * (a + b + m) * x) / ((a + m2) * (a + m2 + 1));
+    d = 1 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+    c = 1 + aa / c; if (Math.abs(c) < TINY) c = TINY;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < 1e-14) break;
+  }
+  return h;
+}
+function betaInc(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const front = Math.exp(lnGamma(a + b) - lnGamma(a) - lnGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? (front * betaCf(a, b, x)) / a : 1 - (front * betaCf(b, a, 1 - x)) / b;
+}
+function tCdf(t, df) {
+  const tail = 0.5 * betaInc(df / (df + t * t), df / 2, 0.5);
+  return t > 0 ? 1 - tail : tail;
+}
+/** Mean over a standard error clustered by `keys`: sqrt(G/(G-1) * sum_g (sum_i in g (x_i - mean))^2) / n, floored at the iid SE. */
+function clusteredT(xs, keys) {
+  const n = xs.length;
+  const groups = groupsOf(keys);
+  const G = groups.length;
+  const m = sum(xs) / n;
+  const seIid = Math.sqrt(sum(xs.map((x) => (x - m) ** 2)) / (n - 1)) / Math.sqrt(n);
+  if (G < 2) return { t: null, pTwo: null, se: null, seIid };
+  const se = Math.sqrt((G / (G - 1)) * sum(groups.map((idx) => sum(idx.map((i) => xs[i] - m)) ** 2))) / n;
+  // Conservative: the t uses max(clustered, iid) SE; few or unequal clusters can make the clustered one too small.
+  const used = Math.max(se, seIid);
+  if (!(used > 0)) return { t: null, pTwo: null, se, seIid };
+  const t = m / used;
+  return { t, pTwo: 2 * (1 - tCdf(Math.abs(t), G - 1)), se, seIid };
+}
+
+/** Each trade keeps ticker, side, benchmark and rules; its public date is a random trading day of the run's window. */
+function placebo(trades, bars, benchBars, rules, calendar, iters, seed, draws) {
+  const signalDays = trades.map((t) => dayOf(t.public_date));
+  const lo = Math.min(...signalDays);
+  const hi = Math.max(...signalDays);
+  const lastExit = Math.max(...trades.map((t) => dayOf(t.exit)));
+  const days = calendar.filter((b) => b[0] >= lo && b[0] <= hi).map((b) => b[0]);
+  if (days.length < 2) return null;
+  const cut = (s) => (s || []).filter((b) => b[0] <= lastExit);
+  const memo = new Map();
+  const legs = trades.map((t) => {
+    const k = `${t.symbol}|${t.side}|${t.benchmark}`;
+    if (!memo.has(k)) memo.set(k, new Map());
+    const bench = benchBars[t.benchmark] || (rules.benchmark === "SECTOR" ? benchBars.SPY : null);
+    return { cache: memo.get(k), series: cut(bars[t.symbol]), bench: cut(bench), sign: t.side === "sell" ? -1 : 1 };
+  });
+  const outcome = (leg, d) => {
+    if (!leg.cache.has(d)) {
+      const sim = leg.series.length && leg.bench.length ? simulate(leg.series, leg.bench, rules, d, leg.sign) : null;
+      leg.cache.set(d, sim ? sim.ret - sim.bench : null);
+    }
+    return leg.cache.get(d);
+  };
+  const rnd = mulberry32(seed);
+  const means = [];
+  for (let it = 0; it < iters; it += 1) {
+    let s = 0;
+    let n = 0;
+    for (const leg of legs) {
+      let got = null;
+      for (let k = 0; k < draws && got == null; k += 1) got = outcome(leg, days[Math.floor(rnd() * days.length)]);
+      if (got == null) continue;
+      s += got;
+      n += 1;
+    }
+    if (n) means.push(s / n);
+  }
+  const actual = sum(trades.map((t) => Number(t.excess))) / trades.length;
+  const below = means.filter((m) => m < actual).length;
+  return { pct: below / means.length, p: (1 + means.length - below) / (means.length + 1) };
+}
+
+function reality({ spec, trades, prices, benchmarks, settings }) {
+  const rules = spec.rules;
+  const rows = trades.filter((t) => t.ret !== "" && t.excess !== "");
+  const n = rows.length;
+  if (n < 2) return {};
+  const rets = rows.map((t) => Number(t.ret));
+  const ex = rows.map((t) => Number(t.excess));
+  const weeks = rows.map((t) => weekOf(dayOf(t.entry)));
+  const members = rows.map((t) => t.actor);
+  const [mt, me] = blockBootstrap([rets, ex], weeks, settings.bootIters, settings.seed, settings.alpha);
+  const byMember = clusteredT(ex, members);
+  const byWeek = clusteredT(ex, weeks);
+  const eff = (c) => (c.se > 0 && c.seIid > 0 ? Math.min(n, n * (c.seIid / c.se) ** 2) : null);
+  const effs = [eff(byMember), eff(byWeek)].filter((v) => v != null);
+  const benchBars = barsBySymbol(benchmarks);
+  const calendar = benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || [];
+  const pl = placebo(rows, barsBySymbol(prices), benchBars, rules, calendar, settings.placeboIters, settings.seed + 1, settings.draws);
+  return {
+    meanTradeLo: r4(mt.lo), meanTradeHi: r4(mt.hi), meanExcessLo: r4(me.lo), meanExcessHi: r4(me.hi),
+    placeboPct: pl ? r4(pl.pct) : null, placeboP: pl ? r4(pl.p) : null,
+    clusterT: r4(byMember.t), clusterPTwo: r4(byMember.pTwo), nEff: effs.length ? Math.max(1, Math.round(Math.min(...effs))) : null
+  };
+}
+
 {
   const meta = JSON.parse(read("spec.json"));
-  const got = replicate({
+  const files = {
     spec: meta.spec,
     trades: parseCsv(read("trades.csv")),
     prices: parseCsv(read("prices.csv")),
     benchmarks: parseCsv(read("benchmark.csv"))
-  });
+  };
+  const got = replicate(files);
   const want = meta.expected || {};
+  if (meta.realitySettings && meta.expectedReality) {
+    Object.assign(got, reality({ ...files, settings: meta.realitySettings }));
+    Object.assign(want, meta.expectedReality);
+  }
   const rows = Object.keys(got).map((k) => {
     const a = got[k];
     const b = want[k];
-    const same = a == null || b == null ? a == b : Math.abs(a - b) <= 1e-4 + 1e-9 || (k === "sharpeish" && Math.abs(a - b) <= 0.011);
+    const same = a == null || b == null ? a == b : Math.abs(a - b) <= 1e-4 + 1e-9 || (k === "sharpeish" && Math.abs(a - b) <= 0.011) || (k === "nEff" && Math.abs(a - b) <= 1);
     return { metric: k, replicated: a, app: b ?? null, match: same };
   });
   console.table(rows);

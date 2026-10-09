@@ -5,6 +5,7 @@
 Reads spec.json, trades.csv, prices.csv, benchmark.csv with pandas (or the csv module when pandas is not installed),
 prints the recomputed headline numbers next to the app's, and exits 1 if any differs by more than 0.0001.
 """
+import bisect
 import json
 import math
 import os
@@ -59,11 +60,16 @@ def bars_by_symbol(rows):
     return out
 
 
+_DAYS = {}
+
+
 def first_after(bars, day):
-    for i, b in enumerate(bars):
-        if b[0] > day:
-            return i
-    return -1
+    hit = _DAYS.get(id(bars))
+    if hit is None or hit[0] is not bars or len(hit[1]) != len(bars):
+        hit = (bars, [b[0] for b in bars])
+        _DAYS[id(bars)] = hit
+    i = bisect.bisect_right(hit[1], day)
+    return i if i < len(bars) else -1
 
 
 def last_on_or_before(bars, day):
@@ -196,11 +202,224 @@ def replicate(spec, trades, prices, benchmarks):
     }
 
 
+# ---------- "Is it real?": block bootstrap, random-entry placebo, clustered t (same seed, same draws as the app) ----------
+
+M32 = 0xFFFFFFFF
+
+
+def mulberry32(seed):
+    state = [seed & M32]
+
+    def rnd():
+        a = (state[0] + 0x6D2B79F5) & M32
+        state[0] = a
+        t = ((a ^ (a >> 15)) * (1 | a)) & M32
+        t = ((t + (((t ^ (t >> 7)) * (61 | t)) & M32)) & M32) ^ t
+        return ((t ^ (t >> 14)) & M32) / 4294967296
+
+    return rnd
+
+
+def plain_sum(xs):
+    # Left to right like JavaScript's reduce; Python 3.12's sum() compensates float error and would differ.
+    s = 0
+    for x in xs:
+        s += x
+    return s
+
+
+def week_of(day):
+    return (day + 3) // 7
+
+
+def groups_of(keys):
+    by = {}
+    for i, k in enumerate(keys):
+        by.setdefault(k, []).append(i)
+    return list(by.values())
+
+
+def block_bootstrap(series, keys, iters, seed, alpha):
+    groups = groups_of(keys)
+    G = len(groups)
+    sums = [[plain_sum([xs[i] for i in idx]) for xs in series] for idx in groups]
+    rnd = mulberry32(seed)
+    draws = [[] for _ in series]
+    for _ in range(iters):
+        acc = [0] * len(series)
+        n = 0
+        for _ in range(G):
+            k = int(rnd() * G)
+            for s in range(len(series)):
+                acc[s] += sums[k][s]
+            n += len(groups[k])
+        for s in range(len(series)):
+            draws[s].append(acc[s] / n)
+    out = []
+    for d in draws:
+        d = sorted(d)
+        out.append((d[math.floor(alpha / 2 * iters)], d[math.ceil((1 - alpha / 2) * iters) - 1]))
+    return out
+
+
+LANCZOS = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7]
+
+
+def ln_gamma(z):
+    if z < 0.5:
+        return math.log(math.pi / math.sin(math.pi * z)) - ln_gamma(1 - z)
+    x0 = z - 1
+    x = LANCZOS[0]
+    for i in range(1, 9):
+        x += LANCZOS[i] / (x0 + i)
+    t = x0 + 7.5
+    return 0.5 * math.log(2 * math.pi) + (x0 + 0.5) * math.log(t) - t + math.log(x)
+
+
+def beta_cf(a, b, x):
+    tiny = 1e-300
+    c = 1.0
+    d = 1 - (a + b) * x / (a + 1)
+    d = 1 / (tiny if abs(d) < tiny else d)
+    h = d
+    for m in range(1, 301):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((a + m2 - 1) * (a + m2))
+        d = 1 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1 / d
+        h *= d * c
+        aa = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1))
+        d = 1 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1) < 1e-14:
+            break
+    return h
+
+
+def beta_inc(x, a, b):
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    front = math.exp(ln_gamma(a + b) - ln_gamma(a) - ln_gamma(b) + a * math.log(x) + b * math.log(1 - x))
+    return front * beta_cf(a, b, x) / a if x < (a + 1) / (a + b + 2) else 1 - front * beta_cf(b, a, 1 - x) / b
+
+
+def t_cdf(t, df):
+    tail = 0.5 * beta_inc(df / (df + t * t), df / 2, 0.5)
+    return 1 - tail if t > 0 else tail
+
+
+def clustered_t(xs, keys):
+    """Mean over a standard error clustered by keys: sqrt(G/(G-1) * sum_g (sum_i in g (x_i - mean))^2) / n, floored at the iid SE."""
+    n = len(xs)
+    groups = groups_of(keys)
+    G = len(groups)
+    m = plain_sum(xs) / n
+    se_iid = math.sqrt(plain_sum([(x - m) ** 2 for x in xs]) / (n - 1)) / math.sqrt(n)
+    if G < 2:
+        return {"t": None, "p": None, "se": None, "se_iid": se_iid}
+    se = math.sqrt(G / (G - 1) * plain_sum([plain_sum([xs[i] - m for i in idx]) ** 2 for idx in groups])) / n
+    # Conservative: the t uses max(clustered, iid) SE; few or unequal clusters can make the clustered one too small.
+    used = max(se, se_iid)
+    if not used > 0:
+        return {"t": None, "p": None, "se": se, "se_iid": se_iid}
+    t = m / used
+    return {"t": t, "p": 2 * (1 - t_cdf(abs(t), G - 1)), "se": se, "se_iid": se_iid}
+
+
+def placebo(trades, bars, bench_bars, rules, calendar, iters, seed, draws):
+    """Each trade keeps ticker, side, benchmark and rules; its public date is a random trading day of the run's window."""
+    signal_days = [day_of(t["public_date"]) for t in trades]
+    lo, hi = min(signal_days), max(signal_days)
+    last_exit = max(day_of(t["exit"]) for t in trades)
+    days = [b[0] for b in calendar if lo <= b[0] <= hi]
+    if len(days) < 2:
+        return None
+    memo = {}
+    cut_cache = {}
+
+    def cut(key, s):
+        if key not in cut_cache:
+            cut_cache[key] = [b for b in (s or []) if b[0] <= last_exit]
+        return cut_cache[key]
+
+    legs = []
+    for t in trades:
+        k = f"{t['symbol']}|{t['side']}|{t['benchmark']}"
+        bench = bench_bars.get(t["benchmark"]) or (bench_bars.get("SPY") if rules["benchmark"] == "SECTOR" else None)
+        legs.append((memo.setdefault(k, {}), cut("s:" + t["symbol"], bars.get(t["symbol"])), cut("b:" + t["benchmark"], bench), -1 if t["side"] == "sell" else 1))
+
+    def outcome(leg, d):
+        cache, series, bench, sign = leg
+        if d not in cache:
+            sim = simulate(series, bench, rules, d, sign) if series and bench else None
+            cache[d] = sim["ret"] - sim["bench"] if sim else None
+        return cache[d]
+
+    rnd = mulberry32(seed)
+    means = []
+    for _ in range(iters):
+        s, n = 0, 0
+        for leg in legs:
+            got = None
+            k = 0
+            while k < draws and got is None:
+                got = outcome(leg, days[int(rnd() * len(days))])
+                k += 1
+            if got is None:
+                continue
+            s += got
+            n += 1
+        if n:
+            means.append(s / n)
+    actual = plain_sum([float(t["excess"]) for t in trades]) / len(trades)
+    below = sum(1 for m in means if m < actual)
+    return {"pct": below / len(means), "p": (1 + len(means) - below) / (len(means) + 1)}
+
+
+def reality(spec, trades, prices, benchmarks, settings):
+    rules = spec["rules"]
+    rows = [t for t in trades if t["ret"] != "" and t["excess"] != ""]
+    n = len(rows)
+    if n < 2:
+        return {}
+    rets = [float(t["ret"]) for t in rows]
+    ex = [float(t["excess"]) for t in rows]
+    weeks = [week_of(day_of(t["entry"])) for t in rows]
+    members = [t["actor"] for t in rows]
+    (mt_lo, mt_hi), (me_lo, me_hi) = block_bootstrap([rets, ex], weeks, settings["bootIters"], settings["seed"], settings["alpha"])
+    by_member = clustered_t(ex, members)
+    by_week = clustered_t(ex, weeks)
+    effs = [min(n, n * (c["se_iid"] / c["se"]) ** 2) for c in (by_member, by_week) if c["se"] and c["se"] > 0 and c["se_iid"] > 0]
+    bench_bars = bars_by_symbol(benchmarks)
+    calendar = bench_bars.get("SPY" if rules["benchmark"] == "SECTOR" else rules["benchmark"], [])
+    pl = placebo(rows, bars_by_symbol(prices), bench_bars, rules, calendar, settings["placeboIters"], settings["seed"] + 1, settings["draws"])
+    return {
+        "meanTradeLo": r4(mt_lo), "meanTradeHi": r4(mt_hi), "meanExcessLo": r4(me_lo), "meanExcessHi": r4(me_hi),
+        "placeboPct": r4(pl["pct"]) if pl else None, "placeboP": r4(pl["p"]) if pl else None,
+        "clusterT": r4(by_member["t"]), "clusterPTwo": r4(by_member["p"]),
+        "nEff": max(1, math.floor(min(effs) + 0.5)) if effs else None,
+    }
+
+
 def main():
     with open(os.path.join(DIR, "spec.json"), encoding="utf-8") as f:
         meta = json.load(f)
-    got = replicate(meta["spec"], read_rows("trades.csv"), read_rows("prices.csv"), read_rows("benchmark.csv"))
+    files = (meta["spec"], read_rows("trades.csv"), read_rows("prices.csv"), read_rows("benchmark.csv"))
+    got = replicate(*files)
     want = meta.get("expected", {})
+    if meta.get("realitySettings") and meta.get("expectedReality"):
+        got.update(reality(*files, meta["realitySettings"]))
+        want.update(meta["expectedReality"])
     ok = True
     print(f"{'metric':<16}{'replicated':>14}{'app':>14}  match")
     for k, a in got.items():
@@ -208,7 +427,7 @@ def main():
         if a is None or b is None:
             same = a == b
         else:
-            same = abs(a - b) <= 1e-4 + 1e-9 or (k == "sharpeish" and abs(a - b) <= 0.011)
+            same = abs(a - b) <= 1e-4 + 1e-9 or (k == "sharpeish" and abs(a - b) <= 0.011) or (k == "nEff" and abs(a - b) <= 1)
         ok = ok and same
         print(f"{k:<16}{str(a):>14}{str(b):>14}  {'yes' if same else 'NO'}")
     print(json.dumps({"replicated": got, "app": want, "match": ok}))

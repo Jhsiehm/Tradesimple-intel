@@ -7,7 +7,8 @@ import { lobbyingFor } from "../corporate/index.mjs";
 import { committees } from "../../roster.mjs";
 import { indexStatus, indexedMeetings } from "../../timeline.mjs";
 import { contractFeed } from "../../contracts.mjs";
-import { contractSignals, congressSignals, form4Signals, hearingsByLane, lanesByMember, lobbySignals, matchCommittees } from "./signals.mjs";
+import { dayOf } from "../../../shared/backtest.mjs";
+import { CIVILIAN_LAG_DAYS, DOD_LAG_DAYS, contractSignals, congressSignals, form4Signals, hearingsByLane, lanesByMember, lobbySignals, matchCommittees } from "./signals.mjs";
 
 export function sectorLookup(db) {
   const bySymbol = new Map(listTickers(db).map((t) => [t.symbol, t.sector || ""]));
@@ -15,6 +16,22 @@ export function sectorLookup(db) {
 }
 
 const feed = (label, res, extra = {}) => ({ label, source: res?.source || "", asOf: res?.asOf || "", latency: res?.latency || "", ...extra });
+
+/**
+ * symbol → contract actions { day, publicDay } from USAspending's 100 largest actions of the last 365 days (the same
+ * sample the contracts source reads). publicDay adds the feed's posting lag: 90 days for Defense, 7 for civilian.
+ */
+export async function contractAwards(db, { feedFn = contractFeed } = {}) {
+  const res = await feedFn(db, { symbol: "", days: 365, sort: "largest" }).catch((err) => ({ ok: false, error: err.message, items: [] }));
+  const awards = new Map();
+  for (const r of res.items || []) {
+    const day = dayOf(r.date);
+    if (!r.symbol || day == null || !(r.amount > 0)) continue;
+    const lag = /defense/i.test(r.agency || "") ? DOD_LAG_DAYS : CIVILIAN_LAG_DAYS;
+    (awards.get(r.symbol) || awards.set(r.symbol, []).get(r.symbol)).push({ day, publicDay: day + lag });
+  }
+  return { awards, res, count: (res.items || []).length };
+}
 
 /** Congressional trades → signals. `error` is set when a filter cannot be honoured (unknown committee, hearing index missing). */
 export async function congressSource(db, f) {
@@ -44,7 +61,15 @@ export async function congressSource(db, f) {
       notes.push({ level: f.hearingKnown ? "info" : "warn", id: "hearing", text: f.hearingKnown ? "Near-hearing filter keeps only hearings dated on or before the filing date." : "Near-hearing filter may use hearings held after the filing date. That is selection on a future event: fine for description, not a rule anyone could have followed." });
     }
   }
-  const out = congressSignals({ trades: board.items, filters: f, sectorOf: sectorLookup(db), committee, lanes, hearings });
+  let awards = null;
+  if (f.awardWithinDays) {
+    const got = await contractAwards(db);
+    if (!got.count) return { error: got.res.error || "No contract actions came back from USAspending; the award filter needs them." };
+    awards = got.awards;
+    feeds.push(feed("Contracts", got.res));
+    notes.push({ level: "warn", id: "awardSample", text: `Award filter: a contract action to the same company within ${f.awardWithinDays} days after the trade, among USAspending's ${got.count} largest actions of the last 365 days (a sample of big awards, not every award), counted only when the award was public (action date + 90 days for Defense, + 7 civilian) by the day the trade was disclosed.` });
+  }
+  const out = congressSignals({ trades: board.items, filters: f, sectorOf: sectorLookup(db), committee, lanes, hearings, awards });
   const h = board.progress?.house;
   const s = board.progress?.senate;
   return {

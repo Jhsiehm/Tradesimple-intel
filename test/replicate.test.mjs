@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { runBacktest, dayOf } from "../shared/backtest.mjs";
 import { cleanRules } from "../shared/backtestSpec.mjs";
-import { replicateFiles, zipFiles, crc32, expectedOf } from "../shared/replicate.mjs";
+import { replicateFiles, zipFiles, crc32, expectedOf, expectedRealityOf } from "../shared/replicate.mjs";
+import { realityCheck } from "../shared/backtestStats.mjs";
 import { backtestFormulas, leadersFormulas } from "../shared/formulas.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -43,6 +44,7 @@ function fixture(ruleOverrides) {
   const rules = cleanRules(ruleOverrides);
   const benchBars = { SPY, XLK };
   const out = runBacktest({ signals, bars, benchBars, rules, calendar: SPY });
+  const reality = realityCheck({ trades: out.trades, bars, benchBars, rules: out.rules });
   const first = Math.min(...out.trades.map((t) => dayOf(t.signal))) - 10;
   const last = Math.max(...out.trades.map((t) => dayOf(t.exit)));
   const cut = (b) => b.filter((x) => x[0] >= first && x[0] <= last);
@@ -50,8 +52,9 @@ function fixture(ruleOverrides) {
   const benches = [...new Set([...out.trades.map((t) => t.benchmark), "SPY"])];
   return {
     out,
+    reality,
     rep: {
-      ok: true, spec: { source: "congress", filters: {}, rules }, description: "fixture", stats: out.stats, counts: out.counts, trades: out.trades,
+      ok: true, spec: { source: "congress", filters: {}, rules }, description: "fixture", stats: out.stats, reality, counts: out.counts, trades: out.trades,
       prices: used.map((symbol) => ({ symbol, bars: cut(bars[symbol]) })),
       benchmarks: benches.map((symbol) => ({ symbol, bars: cut(benchBars[symbol] || SPY) })),
       feeds: [{ label: "Prices", source: "fixture", asOf: "2026-10-09", latency: "none" }], priceSource: "fixture", priceAsOf: "2026-10-09", ranAt: "2026-10-09T00:00:00Z"
@@ -76,16 +79,18 @@ const CASES = [
 
 for (const [name, rules] of CASES) {
   test(`the generated Node script reproduces shared/backtest.mjs: ${name}`, () => {
-    const { out, rep } = fixture(rules);
+    const { out, rep, reality } = fixture(rules);
     assert.ok(out.stats.trades >= 10, "fixture has trades");
+    assert.ok(reality.placebo && reality.bootstrap, "fixture runs every check");
     const dir = writeFolder(rep);
     try {
       const res = lastJson(execFileSync(process.execPath, [join(dir, "replicate.mjs"), dir], { encoding: "utf8" }));
       assert.equal(res.match, true, JSON.stringify(res));
+      for (const [k, v] of Object.entries(expectedRealityOf(reality))) assert.equal(res.replicated[k], v, `reality ${k}`);
       for (const k of ["trades", "total", "benchmarkTotal", "excessTotal", "hitRate", "avgTrade", "medianTrade", "maxDrawdown", "spanDays"]) {
         assert.ok(Math.abs(res.replicated[k] - out.stats[k]) <= 1e-4, `${k}: ${res.replicated[k]} vs ${out.stats[k]}`);
       }
-      assert.deepEqual(res.app, expectedOf(out.stats));
+      assert.deepEqual(res.app, { ...expectedOf(out.stats), ...expectedRealityOf(reality) });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -95,7 +100,7 @@ for (const [name, rules] of CASES) {
 test("the generated Python script reproduces the same numbers (skipped without python3)", (t) => {
   const has = spawnSync("python3", ["--version"]);
   if (has.status !== 0) return t.skip("no python3");
-  const { out, rep } = fixture(CASES[0][1]);
+  const { out, rep, reality } = fixture(CASES[0][1]);
   const dir = writeFolder(rep);
   try {
     const res = spawnSync("python3", [join(dir, "replicate.py"), dir], { encoding: "utf8" });
@@ -103,6 +108,7 @@ test("the generated Python script reproduces the same numbers (skipped without p
     const j = lastJson(res.stdout);
     assert.equal(j.match, true);
     assert.equal(j.replicated.total, out.stats.total);
+    for (const [k, v] of Object.entries(expectedRealityOf(reality))) assert.equal(j.replicated[k], v, `python reality ${k}`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

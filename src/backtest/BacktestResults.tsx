@@ -4,6 +4,7 @@ import { Icon } from "../ui/icons/Icon";
 import { backtestFormulas } from "../../shared/formulas.mjs";
 import { EquityChart } from "./EquityChart";
 import { Formulas } from "./Formulas";
+import { IsItReal } from "./IsItReal";
 import { Replicate } from "./Replicate";
 import type { BtRun } from "./types";
 
@@ -57,9 +58,10 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
             <Tile label="Max drawdown" value={pts(s.maxDrawdown)} sub={`${bench}: ${pts(s.benchmarkMaxDrawdown)} · ${s.drawdownFrom} → ${s.drawdownTo}`} cls="down" />
             <Tile label="Sharpe-ish" value={s.sharpeish == null ? "—" : s.sharpeish.toFixed(2)} sub={`vol ${pc(s.volatility)} · IR-ish ${s.infoRatioish ?? "—"}`} title={s.sharpeNote} />
           </div>
+          <IsItReal reality={run.reality} />
           <EquityChart curve={run.curve} benchmark={bench} />
           <Formulas formulas={backtestFormulas(run)} />
-          <p className="bt-basis">{s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not.</p>
+          <p className="bt-basis">{s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not; the clustered t above does not.</p>
         </>
       )}
 

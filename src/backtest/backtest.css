@@ -107,3 +107,24 @@
 .rep code { color: var(--ink); }
 .bt-ask { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--dim); font-size: 12px; }
 .bt-manual > summary { cursor: pointer; color: var(--dim); font-size: 11px; margin: 4px 0; }
+
+/* Is it real? and Search */
+.bt-real { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; }
+.bt-real h3, .bt-search h3 { margin: 0; font-size: 12px; color: var(--ink); }
+.bt-real h3 small, .bt-search h3 small { color: var(--faint); font-weight: normal; margin-left: 6px; }
+.bt-verdict { margin: 0; font-size: 13px; color: var(--ink); line-height: 1.4; }
+.bt-verdict.up { color: var(--up, var(--cyan)); }
+.bt-verdict.down { color: var(--down, var(--amber)); }
+.bt-real dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 12px; font-size: 11px; }
+.bt-real dt { color: var(--faint); }
+.bt-real dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.bt-real.compact { padding: 6px 8px; }
+.bt-search { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.bt-search-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: var(--dim); }
+.bt-search-count { margin: 0; font-size: 13px; color: var(--ink); }
+.bt-search-count strong { font-size: 18px; margin-right: 4px; }
+.bt-search-count small { color: var(--dim); margin-left: 6px; }
+.bt-search-table td, .bt-search-table th { font-variant-numeric: tabular-nums; }
+.bt-search-table tr.pass td:first-child { box-shadow: inset 2px 0 0 var(--cyan); }
+.bt-search-table .tag { margin-left: 6px; }
+ul.bt-basis { margin: 0; padding-left: 16px; }

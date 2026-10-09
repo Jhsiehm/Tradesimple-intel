@@ -5,6 +5,7 @@
  */
 import { isoOf } from "./backtest.mjs";
 import { backtestFormulas } from "./formulas.mjs";
+import { REALITY } from "./backtestStats.mjs";
 
 export const EXPECTED_KEYS = ["trades", "total", "annualized", "benchmarkTotal", "excessTotal", "hitRate", "avgTrade", "medianTrade", "maxDrawdown", "sharpeish", "spanDays"];
 
@@ -16,6 +17,22 @@ export const toCsv = (head, rows) => [head.join(","), ...rows.map((r) => r.map(c
 
 export function expectedOf(stats) {
   return Object.fromEntries(EXPECTED_KEYS.map((k) => [k, stats?.[k] ?? null]));
+}
+
+/** The "Is it real?" numbers the scripts recompute, flat. */
+export function expectedRealityOf(r) {
+  if (!r?.bootstrap) return null;
+  return {
+    meanTradeLo: r.bootstrap.meanTrade.lo,
+    meanTradeHi: r.bootstrap.meanTrade.hi,
+    meanExcessLo: r.bootstrap.meanExcess.lo,
+    meanExcessHi: r.bootstrap.meanExcess.hi,
+    placeboPct: r.placebo?.pct ?? null,
+    placeboP: r.placebo?.p ?? null,
+    clusterT: r.cluster?.t ?? null,
+    clusterPTwo: r.cluster?.pTwo ?? null,
+    nEff: r.cluster?.nEff ?? null
+  };
 }
 
 const barsCsv = (series, source, asOf) => toCsv(
@@ -30,6 +47,10 @@ export function replicateFiles(rep) {
     spec: rep.spec,
     description: rep.description,
     expected: expectedOf(rep.stats),
+    ...(expectedRealityOf(rep.reality) ? {
+      expectedReality: expectedRealityOf(rep.reality),
+      realitySettings: { seed: rep.reality.seed, bootIters: rep.reality.bootstrap.iters, placeboIters: REALITY.placeboIters, draws: REALITY.draws, alpha: REALITY.alpha }
+    } : {}),
     counts: rep.counts,
     window: rep.window || null,
     sources: (rep.feeds || []).map((f) => ({ label: f.label, source: f.source, asOf: f.asOf, latency: f.latency })),
@@ -51,7 +72,7 @@ export function replicateFiles(rep) {
 
 export function methodsMd(rep) {
   const s = rep.stats || {};
-  const f = backtestFormulas({ stats: s, rules: rep.spec?.rules, trades: rep.trades });
+  const f = backtestFormulas({ stats: s, rules: rep.spec?.rules, trades: rep.trades, reality: rep.reality });
   const lines = [
     "# Backtest replication",
     "",
@@ -64,6 +85,7 @@ export function methodsMd(rep) {
     "- `trades.csv` — each trade the run used: public date (filing/posting), entry, exit, prices, return, benchmark leg, weight.",
     "- `prices.csv` / `benchmark.csv` — daily bars the engine read (adjusted open and close), with source and as-of.",
     "- `replicate.mjs` (Node 18+, no packages) and `replicate.py` (Python 3, pandas optional) recompute the headline numbers from the CSVs and exit 1 on any mismatch over 0.0001.",
+    "- Both scripts also recompute the \"Is it real?\" checks (block-bootstrap intervals, random-entry placebo, clustered t, effective sample) with the same seed and draw order (`realitySettings` in spec.json), so they match the app exactly.",
     "",
     "## Run",
     "```",

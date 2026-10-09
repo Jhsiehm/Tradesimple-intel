@@ -4,6 +4,7 @@ import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import { backtestFormulas } from "../../shared/formulas.mjs";
 import { EquityChart } from "../backtest/EquityChart";
 import { Formulas } from "../backtest/Formulas";
+import { IsItReal } from "../backtest/IsItReal";
 import { Replicate } from "../backtest/Replicate";
 import type { BtRun } from "../backtest/types";
 import type { BacktestRef } from "./types";
@@ -95,6 +96,7 @@ export function BacktestCard({ bt, onFollow, cite }: { bt: BacktestRef; onFollow
               <div><em>Max drawdown</em><strong className="down">{pts(s.maxDrawdown)}</strong><small>{bench}: {pts(s.benchmarkMaxDrawdown)}</small></div>
             </div>
           )}
+          <IsItReal reality={run.reality} compact />
           <EquityChart curve={run.curve} benchmark={bench} />
           {top.length ? (
             <div className="btc-trades"><table>
