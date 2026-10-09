@@ -11,11 +11,11 @@ import { pickFilings } from "../server/domain/watchlist/sources.mjs";
 
 const NOW = Date.parse("2026-10-09T14:00:00Z");
 
-test("House PTR 20035491 (Kevin Hern, LMT): 'S (partial)' and 'S' stay two rows and read differently; identical lines show as one 2× row", () => {
+test("House PTR 20035491 (Kevin Hern, LMT): 'S (partial)' ('sold part of') and 'S' stay two rows and read differently; identical lines show as one 2× row", () => {
   const row = { chamber: "house", person: "Kevin Hern", bioguide: "H001082", party: "R", state: "OK", symbol: "LMT", side: "sell", amount: "$15,001 - $50,000", amountLow: 15001, traded: "2026-09-02", filed: "2026-09-25", owner: "Joint", link: "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2026/20035491.pdf" };
   const partial = congressEvent({ ...row, id: "h-20035491-49", type: "Sale (partial)" });
   const full = congressEvent({ ...row, id: "h-20035491-50", type: "Sale" });
-  assert.equal(partial.title, "Kevin Hern sold (partial) $15,001 - $50,000");
+  assert.equal(partial.title, "Kevin Hern sold part of $15,001 - $50,000");
   assert.equal(full.title, "Kevin Hern sold $15,001 - $50,000");
   assert.equal(groupRepeats([partial, full]).length, 2);
   const twin = congressEvent({ ...row, id: "h-20035491-51", type: "Sale" });

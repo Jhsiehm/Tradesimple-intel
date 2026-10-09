@@ -125,7 +125,7 @@ const num = (v) => (v == null || !Number.isFinite(v) ? "" : Math.round(v).toLoca
 export function congressEvent(t) {
   const lag = t.lag ?? lagDays(t.traded, t.filed);
   const late = lag != null && lag > LATE_DAYS;
-  const verb = t.side === "buy" ? "bought" : t.side === "sell" ? (/partial/i.test(t.type || "") ? "sold (partial)" : "sold") : t.type || "traded";
+  const verb = t.side === "buy" ? "bought" : t.side === "sell" ? (/partial/i.test(t.type || "") ? "sold part of" : "sold") : t.type || "traded";
   return {
     id: `trade:${t.id}`,
     symbol: t.symbol,

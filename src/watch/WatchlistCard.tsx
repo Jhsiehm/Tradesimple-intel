@@ -25,9 +25,11 @@ function AddTicker({ count, onAdd }: { count: number; onAdd: (symbol: string) =>
   const [err, setErr] = useState("");
   const matches = useMemo(() => matchTickers(tickers, q, 8), [tickers, q]);
   const full = count >= WATCH_MAX;
-  const add = (t?: Ticker) => {
-    const exact = tickers.find((x) => x.symbol === normSymbol(q));
-    const chosen = t || matches[pick] || exact;
+  const add = async (t?: Ticker) => {
+    const list = t || tickers.length ? tickers : await loadTickers();
+    if (list !== tickers) setTickers(list);
+    const exact = list.find((x) => x.symbol === normSymbol(q));
+    const chosen = t || (list === tickers ? matches[pick] : matchTickers(list, q, 8)[0]) || exact;
     if (!chosen) { setErr(q.trim() ? `${normSymbol(q)} is not in the ticker join table (data/tickers.json).` : ""); return; }
     onAdd(chosen.symbol);
     setQ(""); setPick(0); setErr("");
@@ -45,7 +47,7 @@ function AddTicker({ count, onAdd }: { count: number; onAdd: (symbol: string) =>
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") { e.preventDefault(); setPick((p) => Math.min(matches.length - 1, p + 1)); }
           else if (e.key === "ArrowUp") { e.preventDefault(); setPick((p) => Math.max(0, p - 1)); }
-          else if (e.key === "Enter") { e.preventDefault(); add(); }
+          else if (e.key === "Enter") { e.preventDefault(); void add(); }
           else if (e.key === "Escape") setQ("");
         }}
       />
@@ -53,7 +55,7 @@ function AddTicker({ count, onAdd }: { count: number; onAdd: (symbol: string) =>
         <ul className="watch-suggest" role="listbox">
           {matches.map((t, i) => (
             <li key={t.symbol} role="option" aria-selected={i === pick}>
-              <button onMouseDown={(e) => { e.preventDefault(); add(t); }}><b>{t.symbol}</b> {t.name}</button>
+              <button onMouseDown={(e) => { e.preventDefault(); void add(t); }}><b>{t.symbol}</b> {t.name}</button>
             </li>
           ))}
         </ul>
@@ -118,7 +120,7 @@ export function WatchlistCard({ onFollow }: { onFollow: (action: string) => void
                   <Icon name={expanded ? "chevron-down" : "chevron-right"} size={12} /> <b>{s}</b> <span className="watch-name">{row?.name || (invalid.has(s) ? "not in data/tickers.json" : "")}</span>
                 </button>
                 <span className="watch-px" title={q?.ok ? `${q.source} · last trade ${when(q.asOf)} · ${q.latency}` : q?.error || ""}>
-                  {q?.ok && q.last != null ? <>{q.last.toFixed(2)} <b className={(q.changePct || 0) > 0 ? "up" : (q.changePct || 0) < 0 ? "down" : ""}>{signed(q.changePct, 2, "%")}</b> <small>delayed</small></> : <small>{row ? "no quote" : invalid.has(s) ? "" : "…"}</small>}
+                  {q?.ok && q.last != null ? <>{q.last.toFixed(2)} <b className={Math.round((q.changePct || 0) * 100) > 0 ? "up" : Math.round((q.changePct || 0) * 100) < 0 ? "down" : ""}>{signed(q.changePct, 2, "%")}</b> <small>delayed</small></> : <small>{row ? "no quote" : invalid.has(s) ? "" : "…"}</small>}
                 </span>
                 {row ? <Badges row={row} /> : <span className="watch-badges" />}
                 <span className="watch-acts">
