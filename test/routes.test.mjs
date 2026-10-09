@@ -112,6 +112,8 @@ export const SMOKE = [
   ["/api/watchlist/activity?tickers=AAPL,ZZZZ&days=7", 200, "asOf,days,invalid,items,latency,max,ok"],
   ["/api/watchlist/activity/AAPL", 200, "asOf,badges,building,days,events,inJoin,name,ok,quote,sections,symbol"],
   ["/api/watchlist/activity/ZZZZ", 404, "error,missing,ok"],
+  ["/api/notify", 200, "asOf,held,ok,recent,sentLastHour,settings"],
+  ["/api/notify/test", 405, "error,missing,ok"],
   ["/api/intel/scope", 200, "arcs,asOf,days,events,from,kinds,len,ms,ok,partial,scope,to"],
   ["/api/intel/case/ticker/AAPL", 200, "asOf,headline,kind,latency,ok,signal,sources,stats,sub,subject"],
   ["/api/relations/node?id=ticker:NVDA", 200, "categories,node,ok"],

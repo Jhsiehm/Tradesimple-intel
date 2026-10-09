@@ -70,6 +70,8 @@ export const MANIFEST = [
   { id: "alerts", path: "/api/alerts", samples: ["/api/alerts?late=all"], warm: "board", snapshot: true },
   { id: "watchlist.activity", path: "/api/watchlist/activity" },
   { id: "watchlist.ticker", path: "/api/watchlist/activity/:symbol([A-Za-z.\\-]+)" },
+  { id: "notify", path: "/api/notify" },
+  { id: "notify.test", path: "/api/notify/test" },
   { id: "intel.scope", path: "/api/intel/scope" },
   { id: "intel.case", path: "/api/intel/case/:kind(member|ticker|district)/:id([A-Za-z0-9.\\-]+)" },
   { id: "relations.node", path: "/api/relations/node" },

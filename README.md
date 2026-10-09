@@ -105,6 +105,20 @@ Nothing is posted without `--post` **and** keys in `.env.local` (names in `.env.
 - **Last buyer drill-down.** On Positions, the Last buyer columns name the most recent Congress and insider buyer. Click ▸ on a row to see the last six buyers, with traded date, filed date, and filing lag.
 - **Supply chain.** For 38 curated large caps (semis, cloud, autos, airlines, defense, energy, pharma, logistics), you get suppliers and customers mapped to revenue lines, each company's home exchange, index, and country ETF, six-month correlation and beta, and a rebased chart of how they moved together. Every link cites the filing or announcement it comes from.
 - **Live imagery.** GOES-East, GOES-West, and Himawari frames every 10 minutes, VIIRS daily passes, and a time slider to scrub and play back.
+- **Trade age on every alert.** Alert rows, live toasts and the watchlist feed show when the record was filed ("filed 2h ago"), when the trade happened ("traded 38d ago"), and the filing lag between them, with a freshness tag on the trade date: FRESH ≤3 days, RECENT ≤14, STALE ≤45, OLD beyond. A Congress trade or Form 4 that is STALE drops one severity level and one that is OLD drops two, so a trade disclosed today but made 38 days ago ranks below an insider buy from yesterday. Late-filing rows keep their level (the lateness is the point). Hover the age for the rule and the level before ageing.
+- **Fast SEC alerts.** For watched tickers, the live poller reads EDGAR's latest-filings Atom feeds (Form 4, 8-K, Schedule 13D, 13G) every 30 seconds through the shared 8 req/s SEC gate, matches issuers by CIK from `data/tickers.json`, and fetches only the matching filings (Form 4s go through the same parser as the Positions board). A per-issuer submissions sweep still runs every 30 minutes and after a restart, so nothing is missed while the server was down. Detection latency (EDGAR acceptance → detected) is measured on every new filing in those feeds and shown in the live status strip; each pushed alert carries its own. Measured on 9 Oct 2026 (30-second polling, 35 new filings over 11.5 minutes): a median of 43 s after acceptance, p90 54 s, worst 63 s, best 25 s. About 25 s of that is EDGAR listing the filing in the feed; the rest is waiting for the next poll. The old per-issuer polling ran every 90 s and could only see a filing once it appeared in that company's submissions file. A 403 or 429 from SEC pauses SEC polling for 10 minutes.
+
+### Phone alerts (ntfy)
+
+Live alerts can also go to your phone through [ntfy](https://ntfy.sh), a free push service with no account needed. The server sends them; the topic never reaches the browser (the Alerts menu shows it masked).
+
+1. Install the ntfy app ([iOS](https://apps.apple.com/app/ntfy/id1625396347), [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy), or the web app at ntfy.sh).
+2. Pick a long random topic. Anyone who knows a topic on ntfy.sh can read it, so treat it like a password. **Alerts → Phone (ntfy) → Suggest a topic** generates one, or run `node -e "console.log('tsi-'+require('crypto').randomBytes(18).toString('base64url').toLowerCase())"`.
+3. Add it to `.env.local` as `NTFY_TOPIC=…` and restart the API (`npm run dev`).
+4. In the app, tap **+**, subscribe to the same topic (server `ntfy.sh` unless you set `NTFY_SERVER`).
+5. Open **Alerts → Phone (ntfy)** and press **Send test notification**.
+
+Each message has the ticker, who and what, traded and filed ages, filing lag, detection latency and the source, with priority from severity (HIGH 4, ELEVATED 3, ROUTINE 2; never 5, which overrides Do Not Disturb) and an **Open filing** button. Tapping opens the hosted terminal when `PUBLIC_ORIGIN` (or `NTFY_CLICK_URL`) is set. By default ELEVATED and HIGH alerts are sent, every kind except news and the all-members late-filing list; change this in the panel or with `NTFY_MIN_SEVERITY` / `NTFY_KINDS`. Quiet hours (`NTFY_QUIET=22:00-07:00`, New York time) hold everything except HIGH. No alert is ever sent twice (sent ids are kept in `data/cache.sqlite`), and at most `NTFY_MAX_PER_HOUR` (default 20) go out per hour; the next message after a held stretch says how many were held. Backfill (filings already on record when a ticker is added) is never sent. For a private server or a reserved topic, set `NTFY_SERVER` and `NTFY_TOKEN`.
 
 ### Keyboard
 
@@ -181,6 +195,8 @@ Keys live only in `.env.local`. The server reads them and they are never sent to
 | `FEC_API_KEY` | Per-ticker corporate PAC receipts and spending for the current cycle, for PACs joined in `data/tickers.json` (member PAC data uses free bulk files) | [api.open.fec.gov](https://api.open.fec.gov/developers/) |
 | `AISSTREAM_API_KEY` | Live ship positions | [aisstream.io](https://aisstream.io) |
 | `X_BEARER_TOKEN` | Real X posts. Without it, the X column shows the same accounts' posts on Bluesky plus Truth Social. | [developer.x.com](https://developer.x.com) |
+| `NTFY_TOPIC` | Phone alerts through ntfy (see [Phone alerts](#phone-alerts-ntfy)) | Any long random string; no sign-up |
+| `SEC_CONTACT` | Your email in the SEC User-Agent. www.sec.gov refuses agents without a contact; a generic default is used when empty. | — |
 
 Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free public endpoints.
 

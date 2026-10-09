@@ -6,6 +6,9 @@ import { api, DEMO, when } from "../lib/api";
 import { memberShareUrl } from "../lib/share";
 import { toggleMember, toggleSymbol, useWatch } from "../lib/useWatch";
 import { Icon, IconLabel } from "../ui/icons/Icon";
+import { AgeLine } from "../ui/AgeLine";
+import { AGE_RULE, type TradeAge } from "../../shared/tradeAge.mjs";
+import { PhoneNotify } from "./PhoneNotify";
 
 type Pin = { kind: "member" | "symbol"; id: string; label: string; chamber?: string };
 type Alert = { id: string; kind: string; date: string; title: string; detail: string; link?: string; action: string; late: boolean; severity?: AlertLevel; source?: string; asOf?: string; latency?: string; pins?: Pin[] };
@@ -21,6 +24,8 @@ const KIND: Record<string, string> = { "member-trade": "MEMBER", "symbol-trade":
 const FEED: Record<string, string> = { "member-trade": "Congress trades", "symbol-trade": "Congress trades", "late-filing": "Congress trades", form4: "Form 4", lobbying: "Lobbying", research: "Research tasks" };
 const WATCH_KIND: Record<string, string> = { contract: "CONTRACT", stake: "13D/G", whale: "13F", "8-k": "8-K", news: "NEWS" };
 const LEVEL_LABEL: Record<AlertLevel, string> = { high: "HIGH", elevated: "ELEVATED", routine: "ROUTINE" };
+/** Trade-age fields the server adds to every row (shared/tradeAge.mjs ageAlert). */
+type Aged = { age?: TradeAge; baseSeverity?: string };
 const RULE_PARTS = ALERT_RULE.split(/(?<=\.)\s+(?=[A-Z]+:|Otherwise)/);
 const LEVEL_RULE: Record<AlertLevel, string> = {
   high: RULE_PARTS.find((p) => p.startsWith("HIGH:")) || ALERT_RULE,
@@ -117,6 +122,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
         </header>
         <button className="alerts-title" onClick={() => follow(a)} title={a.kind === "research" ? "Open the stored result in Ask" : "Open dossier"}>{a.title}</button>
         <p className="alerts-detail">{a.detail}</p>
+        {a.kind === "research" ? null : <AgeLine age={(a as Aged).age} kind={a.kind} filedAt={a.date} baseSeverity={(a as Aged).baseSeverity} />}
         <p className="alerts-meta" title={a.latency || feed?.latency}>
           <span>{a.source || feed?.source || "Source unknown"}</span>
           {a.asOf || feed?.asOf ? <span>as of {when(a.asOf || feed?.asOf || "")}</span> : null}
@@ -160,6 +166,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
             <label><input type="checkbox" checked={allLate} onChange={toggleLate} /> All late filings (&gt;45 days)</label>
             <label><input type="checkbox" checked={notify} onChange={() => void toggleNotify()} disabled={typeof Notification === "undefined"} /> Browser notifications</label>
           </div>
+          <PhoneNotify />
           {items.length ? (
             <div className="alerts-bar">
               <div className="alerts-filter" role="group" aria-label="Filter by severity">
@@ -196,7 +203,7 @@ export function AlertsMenu({ open, onOpen, onFollow }: { open: boolean; onOpen: 
           {res?.sources ? (
             <p className="note alerts-src">
               {res.sources.map((s) => <span key={s.label}><b>{s.label}</b> {s.source}{s.asOf ? ` · as of ${when(s.asOf)}` : ""} · {s.latency}</span>)}
-              <span className="alerts-rule">Severity: {ALERT_RULE}{feeds.has("Research tasks") ? ` ${RESEARCH_RULE}` : ""}</span>
+              <span className="alerts-rule">Severity: {ALERT_RULE}{feeds.has("Research tasks") ? ` ${RESEARCH_RULE}` : ""} {AGE_RULE}</span>
             </p>
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 import { congressTrades, insiderTrades } from "./positions.mjs";
 import { lobbyingBoard } from "./corporate.mjs";
 import { alertSeverity } from "../shared/intel.mjs";
+import { ageAlert } from "../shared/tradeAge.mjs";
 import { RESEARCH_SOURCE, researchAlerts } from "./domain/tasks/alerts.mjs";
 import { watchAlerts } from "./domain/watchlist/index.mjs";
 
@@ -34,6 +35,8 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
         id: `trade:${t.id}`,
         kind,
         date: t.filed,
+        eventAt: t.traded || "",
+        filedAt: t.filed || "",
         title: `${t.person} ${t.side === "sell" ? "sold" : t.side === "buy" ? "bought" : t.type || "traded"} ${t.symbol || t.asset}`,
         detail: `${t.amount} · traded ${t.traded} · filed ${t.filed}${t.lag != null ? ` (${t.lag}d)` : ""}${late ? " · LATE" : ""}`,
         link: t.link,
@@ -48,6 +51,8 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
         id: `late:${t.id}`,
         kind: "late-filing",
         date: t.filed,
+        eventAt: t.traded || "",
+        filedAt: t.filed || "",
         title: `Late filing · ${t.person} · ${t.symbol || t.asset}`,
         detail: `Filed ${t.lag} days after the trade (limit ${LATE_DAYS}) · ${t.amount}`,
         link: t.link,
@@ -66,6 +71,8 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
       id: `f4:${g.symbol}:${g.accession}`,
       kind: "form4",
       date: g.filed,
+      eventAt: g.from || "",
+      filedAt: g.filed || "",
       title: `Form 4 · ${g.symbol} · ${g.person}`,
       detail: `${g.title ? `${g.title} · ` : ""}${g.buys} buy${g.buys === 1 ? "" : "s"} · ${g.sells} sell${g.sells === 1 ? "" : "s"} · ${g.other} other${g.value ? ` · ${usd(g.value)}` : ""} · ${g.lines} line${g.lines === 1 ? "" : "s"}${g.planned ? " · 10b5-1 plan" : ""} · traded ${traded}`,
       link: g.link,
@@ -157,7 +164,7 @@ export async function alertsFor(db, params) {
   return {
     ok: true,
     asOf: new Date().toISOString(),
-    items: [...base, ...extra.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 200)],
+    items: [...base, ...extra.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 200)].map((a) => ageAlert(a)),
     sources: [
       ...(research.length ? [RESEARCH_SOURCE] : []),
       ...(symbols.length ? [{ label: "Watchlist filings", source: "SEC EDGAR 8-K · 13D/13G · 13F · USAspending", asOf: watched.asOf || undefined, latency: "From each watched ticker's last activity pass (refreshed every 15 min). 8-K due 4 business days after the event, 13D 5, 13G and 13F up to 45 days after quarter end; contract actions carry their action date (DoD posts ~90 days late)." }] : []),

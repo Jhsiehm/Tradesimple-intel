@@ -1,0 +1,12 @@
+.alerts-phone { margin: 0 0 10px; padding: 6px 8px; border: 1px solid var(--line); font-size: 11px; color: var(--dim); }
+.alerts-phone summary { cursor: pointer; letter-spacing: 0.06em; color: var(--ink); }
+.alerts-phone .alerts-opts { margin: 6px 0 0; align-items: center; }
+.alerts-phone select, .alerts-phone-quiet { background: #0b0f13; border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 11px; padding: 2px 4px; }
+.alerts-phone-quiet { width: 96px; }
+.alerts-phone-quiet:invalid { border-color: var(--nay); }
+.alerts-phone code { color: var(--cyan); }
+.alerts-phone-topic { display: block; margin-top: 6px; user-select: all; word-break: break-all; }
+.alerts-phone-recent { margin: 6px 0 0; padding: 0; list-style: none; font-size: 10.5px; color: var(--faint); }
+.alerts-phone-recent li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alerts-phone-recent b { color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+.alerts-phone-note { margin: 6px 0 0; }
