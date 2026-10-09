@@ -1,0 +1,44 @@
+[Unit]
+Description=TradeSimple Intel (app + API on 127.0.0.1:8787, behind Caddy)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=tradesimple
+Group=tradesimple
+WorkingDirectory=/srv/tradesimple/app
+# Keys and sign-in settings. Root-owned, mode 600, never in git. systemd reads it before dropping privileges.
+EnvironmentFile=/etc/tradesimple/env
+Environment=NODE_ENV=production
+Environment=PORT=8787
+Environment=INTEL_CACHE=/var/lib/tradesimple/cache.sqlite
+ExecStart=/usr/bin/node server/index.mjs
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tradesimple
+
+# /var/lib/tradesimple holds the sqlite cache (backed up daily by deploy/backup.sh).
+StateDirectory=tradesimple
+StateDirectoryMode=0750
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/tradesimple/app/data
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# Keeps a 1 GB box responsive: the kernel reclaims above MemoryHigh before anything is killed.
+MemoryHigh=700M
+
+[Install]
+WantedBy=multi-user.target

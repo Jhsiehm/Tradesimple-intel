@@ -1,0 +1,36 @@
+# TradeSimple Intel behind Caddy. bootstrap.sh renders this to /etc/caddy/Caddyfile, replacing __HOST__ with your
+# domain or <ip-with-dashes>.sslip.io. Caddy gets and renews the Let's Encrypt certificate on its own (ports 80 and
+# 443 must be open). The Node server listens on 127.0.0.1:8787 only and handles sign-in itself.
+{
+	# Uncomment and set to get certificate expiry mail from Let's Encrypt.
+	# email you@example.com
+}
+
+__HOST__ {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# Event streams (/api/ask, /api/live/stream, task runs): no buffering, no proxy-side timeouts.
+	# flush_interval -1 writes every chunk through at once; Caddy has no response timeout by default.
+	reverse_proxy 127.0.0.1:8787 {
+		flush_interval -1
+		transport http {
+			keepalive 60s
+			read_buffer 16KiB
+		}
+	}
+
+	log {
+		output file /var/log/caddy/tradesimple.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}

@@ -186,6 +186,137 @@ Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends) uses free 
 
 ---
 
+## Hosting on a VPS
+
+An always-on private copy behind a password, on one small Ubuntu server for about $5–7 a month. The public GitHub Pages demo is separate and stays as it is.
+
+```
+browser ──https──▶ Caddy :443  (Let's Encrypt certificate, HSTS, gzip/zstd, event streams flushed unbuffered)
+                     └─▶ node server/index.mjs on 127.0.0.1:8787  (NODE_ENV=production, systemd, Restart=always)
+                           /healthz · /login · /logout → sign-in gate → dist/ (built app) | /api, /geo (API)
+                           sqlite cache /var/lib/tradesimple/cache.sqlite → daily backup, newest 7 kept
+```
+
+In production the Node server serves the built app and the API on one port, and every page and `/api` call needs a signed session cookie (HttpOnly, Secure, SameSite=Lax, 30 days, renewed while you use it). The password is stored only as a scrypt hash. Five wrong tries from one address lock that address out for 15 minutes, 30 in total lock sign-in for everyone, and fail2ban bans repeat offenders at the firewall. An authenticator code (TOTP) is optional. `npm run dev` on your own machine never asks for a password.
+
+### 1. Create the server (only you can do this)
+
+You need an SSH key. If `ls ~/.ssh/id_ed25519.pub` finds nothing, run `ssh-keygen -t ed25519` first. Then copy it with `pbcopy < ~/.ssh/id_ed25519.pub`.
+
+**Hetzner CX22** (2 vCPU, 4 GB RAM, 40 GB disk, about €4–5 a month including the IPv4 address):
+
+1. Sign up at [console.hetzner.cloud](https://console.hetzner.cloud), open the default project and click **Add Server**.
+2. **Location**: Falkenstein, Nuremberg or Helsinki (the CX line runs in the EU; distance does not matter for polled feeds).
+3. **Image**: Ubuntu 24.04. **Type**: Shared vCPU, x86, **CX22**.
+4. **Networking**: keep **Public IPv4** and IPv6 on.
+5. **SSH keys**: **Add SSH key**, paste the key, save.
+6. Leave volumes, firewalls and cloud-config empty. Hetzner's own Backups (+20%) are optional. Name it `intel` and click **Create & Buy now**. Copy the IPv4 address.
+
+**DigitalOcean $6 droplet** (1 vCPU, 1 GB RAM, 25 GB disk; the bootstrap adds 2 GB of swap so builds fit):
+
+1. Sign up at [cloud.digitalocean.com](https://cloud.digitalocean.com), click **Create → Droplets**.
+2. **Region**: New York or the closest to you. **Image**: Ubuntu 24.04 (LTS) x64.
+3. **Size**: Basic, Regular SSD, **$6/mo** (1 GB / 1 CPU).
+4. **Authentication**: SSH Key → **New SSH Key**, paste the key.
+5. Free **Monitoring** is worth ticking. Click **Create Droplet** and copy the IPv4 address.
+
+### 2. Optional: a domain
+
+Without a domain, the bootstrap serves the app at `https://<ip-with-dashes>.sslip.io` (for example `https://203-0-113-5.sslip.io`), which resolves to your server and gets a real certificate. With a domain, add an **A record** for, say, `intel.example.com` pointing at the IPv4 address (and an AAAA record for IPv6 if you like), wait until `dig +short intel.example.com` shows the address, and pass `DOMAIN=intel.example.com` below. Ports 80 and 443 must reach the server so Let's Encrypt can verify it.
+
+### 3. Bootstrap the server (from your laptop, in this repo)
+
+```bash
+scp -r deploy root@SERVER_IP:/root/
+ssh root@SERVER_IP 'bash /root/deploy/bootstrap.sh'
+# with a domain:
+ssh root@SERVER_IP 'DOMAIN=intel.example.com bash /root/deploy/bootstrap.sh'
+```
+
+`deploy/bootstrap.sh` does the following, and is safe to run again:
+
+- Upgrades packages and adds 2 GB of swap on boxes with less than 3 GB of RAM.
+- Creates the `deploy` user (your SSH key, sudo only for the deploy helpers) and the `tradesimple` user (runs the app, no login), and turns off SSH password login.
+- Sets up the firewall (only 22, 80 and 443 open), fail2ban (SSH and app sign-in), and unattended security upgrades (rebooting at 04:30 UTC when needed). Logs go to journald, capped at 300 MB.
+- Installs Node 22 LTS and Caddy.
+- Clones this repo into `/srv/tradesimple/app`, runs `npm ci`, and builds.
+- Installs the systemd unit and the Caddy site.
+- Creates `/etc/tradesimple/env` (root, mode 600) with `PUBLIC_ORIGIN` filled in.
+- Adds a daily database backup.
+
+The app stays stopped until sign-in is set.
+
+### 4. Set the password and copy your keys (never through git)
+
+```bash
+npm run -s auth:hash > /tmp/intel-auth.env        # asks for the password twice; add  -- --totp  for authenticator codes
+scp /tmp/intel-auth.env deploy@SERVER_IP:/tmp/intel-auth.env && rm /tmp/intel-auth.env
+ssh deploy@SERVER_IP sudo tradesimple-env /tmp/intel-auth.env
+
+scp .env.local deploy@SERVER_IP:/tmp/intel.env
+ssh deploy@SERVER_IP sudo tradesimple-env /tmp/intel.env
+```
+
+`tradesimple-env` merges the uploaded `KEY=value` lines into `/etc/tradesimple/env`, prints only the key names, deletes the upload, and starts or restarts the app. Empty values never blank a key already set. Local-only settings (`PORT`, `VITE_*`, `INTEL_ALLOWED_ORIGINS`) are skipped. With `--totp`, `auth:hash` also prints an `otpauth://` link; add it to your authenticator app (or type in the secret) before you sign in. To change one value later, put just that line in a file and send it the same way.
+
+Set **`ASK_MONTHLY_BUDGET_USD`** on the server (see costs below). `PUBLIC_ORIGIN` is the address you open the app at. Phone alerts (ntfy) use it for their tap-through link, and the API accepts writes only from it. `PUBLIC_URL` stays the GitHub Pages demo and is never trusted for writes.
+
+### 5. First sign-in
+
+Open the `https://…` address that the bootstrap printed and enter the password (and the 6-digit code if you set TOTP). To sign out, open `/logout`. To sign out every browser, run `npm run -s auth:hash` again and send only the new `INTEL_SESSION_SECRET` line through `tradesimple-env`.
+
+### Updating
+
+```bash
+git push                                   # the server pulls from GitHub, never from your working tree
+deploy/deploy.sh deploy@SERVER_IP          # or: INTEL_SSH=deploy@SERVER_IP deploy/deploy.sh
+```
+
+The update runs on the server as `/usr/local/sbin/tradesimple-update`:
+
+1. Fetches and runs `npm ci` only when the lockfile changed.
+2. Builds into `dist.next` while the old build keeps serving, and keeps the last build's hashed files so open tabs can still load lazy chunks.
+3. Swaps the builds and restarts the app (open pages wait out the second or two and retry on their own).
+4. Checks `/healthz`. If the check fails, it rolls back to the previous commit and build.
+
+If an update changed `deploy/` itself (unit, Caddyfile, helpers), copy the folder again and re-run the bootstrap.
+
+### Running it
+
+| Task | Command |
+| --- | --- |
+| Live logs | `ssh deploy@SERVER_IP sudo journalctl -u tradesimple -f` |
+| Restart | `ssh deploy@SERVER_IP sudo systemctl restart tradesimple` |
+| Sign-in failures and bans | `ssh root@SERVER_IP 'journalctl -u tradesimple -g "intel auth" -n 50; fail2ban-client status tradesimple-login'` |
+| Backup now | `ssh deploy@SERVER_IP sudo tradesimple-backup` |
+| Copy backups to your laptop | `scp 'root@SERVER_IP:/var/backups/tradesimple/*.gz' ./backups/` |
+
+**Backups.** Every day at 03:30 UTC, `deploy/backup.sh` takes an online sqlite `.backup` of `/var/lib/tradesimple/cache.sqlite`, checks it, gzips it and keeps the newest 7 in `/var/backups/tradesimple`. Most of the database is feed cache that rebuilds itself. The parts worth keeping are scheduled tasks, the watchlist and alert state, the Ask spend ledger, and the insider history. To restore, run `systemctl stop tradesimple`, then `gunzip -c cache-….sqlite.gz > /var/lib/tradesimple/cache.sqlite`, remove any `cache.sqlite-wal` and `cache.sqlite-shm` files, run `chown tradesimple: /var/lib/tradesimple/cache.sqlite`, and start the app again.
+
+**Insider history backfill.** The full SEC Form 4 history (`npm run insiders:backfill`) goes into the same database and runs for a long time, so start it as a background job that survives logging out. It reads the same environment as the app:
+
+```bash
+ssh root@SERVER_IP
+systemd-run --unit=insiders-backfill --uid=tradesimple --gid=tradesimple -p WorkingDirectory=/srv/tradesimple/app \
+  -p EnvironmentFile=/etc/tradesimple/env -E HOME=/srv/tradesimple -E INTEL_CACHE=/var/lib/tradesimple/cache.sqlite -E NODE_ENV=production \
+  /usr/bin/npm run insiders:backfill
+journalctl -u insiders-backfill -f          # it resumes where it stopped if interrupted
+```
+
+On a 1 GB droplet, run it once at a quiet hour and watch `df -h /` afterwards, because the history adds a large table and the backups grow with it.
+
+### Costs
+
+- **Server**: about €4–5 a month for a Hetzner CX22, or $6 for a DigitalOcean droplet. Provider backups are optional (+20%). Bandwidth is included (20 TB at Hetzner, 1 TB at DigitalOcean), far more than one user needs.
+- **Domain**: optional, about $10–15 a year. Caddy, Let's Encrypt and sslip.io are free.
+- **OpenRouter** is the only metered cost, and an always-on server keeps scheduled tasks running. Set `ASK_MONTHLY_BUDGET_USD` in `/etc/tradesimple/env` (default 20; 0 means no cap). Answers warn from 80% of the cap. At 100%, questions fall back to `ASK_CHEAP_MODEL`, or `ASK_BUDGET_HARD_STOP=1` refuses them. Scheduled prompt tasks count toward the cap, and `TASKS_MAX_RUNS_PER_DAY` limits how many run. Web search costs about $0.01 a search. For a second stop, set a credit limit on the key itself at openrouter.ai → Keys.
+
+### If there is no HTTPS
+
+If Let's Encrypt cannot issue a certificate for the sslip.io name (rate limits), use a domain. As a last resort, you can serve plain HTTP: change the site address in `/etc/caddy/Caddyfile` to `http://SERVER_IP`, set `PUBLIC_ORIGIN=http://SERVER_IP`, and run `systemctl reload caddy` and `systemctl restart tradesimple`. The cookie then drops `Secure` and the server logs a warning at every start, because the password and session would cross the network unencrypted.
+
+---
+
 ## Data sources and freshness
 
 | Data | Source | Typical delay |
