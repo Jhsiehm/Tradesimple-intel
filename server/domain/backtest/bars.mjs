@@ -1,4 +1,6 @@
-import { readCache, writeCache } from "../../lib/db.mjs";
+import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
+import { BENCHMARKS } from "../../../shared/backtestSpec.mjs";
+import { PRICE_HISTORY_FROM } from "../../../shared/backtest.mjs";
 import { readStale } from "../../lib/cache.mjs";
 import { KEY } from "../../lib/cacheKeys.mjs";
 import { HOUR } from "../../lib/time.mjs";
@@ -73,6 +75,17 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
     staleStoredAt: storedAt.length ? Math.min(...storedAt) : null,
     oldestStoredAt: stored.filter(Boolean).length ? Math.min(...stored.filter(Boolean)) : null
   };
+}
+
+/**
+ * Background warm: bars for every join-table ticker plus the benchmarks, two at a time through the Yahoo gate, so a
+ * backtest after a restart or a key bump finds them cached. Cached symbols cost nothing.
+ */
+export async function warmBars(db, { fetchBars = yahooBars, log = console.log } = {}) {
+  const symbols = [...BENCHMARKS.filter((b) => b !== "SECTOR"), ...listTickers(db).map((t) => t.symbol)];
+  const res = await loadBars(db, symbols, { concurrency: 2, fetchBars });
+  log(`backtest bars warm: ${res.cached} cached, ${res.fetched} fetched, ${res.missing.length} missing, ${res.stale.length} stale (from ${PRICE_HISTORY_FROM})`);
+  return res;
 }
 
 /** Last bar date across a bars map, ISO. */

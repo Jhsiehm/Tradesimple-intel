@@ -209,12 +209,15 @@ function breakdown(trades, keyOf, labelOf, limit = 30) {
   return { total: rows.length, rows: rows.slice(0, limit) };
 }
 
+/** First day of the daily price history backtests read (Yahoo, adjusted); the SEC insider history starts 2020Q1. */
+export const PRICE_HISTORY_FROM = "2020-01-01";
+
 const SKIP_TEXT = {
   noPrice: "had no daily price history (renamed, delisted, acquired, or not covered by Yahoo)",
   notPriced: "were not priced inside the time budget",
   noBarAfterSignal: "were made public after the last price bar",
   entryGap: "had no trading day within a week after the public date",
-  beforePriceHistory: "were public before the symbol's price history begins (new listing, ticker change, or older than the three-year window)",
+  beforePriceHistory: `were public before the symbol's price history begins (new listing, ticker change, or before ${PRICE_HISTORY_FROM}, where the price history starts)`,
   badPrice: "had an unusable entry price",
   stillOpen: "have not reached their exit yet (hold not complete)",
   noBenchmark: "had no benchmark price on the entry day",

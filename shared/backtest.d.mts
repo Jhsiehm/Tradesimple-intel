@@ -1,6 +1,7 @@
 import type { BacktestRules } from "./backtestSpec.mjs";
 
 export type Bar = [day: number, open: number | null, close: number];
+export declare const PRICE_HISTORY_FROM: string;
 export type BacktestSignal = {
   id: string;
   symbol: string;

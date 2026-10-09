@@ -5,11 +5,12 @@ import { fileURLToPath } from "node:url";
 import { openDb, writeCache } from "../server/lib/db.mjs";
 import { KEY } from "../server/lib/cacheKeys.mjs";
 import { parseBars } from "../server/parsers/bars.mjs";
-import { loadBars } from "../server/domain/backtest/bars.mjs";
+import { loadBars, warmBars } from "../server/domain/backtest/bars.mjs";
 import { runSpec } from "../server/domain/backtest/index.mjs";
+import { yahooBars } from "../server/feeds/yahoo.mjs";
 import { congressSignals, contractSignals, form4Signals, hearingsByLane, lobbySignals, matchCommittees, nearestHearing } from "../server/domain/backtest/signals.mjs";
 import { cleanFilters } from "../shared/backtestSpec.mjs";
-import { dayOf, isoOf } from "../shared/backtest.mjs";
+import { PRICE_HISTORY_FROM, dayOf, isoOf } from "../shared/backtest.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const F = (over = {}) => cleanFilters(over);
@@ -139,6 +140,39 @@ test("lobbying spike is public on the quarter's last posting and compares with f
   assert.equal(out.signals.length, 1);
   assert.equal(out.signals[0].signalDate, "2025-07-18");
   assert.equal(out.signals[0].sizeHint, 250_000);
+});
+
+test("yahooBars asks for a fixed window from 2020-01-01 (Yahoo turns an unsupported range such as 3y into two years)", async () => {
+  const real = globalThis.fetch;
+  let asked = null;
+  globalThis.fetch = async (url) => {
+    asked = new URL(String(url));
+    return new Response(JSON.stringify({ chart: { result: [{ timestamp: [1_577_975_400], indicators: { quote: [{ open: [100], close: [101] }], adjclose: [{ adjclose: [101] }] } }] } }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const bars = await yahooBars("JPM");
+    assert.equal(bars.length, 1);
+    assert.equal(asked.searchParams.get("range"), null);
+    assert.equal(asked.searchParams.get("period1"), String(Date.parse(`${PRICE_HISTORY_FROM}T00:00:00Z`) / 1000));
+    assert.ok(Number(asked.searchParams.get("period2")) > Date.now() / 1000);
+    assert.equal(PRICE_HISTORY_FROM, "2020-01-01");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("warmBars loads every join-table ticker plus the benchmarks once; cached symbols are not fetched again", async () => {
+  process.env.INTEL_CACHE = ":memory:";
+  const db = openDb(root);
+  const asked = [];
+  const fetchBars = async (symbol) => { asked.push(symbol); return [[18262, 10, 11]]; };
+  const first = await warmBars(db, { fetchBars, log: () => {} });
+  assert.ok(asked.includes("SPY") && asked.includes("XLK") && asked.includes("JPM"));
+  assert.equal(asked.includes("SECTOR"), false);
+  assert.equal(first.fetched, asked.length);
+  const again = await warmBars(db, { fetchBars, log: () => {} });
+  assert.equal(again.fetched, 0);
+  assert.equal(again.cached, asked.length);
 });
 
 test("loadBars: cache first, 404 is missing, failures fall back to stale, the deadline leaves symbols pending", async () => {

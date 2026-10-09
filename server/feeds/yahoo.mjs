@@ -2,6 +2,7 @@ import { fetchJson, fetchText, makeGate } from "../lib/http.mjs";
 import { gateSpacing } from "../lib/env.mjs";
 import { BROWSER_UA } from "../lib/ua.mjs";
 import { parseBars } from "../parsers/bars.mjs";
+import { PRICE_HISTORY_FROM } from "../../shared/backtest.mjs";
 
 /** Every Yahoo chart call goes through one gate so boards, dossiers, and the returns warm cannot burst together. */
 export const yahooGate = makeGate(8, gateSpacing(60));
@@ -22,9 +23,15 @@ export function yahooChart(symbol, params, { timeoutMs = 20000, priority = false
   return yahooGate(() => fetchJson(url, yahooHeaders(), timeoutMs), { priority });
 }
 
-/** Three years of adjusted daily [day, open, close] bars for a symbol or index (^GSPC). Throws on HTTP errors; `status` is kept. */
-export async function yahooBars(symbol, { range = "3y", timeoutMs = 20000, priority = false } = {}) {
-  const body = await yahooChart(symbol, { interval: "1d", range, includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
+/**
+ * Adjusted daily [day, open, close] bars for a symbol or index (^GSPC) from `from` (default PRICE_HISTORY_FROM, or the
+ * listing date if later) to now. Yahoo accepts only fixed `range` values (2y, 5y, 10y…) and answers anything else, such
+ * as "3y", with two years, so the window is given as period1/period2. Throws on HTTP errors; `status` is kept.
+ */
+export async function yahooBars(symbol, { from = PRICE_HISTORY_FROM, timeoutMs = 20000, priority = false } = {}) {
+  const period1 = Math.floor(Date.parse(`${from}T00:00:00Z`) / 1000);
+  const period2 = Math.floor(Date.now() / 1000) + 86_400;
+  const body = await yahooChart(symbol, { interval: "1d", period1: String(period1), period2: String(period2), includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
   return parseBars(body);
 }
 
