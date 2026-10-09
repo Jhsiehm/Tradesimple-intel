@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, DEMO } from "../lib/api";
 import type { AgentContext } from "../agent/context";
 import {
-  addPrefs, attachedBody, blankTurn, chatTitle, dropPref, historyOf, lastBacktest, loadChats, loadModelChoice, loadPrefs,
-  newChatId, removeChat, saveChats, saveModelChoice, savePrefs, upsertChat
+  addPrefs, attachedBody, blankTurn, chatTitle, clearSession, dropPref, historyOf, lastBacktest, loadChats, loadModelChoice, loadPrefs,
+  loadSession, newChatId, removeChat, saveChats, saveModelChoice, savePrefs, setSessionModes, upsertChat
 } from "./chats";
 import { readEvents } from "./stream";
 import type { AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn } from "./types";
@@ -34,13 +34,14 @@ export function useAsk() {
   const [status, setStatus] = useState<AskStatus | null>(null);
   const [choice, setChoice] = useState(loadModelChoice);
   const [prefs, setPrefs] = useState(loadPrefs);
+  const [session, setSession] = useState(loadSession);
   const [attachId, setAttachId] = useState("");
   const [detached, setDetached] = useState(false);
   const [busy, setBusy] = useState(false);
   const ctl = useRef<AbortController | null>(null);
   const ctxRef = useRef<AgentContext>({ section: "", node: null, theory: null });
-  const state = useRef({ turns, chatId, kept, detached, prefs, attachId, chats, choice });
-  state.current = { turns, chatId, kept, detached, prefs, attachId, chats, choice };
+  const state = useRef({ turns, chatId, kept, detached, prefs, session, attachId, chats, choice });
+  state.current = { turns, chatId, kept, detached, prefs, session, attachId, chats, choice };
   const statusRef = useRef<AskStatus | null>(null);
   /** App hands over what is on screen each render; it is read only when a question is sent. */
   const bindContext = useCallback((ctx: AgentContext) => { ctxRef.current = ctx; }, []);
@@ -109,6 +110,7 @@ export function useAsk() {
           context: ctx ? { node: ctx.node, theory: ctx.theory } : null,
           attached: attachedBody(attached),
           prefs: s.prefs,
+          session: s.session,
           prior: bt?.spec || null,
           answers: opts.answers || {},
           acceptDefaults: Boolean(opts.acceptDefaults)
@@ -148,6 +150,8 @@ export function useAsk() {
             patch((t) => ({ ...t, phase: "done", text: done.answer || t.text, done }));
             if (done.prefs?.clear) setPrefs(savePrefs({ v: 1, values: {}, updated: "" }));
             else if (done.prefs?.set) setPrefs((p) => addPrefs(p, done.prefs!.set!));
+            if (done.session?.clear) setSession(clearSession());
+            else if (done.session?.set) setSession(setSessionModes(loadSession(), done.session.set));
             break;
           }
           case "error":
@@ -199,6 +203,9 @@ export function useAsk() {
 
   const removePref = useCallback((path: string) => setPrefs((p) => dropPref(p, path)), []);
   const clearPrefs = useCallback(() => setPrefs(savePrefs({ v: 1, values: {}, updated: "" })), []);
+  const setSourcing = useCallback((sourcing: string) => setSession((s) => setSessionModes(s, { sourcing })), []);
+  const setStyle = useCallback((style: string) => setSession((s) => setSessionModes(s, { style })), []);
+  const resetSession = useCallback(() => setSession(clearSession()), []);
 
   useEffect(() => {
     const take = () => {
@@ -219,6 +226,7 @@ export function useAsk() {
     chats, chatId, kept, keep, openSaved, forget, attachId, setAttachId,
     status, model, models, small, chooseModel,
     prefs, removePref, clearPrefs,
+    session, setSourcing, setStyle, resetSession,
     detached, setDetached, bindContext
   };
 }

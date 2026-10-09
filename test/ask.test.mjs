@@ -280,7 +280,9 @@ test("openAction maps a tool call to a board the app already has", () => {
   assert.equal(openAction("case_file", { kind: "district", id: "tx-12" }), "district:TX-12");
   assert.equal(openAction("contracts", { symbol: "LMT" }), "contracts:symbol:LMT");
   assert.match(openAction("run_backtest", {}, { spec: { source: "congress", filters: { committee: "Armed Services" }, rules: {} } }), /^bt:token:[\w-]+$/);
-  assert.equal(openAction("news", {}), "");
+  assert.equal(openAction("news", {}), "section:news");
+  assert.equal(openAction("satellite", {}), "section:strait");
+  assert.equal(openAction("web_search", { q: "nvda" }), "");
 });
 
 test("caveats always say research only, and add the filing-lag note when trades were read", () => {

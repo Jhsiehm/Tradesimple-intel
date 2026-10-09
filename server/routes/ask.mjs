@@ -7,10 +7,12 @@ import { createProvider } from "../ai/providers.mjs";
 import { runAsk } from "../ai/run.mjs";
 import { TOOLS, callRoute, labelOf, runTool, toolDefs } from "../ai/tools.mjs";
 import { askLog } from "../ai/log.mjs";
+import { SOURCING, SOURCING_LABEL, STYLES, STYLE_LABEL } from "../../shared/askModes.mjs";
 
 export function askStatus(env = process.env) {
   const cfg = askConfig(env);
   const models = cfg.configured ? modelOptions(cfg) : [];
+  const brave = Boolean(String(env.BRAVE_SEARCH_API_KEY || "").trim());
   return {
     ok: true,
     configured: cfg.configured,
@@ -21,6 +23,9 @@ export function askStatus(env = process.env) {
     missing: cfg.missing,
     notice: cfg.configured ? "" : cfg.error || NOT_CONFIGURED,
     tools: TOOLS.map((t) => t.name),
+    sourcing: SOURCING.map((id) => ({ id, label: SOURCING_LABEL[id] })),
+    styles: STYLES.map((id) => ({ id, label: STYLE_LABEL[id] })),
+    web: { brave, note: brave ? "Brave Search" : "DuckDuckGo HTML (no key)" },
     limits: { toolCalls: ASK_LIMITS.toolCalls, totalSeconds: ASK_LIMITS.totalMs / 1000, tokenBudget: ASK_LIMITS.tokenBudget, perIp: ASK_LIMITS.perIp, perIpMinutes: ASK_LIMITS.perIpWindowMs / 60_000 }
   };
 }
@@ -54,7 +59,7 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
     res.on("close", () => ctl.abort());
     res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     const emit = (event) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify(event)}\n\n`); };
-    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached) });
+    log({ event: "ask", question: asked.question.slice(0, 160), provider: cfg.provider, model, context: asked.context?.node || (asked.context?.theory ? "theory" : ""), attached: Boolean(asked.attached), sourcing: asked.session?.sourcing || "", style: asked.session?.style || "" });
     try {
       const out = await runAsk({
         question: asked.question,
@@ -62,12 +67,13 @@ export function makeAskHandler({ env = process.env, makeProvider = (cfg) => crea
         context: asked.context,
         attached: asked.attached,
         prefs: asked.prefs,
+        session: asked.session,
         prior: asked.prior,
         answers: asked.answers,
         acceptDefaults: asked.acceptDefaults,
         model,
         provider: makeProvider({ ...cfg, model }),
-        tools: toolDefs(),
+        tools: toolDefs("both"),
         execute: (name, args, hooks) => execute(db, name, args, hooks),
         labelOf,
         emit,

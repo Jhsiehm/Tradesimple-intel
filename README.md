@@ -58,17 +58,37 @@ Pick signals (congressional trades by committee, member, party, chamber, ticker,
 - **What it will not tell you.** Committee seats are the current roster applied to past trades; paper filings are not parsed (counted in the caveats); symbols with no Yahoo history (delisted, renamed) are excluded and counted, which flatters results; `^GSPC` is price only while stocks are dividend-adjusted; trades overlap, so the t-statistic overstates confidence; a single prolific member can be most of a sample (the caveats name them). The Sharpe-ish figure is labeled as rough.
 - **API.** `GET /api/backtest` returns the form options; `POST /api/backtest` with `{source, filters, rules}` (or `GET ?spec=<json or #bt token>`) runs one. `GET /api/backtest/replicate` builds the export pack. Results carry source, as-of and latency per feed, are cached 30 minutes by spec hash, and at most two run at once (429 beyond that). A first run can take 15 to 40 seconds while prices load; the board retries while the server says it is still building. Pure engine: `shared/backtest.mjs`; formulas: `shared/formulas.mjs`; export: `shared/replicate.mjs`.
 
-### Ask: questions answered from the app's own data
+### Ask: questions answered from the app's own data (and optionally the web)
 
-`ASK <your question>` in the command line (`⌘K`), type a question in the top search box and choose the **Ask** row, or press **Ask** when something is on screen. Answers stream in a floating **Ask sheet** (resizable, peek / half / full): live tool steps, citation chips after each claim (`[t3]` style) that open the board they came from, a collapsible **How I got this** list with source / as-of / latency per tool call, **Data caveats**, clarifying chips when a backtest needs a choice, inline backtest cards, and buttons to Keep the chat, copy a link, or share. History stays in this browser only.
+`ASK <your question>` in the command line (`⌘K`), type a question in the top search box and choose the **Ask** row, or press **Ask** when something is on screen. Answers stream in a floating **Ask sheet** (resizable, peek / half / full): live tool steps, citation chips after each claim (`[t3]` style) that open the board they came from, a collapsible **How I got this** list with source / as-of / latency per tool call, **Data caveats**, clarifying chips when a backtest or sourcing choice is needed, inline backtest cards, and buttons to Keep the chat, copy a link, or share. History stays in this browser only.
+
+**Sourcing modes** (default: TradeSimple only — isolates the research bot to this terminal's feeds):
+
+| Mode | What Ask may call |
+| --- | --- |
+| **TradeSimple only** (`platform`) | In-app tools only: Congress, markets, contracts, **news RSS wires**, **X pulse / posts**, world calendar, **satellite frame status**, Strait AIS/news, air, backtests, theories |
+| **TradeSimple + web** (`both`) | Everything above, plus `web_search` and `web_fetch` |
+| **Web only** (`web`) | Open web only (`web_search` / `web_fetch`); no in-app filing tools |
+
+Toggle in the Ask sheet, say it in chat (“use only TradeSimple”, “use TradeSimple and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared.
+
+**Writing styles** (specialized instruction packs per data layer are injected automatically):
+
+| Style | Behavior |
+| --- | --- |
+| **Terminal** (default) | Dense, figures-first tables |
+| **Professional** | Executive brief: finding → evidence → one caveat |
+| **Simplified** | Plain language for a smart non-expert; jargon defined once |
+
+Say “professional”, “simplified”, or “terminal style” in the question or as a follow-up. Layer packs (`shared/askModes.mjs`) add standing rules for Congress, markets, money, news/X, world/geo, and web whenever those tools are enabled.
 
 Screen context (the selected member or ticker, or a theory) is attached only when something is selected; you can detach it. Accepting a **propose_theory** result writes one cleaned theory into your map document (`saveTheory`); dismiss writes nothing. Theories are labeled *not from a data source* and are never mixed into counts or case files.
 
-The model can only call read-only tools that wrap the app's own routes:
+**Platform tools** (TradeSimple feeds): `search`, `member_profile`, `member_trades`, `member_timeline`, `ticker_dossier`, `case_file`, `committee`, `hearings`, `bill`, `bill_votes`, `votes`, `contracts`, `corporate`, `lobbying_client`, `pac_committee`, `positions`, `insiders`, `congress_feed`, `congress_leaders`, `alerts`, `intel_scope`, `run_backtest`, `propose_theory`, `news`, `news_desk`, `x_pulse`, `x_posts`, `world_calendar`, `macro_strip`, `satellite`, `shipping`, `strait_news`, `strait_ships`, `air_theater`.
 
-`search`, `member_profile`, `member_trades`, `member_timeline`, `ticker_dossier`, `case_file`, `committee`, `bill`, `bill_votes`, `votes`, `contracts`, `corporate`, `lobbying_client`, `pac_committee`, `positions`, `alerts`, `intel_scope`, `congress_leaders`, `run_backtest`, `propose_theory`.
+**Web tools** (only in `both` / `web`): `web_search` (Brave when `BRAVE_SEARCH_API_KEY` is set, else DuckDuckGo HTML), `web_fetch` (one public http(s) URL; localhost blocked). Web results are labeled as outside TradeSimple and must be cited by URL.
 
-It never places orders and has no network tool of its own. The server enforces (see `ASK_LIMITS` in `shared/ask.mjs`): at most 8 tool calls, 6 model rounds, 150 seconds wall clock, and an 80,000-token budget per question; 12 questions per 10 minutes per client address; 3 answers in flight. Replies that skip the model (greetings, preference saves, clarify-only turns) do not consume the rate limit. Tool calls (name, arguments, timing; never keys) are logged to `/tmp/intel-ask.log`.
+It never places orders. The server enforces (see `ASK_LIMITS` in `shared/ask.mjs`): at most 8 tool calls, 6 model rounds, 150 seconds wall clock, and an 80,000-token budget per question; 12 questions per 10 minutes per client address; 3 answers in flight. Replies that skip the model (greetings, preference/mode saves, clarify-only turns) do not consume the rate limit. Tool calls (name, arguments, timing; never keys) are logged to `/tmp/intel-ask.log`.
 
 **Grounding.** The prompt requires answering only from tool results with a ref after each fact. The server then checks the final text: refs that match no tool result are reported, and every number in the answer that appears in no tool result is listed under the answer as *not found in any tool result*. This is a warning, not a proof: a number can match by coincidence, and a claim can be wrong without a number in it. If a data tool returned rows but the answer has no figures, Ask retries once; if it still has none, the tool's own table is shown.
 
@@ -211,6 +231,7 @@ Keys live only in `.env.local`. The server reads them and they are never sent to
 | `AISSTREAM_API_KEY` | Live ship positions | [aisstream.io](https://aisstream.io) |
 | `X_BEARER_TOKEN` | Real X posts. Without it, the X column shows the same accounts' posts on Bluesky plus Truth Social. | [developer.x.com](https://developer.x.com) |
 | `ASK_PROVIDER` + provider key | Ask sheet (see table above). `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ASK_API_KEY`+`ASK_BASE_URL`, or `OPENROUTER_API_KEY` | Provider dashboards |
+| `BRAVE_SEARCH_API_KEY` | Optional quality upgrade for Ask `web_search` when sourcing is web/both (otherwise DuckDuckGo HTML, no key) | [Brave Search API](https://brave.com/search/api/) |
 | `INTEL_ALLOWED_ORIGINS` | Extra origins allowed to POST/PUT/PATCH/DELETE to the local API (comma-separated). Loopback Vite and Origin-less curl/scripts are already allowed. | — |
 
 Everything else (quotes, SEC, FINRA, news, aircraft, imagery, trends, backtest prices) uses free public endpoints.

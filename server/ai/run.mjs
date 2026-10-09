@@ -2,9 +2,13 @@ import { ASK_LIMITS, caveatsFor, citationRefs, evidenceOf, groundingCheck, syste
 import { attachedNote, contextNote, fallbackTable, figureCount, greetingText, isGreeting, retryReason } from "../../shared/agent.mjs";
 import { buildSpec, clarifyQuestions, describeValue, isFollowUp, isPrefClear, isPrefStatement, mergeModelSpec, parsePrefs, planNote, provenanceLine, specDiff, wantsBacktest } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
+import {
+  SOURCING_LABEL, STYLE_LABEL, describeModes, isModeClear, isModeStatement, mergeSession, parseSourcing, parseStyle,
+  resolveModes, sourcingClarify, toolsForSourcing
+} from "../../shared/askModes.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4);
-const COMPUTE = new Set(["run_backtest"]);
+const COMPUTE = new Set(["run_backtest", "web_search", "web_fetch", "satellite", "news", "x_pulse"]);
 const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
 /**
@@ -19,32 +23,55 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
  *   citation      { id, tool, label, source, asOf, ok }     the first time the answer cites a ref
  *   clarify       { questions, spec, from, sentence, sources }  chips to settle before a backtest runs (no model call)
  *   done          { answer, cited, unknown, grounding, caveats, usage, ms, stopped, model, theory, table, retried, greeting,
- *                   backtests, clarify, prefs }
+ *                   backtests, clarify, prefs, session, modes }
  *   error         { code, error }
  * Limits (tool calls, rounds, wall clock, tokens) end the loop with a last answer-only round, never a silent cut.
  * A finished answer with no figures after a data tool returned rows (or a backtest question with no backtest) is
  * rewritten once; if it still has no figures, `done.table` carries the tool's own rows.
  * Backtest questions are planned first (shared/backtestAsk.mjs): preferences, the previous run (`prior`), chip
  * `answers`; ambiguous result-changing fields end the turn with `clarify`, and every run_backtest call runs the plan.
+ * Sourcing (platform / both / web) and style (terminal / professional / simplified) come from answers, the
+ * question text, or the session prefs; tools are filtered to match.
  */
-export async function runAsk({ question, history = [], context = null, attached = null, model = "", prefs = null, prior = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
+export async function runAsk({ question, history = [], context = null, attached = null, model = "", prefs = null, session = null, prior = null, answers = {}, acceptDefaults = false, provider, tools, execute, labelOf = (n) => n, emit, limits = ASK_LIMITS, now = () => Date.now(), today = new Date(now()).toISOString().slice(0, 10), signal, log = () => {}, heartbeatMs = 1_500 }) {
   const t0 = now();
   const evidence = [];
   const bodies = new Map();
   let theory = null;
+  const modes = resolveModes({ question, session, answers, acceptDefaults });
+  const allow = toolsForSourcing(modes.sourcing);
+  const activeTools = (tools || []).filter((t) => allow.has(t.name));
 
   const quick = (answer, extra = {}) => {
     emit({ type: "step_progress", phase: "writing" });
     if (answer) emit({ type: "token", delta: answer });
-    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, ...extra });
+    emit({ type: "done", answer, cited: [], unknown: [], grounding: { checked: 0, unmatched: [] }, uncited: false, noTools: false, greeting: false, caveats: [], usage: { tokens: 0, toolCalls: 0 }, ms: now() - t0, stopped: "", model, theory: null, table: null, retried: false, backtests: [], clarify: false, prefs: null, session: null, modes: { sourcing: modes.sourcing, style: modes.style, label: describeModes(modes) }, ...extra });
     return { modelCalled: false };
   };
   if (isGreeting(question) && !history.length && !attached) return quick(greetingText(), { greeting: true });
+  if (isModeClear(question)) {
+    return quick("Cleared Ask sourcing and style. New answers default to TradeSimple only · terminal style until you change them.", { session: { clear: true } });
+  }
+  if (isModeStatement(question)) {
+    const patch = { sourcing: parseSourcing(question) || undefined, style: parseStyle(question) || undefined };
+    const next = mergeSession(session, patch, new Date(now()).toISOString());
+    const bits = [];
+    if (patch.sourcing) bits.push(`sourcing → ${SOURCING_LABEL[patch.sourcing]}`);
+    if (patch.style) bits.push(`style → ${STYLE_LABEL[patch.style]}`);
+    return quick(`Saved for this browser: ${bits.join("; ") || describeModes({ sourcing: next.sourcing || "platform", style: next.style || "terminal" })}.\n\nSay “TradeSimple only”, “use TradeSimple and the web”, or “simplified” any time — including as a follow-up.`, { session: { set: next } });
+  }
   if (isPrefClear(question)) return quick("Cleared your backtest preferences. New backtests use the app defaults until you set new ones.", { prefs: { clear: true } });
   if (isPrefStatement(question)) {
     const values = parsePrefs(question);
     const list = Object.entries(values).map(([p, v]) => `- ${describeValue(p, v)}`).join("\n");
     return quick(`Saved as your backtest defaults:\n${list}\n\nThey apply to new backtests unless a question says otherwise. Edit or clear them under Preferences in this panel.`, { prefs: { set: values } });
+  }
+
+  const sourceQs = sourcingClarify({ question, session, answers, acceptDefaults });
+  if (sourceQs.length) {
+    emit({ type: "clarify", questions: sourceQs, spec: null, from: modes.from, sentence: "Pick where Ask may look for this answer.", sources: [], note: "Default is TradeSimple only." });
+    log({ event: "clarify", fields: sourceQs.map((q) => q.path) });
+    return quick("", { clarify: true, modes: { sourcing: modes.sourcing, style: modes.style, label: describeModes(modes) } });
   }
 
   const plan = wantsBacktest(question) || isFollowUp(question, prior) ? buildSpec({ question, today, prefs, prior, answers }) : null;
@@ -58,7 +85,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   }
   const backtests = [];
 
-  const system = [systemPrompt(today), contextNote(context), plan ? planNote(plan, plan.followUp ? prior : null) : ""].filter(Boolean).join("\n");
+  const system = [systemPrompt(today, modes), contextNote(context), plan ? planNote(plan, plan.followUp ? prior : null) : ""].filter(Boolean).join("\n");
   const messages = [{ role: "system", content: system }];
   if (attached) messages.push({ role: "user", content: attachedNote(attached) }, { role: "assistant", content: "Noted. I will treat that chat as context, not as data." });
   messages.push(...history, { role: "user", content: question });
@@ -67,6 +94,7 @@ export async function runAsk({ question, history = [], context = null, attached 
   let answer = "";
   let stopped = "";
   let retried = false;
+  tools = activeTools;
 
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
@@ -191,7 +219,10 @@ export async function runAsk({ question, history = [], context = null, attached 
     const t = fallbackTable(bodies.get(best.id));
     if (t) table = { ...t, ref: best.id, label: best.label, source: best.source, asOf: best.asOf };
   }
-  log({ event: "done", ms: now() - t0, toolCalls: calls, retried, table: Boolean(table) });
+  const sessionPatch = (parseSourcing(question) || parseStyle(question))
+    ? { set: mergeSession(session, { sourcing: parseSourcing(question) || undefined, style: parseStyle(question) || undefined }, new Date(now()).toISOString()) }
+    : null;
+  log({ event: "done", ms: now() - t0, toolCalls: calls, retried, table: Boolean(table), sourcing: modes.sourcing, style: modes.style });
   emit({
     type: "done",
     answer,
@@ -211,6 +242,8 @@ export async function runAsk({ question, history = [], context = null, attached 
     retried,
     backtests: backtests.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1))),
     clarify: false,
-    prefs: null
+    prefs: null,
+    session: sessionPatch,
+    modes: { sourcing: modes.sourcing, style: modes.style, label: describeModes(modes) }
   });
 }

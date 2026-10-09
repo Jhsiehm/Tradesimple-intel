@@ -60,9 +60,18 @@ export type Done = {
   backtests: BacktestRef[];
   clarify: boolean;
   prefs: { set?: Record<string, unknown>; clear?: boolean } | null;
+  session?: { set?: { sourcing?: string; style?: string; v?: number; updated?: string }; clear?: boolean } | null;
+  modes?: { sourcing: string; style: string; label: string } | null;
 };
 
-export type ClarifyAsk = { questions: Clarify[]; spec: BacktestSpec; from: Record<string, string>; sentence: string; sources: string[]; note: string };
+export type ClarifyAsk = {
+  questions: Array<Clarify | { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback?: unknown }>;
+  spec: BacktestSpec | null;
+  from: Record<string, string>;
+  sentence: string;
+  sources: string[];
+  note: string;
+};
 
 /** One exchange: the question and everything the answer streamed. */
 export type Turn = {
@@ -92,4 +101,7 @@ export type AskStatus = {
   missing: string[];
   notice: string;
   tools: string[];
+  sourcing?: { id: string; label: string }[];
+  styles?: { id: string; label: string }[];
+  web?: { brave: boolean; note: string };
 };

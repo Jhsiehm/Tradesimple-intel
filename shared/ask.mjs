@@ -5,6 +5,7 @@
 import { cleanSpec, encodeSpec } from "./backtestSpec.mjs";
 import { PREF_FIELDS, cleanPrefs } from "./backtestAsk.mjs";
 import { cleanAttached, cleanContext, rowCount } from "./agent.mjs";
+import { SOURCING, STYLES, cleanSession, modeSystemNote } from "./askModes.mjs";
 
 export const ASK_LIMITS = {
   question: 800,
@@ -45,6 +46,7 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     context: cleanContext(raw.context),
     attached: cleanAttached(raw.attached),
     prefs: raw.prefs ? cleanPrefs(raw.prefs) : null,
+    session: cleanSession(raw.session),
     prior: cleanPrior(raw.prior),
     answers: cleanAnswers(raw.answers),
     acceptDefaults: raw.acceptDefaults === true
@@ -57,20 +59,23 @@ function cleanPrior(raw) {
   return out.ok ? out.spec : null;
 }
 
-/** Chip picks: known preference paths with a scalar value only. */
+/** Chip picks: backtest preference paths, plus sourcing/style mode answers. */
 function cleanAnswers(raw) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;
   for (const [path, v] of Object.entries(raw)) {
-    if (path in PREF_FIELDS && ["string", "number", "boolean"].includes(typeof v)) out[path] = typeof v === "string" ? v.slice(0, 20) : v;
+    if (path === "sourcing" && SOURCING.includes(v)) out.sourcing = v;
+    else if (path === "style" && STYLES.includes(v)) out.style = v;
+    else if (path in PREF_FIELDS && ["string", "number", "boolean"].includes(typeof v)) out[path] = typeof v === "string" ? v.slice(0, 20) : v;
   }
   return out;
 }
 
 const daysBefore = (today, n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
 
-export function systemPrompt(today) {
-  return [
+/** Base research rules. Pass `modes` ({ sourcing, style }) to append sourcing, style, and layer packs. */
+export function systemPrompt(today, modes = null) {
+  const base = [
     `You are the research assistant inside TradeSimple Intel, a read-only research terminal. Today is ${today}.`,
     "Answer only from tool results. Call tools to look things up; you have no other knowledge of this data. Nothing on the user's screen is known to you unless the user attached it.",
     "Every tool result carries a ref such as t3. Put that ref in square brackets, [t3], right after each sentence, table row, or number that comes from it. A number or fact without a ref from a result you called is not allowed.",
@@ -78,6 +83,7 @@ export function systemPrompt(today) {
     "Quote numbers as the tool returned them (a fraction such as 0.0834 may be written 8.34%). Do not do arithmetic that no tool did; if a difference matters, give the two figures with their refs.",
     `Backtests: call run_backtest. For "the last N days", set filters.from to N days before today (30 days → ${daysBefore(today, 30)}), filters.to to ${today}, rules.openTrades to "mark" and rules.holdDays to N, because most of those positions have not reached a normal 90-day exit. "All data sources" means one run_backtest call per source in the same turn: congress, form4, and contracts (lobbying needs tickers; say so). State the spec you used in one line.`,
     "Use congress_leaders for disclosed buys ranked against SPY.",
+    "For headlines and world updates use news / news_desk / x_pulse / x_posts / world_calendar / strait_news. For satellite status use satellite. For open-web context (when those tools are listed) use web_search and web_fetch.",
     "If the tools cannot answer, say so plainly and say what is missing. Do not guess, do not fill gaps from memory.",
     "Never guess a ticker join. A symbol that the ticker tool says is not joined is not joined; say that and stop.",
     "Congress trades are known by their filing date, not their trade date, and amounts are ranges. Say so when you use them. Committee seats are the current roster, applied to past trades.",
@@ -86,7 +92,9 @@ export function systemPrompt(today) {
     "If the user wants to save a link between two things as their own theory, call propose_theory; it writes nothing until the user accepts it.",
     "This is research, not advice. Do not recommend buying or selling anything, do not suggest an order, and do not predict prices.",
     "Be short. No headings. Use at most six tool calls."
-  ].join("\n");
+  ];
+  if (modes?.sourcing || modes?.style) base.push(modeSystemNote(modes));
+  return base.join("\n");
 }
 
 const trimNode = (v, depth, items, chars = 320, maxDepth = 6) => {
@@ -189,6 +197,20 @@ export function openAction(tool, args = {}, body = {}) {
       return "today:leaders";
     case "intel_scope":
       return a.member ? `scope:member:${String(a.member).toUpperCase()}` : sym ? `scope:symbol:${sym}` : "";
+    case "news":
+    case "news_desk":
+    case "x_pulse":
+    case "x_posts":
+      return "section:news";
+    case "satellite":
+    case "shipping":
+    case "strait_news":
+    case "strait_ships":
+    case "air_theater":
+      return "section:strait";
+    case "world_calendar":
+    case "macro_strip":
+      return "calendar:macro";
     case "run_backtest": {
       const spec = body && typeof body === "object" ? body.spec : null;
       return spec ? `bt:token:${encodeSpec(spec)}` : "";
@@ -288,8 +310,11 @@ export function caveatsFor(evidence) {
   if (used.has("run_backtest")) {
     for (const e of evidence) if (e.tool === "run_backtest" && e.ok) out.push(...e.caveats);
   }
+  if (["news", "news_desk", "x_pulse", "x_posts", "strait_news"].some((t) => used.has(t))) out.push("Headlines and social posts use the publisher's stamp; trending lists can lag X by up to an hour.");
+  if (used.has("satellite") || used.has("shipping") || used.has("air_theater") || used.has("strait_ships")) out.push("Satellite frames and volunteer AIS/ADS-B feeds are delayed or incomplete; empty coverage is honest, not a claim that nothing is there.");
+  if (used.has("web_search") || used.has("web_fetch")) out.push("Open-web results are outside TradeSimple's own feeds. URLs can be wrong or stale; they are not filings.");
   out.push("Research only. Not investment advice, and nothing here places an order.");
-  return [...new Set(out)].slice(0, 10);
+  return [...new Set(out)].slice(0, 12);
 }
 
 /* ---------- limiter ---------- */

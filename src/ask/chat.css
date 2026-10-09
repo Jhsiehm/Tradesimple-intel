@@ -23,6 +23,8 @@
 .ask-prefs ul { margin: 4px 0; }
 .ask-prefs li { display: flex; gap: 6px; align-items: baseline; color: var(--ink); }
 .ask-saved .ask-prefs button { width: auto; display: inline; padding: 0 4px; border: 0; color: var(--cyan, var(--dim)); }
+.ask-modes { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.ask-modes .chip[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 
 .ask-empty { display: grid; gap: 8px; }
 .ask-examples { display: flex; flex-wrap: wrap; gap: 6px; }
