@@ -15,6 +15,7 @@
     "publish:demo": "node scripts/publish-demo.mjs",
     "bot": "node scripts/bot.mjs",
     "warm": "node scripts/warm.mjs",
+    "insiders:backfill": "node scripts/insiders-backfill.mjs",
     "auth:hash": "node scripts/auth-hash.mjs",
     "start:prod": "NODE_ENV=production node server/index.mjs"
   },

@@ -7,6 +7,7 @@ import { refreshReturns } from "../returns.mjs";
 import { warmContracts } from "../contracts.mjs";
 import { warmCorporate } from "../domain/corporate/index.mjs";
 import { warmMacro } from "../macro.mjs";
+import { refreshInsiderHistory } from "./insidersBackfill.mjs";
 
 function corporateThenMacro(db) {
   return warmCorporate(db)
@@ -22,7 +23,8 @@ export const SCHEDULE = [
   { name: "corporate+macro", delay: 5000, every: null, run: corporateThenMacro },
   { name: "timeline", delay: 8000, every: 6 * HOUR, run: refreshTimeline },
   { name: "returns", delay: 20000, every: 12 * HOUR, run: refreshReturns },
-  { name: "watchlist", delay: 30000, every: 15 * MINUTE, run: refreshWatched }
+  { name: "watchlist", delay: 30000, every: 15 * MINUTE, run: refreshWatched },
+  { name: "insider-history", delay: 60000, every: 6 * HOUR, run: refreshInsiderHistory }
 ];
 
 export function startWarm(db) {

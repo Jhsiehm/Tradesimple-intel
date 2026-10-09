@@ -77,7 +77,7 @@ const few = (xs, n = 8) => `${xs.slice(0, n).join(", ")}${xs.length > n ? "…" 
  */
 export async function form4Source(db, f, { deadline = 0, history = insiderHistory } = {}) {
   const from = f.from || daysAgo(FORM4_DEFAULT_DAYS);
-  const res = await history(db, { from, to: f.to, deadline }).catch((err) => ({ items: [], errors: [err.message], filings: { wanted: 0, read: 0, failed: 0, pending: 0 }, coverage: { shortList: [], capped: [] } }));
+  const res = await history(db, { from, to: f.to, deadline, symbols: f.tickers }).catch((err) => ({ items: [], errors: [err.message], filings: { wanted: 0, read: 0, failed: 0, pending: 0 }, coverage: { shortList: [], capped: [] } }));
   if (!res?.items?.length) {
     return { error: res?.filings?.pending ? `Form 4 filings are still being read from SEC EDGAR (${res.filings.read} of ${res.filings.wanted} so far). Try again in a minute.` : res?.errors?.[0] || "No Form 4 filings were found for join-table issuers in this window.", building: Boolean(res?.building) };
   }
@@ -92,7 +92,7 @@ export async function form4Source(db, f, { deadline = 0, history = insiderHistor
     building: Boolean(res.building),
     context: {
       notes: [
-        { level: "info", id: "f4cover", text: `Form 4 history: ${read} of ${wanted} filings read for ${res.issuers} join-table issuers, filed ${dates[0]} to ${dates.at(-1)}${f.from ? "" : ` (no start date given; last ${FORM4_DEFAULT_DAYS} days)`}. Each issuer's newest ${HISTORY_PER_ISSUER} Form 4s in the window are read.` },
+        { level: "info", id: "f4cover", text: res.coverageNote || `Form 4 history: ${read} of ${wanted} filings read for ${res.issuers} join-table issuers, filed ${dates[0]} to ${dates.at(-1)}${f.from ? "" : ` (no start date given; last ${FORM4_DEFAULT_DAYS} days)`}. Each issuer's newest ${HISTORY_PER_ISSUER} Form 4s in the window are read.` },
         ...(res.building ? [{ level: "warn", id: "f4pending", text: `${pending} Form 4 filings were still being read from SEC EDGAR when the time budget ended and are not in this run${res.filings.listingIncomplete ? ", and some issuers' filing lists had not been read yet, so more are missing than that" : ""}. They keep loading; run again in a minute.` }] : []),
         ...(failed ? [{ level: "warn", id: "f4failed", text: `${failed} Form 4 documents could not be read from SEC EDGAR this run.` }] : []),
         ...(res.errors?.length ? [{ level: "warn", id: "f4issuers", text: `${res.errors.length} of ${res.issuers} issuers' SEC filing lists could not be read (${few(res.errors.map((e) => e.split(":")[0]))}); their insider trades are missing.` }] : []),

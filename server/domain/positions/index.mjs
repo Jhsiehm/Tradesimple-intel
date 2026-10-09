@@ -4,7 +4,7 @@ import { whaleHoldings } from "./whales.mjs";
 import { shortBoard } from "./shorts.mjs";
 
 export { congressTrades, memberTrades } from "./congress.mjs";
-export { insiderHistory, insiderTrades } from "./insiders.mjs";
+export { insiderHistory, insiderTrades, insiderWindow } from "./insiders.mjs";
 export { whaleHoldings } from "./whales.mjs";
 export { shortBoard } from "./shorts.mjs";
 export { coverage, positionsBoard, positionsFor } from "./board.mjs";

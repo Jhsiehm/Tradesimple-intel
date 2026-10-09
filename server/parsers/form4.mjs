@@ -38,6 +38,6 @@ function decodeXml(value) {
     .replace(/&amp;/g, "&");
 }
 
-function titleCase(value) {
+export function titleCase(value) {
   return String(value || "").toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase()).replace(/\b(Llc|Lp|Inc|Ltd|Plc)\b/g, (s) => s.toUpperCase());
 }

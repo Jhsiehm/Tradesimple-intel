@@ -7,6 +7,7 @@ import { KEY } from "../../lib/cacheKeys.mjs";
 import { parseForm4 } from "../../parsers/form4.mjs";
 import { lagDays } from "../../parsers/dates.mjs";
 import { secSubmissions } from "./submissions.mjs";
+import { STORE_SOURCE, storeReady, storeRows } from "./insiderStore.mjs";
 
 const FORM4_CODES = {
   P: "buy",
@@ -113,7 +114,7 @@ export function insiderTrades(db) {
 const reading = new Map();
 
 /** One parsed Form 4, cached for six months. Concurrent asks for the same accession share one fetch. */
-function form4(db, cik, pick) {
+export function form4(db, cik, pick) {
   const key = KEY.secForm4(pick.accession);
   const hit = readCache(db, key);
   if (hit) return Promise.resolve(hit);
@@ -129,13 +130,78 @@ function form4(db, cik, pick) {
   return job;
 }
 
+/** Most rows one window answer carries; `totals` count the whole window. */
+export const WINDOW_ROWS = 2000;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Form 4 rows filed in [from, to] for every join-table issuer: up to `perIssuer` filings each, newest first. Reads
+ * Every Form 4 line filed in [from, to] from the insider store (plus live reads after its coverage), newest first,
+ * for Ask's dated questions. Without a backfilled store it is the board (latest eight Form 4s per issuer).
+ */
+export async function insiderWindow(db, { from = "", to = "" } = {}) {
+  const lo = ISO_DAY.test(from) ? from : "";
+  const hi = ISO_DAY.test(to) ? to : "";
+  if (!storeReady(db) || (!lo && !hi)) return insiderTrades(db);
+  const res = await insiderHistory(db, { from: lo, to: hi, deadline: Date.now() + 15_000 });
+  const distinct = (k) => new Set(res.items.map((r) => r[k]).filter(Boolean)).size;
+  const { coverageNote, store, ...rest } = res;
+  return {
+    ...rest,
+    ok: true,
+    latency: `${res.latency} ${coverageNote}`,
+    items: res.items.slice(0, WINDOW_ROWS),
+    totals: { transactionLines: res.items.length, forms: distinct("accession"), issuers: distinct("symbol"), insiders: distinct("person") },
+    truncated: res.items.length > WINDOW_ROWS,
+    history: store
+  };
+}
+
+const dayAfter = (day) => new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * Form 4 rows filed in [from, to] for join-table issuers (`symbols` narrows them), newest first. Once the insider
+ * store is backfilled it answers for every filing through its `coveredThrough` day, with no per-issuer cap; only
+ * filings after that are read live from issuer submissions. With no store it is the submissions path alone.
+ */
+export async function insiderHistory(db, opts = {}) {
+  const symbols = new Set(opts.symbols || []);
+  const list = (opts.tickers || listCore(db)).filter((t) => t.cik && (!symbols.size || symbols.has(t.symbol)));
+  const store = opts.store === false || !db ? null : storeReady(db);
+  if (!store) return submissionsHistory(db, { ...opts, tickers: list });
+  const { from = "", to = "" } = opts;
+  const stored = storeRows(db, { from, to: to && to < store.coveredThrough ? to : store.coveredThrough, symbols: list.map((t) => t.symbol) });
+  const liveFrom = from > store.coveredThrough ? from : dayAfter(store.coveredThrough);
+  const tail = to && to < liveFrom ? null : await submissionsHistory(db, { ...opts, from: liveFrom, tickers: list });
+  const known = new Set(stored.items.map((r) => r.accession));
+  const fresh = (tail?.items || []).filter((r) => !known.has(r.accession));
+  const items = [...stored.items, ...fresh].sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
+  const forms = known.size;
+  const early = from && from < store.coveredFrom;
+  const live = tail ? ` Form 4s filed after ${store.coveredThrough} are read live from issuer submissions (up to ${opts.perIssuer || HISTORY_PER_ISSUER} per issuer): ${tail.filings.read} read.` : "";
+  return {
+    ok: items.length > 0,
+    source: `${STORE_SOURCE}${tail ? " + SEC EDGAR Form 4 (issuer submissions)" : ""}`,
+    asOf: store.lastUpdate || new Date().toISOString(),
+    latency: `Form 4 is due two business days after the trade. Quarterly data sets cover filings through ${store.datasetThrough}, the EDGAR daily index through ${store.coveredThrough}; the store is updated every 6 h.${live} Every Form 4 in the window is read, with no per-issuer cap. Data-set prices and share counts are rounded to cents and hundredths.`,
+    items,
+    errors: tail?.errors || [],
+    issuers: list.length,
+    filings: { wanted: forms + (tail?.filings.wanted || 0), read: forms + (tail?.filings.read || 0), failed: tail?.filings.failed || 0, pending: tail?.filings.pending || 0, listingIncomplete: Boolean(tail?.filings.listingIncomplete) },
+    coverage: { shortList: [], capped: tail?.coverage.capped || [] },
+    otherIssuer: tail?.otherIssuer || 0,
+    building: Boolean(tail?.building),
+    store: { ...store, amended: stored.amended, forms, liveForms: tail?.filings.read || 0 },
+    coverageNote: `Form 4 history: every Form 4 filed ${from || store.coveredFrom} to ${to || "today"} for ${list.length} join-table issuers — ${forms} forms from the ${STORE_SOURCE} (complete ${store.coveredFrom} to ${store.coveredThrough}, updated ${store.lastUpdate || "—"})${tail ? ` and ${tail.filings.read} filed since, read live` : ""}. No per-issuer cap; ${stored.amended} lines on 4/A amendments are left out (they restate a form already counted).${early ? ` The store starts ${store.coveredFrom}; Form 4s filed before that are not here.` : ""}`
+  };
+}
+
+/**
+ * Form 4 rows filed in [from, to] from issuer submissions: up to `perIssuer` filings each, newest first. Reads
  * still running at `deadline` keep going and fill the cache for the next run; they are counted in `filings.pending`.
  * `coverage` says what the SEC list could not reach: issuers whose recent-filings list starts after `from`, and
  * issuers with more filings in the window than `perIssuer`.
  */
-export async function insiderHistory(db, { from = "", to = "", deadline = 0, perIssuer = HISTORY_PER_ISSUER, read = form4, subsOf = secSubmissions, tickers = null } = {}) {
+async function submissionsHistory(db, { from = "", to = "", deadline = 0, perIssuer = HISTORY_PER_ISSUER, read = form4, subsOf = secSubmissions, tickers = null } = {}) {
   const list = (tickers || listCore(db)).filter((t) => t.cik);
   const rows = [];
   const errors = [];

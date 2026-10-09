@@ -135,12 +135,21 @@ export function windowItems(body, { days = 0, from = "", to = "", key = "filed",
   return { ...body, items, itemsBeforeWindow: body.items.length, window: { all: false, from: lo, to: hi, ...(n ? { days: n } : {}), basis, [unit]: items.length, ...(coverage ? { coverage } : {}) } };
 }
 
-/** Form 4 rows are transaction lines; several lines share one form. Counts say which is which. */
+/** The [from, to] a window's args ask for (days counts back from `to` or today), or null for no window. */
+export function windowRange({ days = 0, from = "", to = "" } = {}, today = new Date().toISOString().slice(0, 10)) {
+  const n = daysArg(days, 730);
+  let lo = ISO_DAY.test(from) ? from : "";
+  let hi = ISO_DAY.test(to) ? to : "";
+  if (n) { hi = hi || today; lo = new Date(Date.parse(`${hi}T00:00:00Z`) - n * DAY_MS).toISOString().slice(0, 10); }
+  return lo || hi ? { ...(lo ? { from: lo } : {}), ...(hi ? { to: hi } : {}) } : null;
+}
+
+/** Form 4 rows are transaction lines; several lines share one form. Counts say which is which (`totals` when rows were cut). */
 export function insiderCounts(body) {
   if (!body || body.ok === false || !Array.isArray(body.items)) return body;
   const distinct = (k) => new Set(body.items.map((r) => r[k]).filter(Boolean)).size;
-  const { itemsBeforeWindow, ...rest } = body;
-  return { ...rest, counts: { transactionLines: body.items.length, forms: distinct("accession"), issuers: distinct("symbol"), insiders: distinct("person") }, ...(itemsBeforeWindow != null ? { transactionLinesBeforeWindow: itemsBeforeWindow } : {}) };
+  const { itemsBeforeWindow, totals, ...rest } = body;
+  return { ...rest, counts: totals || { transactionLines: body.items.length, forms: distinct("accession"), issuers: distinct("symbol"), insiders: distinct("person") }, ...(itemsBeforeWindow != null && !totals ? { transactionLinesBeforeWindow: itemsBeforeWindow } : {}) };
 }
 
 /** What congress_leaders gives a model: the window and benchmark status first, then the boards, shortened. */
@@ -288,9 +297,14 @@ export const TOOLS = [
     const s = symbolOf(a.symbol);
     return s ? call(db, "markets.position", { symbol: s }) : call(db, "markets.positions");
   }, "Positions"),
-  tool("insiders", "Recent Form 4 insider transactions: the latest eight Form 4s per join-table issuer, newest filed first. days (or from/to) keeps Form 4s filed in that window; `window` says what the rows cover.", obj(WINDOW_ARGS), async (db, a, call) => insiderCounts(windowItems(await call(db, "markets.insiders"), {
-    days: a.days, from: a.from, to: a.to, key: "filed", basis: "Form 4 filing date", unit: "transactionLines", coverage: "latest eight Form 4s per join-table issuer"
-  })), "Insiders"),
+  tool("insiders", "Form 4 insider transactions, newest filed first. With days (or from/to) it reads every Form 4 filed in that window from the SEC insider history (back to 2020) when that store is loaded; with no window, the latest eight Form 4s per join-table issuer. `window` says what the rows cover; `counts` count the whole window even when rows are cut.", obj(WINDOW_ARGS), async (db, a, call) => {
+    const range = windowRange(a);
+    const body = await call(db, "markets.insiders", {}, range ? qs(range) : "");
+    return insiderCounts(windowItems(body, {
+      days: a.days, from: a.from, to: a.to, key: "filed", basis: "Form 4 filing date", unit: "transactionLines",
+      coverage: body?.history ? `every Form 4 filed in the window (${body.history.source}, complete ${body.history.coveredFrom} to ${body.history.coveredThrough}${body.truncated ? `; newest ${body.items.length} lines listed` : ""})` : "latest eight Form 4s per join-table issuer"
+    }));
+  }, "Insiders"),
   tool("congress_feed", "Congressional trade disclosures by filing date: newest filings, biggest, most-traded tickers, late filings. Default window is the last 7 days, widened to 14 or 30 when few members filed; days sets the starting window (up to 90). `window` says what was used.", obj({ days: { type: "number", description: "Starting window in days (default 7, up to 90). Pass N for a last-N-days question." } }), (db, a, call) => {
     const days = daysArg(a.days, 90);
     return call(db, "congress.feed", {}, days ? qs({ days }) : "");

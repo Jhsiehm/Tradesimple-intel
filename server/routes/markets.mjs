@@ -1,5 +1,5 @@
 import { shortInterest } from "../markets.mjs";
-import { congressTrades, insiderTrades, positionsBoard, positionsFor, shortBoard, whaleHoldings } from "../positions.mjs";
+import { congressTrades, insiderTrades, insiderWindow, positionsBoard, positionsFor, shortBoard, whaleHoldings } from "../positions.mjs";
 import { globalBoard } from "../globals.mjs";
 import { chainSymbols, supplyChain } from "../supply.mjs";
 import { priceChart, quoteBoard } from "../chart.mjs";
@@ -8,7 +8,11 @@ import { marketEvents } from "../domain/events.mjs";
 
 export const handlers = {
   "markets.politicians": ({ db }) => congressTrades(db),
-  "markets.insiders": ({ db }) => insiderTrades(db),
+  "markets.insiders": ({ db, query }) => {
+    const from = query.str("from");
+    const to = query.str("to");
+    return from || to ? insiderWindow(db, { from, to }) : insiderTrades(db);
+  },
   "markets.whales": ({ db }) => whaleHoldings(db),
   "markets.shorts": ({ db, query }) => {
     const symbol = query.str("symbol");
