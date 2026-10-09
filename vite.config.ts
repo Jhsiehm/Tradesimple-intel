@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 const demo = process.env.VITE_DEMO === "1";
+/** Where /api goes. A second API on another port (experiments, a fake model) sets INTEL_API and VITE_PORT. */
+const API = process.env.INTEL_API || "http://127.0.0.1:8787";
 
 export default defineConfig({
   plugins: [react()],
@@ -17,12 +19,12 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5173,
+    port: Number(process.env.VITE_PORT || 5173),
     strictPort: true,
     proxy: {
       // Listed before /api so Ask's event stream matches this entry. Rounds and backtests can run for minutes.
       "/api/ask": {
-        target: "http://127.0.0.1:8787",
+        target: API,
         proxyTimeout: 600_000,
         configure(proxy) {
           proxy.on("error", (err, _req, res) => {
@@ -42,8 +44,8 @@ export default defineConfig({
           });
         }
       },
-      "/api": "http://127.0.0.1:8787",
-      "/geo": "http://127.0.0.1:8787"
+      "/api": API,
+      "/geo": API
     }
   }
 });
