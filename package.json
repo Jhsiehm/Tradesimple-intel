@@ -14,7 +14,9 @@
     "build:demo": "VITE_DEMO=1 vite build",
     "publish:demo": "node scripts/publish-demo.mjs",
     "bot": "node scripts/bot.mjs",
-    "warm": "node scripts/warm.mjs"
+    "warm": "node scripts/warm.mjs",
+    "auth:hash": "node scripts/auth-hash.mjs",
+    "start:prod": "NODE_ENV=production node server/index.mjs"
   },
   "dependencies": {
     "katex": "^0.19.0",

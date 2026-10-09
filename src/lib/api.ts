@@ -40,6 +40,11 @@ export function waitForApi(signal?: AbortSignal): Promise<boolean> {
   return Promise.race([waiting, new Promise<boolean>((r) => signal.addEventListener("abort", () => r(false), { once: true }))]);
 }
 
+/** A hosted copy answers 401 once the session cookie has expired: go to its sign-in page and come back here. */
+function signIn() {
+  window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`);
+}
+
 /** GET JSON. While the API restarts, waits for it (see `waitForApi`) and tries once more. */
 export async function api<T>(path: string): Promise<T> {
   if (DEMO) {
@@ -57,6 +62,7 @@ export async function api<T>(path: string): Promise<T> {
       if (attempt === 0 && isRestart({ error }) && (await waitForApi())) continue;
       throw error;
     }
+    if (res.status === 401) signIn();
     const text = await res.text();
     if (attempt === 0 && isRestart({ status: res.status, body: text }) && (await waitForApi())) continue;
     let body: { error?: string } | null = null;
@@ -75,6 +81,7 @@ export async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
+  if (res.status === 401) signIn();
   const text = await res.text();
   let data: unknown = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = null; }
