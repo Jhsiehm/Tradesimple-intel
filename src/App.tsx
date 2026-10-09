@@ -29,6 +29,7 @@ import { loadDossier, loadLobby, loadPositions, tickerShell, useMarkets, withLob
 import { useNews } from "./news/useNews";
 import { REGIONS, regionOutlets } from "./news/newsGlobe";
 import { districtCode, useDistricts, type DistrictLayer } from "./districts/useDistricts";
+import { districtGeoid, parseDistrict } from "../shared/districts.mjs";
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
 import { useEarth } from "./lib/useEarth";
@@ -277,6 +278,7 @@ export function App() {
       const [k, val] = v.split(":");
       return k === "member" ? `Contracts · ${who(val)} district` : k === "all" || !val ? "Contracts · all agencies" : `Contracts · ${val}`;
     }
+    if (kind === "district") return `${v} · district dossier`;
     const label: Record<string, string> = { section: SECTIONS.find((s) => s.id === v)?.label || v, ticker: `${v} dossier`, chart: `${v} chart`, inst: `${v} chart`, pos: `${v} positions`, supply: `${v} supply chain`, bill: `Bill ${v}`, vote: `Roll call ${v}`, committee: `Committee ${v}`, mode: `Congress · ${v}`, view: `Markets · ${v}`, layer: `Markets · ${v}`, calendar: "Calendar", alerts: "Alerts", today: v === "leaders" ? "Leaderboards" : "This week in Congress trading" };
     return label[kind] || action;
   }
@@ -337,6 +339,7 @@ export function App() {
       setDossier(null);
       rail.show();
     },
+    district: (code) => openDistrict(code),
     member: (id) => openMember(id),
     news: (id) => { setDossier(null); setSelectedId(id); },
     committee: (id) => goCongress("committees", id, id.startsWith("HS") ? "house" : id.startsWith("SS") ? "senate" : undefined),
@@ -488,11 +491,25 @@ export function App() {
     setDossier((d) => (still(d) ? withLobby(d!, lines) : d));
   }
 
+  /** Same dossier and fly-to as clicking the seat on the Districts map: selection is the cd119 GEOID. */
+  function openDistrict(code: string) {
+    const geoid = districtGeoid(parseDistrict(code));
+    if (!geoid) return;
+    closeStage();
+    setCalendarTab(null);
+    setSection("districts");
+    setSelectedId(geoid);
+    setDossier(null);
+    rail.show();
+  }
+
   async function chooseHit(hit: SearchHit) {
     if (hit.kind === "ticker") {
       showChart(hit.id, OPEN_SPAN);
       setSelectedId(null);
       await openTickerDossier(hit.id, hit.label.slice(hit.id.length + 1));
+    } else if (hit.kind === "district") {
+      go(`district:${hit.id}`);
     } else if (hit.kind === "site") {
       setSection("districts");
       setSelectedId(hit.id);

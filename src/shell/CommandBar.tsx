@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { matchMembers } from "../../shared/memberMatch.mjs";
+import { districtName, parseDistrict } from "../../shared/districts.mjs";
 
 export type TrailEntry = { label: string; action: string };
 type Seat = { bioguide: string; name: string; first?: string; last?: string; nickname?: string; party: string; state: string; district: string; chamber: string };
@@ -52,12 +53,14 @@ export function commandsFor(text: string, tickers: Ticker[], roster: Seat[]): Co
   if (!raw) return [];
   const [head, fn = ""] = raw.split(/\s+/);
   const out: Command[] = [];
-  const district = /^([A-Z]{2})-?(\d{1,2})$/.exec(head);
+  const dfn = /\s(DES|CTR|REP)$/.exec(raw)?.[1] || "";
+  const district = parseDistrict(dfn ? raw.slice(0, -dfn.length) : raw);
   if (district) {
-    const code = `${district[1]}-${district[2].padStart(2, "0")}`;
-    out.push({ code: `${code} CTR`, label: `Contracts performed in ${code}`, hint: "USAspending place of performance", action: `contracts:place:${code}` });
-    const rep = roster.find((m) => m.chamber === "house" && m.state === district[1] && String(Number(m.district) || 0) === String(Number(district[2])));
-    if (rep) out.push({ code: `${code} DES`, label: `${rep.name} · ${rep.party}`, hint: "Representative", action: `member:${rep.bioguide}` });
+    const [state, num] = district.split("-");
+    const rep = roster.find((m) => m.chamber === "house" && m.state === state && String(Number(m.district) || 0) === (num === "AL" ? "0" : String(Number(num))));
+    if (!dfn || dfn === "DES") out.push({ code: `${district} DES`, label: `${districtName(district)} · district dossier`, hint: "Map, representative, senators, sites", action: `district:${district}` });
+    if (!dfn || dfn === "CTR") out.push({ code: `${district} CTR`, label: `Contracts performed in ${district}`, hint: "USAspending place of performance", action: `contracts:place:${district}` });
+    if (rep && (!dfn || dfn === "REP")) out.push({ code: `${district} REP`, label: `${rep.name} · ${rep.party}`, hint: "Representative", action: `member:${rep.bioguide}` });
   }
   const t = tickers.find((x) => x.symbol === head);
   if (t) {

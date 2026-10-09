@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, when } from "../lib/api";
-import { STATE_NAME_TO_POSTAL } from "../congress/states";
+import { districtFromGeoid, districtGeoid, parseDistrict, STATES } from "../../shared/districts.mjs";
 import type { RosterMember } from "../congress/useCongress";
 import type { DrawerLink, DrawerModel, ListItem, Marker, StatusLine } from "../types";
 
@@ -44,7 +44,8 @@ type Seat = { code: string; geoid: string; lon: number; lat: number; zoom: numbe
 
 const SOURCE = "Curated HQ, plant, and regulation sites · Census 119th Congress boundaries · congress-legislators roster";
 const HQ_FALLBACK = "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
-const POSTAL_TO_NAME = Object.fromEntries(Object.entries(STATE_NAME_TO_POSTAL).map(([name, postal]) => [postal, name]));
+const POSTAL_TO_NAME = Object.fromEntries(Object.entries(STATES).map(([postal, s]) => [postal, s.name]));
+const delegate = (state: string) => Boolean(STATES[state]?.delegate);
 
 /** `selectedId` is a site id, `hq:SYMBOL`, or a district GEOID from a boundary click. */
 export function useDistricts(query: string, selectedId: string | null, roster: RosterMember[], layer: DistrictLayer) {
@@ -235,7 +236,7 @@ function hqDrawer(hq: Hq, all: Hq[], roster: RosterMember[], source: string): Dr
   const address = [hq.street, `${titleCase(hq.city)}, ${hq.state} ${hq.zip}`].filter(Boolean).join(" · ");
   return {
     title: `${hq.symbol} ${hq.name} · headquarters`,
-    meta: hq.foreign ? `Business address outside the US · ${hq.country || hq.state}` : hq.district ? `${hq.district} · ${POSTAL_TO_NAME[state] || state}${atLarge ? " at-large" : ` district ${district}`}` : hq.note,
+    meta: hq.foreign ? `Business address outside the US · ${hq.country || hq.state}` : hq.district ? `${hq.district} · ${POSTAL_TO_NAME[state] || state}${atLarge ? (delegate(state) ? " delegate" : " at-large") : ` district ${district}`}` : hq.note,
     watch: hq.symbol,
     caseKey: `ticker:${hq.symbol}`,
     rows: [
@@ -243,7 +244,7 @@ function hqDrawer(hq: Hq, all: Hq[], roster: RosterMember[], source: string): Dr
       ...(hq.foreign ? [] : [
         { label: "District", value: hq.district ? `${hq.district} · 119th Congress` : `Not placed · ${hq.note}` },
         ...(hq.district ? [{ label: "Representative", value: rep ? `${who(rep)} · since ${rep.since.slice(0, 4)}` : roster.length ? "Vacant or not in roster" : "Loading roster…" }] : []),
-        { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : state === "DC" || state === "PR" ? "None (non-voting delegate seat)" : "—" }
+        { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : delegate(state) ? "None (non-voting delegate seat)" : "—" }
       ]),
       ...(hq.matched ? [{ label: "Geocoded", value: `${hq.geocoder} · ${hq.matched}` }] : []),
       ...(hq.districtBy ? [{ label: "District by", value: hq.districtBy }] : []),
@@ -283,13 +284,13 @@ function districtDrawer(seat: Seat, site: Site | null, sites: Site[], roster: Ro
     { label: "District", value: `${seat.code} · ${POSTAL_TO_NAME[state] || state}` },
     { label: "Representative", value: rep ? `${who(rep)} · since ${rep.since.slice(0, 4)}` : roster.length ? "Vacant or not in roster" : "Loading roster…" },
     ...(rep?.phone ? [{ label: "Office", value: `${rep.office || "—"} · ${rep.phone}` }] : []),
-    { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : state === "DC" || state === "PR" ? "None (non-voting delegate seat)" : "—" },
+    { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : delegate(state) ? "None (non-voting delegate seat)" : "—" },
     { label: "Joined sites", value: here.length ? `${here.length} · ${symbols.join(", ")}` : "None in the registry" },
     ...(hqs.length ? [{ label: "Index HQs", value: hqHere.length ? `${hqHere.length} · ${hqHere.map((h) => h.symbol).join(", ")}` : "None" }] : [])
   ];
 
   return {
-    title: site ? site.name : `${seat.code} · ${atLarge ? "at-large" : `district ${district}`}`,
+    title: site ? site.name : `${seat.code} · ${atLarge ? (delegate(state) ? "delegate" : "at-large") : `district ${district}`}`,
     meta: site ? site.note : `${POSTAL_TO_NAME[state] || state} · 119th Congress`,
     caseKey: `district:${seat.code}`,
     rows,
@@ -307,18 +308,12 @@ function titleCase(s: string) {
 }
 
 function geoid(district: string) {
-  const [state, num] = district.split("-");
-  const fips = FIPS[state];
-  if (!fips || !num) return "";
-  return `${fips}${num === "AL" ? "00" : num.padStart(2, "0")}`;
+  return districtGeoid(parseDistrict(district));
 }
 
 /** "0617" → "CA-17"; at-large and delegate seats → "AK-AL". */
 export function districtCode(id: string) {
-  const state = Object.keys(FIPS).find((k) => FIPS[k] === id.slice(0, 2));
-  const num = id.slice(2);
-  if (!state || !/^\d\d$/.test(num)) return "";
-  return `${state}-${num === "00" || num === "98" ? "AL" : num}`;
+  return districtFromGeoid(id) || "";
 }
 
 /** Bounding-box center and its larger side in degrees. */
@@ -334,11 +329,3 @@ function middle(geometry: GeoJSON.Geometry): [number, number, number] {
   if ("coordinates" in geometry) walk(geometry.coordinates);
   return [(minX + maxX) / 2, (minY + maxY) / 2, Math.max(maxX - minX, maxY - minY, 0.05)];
 }
-
-const FIPS: Record<string, string> = {
-  AL:"01",AK:"02",AZ:"04",AR:"05",CA:"06",CO:"08",CT:"09",DE:"10",DC:"11",FL:"12",GA:"13",
-  HI:"15",ID:"16",IL:"17",IN:"18",IA:"19",KS:"20",KY:"21",LA:"22",ME:"23",MD:"24",MA:"25",
-  MI:"26",MN:"27",MS:"28",MO:"29",MT:"30",NE:"31",NV:"32",NH:"33",NJ:"34",NM:"35",NY:"36",
-  NC:"37",ND:"38",OH:"39",OK:"40",OR:"41",PA:"42",RI:"44",SC:"45",SD:"46",TN:"47",TX:"48",
-  UT:"49",VT:"50",VA:"51",WA:"53",WV:"54",WI:"55",WY:"56",PR:"72"
-};
