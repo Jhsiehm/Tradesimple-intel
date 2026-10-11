@@ -12,7 +12,8 @@
  */
 import dns from "node:dns/promises";
 import net from "node:net";
-import { fetchJson, fetchResponse } from "../lib/http.mjs";
+import { fetchJson } from "../lib/http.mjs";
+import { fetchPinnedResponse } from "../lib/pinnedHttp.mjs";
 import { BROWSER_UA } from "../lib/ua.mjs";
 import { WEB_CAPS, htmlToText, titleOf } from "../../shared/webAsk.mjs";
 
@@ -117,35 +118,77 @@ async function publicUrl(raw, lookup) {
   const addrs = net.isIP(host) ? [{ address: host }] : await lookup(host, { all: true, verbatim: true }).catch(() => []);
   if (!addrs.length) return { error: `Could not resolve ${host}.` };
   if (addrs.some((a) => privateAddress(a.address))) return { error: "Private and loopback addresses are not read." };
-  return { url: u };
+  return { url: u, addresses: addrs };
+}
+
+const MAX_PAGE_BYTES = 2_000_000;
+
+/** DNS and body reads share the same deadline as the request and every redirect. */
+function abortable(promise, signal) {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+    Promise.resolve(promise).then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+
+async function pageText(res, signal) {
+  if (Number(res.headers.get("content-length")) > MAX_PAGE_BYTES) throw new Error("Page exceeds the 2 MB limit.");
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const chunks = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await abortable(reader.read(), signal);
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_PAGE_BYTES) throw new Error("Page exceeds the 2 MB limit.");
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks, bytes).toString("utf8");
+  } finally {
+    void reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
 }
 
 /**
- * One public page as text (scripts, styles and tags stripped; at most WEB_CAPS.pageChars). Redirects are followed by
- * hand, each hop re-checked, at most 3. `fetcher(url, options, timeoutMs)` returns a Response; injectable for tests.
+ * One public page as text, at most 2 MB decoded / WEB_CAPS.pageChars. Each redirect is validated and its DNS
+ * results pinned to the socket; at most 3 redirects. The timeout covers DNS, headers and all response bodies.
  */
-export async function webPage(rawUrl, { fetcher = fetchResponse, lookup = dns.lookup, now = () => Date.now(), timeoutMs = 12_000 } = {}) {
+export async function webPage(rawUrl, { fetcher = fetchPinnedResponse, lookup = dns.lookup, now = () => Date.now(), timeoutMs = 12_000 } = {}) {
   const started = now();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(new DOMException("Page fetch timed out.", "TimeoutError")), timeoutMs);
   let target = rawUrl;
-  for (let hop = 0; hop < 4; hop++) {
-    const checked = await publicUrl(target, lookup);
-    if (checked.error) return { ok: false, error: checked.error, url: String(target).slice(0, 300) };
-    let res;
-    try {
-      res = await fetcher(checked.url, { redirect: "manual", headers: { "User-Agent": BROWSER_UA, Accept: "text/html,text/plain;q=0.9" } }, timeoutMs);
-    } catch (err) {
-      return { ok: false, error: `Page fetch failed: ${err?.name === "TimeoutError" ? "timed out" : err?.message || "error"}.`, url: checked.url.href };
+  try {
+    for (let hop = 0; hop < 4; hop++) {
+      const checked = await abortable(publicUrl(target, lookup), ctl.signal);
+      if (checked.error) return { ok: false, error: checked.error, url: String(target).slice(0, 300) };
+      const res = await fetcher(checked.url, { addresses: checked.addresses, signal: ctl.signal,
+        redirect: "manual", headers: { "User-Agent": BROWSER_UA, Accept: "text/html,text/plain;q=0.9" } }, timeoutMs);
+      try {
+        if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+          target = new URL(res.headers.get("location"), checked.url).href;
+          continue;
+        }
+        if (!res.ok) return { ok: false, error: `Page fetch failed: HTTP ${res.status}.`, url: checked.url.href };
+        const type = res.headers.get("content-type") || "";
+        if (!/text\/(html|plain)|application\/xhtml/.test(type)) return { ok: false, error: `Not a text page (${type || "unknown type"}).`, url: checked.url.href };
+        const html = await pageText(res, ctl.signal);
+        const retrievedAt = new Date(now()).toISOString();
+        return { ok: true, url: checked.url.href, title: titleOf(html), text: /html/.test(type) ? htmlToText(html) : htmlToText(html.replace(/</g, "&lt;")), retrievedAt, fetchMs: now() - started };
+      } finally {
+        if (res.body && !res.body.locked) void res.body.cancel().catch(() => {});
+      }
     }
-    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
-      target = new URL(res.headers.get("location"), checked.url).href;
-      continue;
-    }
-    if (!res.ok) return { ok: false, error: `Page fetch failed: HTTP ${res.status}.`, url: checked.url.href };
-    const type = res.headers.get("content-type") || "";
-    if (!/text\/(html|plain)|application\/xhtml/.test(type)) return { ok: false, error: `Not a text page (${type || "unknown type"}).`, url: checked.url.href };
-    const html = (await res.text()).slice(0, 2_000_000);
-    const retrievedAt = new Date(now()).toISOString();
-    return { ok: true, url: checked.url.href, title: titleOf(html), text: /html/.test(type) ? htmlToText(html) : htmlToText(html.replace(/</g, "&lt;")), retrievedAt, fetchMs: now() - started };
+    return { ok: false, error: "Too many redirects.", url: String(rawUrl).slice(0, 300) };
+  } catch (err) {
+    return { ok: false, error: `Page fetch failed: ${ctl.signal.aborted ? "timed out" : err?.message || "error"}.`, url: String(target).slice(0, 300) };
+  } finally {
+    clearTimeout(timer);
+    ctl.abort();
   }
-  return { ok: false, error: "Too many redirects.", url: String(rawUrl).slice(0, 300) };
 }

@@ -11,8 +11,6 @@ import { theoryId } from "./dossier";
 import type { Relations } from "./useRelations";
 import "./relations.css";
 
-export { useRelations } from "./useRelations";
-
 type Props = {
   rel: Relations;
   selectedId: string | null;

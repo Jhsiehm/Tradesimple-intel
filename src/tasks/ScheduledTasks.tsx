@@ -1,18 +1,11 @@
 import { useState } from "react";
 import type { Turn } from "../ask/types";
-import { loadResult, removeTask, runNow, setEnabled, type TaskView } from "./api";
+import { openStored, removeTask, runNow, setEnabled, type TaskView } from "./api";
 import { useTasks } from "./useTasks";
 import "./tasks.css";
 
 const ET = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" });
 const et = (iso: string | null) => (iso ? `${ET.format(new Date(iso))} ET` : "—");
-
-/** Opens a stored run in the Ask sheet. */
-export async function openStored(runId: string, openTurns: (turns: Turn[]) => void) {
-  const turn = await loadResult(runId).catch(() => null);
-  if (turn) openTurns([turn]);
-  return Boolean(turn);
-}
 
 /** Scheduled research tasks, compact, inside the Ask sheet's Saved area. Results post to Alerts; each opens here. */
 export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[]) => void; active: boolean }) {

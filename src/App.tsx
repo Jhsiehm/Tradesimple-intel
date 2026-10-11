@@ -1,11 +1,11 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { AskSheet } from "./agent/AskSheet";
+import { DeferredAskSheet } from "./agent/DeferredAskSheet";
 import { contextLine, screenContext, type AgentContext } from "./agent/context";
 import { aboutContext, itemStarters, parseAskAction, selectionKey } from "./agent/starters";
 import { ApiBanner } from "./shell/ApiBanner";
 import { CommandBar, type TrailEntry } from "./shell/CommandBar";
 import { useAsk } from "./ask/useAsk";
-import { openStored } from "./tasks/ScheduledTasks";
+import { openStored } from "./tasks/api";
 import { api, DEMO } from "./lib/api";
 import { DemoChip } from "./shell/DemoChip";
 import { SignOut } from "./shell/SignOut";
@@ -17,7 +17,7 @@ import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
 import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NewsBar, StraitBar, StraitPicture, type StraitFeed } from "./shell/MapBar";
-import { RelationsMap, useRelations } from "./relations/RelationsMap";
+import { useRelations } from "./relations/useRelations";
 import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
 import { placeFilings, useWeekFilings } from "./congress/filingMap";
@@ -53,6 +53,7 @@ import type { ArcKind } from "../shared/intel.mjs";
 import type { Chamber, ChartMark, DrawerModel, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
 const MapFrame = lazy(() => import("./shell/MapFrame").then((m) => ({ default: m.MapFrame })));
+const RelationsMap = lazy(() => import("./relations/RelationsMap").then((m) => ({ default: m.RelationsMap })));
 const FloorMap = lazy(() => import("./congress/FloorMap").then((m) => ({ default: m.FloorMap })));
 const CalendarBoard = lazy(() => import("./markets/CalendarBoard").then((m) => ({ default: m.CalendarBoard })));
 const MarketStage = lazy(() => import("./markets/MarketStage").then((m) => ({ default: m.MarketStage })));
@@ -847,7 +848,7 @@ export function App() {
         <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
       <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
-      <AskSheet ask={ask} context={askContext} region={askRegion} onFollow={follow} />
+      <DeferredAskSheet ask={ask} context={askContext} region={askRegion} onFollow={follow} />
       <ApiBanner />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />
     </div>

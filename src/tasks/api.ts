@@ -3,6 +3,13 @@ import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { Turn } from "../ask/types";
 import { api, DEMO, post } from "../lib/api";
 
+/** Opens a stored run without importing the scheduled-tasks UI into the app shell. */
+export async function openStored(runId: string, openTurns: (turns: Turn[]) => void) {
+  const turn = await loadResult(runId).catch(() => null);
+  if (turn) openTurns([turn]);
+  return Boolean(turn);
+}
+
 /** What GET /api/tasks lists per task. */
 export type TaskView = {
   id: string;

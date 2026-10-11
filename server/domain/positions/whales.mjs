@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { secJson, secText } from "../../feeds/sec.mjs";
 import { once } from "../../lib/once.mjs";
@@ -17,7 +16,7 @@ export function whaleHoldings(db) {
     const tickers = listTickers(db);
     const names = tickers.map((t) => ({ symbol: t.symbol, keys: [t.name, ...(t.recipients || [])].map(normIssuer) }));
     const keySet = new Set(names.flatMap((n) => n.keys));
-    const funds = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "..", "..", "..", "data", "whales.json"), "utf8"));
+    const funds = JSON.parse(fs.readFileSync(new URL("../../../data/whales.json", import.meta.url), "utf8"));
     const rows = [];
     const errors = [];
     let scanned = 0;

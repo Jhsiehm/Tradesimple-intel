@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 export function loadEnv(root) {
+  // Tests supply their own configuration; never load a developer's credentials or production settings.
+  if (process.env.INTEL_TEST === "1") return;
   const file = path.join(root, ".env.local");
   if (!fs.existsSync(file)) return;
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {

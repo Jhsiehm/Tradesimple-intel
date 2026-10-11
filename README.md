@@ -70,7 +70,7 @@ Pick signals (congressional trades by committee, member, party, chamber, ticker,
 | **In-app + web** (`both`) | Everything above, plus `web_search` and `web_fetch` |
 | **Web only** (`web`) | Open web only (`web_search` / `web_fetch`); no in-app filing tools |
 
-Toggle in the Ask sheet, say it in chat (“in-app only”, “use in-app and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared. `web_fetch` refuses private/link-local hosts and does not follow redirects.
+Toggle in the Ask sheet, say it in chat (“in-app only”, “use in-app and the web”, “web only”), or answer the follow-up chip when a question clearly wants the open web. Modes persist in this browser (`intel:ask:session:v1`) until cleared. `web_fetch` refuses private/link-local hosts, pins validated DNS addresses to each connection, and revalidates up to three redirects. Downloads stop at 2 MB of decoded content or a 12-second deadline covering DNS, redirects, and the body.
 
 **Writing styles** (specialized instruction packs per data layer are injected automatically):
 
@@ -184,7 +184,7 @@ Each message has the ticker, who and what, traded and filed ages, filing lag, de
 
 ## Getting started
 
-Requires **Node.js 22+**.
+Requires **Node.js 22.13+**.
 
 ```bash
 git clone git@github.com:Jhsiehm/Tradesimple-intel.git
@@ -240,7 +240,7 @@ Keys live only in `.env.local`. The server reads them and they are never sent to
 | Key | Unlocks | Get one |
 | --- | --- | --- |
 | `CONGRESS_API_KEY` | Votes, bills, members, committees, calendar | [api.congress.gov](https://api.congress.gov/sign-up/) |
-| `LDA_API_KEY` | Lobbying filings | [lda.senate.gov](https://lda.senate.gov/api/register/) |
+| `LDA_API_KEY` | Lobbying filings | [lda.gov](https://lda.gov/api/register/) |
 | `FEC_API_KEY` | Per-ticker corporate PAC receipts and spending for the current cycle, for PACs joined in `data/tickers.json` (member PAC data uses free bulk files) | [api.open.fec.gov](https://api.open.fec.gov/developers/) |
 | `AISSTREAM_API_KEY` | Live ship positions | [aisstream.io](https://aisstream.io) |
 | `X_BEARER_TOKEN` | Real X posts. Without it, the X column shows the same accounts' posts on Bluesky plus Truth Social. | [developer.x.com](https://developer.x.com) |
@@ -466,7 +466,8 @@ test/          parsers, joins, ask, backtest, replicate, routes, intel, …
 ```bash
 npm run dev      # API and web UI
 npm start        # API only
-npm run build    # production build of the web UI into dist/ (map and boards load on demand)
+npm run typecheck # TypeScript check without emitting files
+npm run build    # typecheck, then production build into dist/ (Ask, maps and boards load on demand)
 npm run snapshot # capture the running API into demo/snapshot/ for demo mode
 npm run publish:demo   # build the static demo with member share pages and push it to gh-pages
 npm run bot      # dry-run the Bluesky/X posting bot (add --post to post)
@@ -477,6 +478,8 @@ node scripts/joins.mjs --count 76 --refresh   # derive district/LDA/PAC joins fo
 node scripts/contract-parents.mjs [--only LMT,BA]   # join tickers to USAspending parent recipients (no key)
 INTEL_API=http://127.0.0.1:8788 VITE_PORT=5174 npm run dev   # second UI against another API
 ```
+
+GitHub Actions runs tests, typechecking, production and demo builds, and a high-severity dependency audit on Node 22 and 24. Tests do not load `.env.local`; API smoke tests use explicit dummy keys and an isolated temporary cache, with outbound requests disabled. FEC routes report an error when their bulk downloads are unavailable instead of relying on previously downloaded files.
 
 ---
 

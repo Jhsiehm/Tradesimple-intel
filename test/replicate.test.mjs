@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync, spawnSync } from "node:child_process";
 import { runBacktest, dayOf } from "../shared/backtest.mjs";
 import { cleanRules } from "../shared/backtestSpec.mjs";
@@ -10,7 +11,7 @@ import { replicateFiles, zipFiles, crc32, expectedOf, expectedRealityOf } from "
 import { realityCheck } from "../shared/backtestStats.mjs";
 import { backtestFormulas, leadersFormulas } from "../shared/formulas.mjs";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const START = dayOf("2025-01-02");
 
 /** Deterministic random walk with weekends removed and a few missing opens. */

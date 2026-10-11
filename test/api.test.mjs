@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { serverEnv } from "./fixtures/serverEnv.mjs";
 
 const port = 18000 + Math.floor(Math.random() * 2000);
 const cache = path.join(os.tmpdir(), `intel-test-${process.pid}.sqlite`);
@@ -14,7 +15,7 @@ let server;
 before(async () => {
   server = spawn(process.execPath, ["server/index.mjs"], {
     cwd: new URL("..", import.meta.url),
-    env: { ...process.env, PORT: String(port), INTEL_CACHE: cache, INTEL_NO_WARM: "1" },
+    env: serverEnv({ PORT: String(port), INTEL_CACHE: cache }),
     stdio: ["ignore", "pipe", "pipe"]
   });
   await new Promise((resolve, reject) => {

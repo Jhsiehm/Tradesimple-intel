@@ -8,16 +8,20 @@ import os from "node:os";
 import path from "node:path";
 import { MANIFEST } from "../server/routes/manifest.mjs";
 import { compile } from "../server/router.mjs";
+import { serverEnv } from "./fixtures/serverEnv.mjs";
 
 const port = 20000 + Math.floor(Math.random() * 2000);
-const cache = path.join(os.tmpdir(), `intel-routes-${process.pid}.sqlite`);
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), "intel-routes-"));
+const cache = path.join(temp, "cache.sqlite");
 const base = `http://127.0.0.1:${port}`;
 let server;
 
 before(async () => {
   server = spawn(process.execPath, ["--import", "./test/fixtures/offline.mjs", "server/index.mjs"], {
     cwd: new URL("..", import.meta.url),
-    env: { ...process.env, PORT: String(port), INTEL_CACHE: cache, INTEL_NO_WARM: "1" },
+    env: serverEnv({ PORT: String(port), INTEL_CACHE: cache, TMPDIR: temp, TMP: temp, TEMP: temp,
+      CONGRESS_API_KEY: "offline-placeholder", FEC_API_KEY: "offline-placeholder",
+      LDA_API_KEY: "offline-placeholder", AISSTREAM_API_KEY: "offline-placeholder" }),
     stdio: ["ignore", "pipe", "pipe"]
   });
   await new Promise((resolve, reject) => {
@@ -32,9 +36,11 @@ before(async () => {
   });
 });
 
-after(() => {
-  server?.kill();
-  for (const f of [cache, `${cache}-wal`, `${cache}-shm`]) fs.rmSync(f, { force: true });
+after(async () => {
+  if (server && server.exitCode == null && server.signalCode == null) {
+    await new Promise((resolve) => { server.once("exit", resolve); server.kill(); });
+  }
+  fs.rmSync(temp, { recursive: true, force: true });
 });
 
 /** [sample url, status, keys] — keys are the sorted top-level JSON keys, or a content type for non-JSON. */
@@ -126,10 +132,10 @@ export const SMOKE = [
   ["/api/relations/path?node=ticker:NVDA", 200, "asOf,category,edges,label,latency,limit,more,node,nodes,note,offset,ok,source,total"],
   ["/api/relations/expand?node=member:bogus&category=trade", 400, "error,ok"],
   ["/api/calendar/lobbying", 200, "asOf,items,latency,ok,source,totals"],
-  ["/api/calendar/pacs", 200, "asOf,cycle,groups,latency,members,ok,rows,source"],
+  ["/api/calendar/pacs", 500, "error,ok"],
   ["/api/markets/events?symbol=AAPL", 200, "asOf,feeds,latency,marks,ok,source,symbol"],
   ["/api/corporate/lobbying/AAPL", 200, "asOf,byYear,filings,latency,ok,source,unavailable"],
-  ["/api/corporate/pac/AAPL", 200, "asOf,cycle,dem,latency,ok,recipients,rep,rows,source,total"],
+  ["/api/corporate/pac/AAPL", 500, "error,ok"],
   ["/api/corporate/contracts/AAPL", 200, "asOf,awards,byYear,note,ok,parents,source"],
   ["/api/corporate/earnings/AAPL", 500, "error,ok"],
   ["/api/corporate/pac/ZZ-Q", 404, "error,ok"],
