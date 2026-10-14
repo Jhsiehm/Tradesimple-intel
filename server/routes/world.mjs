@@ -1,3 +1,4 @@
+import { hazards, forecast } from "../weather.mjs";
 import { newsWire, xPulse, xWire } from "../news.mjs";
 import { airspace, flightRoute, metroAir } from "../air.mjs";
 import { THEATERS, aisSnapshot, straitNews } from "../strait.mjs";
@@ -6,6 +7,8 @@ import { alertsFor } from "../alerts.mjs";
 import { caseFile, intelScope } from "../intel.mjs";
 
 export const handlers = {
+  "weather.hazards": ({ db }) => hazards(db),
+  "weather.forecast": ({ db, query }) => forecast(db, query.params.get("lat"), query.params.get("lon")),
   news: ({ db }) => newsWire(db),
   "news.xpulse": ({ db }) => xPulse(db),
   "news.x": ({ db }) => xWire(db),

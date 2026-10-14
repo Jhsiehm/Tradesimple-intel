@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { Chamber } from "../types";
 import { FLOOR_VIEW, floorGuide, layoutFloor, partyStroke, voteFill, type FloorSeat } from "./floorLayout";
+import { PARTY_COLOR, PARTY_LABEL, VOTE_FILL } from "./colors";
 
 export type FloorMember = {
   name: string;
@@ -21,15 +22,13 @@ type Props = {
   onSelect?: (seat: FloorSeat) => void;
 };
 
-const PARTY_FILL: Record<string, string> = { D: "#3b5f86", R: "#8a3f3a", I: "#8a7a3a" };
-
 export function FloorMap({ chamber, members, party = "all", caption, highlight, onSelect }: Props) {
   const seats = useMemo(() => layoutFloor(members, chamber), [members, chamber]);
   const [hover, setHover] = useState<FloorSeat | null>(null);
   const hasVote = members.some((m) => m.vote && m.vote !== "Seat");
   const [color, setColor] = useState<"vote" | "party">("vote");
   const byParty = color === "party" || !hasVote;
-  const fill = (seat: FloorSeat) => (byParty ? PARTY_FILL[seat.party || "I"] || "#1e2831" : voteFill(seat.vote));
+  const fill = (seat: FloorSeat) => (byParty ? PARTY_COLOR[seat.party] || "#78838e" : voteFill(seat.vote));
   const guide = floorGuide(chamber);
   const arcs = Array.from({ length: guide.rows }, (_, row) => {
     const t = guide.rows === 1 ? 0.5 : row / (guide.rows - 1);
@@ -44,14 +43,18 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
     <div className="floor">
       <header className="floor-bar">
         <strong>{chamber === "senate" ? "SENATE FLOOR" : "HOUSE FLOOR"}</strong>
-        <span>Democrats left</span>
-        <span className="floor-aisle-label">aisle</span>
-        <span>Republicans right</span>
-        <span className="seg floor-color">
-          <button aria-pressed={!byParty} disabled={!hasVote} onClick={() => setColor("vote")}>Vote</button>
-          <button aria-pressed={byParty} onClick={() => setColor("party")}>Party</button>
+        <span className="floor-party" style={{ color: PARTY_COLOR.D }}><i className="party-dot" aria-hidden="true" />Democrats <small>left</small></span>
+        <span className="floor-party" style={{ color: PARTY_COLOR.I }}><i className="party-dot" aria-hidden="true" />Independents <small>aisle</small></span>
+        <span className="floor-party" style={{ color: PARTY_COLOR.R }}><i className="party-dot" aria-hidden="true" />Republicans <small>right</small></span>
+        <span className="seg floor-color" role="group" aria-label="Seat color mode">
+          <button style={{ "--mode-color": VOTE_FILL.Yea } as CSSProperties} aria-pressed={!byParty} disabled={!hasVote} title={hasVote ? "Color seats by their vote" : "Vote colors become available when a roll call loads"} onClick={() => setColor("vote")}>
+            <span className="color-key" aria-hidden="true">{["Yea", "Nay"].map((v) => <i key={v} style={{ background: VOTE_FILL[v] }} />)}</span>Vote
+          </button>
+          <button style={{ "--mode-color": PARTY_COLOR.D } as CSSProperties} aria-pressed={byParty} onClick={() => setColor("party")} title="Color seats by party">
+            <span className="color-key color-key-party" aria-hidden="true">{["D", "I", "R"].map((p) => <i key={p} style={{ background: PARTY_COLOR[p] }} />)}</span>Party
+          </button>
         </span>
-        {!members.length ? <em>Loading seats</em> : hasVote && !byParty ? <em>{party === "all" ? "" : `${party} only · `}{yea} yea · {nay} nay</em> : <em>{focus.length} seats · click any seat for the member card</em>}
+        {!members.length ? <em>Waiting for seats</em> : hasVote && !byParty ? <em>{party === "all" ? "" : `${party} only · `}{yea} yea · {nay} nay</em> : <em>{focus.length} seats · click any seat for the member card</em>}
       </header>
       {highlight ? <p className="floor-caption">Highlighting {highlight.label} · {highlight.ids.size} members</p> : null}
       {caption ? <p className="floor-caption">{caption}</p> : null}
@@ -60,7 +63,7 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
         className="floor-svg"
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`${chamber} floor vote map`}
+        aria-label={`${chamber} floor colored by ${byParty ? "party" : "vote"}${members.length ? "" : " · waiting for seats"}`}
         shapeRendering="geometricPrecision"
       >
         <path
@@ -97,6 +100,12 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
           </circle>
         ))}
       </svg>
+      <div className="legend floor-legend" aria-label={byParty ? "Party color key" : "Vote color key"}>
+        {byParty ? ["D", "R", "I"].map((p) => <span key={p}><i className="swatch" style={{ background: PARTY_COLOR[p], borderRadius: "50%" }} aria-hidden="true" />{PARTY_LABEL[p]}</span>) : <>
+          {["Yea", "Nay", "Present", "Not voting"].map((v) => <span key={v}><i className="swatch" style={{ background: VOTE_FILL[v] }} aria-hidden="true" />{v}</span>)}
+          <span className="floor-ring-key">Party rings {["D", "R", "I"].map((p) => <span key={p}><i className="ring" style={{ borderColor: PARTY_COLOR[p] }} aria-hidden="true" />{p}</span>)}</span>
+        </>}
+      </div>
       <div className="floor-hud">
         {hover ? (
           <p className="floor-hover">
@@ -108,12 +117,12 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
         ) : members.length ? (
           <p>
             <strong>{members.length} seats</strong>
-            <span>Hover a seat · vote color, party ring</span>
+            <span>{byParty ? "Hover a seat · colored by party" : "Hover a seat · vote color, party ring"}</span>
           </p>
         ) : (
           <p>
-            <strong>Loading the latest roll call</strong>
-            <span>Floor seats color by Yea / Nay</span>
+            <strong>Party colors are ready</strong>
+            <span>Seats appear when the roster loads</span>
           </p>
         )}
       </div>

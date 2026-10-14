@@ -1,3 +1,5 @@
+import { PARTY_COLOR, VOTE_FILL } from "./colors";
+
 export type FloorSeat = {
   id: string;
   name: string;
@@ -146,15 +148,9 @@ export function layoutFloor(members: MemberLike[], chamber: "house" | "senate"):
 }
 
 export function voteFill(vote: string) {
-  if (vote === "Yea") return "#2f9a55";
-  if (vote === "Nay") return "#c45c54";
-  if (vote === "Present") return "#6f86a3";
-  if (vote === "Split") return "#a08a3e";
-  return "#1e2831";
+  return VOTE_FILL[vote] || "#1e2831";
 }
 
 export function partyStroke(party: string) {
-  if (party === "D") return "#9eb892";
-  if (party === "R") return "#c49a96";
-  return "#e2b657";
+  return PARTY_COLOR[party] || "#a0a9b1";
 }

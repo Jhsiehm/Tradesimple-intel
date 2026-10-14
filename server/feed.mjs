@@ -32,7 +32,7 @@ export function buildFeed(trades, { today, days = 7, minMembers = 5, limit = 30 
   }
   const fallback = span !== days;
   const from = back(today, span);
-  if (!base.length) base = byFiled.slice(0, 200);
+  // Keep an empty window honest: older disclosures belong only to the all-history late list.
   const filings = new Map();
   for (const t of base) {
     const key = t.link || t.id;

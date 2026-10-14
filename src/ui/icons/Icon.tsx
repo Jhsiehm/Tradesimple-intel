@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import type { IconName } from "./names";
 import { PATHS } from "./paths";
+import { ICON_MOTION } from "./motion";
 import "./icons.css";
+import "./motion.css";
 
 export type { IconName } from "./names";
 
@@ -13,6 +15,8 @@ export function Icon({ name, size = 14, title, className }: { name: IconName; si
   return (
     <svg
       className={className ? `ic ${className}` : "ic"}
+      data-icon={name}
+      data-motion={ICON_MOTION[name]}
       width={size}
       height={size}
       viewBox="0 0 16 16"
@@ -25,7 +29,9 @@ export function Icon({ name, size = 14, title, className }: { name: IconName; si
       {...(title ? { role: "img", "aria-label": title } : { "aria-hidden": true })}
     >
       {title ? <title>{title}</title> : null}
-      {PATHS[name].map((p, i) => (typeof p === "string" ? <path key={i} d={p} /> : <path key={i} d={p.d} fill="currentColor" />))}
+      <g className="ic-glyph">
+        {PATHS[name].map((p, i) => (typeof p === "string" ? <path key={i} d={p} /> : <path key={i} d={p.d} fill="currentColor" />))}
+      </g>
     </svg>
   );
 }

@@ -1,4 +1,9 @@
+import { useWeather } from "./weather/useWeather";
+import { WeatherControls } from "./weather/WeatherControls";
+import type { Point as WeatherPoint } from "./weather/model";
+import { NewsControls } from "./news/NewsControls";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { BrandHome } from "./shell/BrandHome";
 import { DeferredAskSheet } from "./agent/DeferredAskSheet";
 import { contextLine, screenContext, type AgentContext } from "./agent/context";
 import { aboutContext, itemStarters, parseAskAction, selectionKey } from "./agent/starters";
@@ -16,7 +21,7 @@ import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
-import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NewsBar, StraitBar, StraitPicture, type StraitFeed } from "./shell/MapBar";
+import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NavPicture, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
 import { useRelations } from "./relations/useRelations";
 import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
@@ -43,7 +48,7 @@ import { useDistricts } from "./districts/useDistricts";
 import { HqLegend } from "./districts/HqLegend";
 import { useStrait } from "./strait/useStrait";
 import { scopeLabel, useContracts, type ContractScope, type ContractSort } from "./contracts/useContracts";
-import { useEarth } from "./lib/useEarth";
+import { earthCreditFor, useEarth } from "./lib/useEarth";
 import { ALL_SCOPE, scopeOf, useIntelScope, type IntelScope } from "./intel/useIntel";
 import { arcView } from "./intel/arcs";
 import { Scrubber } from "./intel/Scrubber";
@@ -86,7 +91,7 @@ export function App() {
   const [newsDesk, setNewsDesk] = useState<NewsDesk>("all");
   const [newsRegion, setNewsRegion] = useState("all");
   const [mapTime, setMapTime] = useState<number | null>(null);
-  const [theaterId, setTheaterId] = useState("taiwan-strait");
+  const [theaterId, setTheaterId] = useState("world");
   const [straitFeed, setStraitFeed] = useState<StraitFeed>("ships");
   const [airMil, setAirMil] = useState(false);
   const [contractScope, setContractScope] = useState<ContractScope>({ kind: "all", value: "" });
@@ -129,7 +134,7 @@ export function App() {
   const phone = usePhone();
   const rail = useRail();
   const cards = useCards();
-  const { earth, settings: earthSettings, update: updateEarth, credit: imageryCredit } = useEarth();
+  const { earth, settings: earthSettings, update: updateEarth } = useEarth();
 
   const congress = useCongress(chamber, mode, query, section === "congress" && !today && !timelineId ? selectedId : null, party);
   const congressMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
@@ -145,7 +150,10 @@ export function App() {
   const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party, section === "markets");
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
-  const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" ? straitFeed : "ships", airMil, section === "strait");
+  const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" && straitFeed !== "weather" ? straitFeed : "ships", airMil, section === "strait" && straitFeed !== "weather");
+  const weatherOn = section === "strait" && straitFeed === "weather";
+  const weather = useWeather(weatherOn, strait.theater, selectedId);
+  const pickWeather = (point: WeatherPoint) => { weather.setPoint(point); weather.setPicking(false); setSelectedId("weather:point"); setDossier(null); weather.setPhoneMap(false); rail.show(); };
   const boardOn = section === "map" && !today && !timelineId && !calendarTab;
   const recordsOn = !today && !timelineId && !calendarTab && (section === "districts" || (section === "congress" && voteView === "map" && mapLayer !== "filings"));
   const intelOn = recordsOn;
@@ -157,9 +165,9 @@ export function App() {
   const straitView = {
     ...strait,
     items: straitFeed === "air" ? strait.airItems : straitFeed === "news" ? strait.newsItems : strait.items,
-    empty: straitFeed === "air" ? strait.airEmpty : straitFeed === "news" ? (strait.newsItems.length ? "" : "No recent strait headlines.") : strait.empty
+    empty: straitFeed === "air" ? strait.airEmpty : straitFeed === "news" ? (strait.newsItems.length ? "" : strait.newsEmpty) : strait.empty
   };
-  const view = { congress, markets, contracts, news, districts, strait: straitView, map: board }[section];
+  const view = { congress, markets, contracts, news, districts, strait: weatherOn ? weather : straitView, map: board }[section];
   const items = view.items;
   const onToday = Boolean(today) && !timelineId;
   const listItems = onToday ? (stageList?.items ?? []) : items;
@@ -328,6 +336,7 @@ export function App() {
       setAskAbout(ctx);
       return openAsk(itemStarters(ctx)[0] || "", "half");
     }
+    if (action.startsWith("ask:saved:")) { openAsk(); return ask.openSaved(action.slice(10)); }
     if (action.startsWith("ask:research:")) { openAsk(); return void openStored(action.slice(13), ask.openTurns); }
     if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
@@ -491,8 +500,9 @@ export function App() {
   const lanesOn = section === "strait";
   const showMap = section === "strait" || section === "districts" || section === "map" || newsGlobe || (section === "congress" && voteView === "map");
   const look = mapLook(nav.view, { onMap: showMap && !calendarTab && !today && !timelineId, scoped: intelScope.kind !== "all", settings: earthSettings });
-  const earthCredit = look.imagery ? imageryCredit : "";
-  const time = useMapClock({ mapOn: look.imagery, base: section === "strait" && earthSettings.base === "live" ? "live" : look.earth.base, newsGlobe, headlines: news.all, clock, mapTime });
+  const mapSettings = newsGlobe ? { ...earthSettings, view: "globe" as const, lanes: false } : section === "strait" ? { ...earthSettings, base: earthSettings.base === "live" ? "live" as const : earthSettings.base === "dark" ? "dark" as const : "sat" as const } : look.earth;
+  const earthCredit = look.imagery ? earthCreditFor(earth, mapSettings) : "";
+  const time = useMapClock({ mapOn: look.imagery, base: mapSettings.base, newsGlobe, headlines: news.all, clock, mapTime });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
   const lagWindow = useDeferredValue(intelWindow);
   const arcs = useMemo(() => {
@@ -554,16 +564,14 @@ export function App() {
   useEffect(() => { setDetached(false); }, [askKey, setDetached]);
 
   return (
-    <div className={`app${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
+    <div className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
-          <button type="button" className="brand-home" aria-label="Go to Today" title="Today" onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)}>
-            <strong>TRADESIMPLE</strong>
-            <span>INTEL</span>
-          </button>
+          <BrandHome onHome={() => go("today:week")} />
           {DEMO ? <DemoChip /> : null}
         </div>
         <nav className="nav">
+          <button className="compact-find" aria-label="Search TradeSimple" aria-haspopup="dialog" onClick={() => { ask.close(); setCmdOpen(true); }}><Icon name="search" /> Find</button>
           <button aria-current={today && today !== "bt" ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
             <kbd>0</kbd><IconLabel icon="today" hide>Today</IconLabel>
           </button>
@@ -575,7 +583,7 @@ export function App() {
           <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
-          <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Command line: tickers + functions (LMT CTR), districts (TX-12), members, section codes"><Icon name="command" /> GO <kbd>⌘K</kbd></button>
+          <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Search destinations, companies, members and saved research"><Icon name="search" /> Find <kbd>⌘K</kbd></button>
           <button className="panels-btn" aria-expanded={ask.open} aria-haspopup="dialog" onClick={() => (ask.open ? ask.close() : openAsk())} title={`Ask · ${contextLine(askContext)}`}>ASK</button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
           <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) { setPanelsOpen(false); ask.close(); } }} onFollow={follow} />
@@ -635,6 +643,7 @@ export function App() {
               />
             ) : null}
             {barFor === "news" ? (
+              <>
               <NewsBar
                 view={newsView}
                 onView={(v) => { setNewsView(v); if (v === "globe") setMapTime(null); }}
@@ -643,6 +652,8 @@ export function App() {
                 region={newsRegion}
                 onRegion={(r) => { setNewsRegion(r); reset(); }}
               />
+              <NewsControls outlets={news.outlets} selected={news.outletIds} onChange={(ids) => { news.setOutletIds(ids); setSelectedId(null); }} items={news.all} scopedCount={news.scopedCount} wire={news.wire} social={news.x} />
+              </>
             ) : null}
             {barFor === "contracts" ? (
               <ContractsBar
@@ -656,20 +667,29 @@ export function App() {
             ) : null}
             {barFor === "strait" ? (
               <label className="theater">
-                <select value={theaterId} onChange={(e) => { setTheaterId(e.target.value); setSelectedId(null); }} aria-label="Theater">
-                  {strait.theaters.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <select value={theaterId} onChange={(e) => { setTheaterId(e.target.value); setSelectedId(null); }} aria-label="Nav region">
+                  {(["World", "Continents", "Regions"] as const).map((group) => (
+                    <optgroup key={group} label={group}>
+                      {strait.theaters.filter((t) => t.group === group).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
               </label>
             ) : null}
             {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
-            {barFor === "strait" ? <StraitPicture live={earthSettings.base === "live"} onLive={(live) => updateEarth({ base: live ? "live" : "dark", view: "2d" })} /> : null}
+            {barFor === "strait" && (!phone || !weatherOn || weather.phoneMap) ? <>
+              <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} imagery={false} lanes={false} />
+              <NavPicture base={mapSettings.base} onBase={(base) => { updateEarth({ base }); setMapTime(null); }} />
+              {theaterId === "antarctica" && earthSettings.view !== "globe" ? <span className="bar-note">Choose Globe for a polar view.</span> : null}
+            </> : null}
+            {weatherOn && barFor === "strait" ? <WeatherControls weather={weather} region={strait.theater.name} phone={phone} onPoint={pickWeather} onLive={() => { updateEarth({ base: "live" }); setMapTime(null); if (phone) weather.setPhoneMap(true); }} /> : null}
             {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
             {look.data && look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
             {barFor === "map" ? <span className="bar-note">Each line is the latest trade and how many days later it was filed. A hearing is within 14 days, calendar only. T draws your own.</span> : null}
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
-            {phone && !timelineId && !today && section !== "map" ? null : timelineId ? (
+            {phone && !timelineId && !today && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
             ) : today === "bt" ? (
               <BacktestBoard key={btSeed} seed={btSeed} onFollow={follow} onClose={closeToday} onList={reportList} />
@@ -726,11 +746,12 @@ export function App() {
                   geojson={map.geojson}
                   colorProp={map.colorProp}
                   fill={look.fill}
-                  markers={map.markers}
+                  markers={weatherOn ? weather.markers : map.markers}
                   earth={earth}
-                  settings={newsGlobe ? { ...earthSettings, view: "globe", lanes: false } : section === "strait" ? { ...earthSettings, view: "2d", base: earthSettings.base === "live" ? "live" : "dark" } : look.earth}
-                  center={map.center}
-                  zoom={map.zoom}
+                  settings={mapSettings}
+                  center={weatherOn && weather.target ? [weather.target.lon, weather.target.lat] : map.center}
+                  zoom={weatherOn && weather.target ? 6 : map.zoom}
+                  onPoint={weatherOn && weather.picking ? (lon, lat) => pickWeather({ lon: Number(lon.toFixed(2)), lat: Number(lat.toFixed(2)), label: `${lat.toFixed(2)}, ${lon.toFixed(2)}` }) : undefined}
                   selectedId={filingMapOn ? (activeFiling?.state || null) : section === "congress" ? null : selectedId}
                   live={time.liveLayers}
                   dailyTiles={time.dailyLayer?.tiles}
@@ -745,13 +766,14 @@ export function App() {
                       return;
                     }
                     rail.show();
+                    if (weatherOn) weather.setPhoneMap(false);
                     if (section === "congress") openSeat(id);
                     else if (id.startsWith("place:")) setDossier(time.globe.placeModel(id));
                     else setSelectedId(id);
                   }}
                 />
                 <div className="map-frame" />
-                {earthCredit && (section === "strait" || newsGlobe || look.data) ? <p className="map-cred" title={earthCredit}><em>{section === "strait" ? "STRAIT" : newsGlobe ? "GLOBE" : "IMAGERY"}</em>{earthCredit}</p> : null}
+                {earthCredit && (section === "strait" || newsGlobe || look.data) ? <p className="map-cred" title={earthCredit}><em>{section === "strait" ? "NAV" : newsGlobe ? "GLOBE" : "IMAGERY"}</em>{earthCredit}</p> : null}
                 {newsGlobe ? (
                   <p className="map-outlets">
                     <em>{REGIONS.find((r) => r.id === newsRegion)?.label.toUpperCase()}</em>
@@ -772,15 +794,6 @@ export function App() {
               <VoteLegend chamber={chamber} counts={congress.mapCounts} source={congress.positions.length ? congress.voteSource : null} />
             ) : null}
             {barFor === "districts" && districtLayer === "hq" && !phone ? <HqLegend top={districts.top} source={districts.status.source} /> : null}
-            {barFor === "congress" && !timelineId && !today && voteView === "floor" ? (
-              <div className="legend" aria-hidden="true">
-                <span><i className="swatch yea" />Yea</span>
-                <span><i className="swatch nay" />Nay</span>
-                <span><i className="swatch present" />Present</span>
-                <span><i className="ring dem" />D ring</span>
-                <span><i className="ring rep" />R ring</span>
-              </div>
-            ) : null}
           </div>
           {intelOn ? (
             <Scrubber
@@ -820,7 +833,7 @@ export function App() {
           <header className="rail-head">
             <div>
               <h1>{onToday ? (stageList?.title || (today === "leaders" ? "Leaderboards" : "Today")) : `${active.label}${section === "congress" ? ` · ${mode}` : section === "contracts" ? ` · ${scopeLabel(contractScope, contracts.feed)}` : ""}`}</h1>
-              <p>{onToday ? (stageList?.blurb || "Newest disclosed trades in this window.") : section === "congress" ? MODE_BLURB[mode] : section === "contracts" ? `${contractSort === "largest" ? "Largest" : "Latest"} actions · last ${contractDays} days · click a row for the award` : active.blurb}</p>
+              <p>{onToday ? (stageList?.blurb || "Newest disclosed trades in this window.") : section === "congress" ? MODE_BLURB[mode] : section === "contracts" ? `${contractSort === "largest" ? "Largest" : "Latest"} actions · last ${contractDays} days · click a row for the award` : weatherOn ? "Forecast points and regional hazard reports · select for details" : active.blurb}</p>
             </div>
             <span className="count">{String(listItems.length).padStart(2, "0")}</span>
           </header>
@@ -847,7 +860,7 @@ export function App() {
         <span title={foot.latency}><em>NOTE</em>{foot.latency || "—"}</span>
         <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
       </footer>
-      <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} />
+      <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} chats={ask.chats} />
       <DeferredAskSheet ask={ask} context={askContext} region={askRegion} onFollow={follow} />
       <ApiBanner />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />

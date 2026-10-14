@@ -18,6 +18,8 @@ type Props = {
   zoom: number;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
+  /** Optional opt-in weather point selection; never fires on a data marker. */
+  onPoint?: (lon: number, lat: number) => void;
   live?: { key: string; tiles: string[]; maxzoom: number }[];
   dailyTiles?: string[];
   flash?: MapFlash | null;
@@ -86,6 +88,7 @@ export function MapFrame({
   zoom,
   selectedId,
   onSelect,
+  onPoint,
   live,
   dailyTiles,
   flash,
@@ -97,6 +100,8 @@ export function MapFrame({
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onPointRef = useRef(onPoint);
+  onPointRef.current = onPoint;
   const onArcRef = useRef(onArc);
   const idPropRef = useRef(idProp);
   idPropRef.current = idProp;
@@ -234,6 +239,10 @@ export function MapFrame({
         const id = event.features?.[0]?.properties?.[idPropRef.current];
         if (id) onSelectRef.current?.(String(id));
       });
+      map.on("click", (event) => {
+        if (!onPointRef.current || map.queryRenderedFeatures(event.point, { layers: ["marks", "marks-track", "arcs", "arc-ends"] }).length) return;
+        onPointRef.current(((event.lngLat.lng + 180) % 360 + 360) % 360 - 180, event.lngLat.lat);
+      });
       map.getCanvas().style.cursor = "crosshair";
       STYLED.add(map);
       setReady(true);
@@ -257,6 +266,7 @@ export function MapFrame({
   const pushedGeojson = useRef<GeoJSON.FeatureCollection | undefined | null>(null);
 
   const camera = useRef<{ view: string; massing: boolean; lon: number; lat: number; zoom: number } | null>(null);
+  const cameraPending = useRef(false);
 
   useEffect(() => {
     const map = loadedMap();
@@ -354,7 +364,13 @@ export function MapFrame({
     camera.current = { view: settings.view, massing, lon, lat, zoom };
     const relief = massing || settings.view === "3d";
     const globe = !massing && settings.view === "globe";
-    const target = !prev || prev.massing !== massing || prev.lon !== lon || prev.lat !== lat || prev.zoom !== zoom || (prev.view === "globe" && !globe);
+    // A view toggle can interrupt a region flight. Keep its destination until
+    // the move finishes, while letting direct map gestures cancel the flight.
+    const target = cameraPending.current || !prev || prev.massing !== massing || prev.lon !== lon || prev.lat !== lat || prev.zoom !== zoom || (prev.view === "globe" && !globe);
+    map.stop();
+    cameraPending.current = target;
+    const finish = () => { cameraPending.current = false; };
+    map.once("moveend", finish);
     map.easeTo({
       ...(target ? { center: [lon, lat] as [number, number] } : {}),
       pitch: massing ? 46 : relief ? 64 : 0,
@@ -362,6 +378,7 @@ export function MapFrame({
       zoom: target ? zoom : globe ? (map.getZoom() > 3 ? 2.2 : map.getZoom()) : Math.max(map.getZoom(), zoom),
       duration: 700
     });
+    return () => { map.off("moveend", finish); };
   }, [ready, settings.view, massing, lon, lat, zoom]);
 
   useEffect(() => {

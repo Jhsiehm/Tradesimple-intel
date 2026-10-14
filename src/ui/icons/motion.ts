@@ -1,0 +1,28 @@
+import type { IconName } from "./names";
+
+/** Motion follows the drawing's meaning; related controls share a small movement vocabulary. */
+export const ICON_MOTION = {
+  today: "sunrise", congress: "structure", markets: "trend", contracts: "document",
+  news: "news", districts: "locator", strait: "ship", map: "fold", calendar: "calendar",
+  globe: "globe", city: "structure",
+  house: "structure", senate: "structure", votes: "gavel", bills: "document",
+  members: "people", committees: "people", floor: "wave", filings: "document",
+  form4: "document", hearing: "signal", roll: "tally", trade: "exchange", pac: "coin",
+  leaders: "trophy", timeline: "timeline",
+  chart: "candles", board: "grid", fx: "coin", crypto: "orbit", positions: "orbit",
+  supply: "network", star: "sparkle", "star-on": "sparkle",
+  view2d: "grid", cube: "fold", lanes: "route", imagery: "image", labels: "tag",
+  hq: "structure", sites: "structure", air: "plane", military: "shield",
+  satellite: "orbit", live: "pulse", daily: "sun", night: "moon", filter: "filter", arc: "route",
+  search: "search", back: "left", close: "turn", collapse: "press", expand: "expand",
+  "chevron-down": "down", "chevron-right": "right", pin: "press", share: "send",
+  link: "link", external: "diagonal", check: "tick", checks: "tick", dismiss: "tray",
+  restore: "undo", bell: "bell", grip: "dots", command: "command", panels: "panels",
+  dossier: "document", recent: "clock", feed: "wave", reset: "undo", backtest: "undo",
+  ask: "question", play: "right",
+  lobbying: "signal", agency: "structure", firm: "case", company: "structure",
+  ticker: "trend", insider: "people", theory: "bulb", "user-node": "people",
+  draw: "pen", fit: "expand", undo: "undo", redo: "redo", "zoom-in": "search",
+  "zoom-out": "search", export: "receive", import: "send", layout: "network",
+  more: "dots", trash: "lid"
+} as const satisfies Record<IconName, string>;

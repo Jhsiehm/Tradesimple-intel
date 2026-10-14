@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { matchMembers } from "../../shared/memberMatch.mjs";
 import { districtName, parseDistrict } from "../../shared/districts.mjs";
 import { Icon } from "../ui/icons/Icon";
 import { commandIcon } from "../ui/icons/commandIcon";
+import { filterChats, orderChats } from "../ask/chats";
+import type { SavedChat } from "../ask/types";
+import "./commandBar.css";
 
 export type TrailEntry = { label: string; action: string };
 type Seat = { bioguide: string; name: string; first?: string; last?: string; nickname?: string; party: string; state: string; district: string; chamber: string };
@@ -12,7 +15,7 @@ type Command = { code: string; label: string; hint: string; action: string };
 
 /** Static destinations, Bloomberg-style mnemonics on the left. Actions route through App.go(). */
 const STATIC: Command[] = [
-  { code: "WEEK", label: "Today · this week in Congress trading", hint: "Newest filings, late filings, biggest trades", action: "today:week" },
+  { code: "WEEK", label: "Today · filings and watchlist", hint: "This week in Congress trading, newest filings and biggest trades", action: "today:week" },
   { code: "LEAD", label: "Today · leaderboards", hint: "Buys vs S&P 500, most active, late filers", action: "today:leaders" },
   { code: "CONG", label: "Congress", hint: "Votes, bills, members, committees", action: "section:congress" },
   { code: "VOTE", label: "Congress · roll calls", hint: "Close votes first", action: "mode:votes" },
@@ -29,7 +32,7 @@ const STATIC: Command[] = [
   { code: "CTR", label: "Contracts · all agencies", hint: "Largest federal contract actions", action: "contracts:all" },
   { code: "NEWS", label: "News · board", hint: "Wires and X", action: "section:news" },
   { code: "DIST", label: "Districts", hint: "Plants and HQs on the map", action: "section:districts" },
-  { code: "STRT", label: "Strait", hint: "Ships, aircraft, imagery", action: "section:strait" },
+  { code: "NAV", label: "Nav", hint: "Regional ships, aircraft, news and satellite imagery", action: "section:strait" },
   { code: "MAP", label: "Map", hint: "Records in a window, lines you draw", action: "section:map" },
   { code: "CAL", label: "Calendar", hint: "Earnings, macro, lobbying, PAC", action: "calendar:" },
   { code: "ALRT", label: "Alerts", hint: "Watched members and tickers", action: "alerts:" },
@@ -91,72 +94,112 @@ export function commandsFor(text: string, tickers: Ticker[], roster: Seat[]): Co
       out.push({ code: `${x.symbol} DES`, label: `${x.name} · dossier`, hint: "type a function: GP POS CTR SPLC", action: `ticker:${x.symbol}` });
     }
   }
-  for (const c of STATIC) if (c.code.startsWith(head) || c.label.toUpperCase().includes(raw)) out.push(c);
+  for (const c of STATIC) if (c.code.startsWith(head) || (c.label + " " + c.hint).toUpperCase().includes(raw)) out.push(c);
   return out.slice(0, 14);
 }
 
-/** ⌘K / Ctrl+K / ":" command line. Type a mnemonic, a ticker and function (LMT CTR), a district (TX-12), or a member name. */
-export function CommandBar({ open, onClose, go, roster, trail }: { open: boolean; onClose: () => void; go: (action: string, label: string) => void; roster: Seat[]; trail: TrailEntry[] }) {
+/** One keyboard-accessible entry to destinations, records, and locally saved research. */
+export function CommandBar({ open, onClose, go, roster, trail, chats }: { open: boolean; onClose: () => void; go: (action: string, label: string) => void; roster: Seat[]; trail: TrailEntry[]; chats: SavedChat[] }) {
   const [text, setText] = useState("");
   const [at, setAt] = useState(0);
   const [tickers, setTickers] = useState<Ticker[]>(tickerCache || []);
+  const [tickerState, setTickerState] = useState<"loading" | "ready" | "error">(tickerCache ? "ready" : "loading");
   const input = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const listId = useId();
 
   useEffect(() => {
     if (!open) return;
+    let active = true;
+    const previous = document.activeElement as HTMLElement | null;
     setText("");
     setAt(0);
-    window.setTimeout(() => input.current?.focus(), 0);
-    if (!tickerCache) api<{ items: Ticker[] }>("/api/tickers").then((res) => { tickerCache = res.items || []; setTickers(tickerCache); }).catch(() => null);
+    const modal = dialog.current;
+    modal?.showModal();
+    input.current?.focus();
+    if (!tickerCache) {
+      setTickerState("loading");
+      api<{ items: Ticker[] }>("/api/tickers").then((res) => {
+        if (!Array.isArray(res.items)) throw new Error("Ticker search unavailable");
+        tickerCache = res.items;
+        if (active) { setTickers(tickerCache); setTickerState("ready"); }
+      }).catch(() => { if (active) setTickerState("error"); });
+    } else { setTickers(tickerCache); setTickerState("ready"); }
+    return () => { active = false; modal?.close(); previous?.focus(); };
   }, [open]);
 
-  const list = useMemo(() => {
-    if (text.trim()) return commandsFor(text, tickers, roster);
-    return [
-      ...trail.slice(1, 7).map((e, i) => ({ code: i === 0 ? "BACK" : "RCNT", label: e.label, hint: i === 0 ? "Alt+← also goes back" : "", action: e.action })),
-      ...STATIC
-    ];
-  }, [text, tickers, roster, trail]);
+  const groups = useMemo(() => {
+    const query = text.trim().toLowerCase();
+    const recent = trail.slice(1).filter((e) => !query || e.label.toLowerCase().includes(query))
+      .slice(0, query ? 3 : 5).map((e) => ({ code: "RCNT", label: e.label, hint: "Previously opened", action: e.action }));
+    const saved = filterChats(orderChats(chats), text).slice(0, query ? 5 : 3)
+      .map((c) => ({ code: "ASK", label: c.title, hint: c.pinned ? "Pinned · saved in this browser" : "Saved in this browser", action: `ask:saved:${c.id}` }));
+    const matches = query ? commandsFor(text, tickers, roster) : STATIC;
+    const seen = new Set<string>();
+    const destinations = { label: query ? "Results" : "Go to", items: matches };
+    const history = [{ label: "Recent research", items: recent }, { label: "Saved research", items: saved }];
+    return (query ? [destinations, ...history] : [...history, destinations])
+      .map((g) => ({ ...g, items: g.items.filter((c) => { if (seen.has(c.action)) return false; seen.add(c.action); return true; }) }))
+      .filter((g) => g.items.length);
+  }, [text, tickers, roster, trail, chats]);
+  const list = groups.flatMap((g) => g.items);
+  const selected = Math.max(0, Math.min(at, list.length - 1));
 
-  if (!open) return null;
+  useEffect(() => {
+    if (open) document.getElementById(`${listId}-${selected}`)?.scrollIntoView({ block: "nearest" });
+  }, [open, selected, text, listId]);
+
   const run = (c: Command | undefined) => {
     if (!c) return;
     onClose();
     go(c.action, c.label);
   };
+  if (!open) return null;
 
   return (
-    <div className="cmd-scrim" onMouseDown={onClose}>
-      <div className="cmd" role="dialog" aria-label="Command line" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="cmd-input">
-          <b><Icon name="command" />GO</b>
-          <input
-            ref={input}
-            value={text}
-            placeholder="WEEK · LMT CTR · TX-12 · Pelosi TL · ASK"
-            spellCheck={false}
-            onChange={(e) => { setText(e.target.value); setAt(0); }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onClose();
-              if (e.key === "ArrowDown") { e.preventDefault(); setAt((i) => Math.min(list.length - 1, i + 1)); }
-              if (e.key === "ArrowUp") { e.preventDefault(); setAt((i) => Math.max(0, i - 1)); }
-              if (e.key === "Enter") run(list[at]);
-            }}
-          />
-          <kbd>esc</kbd>
-        </div>
-        <ul className="cmd-list" role="listbox">
-          {list.map((c, i) => (
-            <li key={`${c.code}:${c.action}:${i}`} role="option" aria-selected={i === at} onMouseEnter={() => setAt(i)} onClick={() => run(c)}>
-              <code><Icon name={commandIcon(c.code)} />{c.code}</code>
-              <span>{c.label}</span>
-              <em>{c.hint}</em>
-            </li>
-          ))}
-          {!list.length ? <li className="cmd-empty">No match. Try a ticker, a district like TX-12, a member name, or a code like CTR.</li> : null}
-        </ul>
-        <p className="cmd-foot">↑↓ choose · enter go · ASK ask · DES dossier · GP chart · POS positions · CTR contracts · SPLC supply · TL timeline</p>
+    <dialog ref={dialog} className="cmd research-command" aria-label="Search TradeSimple" onKeyDown={(e) => {
+        e.stopPropagation();
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); onClose(); }
+      }} onCancel={(e) => { e.preventDefault(); onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose(); } }}>
+      <div className="cmd-input">
+        <Icon name="search" />
+        <input ref={input} value={text} autoFocus role="combobox" aria-label="Search companies, members, destinations and saved research"
+          aria-expanded="true" aria-controls={listId} aria-autocomplete="list" aria-activedescendant={list.length ? `${listId}-${selected}` : undefined}
+          placeholder="Search companies, members, or research…" spellCheck={false}
+          onChange={(e) => { setText(e.target.value); setAt(0); }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setAt(Math.min(list.length - 1, selected + 1)); }
+            if (e.key === "ArrowUp") { e.preventDefault(); setAt(Math.max(0, selected - 1)); }
+            if (e.key === "Enter") { e.preventDefault(); run(list[selected]); }
+          }} />
+        <button className="cmd-close" onClick={onClose} aria-label="Close search"><Icon name="close" /></button>
       </div>
-    </div>
+      <div className="cmd-results" id={listId} role="listbox" aria-label="Search results">
+        {groups.map((g) => (
+          <div key={g.label} role="group" aria-label={g.label}>
+            <h2 className="cmd-group" role="presentation">{g.label}</h2>
+            {g.items.map((c) => {
+              const i = list.indexOf(c);
+              return <div key={c.action} id={`${listId}-${i}`} className="cmd-result" role="option" aria-selected={i === selected}
+                onMouseDown={(e) => e.preventDefault()} onClick={() => run(c)}>
+                <Icon name={commandIcon(c.code)} />
+                <span className="cmd-copy"><strong>{c.label}</strong><small>{c.hint}</small></span>
+                <span className="cmd-type">{commandType(c.action)}</span>
+                <code>{c.code === "RCNT" ? "" : c.code}</code>
+              </div>;
+            })}
+          </div>
+        ))}
+        {!list.length ? <p className="cmd-empty">No matches. Try a company, member name, or “watchlist”. Start with ASK to ask a research question.</p> : null}
+      </div>
+      {tickerState !== "ready" ? <p className="cmd-notice" role="status">{tickerState === "loading" ? "Loading company search…" : "Company search is unavailable. Close and reopen to retry; destinations and saved research still work."}</p> : null}
+      <p className="cmd-foot"><span>↑↓ navigate · Enter open · Esc close</span><span>Shortcuts still work: LMT CTR · Pelosi TL · ASK</span></p>
+    </dialog>
   );
+}
+
+function commandType(action: string): string {
+  if (action.startsWith("ask:saved:")) return "Research";
+  return ({ ticker: "Company", member: "Member", timeline: "Timeline", chart: "Chart", pos: "Positions", contracts: "Contracts", district: "District", supply: "Supply chain", bt: "Backtest", ask: "Ask" } as Record<string, string>)[action.split(":")[0]] || "View";
 }

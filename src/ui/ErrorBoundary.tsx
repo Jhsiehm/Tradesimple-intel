@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { needsPageReload } from "./loadFailure";
 import "./boundary.css";
 
 type Props = {
@@ -30,12 +31,13 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    const reload = needsPageReload(error);
     return (
       <div className="boundary" role="alert">
         <p>
           <strong>{this.props.name} failed</strong>
-          <span title={error.stack}>{error.message || String(error)}</span>
-          <button className="ghost" onClick={() => this.setState({ error: null })}>Retry</button>
+          <span title={error.message}>{reload ? "This view's files could not load. Reload the app to fetch a fresh copy." : error.message || String(error)}</span>
+          <button className="ghost" onClick={() => reload ? window.location.reload() : this.setState({ error: null })}>{reload ? "Reload app" : "Retry"}</button>
         </p>
       </div>
     );

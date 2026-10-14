@@ -1,28 +1,22 @@
 import { useEffect, useState } from "react";
 import { api, recent, when } from "../lib/api";
 import type { DrawerModel, ListItem, Marker, StatusLine } from "../types";
+import { NAV_REGIONS, type NavRegion } from "../../shared/navRegions.mjs";
 
-export type Theater = {
-  id: string;
-  name: string;
-  lon: number;
-  lat: number;
-  zoom: number;
-  live: boolean;
-};
+export type Theater = NavRegion;
 
 type Ship = { id: string; name: string; mmsi: string; lat: number; lon: number; seen: string };
 type Article = { id: string; title: string; source: string; seen: string; url: string };
 export type Aircraft = { id: string; hex: string; callsign: string; reg: string; type: string; desc: string; owner: string; lat: number; lon: number; alt: number; ground: boolean; gs: number | null; track: number | null; squawk: string; emergency: string; mil: boolean; seen: string };
-type AirFeed = { ok: boolean; source: string; asOf: string; latency: string; milWorld: number; items: Aircraft[] };
+type AirFeed = { ok: boolean; theater: string; source: string; asOf: string; latency: string; milWorld: number; items: Aircraft[] };
 type Route = { ok: boolean; source: string; airline?: string; flight?: string; origin?: { iata: string; name: string; city: string; country: string }; destination?: { iata: string; name: string; city: string; country: string }; note?: string; error?: string };
 
-/** `enabled` is false while the Strait view is off screen, so ship and aircraft positions stop polling. */
+/** `enabled` is false while Nav is off screen, so ship and aircraft positions stop polling. */
 export function useStrait(theaterId: string, selectedId: string | null, feed: "ships" | "news" | "air" = "ships", milOnly = false, enabled = true) {
-  const [air, setAir] = useState<AirFeed | null>(null);
+  const [airData, setAir] = useState<AirFeed | null>(null);
   const [airError, setAirError] = useState("");
   const [route, setRoute] = useState<Route | null>(null);
-  const [theaters, setTheaters] = useState<Theater[]>([]);
+  const theaters = NAV_REGIONS;
   const [ships, setShips] = useState<Ship[]>([]);
   const [news, setNews] = useState<Article[]>([]);
   const [newsSource, setNewsSource] = useState("");
@@ -30,25 +24,28 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
   const [aisNote, setAisNote] = useState("");
 
   const theater = theaters.find((t) => t.id === theaterId) || theaters[0];
-
-  useEffect(() => {
-    api<{ items: Theater[] }>("/api/strait/theaters").then((res) => setTheaters(res.items)).catch(() => null);
-  }, []);
+  const air = airData?.theater === theater.id ? airData : null;
+  const unavailable = "Ship and regional news feeds currently cover Taiwan Strait. Map and satellite views are available here.";
 
   useEffect(() => {
     if (!enabled) return;
+    let cancel = false;
+    setShips([]);
+    setNews([]);
+    setNewsSource("");
+    setAisNote("");
     if (!theater?.live) {
-      setShips([]);
-      setNews([]);
-      setEmpty(`${theater?.name || "This theater"} is listed and not populated in this slice.`);
+      setEmpty(unavailable);
       return;
     }
+    setEmpty("Loading ship positions…");
     api<{ items: Article[]; source: string }>("/api/strait/news")
-      .then((res) => { setNews(res.items || []); setNewsSource(res.source || ""); })
-      .catch(() => setNews([]));
+      .then((res) => { if (!cancel) { setNews(res.items || []); setNewsSource(res.source || ""); } })
+      .catch(() => { if (!cancel) setNews([]); });
     const pull = () => {
       api<{ ok: boolean; missing?: string; items: Ship[] }>("/api/strait/ais")
         .then((res) => {
+          if (cancel) return;
           if (res.missing) {
             setAisNote(`Set ${res.missing} for live ship positions.`);
             setShips([]);
@@ -59,16 +56,18 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
             setAisNote("");
           }
         })
-        .catch((err: Error) => setEmpty(err.message));
+        .catch((err: Error) => { if (!cancel) setEmpty(err.message); });
     };
     pull();
     const timer = window.setInterval(pull, 15000);
-    return () => window.clearInterval(timer);
+    return () => { cancel = true; window.clearInterval(timer); };
   }, [enabled, theater?.id, theater?.live, theater?.name]);
 
   useEffect(() => {
     if (!enabled || feed !== "air" || !theater) return;
     let cancel = false;
+    setAir(null);
+    setAirError("");
     const pull = () => api<AirFeed>(`/api/air?theater=${theater.id}`)
       .then((res) => { if (!cancel) { setAir(res); setAirError(""); } })
       .catch((err: Error) => { if (!cancel) setAirError(err.message); });
@@ -184,15 +183,16 @@ export function useStrait(theaterId: string, selectedId: string | null, feed: "s
         latency: aisNote || `${ships.length} vessels · positions update while the server holds the websocket`
       }
     : {
-        source: theater?.name || "Theater",
+        source: theater?.name || "Nav",
         asOf: "",
-        latency: "Not populated in this slice."
+        latency: unavailable
       };
 
   return {
     theaters,
     items,
     newsItems,
+    newsEmpty: theater.live ? "No recent Taiwan Strait headlines." : unavailable,
     airItems,
     airMarkers,
     airEmpty: airError || (air ? (planes.length ? "" : milOnly ? "No military transponders visible in this box right now." : "No aircraft in range.") : "Loading aircraft…"),

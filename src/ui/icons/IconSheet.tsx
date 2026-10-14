@@ -9,7 +9,7 @@ import { RELATIONS } from "./relations";
 
 const MEANING: Record<IconName, string> = {
   today: "Today · this week's filings", congress: "Congress section", markets: "Markets section", contracts: "Federal contracts",
-  news: "News wires", districts: "Districts · location", strait: "Strait · shipping", map: "Map section · map view",
+  news: "News wires", districts: "Districts · location", strait: "Nav · shipping", map: "Map section · map view",
   calendar: "Calendar", globe: "Globe view · global indices", city: "City skyline",
   house: "House chamber", senate: "Senate chamber", votes: "Votes · roll calls", bills: "Bills", members: "Members · representative",
   committees: "Committees", floor: "Floor seating chart", filings: "Trade filings", form4: "SEC Form 4 · insiders", hearing: "Hearings",

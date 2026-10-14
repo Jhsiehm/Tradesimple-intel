@@ -3,7 +3,7 @@
 
 
 
-<img width="324" height="316" alt="image" src="https://github.com/user-attachments/assets/ef494081-e109-4578-b410-b0a5e94b6c5d" />
+<img width="480" height="160" alt="TradeSimple Intel" src="src/assets/tradesimple-intel-logo.png" />
 
 
 A one-screen research terminal that joins **what Congress is doing** with **what markets are doing**: roll-call votes, bills, committees, and member stock trades next to insider filings, fund holdings, lobbying, PAC money, federal contracts, global markets, news, X, ships, aircraft, and live satellite imagery.
@@ -31,7 +31,11 @@ Every panel shows where its data came from, when it was fetched, and how late th
 
 ### Today: this week in Congress trading
 
-The first visit (and every visit to the public demo) opens **Today** in the center stage: the newest disclosed trades in plain sentences, such as *Sen. X sold $50k–$100k NVDA · traded Sep 3, filed Sep 25 (22d)*, each with a **filing ↗** link to the source document. Four cards: latest filings (one row per report, with a count of the other trades in it), filings more than 45 days late, the biggest trades by the low end of the disclosed range, and the most-traded tickers by number of members. The window is by filed date: 7 days, widened to 14 or 30 when fewer than five members filed, and the header says which. Names open the member timeline, tickers open the chart. Open it with **Today** in the nav, key `0`, `#week`, or the command codes `WEEK` and `LEAD` (leaderboards). API: `/api/congress/feed` (pure `buildFeed` in `server/feed.mjs`; sentences in `shared/sentences.mjs`).
+The first visit (and every visit to the public demo) opens **Today** in the center stage: the newest disclosed trades in plain sentences, such as *Sen. X sold $50k–$100k NVDA · traded Sep 3, filed Sep 25 (22d)*, each with a **filing ↗** link to the source document. A disclosure overview leads into four evidence views: latest filings (one row per report, with a count of the other trades in it), filings made more than 45 days after trading (all loaded history), the biggest trades by the low end of the disclosed range, and the most-traded tickers by number of members. Overview links open the corresponding evidence view; the watchlist follows the evidence. The window is by filed date: 7 days, widened to 14 or 30 when fewer than five members filed, and the header says which. Names open the member timeline, tickers open the chart. Open it with **Today** in the nav, key `0`, `#week`, or the command codes `WEEK` and `LEAD` (leaderboards). API: `/api/congress/feed` (pure `buildFeed` in `server/feed.mjs`; sentences in `shared/sentences.mjs`).
+
+### Find: destinations and research
+
+Open **Find** or press **⌘K / Ctrl+K** to search companies, members, districts, app destinations, recent visits, and saved Ask chats. Recent and saved research appear first when the query is empty; saved chats stay in this browser. Results show their type and a short explanation, with existing codes such as `LMT CTR`, `Pelosi TL`, and `ASK …` retained. Use arrow keys and Enter to open a result, Escape to dismiss; focus stays inside the dialog and returns to its opener. Find is also available in the phone navigation. Company-search loading or failure is shown independently of local results.
 
 ### Leaderboards and returns against the S&P 500
 
@@ -486,3 +490,17 @@ GitHub Actions runs tests, typechecking, production and demo builds, and a high-
 ## Disclaimer
 
 For research and education. Nothing here is investment advice. Public disclosures are late by design, and delayed quotes are not suitable for trading decisions. Backtests replay past public records with the caveats on the board — they are not proof of an edge. Ask answers are grounded against tool results with a warning check, not a guarantee. Check anything important against the primary filing, which every row links to.
+
+### Nav weather and hazards
+
+Choose **Nav → Weather** for worldwide point forecasts and regional hazard reports. Use **Point forecast** to pick a map point, enter coordinates, or choose a supply location. The dossier shows temperature, sustained wind, precipitation, a 24-hour temperature change, and a seven-day UTC outlook. **Hazard layers** toggles earthquakes, cyclones, floods, droughts, wildfires, and volcanoes; the continent/region selector filters event centers. On phones, **Reports / Map** explicitly switches between the list and interactive map. Cloud imagery reuses the existing GOES/Himawari layer.
+
+No new API keys are required:
+
+- [MET Norway Locationforecast](https://api.met.no/doc/locationforecast/HowTO): worldwide model forecasts. [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); TradeSimple summarizes model samples and non-overlapping precipitation intervals. Missing rain remains unknown, and partial UTC days are marked. Requests identify this repository, are rounded to two decimal places, cached for at least an hour or until upstream `Expires`, and conditionally revalidated with `If-Modified-Since`. No device geolocation is collected.
+- [USGS GeoJSON feeds](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php): M2.5+ earthquakes over the past week, refreshed every five minutes. PAGER impact colors appear only when supplied; absent ratings remain **unrated**.
+- [Global Disaster Awareness and Coordination System, GDACS](https://www.gdacs.org/Documents/2025/GDACS_API_quickstart_v2.pdf): latest 100 reports, plus a separate two-year drought/volcano search (up to 100 reports, cached hourly) so slower events are not crowded out by wildfire updates. Only reports marked current by GDACS are shown; overlapping results are deduplicated. Event centers are not affected-area polygons or a complete inventory of local warnings. GDACS and USGS levels are distinct provider assessments, not a comparable risk score.
+
+API: `/api/weather/hazards` returns independent feed states, source coverage and timestamps; `/api/weather/forecast?lat=29.76&lon=-95.37` returns the point forecast. Concurrent identical fetches are coalesced. Upstream failures retain cached data explicitly labeled **stale**, or show unavailable without manufacturing an all-clear. These feeds have no delivery SLA. The static demo does not contain weather snapshots and shows an unavailable state.
+
+Commodity notes describe conditional exposure channels and locations to investigate. They do not match events to facilities, estimate lost production, forecast prices, or provide push/emergency notifications. This release does not include global radar, marine-wave forecasts, every national warning system, or gridded drought/soil-moisture products.

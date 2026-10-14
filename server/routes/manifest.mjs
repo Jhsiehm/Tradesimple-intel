@@ -55,6 +55,8 @@ export const MANIFEST = [
   { id: "markets.globals", path: "/api/markets/globals", warm: "board", snapshot: true },
   { id: "markets.supply", path: "/api/markets/supply", warm: "discover", snapshot: true },
   { id: "markets.supplyChain", path: "/api/markets/supply/:symbol([A-Za-z.\\-]+)" },
+  { id: "weather.hazards", path: "/api/weather/hazards" },
+  { id: "weather.forecast", path: "/api/weather/forecast" },
   { id: "air", path: "/api/air" },
   { id: "air.near", path: "/api/air/near" },
   { id: "air.route", path: "/api/air/route/:callsign([A-Za-z0-9]+)" },

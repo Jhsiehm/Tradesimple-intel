@@ -43,6 +43,7 @@ const POLL = 5 * 60 * 1000;
 const EDITION_DEMOTE = 12 * 60 * 60 * 1000;
 
 export function useNews(desk: NewsDesk, query: string, selectedId: string | null, active: boolean, region = "all") {
+  const [outletIds, setOutletIds] = useState<string[]>([]);
   const [wire, setWire] = useState<Wire | null>(null);
   const [x, setX] = useState<Wire | null>(null);
   const [empty, setEmpty] = useState("Loading wires…");
@@ -57,11 +58,11 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
         .then((res) => {
           if (cancel) return;
           setWire(res);
-          setEmpty(res.items?.length ? "" : res.errors?.[0] || "No headlines returned.");
+          setEmpty(res.items?.length ? "" : "No stories available yet. Check source details for feed status.");
         })
-        .catch((err: Error) => {
+        .catch(() => {
           if (cancel) return;
-          setEmpty(`${err.message} · retrying in 15s`);
+          setEmpty("Unable to refresh stories. Retrying in 15 seconds.");
           retry = window.setTimeout(load, 15000);
         });
       api<Wire>("/api/news/x")
@@ -83,13 +84,21 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
     return merged.sort((a, b) => key(b) - key(a));
   }, [wire, x]);
 
-  const filtered = useMemo(() => {
+  const scoped = useMemo(() => {
     const q = query.trim().toLowerCase();
     return all
       .filter((h) => desk === "all" || h.desk === desk)
       .filter((h) => region === "all" || h.geo?.region === region)
       .filter((h) => !q || `${h.title} ${h.source} ${h.symbols.join(" ")}`.toLowerCase().includes(q));
   }, [all, desk, query, region]);
+
+  const filtered = useMemo(() => scoped.filter((h) => !outletIds.length || outletIds.includes(h.feed)), [scoped, outletIds]);
+  const outlets = useMemo(() => {
+    const options = new Map((wire?.feeds || []).map((f) => [f.id, { id: f.id, name: f.name, desk: f.desk, ok: f.ok, count: 0 }]));
+    for (const h of all) if (!options.has(h.feed)) options.set(h.feed, { id: h.feed, name: h.via || (h.desk === "x" ? "X" : h.source), desk: h.desk, ok: true, count: 0 });
+    for (const h of scoped) { const option = options.get(h.feed); if (option) option.count++; }
+    return [...options.values()];
+  }, [wire, all, scoped]);
 
   const items: ListItem[] = useMemo(() => filtered.slice(0, 250).map((h) => ({
     id: h.id,
@@ -129,7 +138,7 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
     ? { source: x?.source || "X API v2", asOf: when(x?.asOf), latency: x?.missing ? `Set ${x.missing} in .env.local` : x?.latency }
     : { source: wire?.source || "RSS wires", asOf: when(wire?.asOf), latency: wire?.latency };
 
-  return { items, empty: desk === "x" && x?.missing ? `Set ${x.missing} in .env.local. ${x.detail || ""}` : empty, drawer, status, wire, x, all: filtered };
+  return { outletIds, setOutletIds, outlets, scopedCount: scoped.length, items, empty: outletIds.length && !filtered.length ? "No stories match these outlets and filters. Try All outlets or broaden your filters." : desk === "x" && x?.missing ? "Social feed is not configured. Open source details for setup information." : empty, drawer, status, wire, x, all: filtered };
 }
 
 export function age(iso: string) {

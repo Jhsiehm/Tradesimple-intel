@@ -4,15 +4,20 @@ import { KEY } from "./lib/cacheKeys.mjs";
 
 const HEADERS = { headers: { "User-Agent": "Mozilla/5.0 tradesimple-intel", Accept: "application/json" } };
 
-function bboxOf(theater) {
+export function bboxOf(theater) {
+  if (theater.bounds) {
+    const [w, s, e, n] = theater.bounds;
+    return { w, s, e, n, global: theater.id === "world" };
+  }
   const halfLon = Math.min(180, (180 / 2 ** theater.zoom) * 1.6);
   const halfLat = Math.min(85, halfLon * 0.62);
   return { w: theater.lon - halfLon, e: theater.lon + halfLon, s: theater.lat - halfLat, n: theater.lat + halfLat, global: theater.zoom < 2 };
 }
 
-function inBox(ac, box) {
+export function inBox(ac, box) {
   if (box.global) return true;
-  return ac.lat >= box.s && ac.lat <= box.n && ac.lon >= box.w && ac.lon <= box.e;
+  const longitude = box.w > box.e ? ac.lon >= box.w || ac.lon <= box.e : ac.lon >= box.w && ac.lon <= box.e;
+  return ac.lat >= box.s && ac.lat <= box.n && longitude;
 }
 
 function shape(ac, mil, now) {

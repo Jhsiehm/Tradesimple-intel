@@ -67,7 +67,7 @@ const KIND_WORD: Record<string, string> = { bill: "bill", vote: "roll call", com
 
 /** One line for the sheet header and the ASK button. */
 export function contextLine(ctx: AgentContext): string {
-  const section = ctx.section.toUpperCase();
+  const section = ctx.section === "strait" ? "NAV" : ctx.section.toUpperCase();
   if (ctx.theory) return `${section} · your theory · ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}`;
   if (ctx.node?.startsWith("member:")) return `${section} · ${ctx.label || `member ${ctx.node.slice(7)}`}`;
   if (ctx.node?.startsWith("ticker:")) return `${section} · ${ctx.node.slice(7)}`;

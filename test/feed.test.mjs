@@ -46,3 +46,12 @@ test("buildFeed keeps the 7-day window when enough members filed", () => {
   assert.equal(f.window.fallback, false);
   assert.equal(f.counts.members, 5);
 });
+
+test("an empty recent window never relabels historical trades as current filings", () => {
+  const f = buildFeed([t({ id: "old", filed: "2026-06-01", lag: 60 })], { today: "2026-09-30" });
+  assert.equal(f.counts.trades, 0);
+  assert.deepEqual(f.latest, []);
+  assert.deepEqual(f.biggest, []);
+  assert.deepEqual(f.tickers, []);
+  assert.equal(f.late[0].id, "old");
+});

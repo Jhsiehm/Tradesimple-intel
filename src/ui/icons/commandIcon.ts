@@ -3,7 +3,7 @@ import type { IconName } from "./names";
 const CODE_ICON: Record<string, IconName> = {
   WEEK: "today", LEAD: "leaders", CONG: "congress", VOTE: "votes", BILL: "bills", MEMB: "members", CMTE: "committees",
   MKTS: "markets", WEI: "globe", FXIP: "fx", CRYP: "crypto", POSN: "positions", PTRS: "trade", FRM4: "form4",
-  NEWS: "news", DIST: "districts", STRT: "strait", MAP: "map", CITY: "city", CAL: "calendar", ALRT: "bell",
+  NEWS: "news", DIST: "districts", NAV: "strait", STRT: "strait", MAP: "map", CITY: "city", CAL: "calendar", ALRT: "bell",
   BACK: "back", RCNT: "recent", BT: "backtest", ASK: "ask",
   DES: "dossier", GP: "chart", POS: "positions", CTR: "contracts", SPLC: "supply", HQ: "hq", TL: "timeline", REP: "members"
 };

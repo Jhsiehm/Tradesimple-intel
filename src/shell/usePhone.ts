@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const QUERY = "(max-width: 720px)";
 
-/** Phone layout: list + dossier only. The map and boards are never mounted, so MapLibre never downloads. */
+/** Phone layout: list + dossier only. Maps stay unmounted by default; Weather offers an explicit map opt-in. */
 export function usePhone() {
   const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(QUERY).matches);
   useEffect(() => {

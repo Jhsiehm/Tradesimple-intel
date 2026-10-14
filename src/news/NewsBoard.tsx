@@ -29,16 +29,8 @@ export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Pr
       <header className="board-head">
         <div className="board-title">
           <strong>WIRE</strong>
-          <span>{items.length} headlines · {when(wire?.asOf)}</span>
+          <span>{items.length} stories · {when(wire?.asOf)} · up to 80 per column</span>
         </div>
-        <p className="feeds">
-          {(wire?.feeds || []).map((feed) => (
-            <span key={feed.id} className={feed.ok ? undefined : "down"} title={`${feed.desk} · fetched in ${feed.ms} ms`}>
-              <em>{feed.name}</em>{feed.ok ? `${feed.count} · ${feed.ms}ms` : "down"}
-            </span>
-          ))}
-          <span className={x?.ok ? undefined : "down"} title={x?.latency}><em>X</em>{x?.ok ? `${x.items.length}${x.mode === "social" ? " · via Bluesky + Truth Social" : ""}` : x?.missing ? "no token" : "—"}</span>
-        </p>
         {mentions.length ? (
           <p className="chips">
             <em>MENTIONS</em>
@@ -52,11 +44,11 @@ export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Pr
         <Column title="World" rows={columns.world} selectedId={selectedId} onSelect={onSelect} />
         <Column title="Markets" rows={columns.markets} selectedId={selectedId} onSelect={onSelect} />
         <Column
-          title={x?.mode === "social" ? "X · accounts via Bluesky / Truth" : "X"}
+          title={x?.mode === "social" ? "Social posts" : "X"}
           rows={columns.x}
           selectedId={selectedId}
           onSelect={onSelect}
-          empty={x?.missing ? `Set ${x.missing} in .env.local. ${x.detail || ""}` : x?.error || "No posts."}
+          empty="No posts match the current filters."
           lead={x?.trends?.length ? (
             <div className="x-trends">
               <p><em>TRENDING ON X · US</em> {x.trendsAsOf ? `${when(x.trendsAsOf).slice(11)} UTC · trends24` : ""}</p>
@@ -89,12 +81,12 @@ function Column({ title, rows, selectedId, onSelect, empty, lead }: { title: str
         {lead}
         {rows.length ? rows.map((h) => (
           <button key={h.id} className="wire-row" aria-selected={h.id === selectedId} onClick={() => onSelect(h.id)}>
-            <time>{h.published ? new Date(h.published).toISOString().slice(11, 16) : "--:--"}</time>
+            <time>{Number.isFinite(Date.parse(h.published)) ? new Date(h.published).toISOString().slice(11, 16) : "--:--"}</time>
             <span className={h.via ? "wire-src handle" : "wire-src"}>{h.source}{h.via ? <i> · {h.via}</i> : null}</span>
             <span className="wire-title">{h.title}</span>
             <small>{age(h.published)}{h.symbols.length ? ` · ${h.symbols.join(" ")}` : ""}</small>
           </button>
-        )) : <p className="note">{empty || "No headlines."}</p>}
+        )) : <p className="note">{empty || "No stories match the current filters."}</p>}
       </div>
     </section>
   );

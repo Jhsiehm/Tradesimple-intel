@@ -147,7 +147,7 @@ export function mapLook(view: View, at: { onMap: boolean; scoped: boolean; setti
   };
 }
 
-const SECTION_LABEL: Record<string, string> = { congress: "Congress", markets: "Markets", contracts: "Contracts", news: "News", districts: "Districts", strait: "Strait", map: "Map" };
+const SECTION_LABEL: Record<string, string> = { congress: "Congress", markets: "Markets", contracts: "Contracts", news: "News", districts: "Districts", strait: "Nav", map: "Map" };
 
 /** Trail and ⌘K recents label. `who` names a bioguide id. */
 export function trailLabel(action: string, who: (bioguide: string) => string): string {

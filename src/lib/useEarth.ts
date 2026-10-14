@@ -34,8 +34,13 @@ export function useEarth() {
   }, []);
 
   const update = (next: Partial<EarthSettings>) => setSettings((cur) => ({ ...cur, ...next }));
+  return { earth: earth?.layers ? earth : null, settings, update };
+}
+
+/** Credit the effective view, which may constrain saved imagery and camera preferences. */
+export function earthCreditFor(earth: Earth | null, settings: EarthSettings) {
   const layer = settings.base === "live" ? null : earth?.layers?.[settings.base];
-  const credit = [
+  return [
     settings.base === "live" ? "NASA GIBS · GOES-East + GOES-West GeoColor, Himawari-9 IR, over daily VIIRS where no geostationary feed exists" : "",
     layer ? `${layer.source} · ${layer.asOf}` : "",
     settings.view === "3d" && earth?.layers?.terrain ? `Relief ${earth.layers.terrain.source}` : "",
@@ -43,5 +48,4 @@ export function useEarth() {
     settings.lanes && earth?.lanesSource ? `Lanes ${earth.lanesAsOf}` : ""
   ].filter(Boolean).join("  ·  ");
 
-  return { earth: earth?.layers ? earth : null, settings, update, credit };
 }

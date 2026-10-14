@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import { REGIONS } from "../news/newsGlobe";
+import { PARTY_COLOR, PARTY_LABEL } from "../congress/colors";
 import type { Chamber, CongressMode, EarthBase, EarthSettings, EarthView, MarketLayer, NewsDesk, PartyFilter } from "../types";
 import { BASE_TITLE, type MarketView } from "./sections";
 import type { ContractScope, ContractSort } from "../contracts/useContracts";
@@ -15,12 +17,13 @@ export function DistrictsBar({ layer, onLayer }: { layer: DistrictLayer; onLayer
   );
 }
 
-/** Strait's picture. Dark keeps the ships readable. Live is the GOES and Himawari clock. */
-export function StraitPicture({ live, onLive }: { live: boolean; onLive: (live: boolean) => void }) {
+/** Detail and freshness are separate choices: aerial mosaic versus weather satellite frames. */
+export function NavPicture({ base, onBase }: { base: EarthBase; onBase: (base: EarthBase) => void }) {
   return (
-    <span className="seg" title="Picture under the ships. Live scrubs GOES and Himawari on the clock.">
-      <button aria-pressed={!live} onClick={() => onLive(false)}><IconLabel icon="map">Dark</IconLabel></button>
-      <button aria-pressed={live} onClick={() => onLive(true)}><IconLabel icon="live">Live</IconLabel></button>
+    <span className="seg" role="group" aria-label="Nav imagery">
+      <button aria-pressed={base === "dark"} onClick={() => onBase("dark")} title="Dark basemap"><IconLabel icon="map">Map</IconLabel></button>
+      <button aria-pressed={base === "sat"} onClick={() => onBase("sat")} title="High-resolution satellite and aerial imagery. Zoom in for streets and buildings where covered. Capture dates vary; this is not live."><IconLabel icon="satellite">Detailed satellite</IconLabel></button>
+      <button aria-pressed={base === "live"} onClick={() => onBase("live")} title="Frequently updated GOES and Himawari weather imagery; lower resolution than Detailed satellite."><IconLabel icon="live">Live weather</IconLabel></button>
     </span>
   );
 }
@@ -36,9 +39,10 @@ export function ImageryToggle({ on, onChange }: { on: boolean; onChange: (on: bo
 
 export function PartyButtons({ party, onParty }: { party: PartyFilter; onParty: (p: PartyFilter) => void }) {
   return (
-    <span className="seg">
+    <span className="seg party-filters" role="group" aria-label="Filter by party">
       {(["all", "D", "R", "I"] as PartyFilter[]).map((p) => (
-        <button key={p} className={p === "D" ? "p-dem" : p === "R" ? "p-rep" : undefined} aria-pressed={party === p} onClick={() => onParty(p)}>
+        <button key={p} style={p === "all" ? undefined : { "--party-color": PARTY_COLOR[p] } as CSSProperties} className={p === "all" ? undefined : "party-filter"} aria-label={p === "all" ? "All parties" : PARTY_LABEL[p]} title={p === "all" ? "All parties" : PARTY_LABEL[p]} aria-pressed={party === p} onClick={() => onParty(p)}>
+          {p === "all" ? null : <i className="party-dot" aria-hidden="true" />}
           {p === "all" ? "All" : p}
         </button>
       ))}
@@ -172,7 +176,7 @@ export function NewsBar(props: {
   );
 }
 
-export type StraitFeed = "ships" | "news" | "air";
+export type StraitFeed = "ships" | "news" | "air" | "weather";
 
 const SCOPE_HINT: Record<ContractScope["kind"], string> = { all: "", symbol: "LMT", place: "TX-12 or TX", member: "G000583" };
 
@@ -225,6 +229,7 @@ export function StraitBar(props: { feed: StraitFeed; onFeed: (f: StraitFeed) => 
       <span className="seg">
         <button aria-pressed={props.feed === "ships"} onClick={() => props.onFeed("ships")}><IconLabel icon="strait">Ships</IconLabel></button>
         <button aria-pressed={props.feed === "news"} onClick={() => props.onFeed("news")}><IconLabel icon="news">News</IconLabel></button>
+        <button aria-pressed={props.feed === "weather"} onClick={() => props.onFeed("weather")}><IconLabel icon="live">Weather</IconLabel></button>
         <button aria-pressed={props.feed === "air"} onClick={() => props.onFeed("air")}><IconLabel icon="air">Air</IconLabel></button>
       </span>
       {props.feed === "air" ? (
@@ -254,9 +259,9 @@ const BASE_ICON: Record<EarthBase, IconName> = { dark: "map", sat: "satellite", 
 export function EarthBar({ settings, update, onBase, imagery = true, lanes = true }: { settings: EarthSettings; update: (next: Partial<EarthSettings>) => void; onBase: () => void; imagery?: boolean; lanes?: boolean }) {
   return (
     <>
-      <span className="seg" title="View">
+      <span className="seg" role="group" aria-label="Map view">
         {(["2d", "globe", "3d"] as EarthView[]).map((v) => (
-          <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Pitch the camera. On Map, pick a city for the block skyline and live aircraft." : undefined} onClick={() => update({ view: v })}>
+          <button key={v} aria-pressed={settings.view === v} title={v === "3d" ? "Tilt the camera and show terrain relief" : v === "globe" ? "Explore the Earth as a globe" : "Flat map view"} onClick={() => update({ view: v })}>
             <IconLabel icon={v === "2d" ? "view2d" : v === "globe" ? "globe" : "cube"}>{v === "2d" ? "2D" : v === "globe" ? "Globe" : "3D"}</IconLabel>
           </button>
         ))}

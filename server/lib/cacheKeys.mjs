@@ -3,6 +3,10 @@
  * renaming one orphans the old rows and forces a refetch.
  */
 export const KEY = {
+  weatherSlow: "weather:gdacs-slow:v1",
+  weatherQuakes: "weather:usgs:v1",
+  weatherDisasters: "weather:gdacs:v1",
+  weatherPoint: (lat, lon) => `weather:met:v1:${lat}:${lon}`,
   // Congress.gov, Senate and House clerks
   congress: (path) => `congress:${path}`,
   senateVoteMenu: (session) => `senate:vote-menu-119-${session}`,

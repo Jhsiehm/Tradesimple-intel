@@ -4,18 +4,7 @@ import { STATE_NAME_TO_POSTAL } from "./states";
 
 export type Seat = { state: string; district: string; vote: string; party?: string; geoid: string | null };
 
-/** Map fill per category. Floor seats use the same Yea/Nay/Present colors. */
-export const VOTE_FILL: Record<string, string> = {
-  Yea: "#1f6b3a",
-  Nay: "#7a3030",
-  Split: "#6a5a28",
-  Present: "#6f86a3",
-  "Not voting": "#4b525b",
-  "Half yea": "#6f9a78",
-  "Half nay": "#a87a74",
-  Vacant: "#3b2f4d",
-  Delegate: "#1c242c"
-};
+export { VOTE_FILL } from "./colors";
 
 export const VOTE_LABEL: Record<string, string> = {
   Yea: "Yea",

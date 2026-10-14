@@ -1,0 +1,71 @@
+.brand-home {
+  --brand-beam-scale: 0.7;
+  --brand-light: 0;
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 4px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.brand-mark {
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.brand-symbol {
+  transform-origin: 320px 320px;
+  transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) rotate(var(--brand-angle, 0deg));
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-beams {
+  transform-origin: 265px 371px;
+  opacity: var(--brand-light);
+  transform: scaleX(var(--brand-beam-scale));
+  transition: opacity 180ms ease-out, transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.brand-dust { opacity: 0; transition: opacity 120ms ease-out; }
+.brand-grain { opacity: 0; }
+
+.brand-home:is(:focus-visible, :active) {
+  --brand-beam-scale: 1;
+  --brand-light: 0.75;
+}
+.brand-home:is(:focus-visible, :active) .brand-dust { opacity: 1; }
+.brand-home:focus-visible .brand-grain {
+  animation: brand-drift 1100ms ease-out var(--dust-delay) both;
+}
+.brand-home:active .brand-symbol { transform: scale(0.94); }
+
+@media (hover: hover) and (pointer: fine) {
+  .brand-home:hover {
+    --brand-beam-scale: 1;
+    --brand-light: 0.75;
+  }
+  .brand-home:hover .brand-dust { opacity: 1; }
+  .brand-home:hover .brand-grain {
+    animation: brand-drift 1100ms ease-out var(--dust-delay) both;
+  }
+}
+
+@keyframes brand-drift {
+  0% { opacity: 0; transform: translate(0, 0); }
+  20% { opacity: 0.65; }
+  100% { opacity: 0; transform: translate(var(--dust-x), var(--dust-y)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-home .brand-symbol,
+  .brand-home .brand-beams { transform: none; transition: none; }
+  .brand-home .brand-dust { display: none; }
+  .brand-home .brand-grain { animation: none; }
+  .brand-home .brand-beams { transition: opacity 120ms ease-out; }
+}

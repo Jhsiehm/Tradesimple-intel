@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none">
+  <title>TradeSimple Intel</title>
+  <desc>Cream circular emblem with an offset emerald center and four light rays opening to the right.</desc>
+  <defs>
+    <radialGradient id="core" cx="300" cy="320" r="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#003e30"/>
+      <stop offset=".38" stop-color="#003226"/>
+      <stop offset=".72" stop-color="#00271e"/>
+      <stop offset="1" stop-color="#001e17"/>
+    </radialGradient>
+    <radialGradient id="ivory" cx="302" cy="341" r="313" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffef7"/>
+      <stop offset=".5" stop-color="#fff9e9"/>
+      <stop offset=".82" stop-color="#f9f0d4"/>
+      <stop offset="1" stop-color="#eee0b8"/>
+    </radialGradient>
+    <linearGradient id="rays" x1="265" y1="371" x2="650" y2="371" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffbea"/>
+      <stop offset=".28" stop-color="#f9f7e4"/>
+      <stop offset=".48" stop-color="#d5e6c5"/>
+      <stop offset=".68" stop-color="#69b892"/>
+      <stop offset=".87" stop-color="#02765a"/>
+      <stop offset="1" stop-color="#025541"/>
+    </linearGradient>
+    <linearGradient id="ray-top" href="#rays" x2="635"/>
+    <linearGradient id="ray-bottom" href="#rays" x2="625"/>
+    <linearGradient id="edge" x1="342" y1="371" x2="643" y2="371" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffdee" stop-opacity=".65"/>
+      <stop offset=".65" stop-color="#d5edd0" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#8cddc3" stop-opacity=".08"/>
+    </linearGradient>
+  </defs>
+  <!-- Contours follow the supplied 2172 × 724 wordmark, in its original coordinate space. -->
+  <g transform="translate(-45 -45)">
+    <path d="M518 167C474 125 414 101 351 101C202 101 79 199 79 365C79 532 200 629 351 629C414 629 475 605 518 564C578 506 613 438 613 365C613 289 576 217 518 167Z" fill="url(#core)"/>
+    <!-- The inner arc is intentionally offset left; the narrow horizontal opening is part of the mark. -->
+    <g fill="url(#ivory)">
+      <path d="M518 167C474 125 414 101 351 101C202 101 80 195 79 363L154 360C158 287 218 229 296 229C332 229 363 244 387 269Z"/>
+      <path d="M79 370C81 535 201 629 351 629C414 629 475 605 518 564L388 464C363 491 330 505 296 505C219 505 154 445 154 373Z"/>
+    </g>
+    <path d="M265 371L583 191C623 238 647 300 647 367C647 437 619 501 577 550Z" fill="url(#core)"/>
+    <g fill="url(#rays)">
+      <path d="M265 367L583 191C602 211 617 235 625 251Z" fill="url(#ray-top)"/>
+      <path d="M266 371L633 286C641 307 646 330 647 352Z"/>
+      <path d="M267 376L647 385C646 409 640 433 632 455Z"/>
+      <path d="M268 379L624 491C613 516 596 539 577 550Z" fill="url(#ray-bottom)"/>
+    </g>
+    <!-- Fine edge reflections retain the original's dimensional shading without raster noise. -->
+    <g stroke="url(#edge)" stroke-width="1.3" stroke-linecap="round">
+      <path d="M268 366L582 192"/>
+      <path d="M269 370L632 287"/>
+      <path d="M270 376L646 386"/>
+      <path d="M271 380L623 492"/>
+    </g>
+  </g>
+</svg>

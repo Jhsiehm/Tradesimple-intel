@@ -1,0 +1,31 @@
+.news-controls { flex: 0 0 100%; min-width: 0; border-top: 1px solid var(--line); padding-top: 10px; }
+.news-overview { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 20px; padding: 0 4px 10px; color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.news-overview strong { color: var(--ink); font-size: 22px; font-weight: 500; }
+.news-overview strong span { margin-left: 7px; font-size: 12px; }
+.news-overview b { color: var(--ink); font-weight: 400; }
+.news-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 11px; }
+.news-filter-row summary { cursor: pointer; padding: 8px; color: var(--ink); }
+.outlet-picker > summary { border: 1px solid var(--line); }
+.outlet-picker > summary span { color: var(--amber); margin-left: 8px; }
+.news-scope { color: var(--dim); }
+.news-health { margin-left: auto; }
+.news-controls details[open] > summary { color: var(--amber); }
+.outlet-panel, .news-health-panel { position: absolute; top: auto; left: 8px; right: 8px; z-index: 30; background: #0d1217; border: 1px solid var(--line); padding: 14px; box-shadow: 0 12px 28px #0008; max-height: min(460px, 65vh); overflow: auto; }
+.outlet-tools { display: flex; gap: 8px; }
+.outlet-tools input { flex: 1; min-width: 0; }
+.outlet-tools input, .outlet-tools select { padding: 9px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font: inherit; }
+.outlet-help { display: flex; align-items: center; gap: 16px; justify-content: space-between; color: var(--dim); line-height: 1.5; padding: 12px 0; }
+.outlet-help button { flex-shrink: 0; color: var(--amber); }
+.outlet-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; max-height: 280px; overflow: auto; }
+.outlet-option { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--line); cursor: pointer; color: var(--ink); padding: 6px 4px; }
+.outlet-option:hover { background: #ffffff06; }
+.outlet-option input { accent-color: var(--amber); }
+.outlet-option span { flex: 1; }
+.outlet-option small { display: block; color: var(--dim); margin-top: 3px; text-transform: capitalize; }
+.outlet-option b { color: var(--dim); font-weight: 400; }
+.news-clear { color: var(--amber); text-decoration: underline; text-underline-offset: 3px; }
+.news-health-panel { color: var(--dim); line-height: 1.6; }
+.news-health-list p { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding: 5px 0; margin: 0; }
+.news-health-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.news-controls :is(button, input, select, summary):focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+@media (max-width: 600px) { .outlet-list { grid-template-columns: 1fr; } .news-overview { gap: 6px 12px; } .news-health { margin-left: 0; } .news-filter-row { gap: 4px 8px; } .outlet-tools { flex-wrap: wrap; } }
