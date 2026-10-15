@@ -569,6 +569,7 @@ export function App() {
         <div className="brand">
           <BrandHome onHome={() => go("today:week")} />
           {DEMO ? <DemoChip /> : null}
+          {import.meta.env.VITE_HISTORY_PREVIEW === "1" ? <span className="demo-chip" title="Previously collected public data, not live. Original source timestamps are preserved. Coverage varies by feed; weather may refresh separately.">Historical preview</span> : null}
         </div>
         <nav className="nav">
           <button className="compact-find" aria-label="Search TradeSimple" aria-haspopup="dialog" onClick={() => { ask.close(); setCmdOpen(true); }}><Icon name="search" /> Find</button>
