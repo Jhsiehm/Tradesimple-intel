@@ -6,6 +6,7 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  { id: 'research.context', path: '/api/research/context' },
   { id: 'research.notebooks', path: '/api/research/notebooks' },
   { id: 'research.notebook', path: '/api/research/notebooks/:id(nb_[a-f0-9]+)' },
   { id: 'research.convergence', path: '/api/research/convergence' },

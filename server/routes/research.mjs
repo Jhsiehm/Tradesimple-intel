@@ -1,3 +1,5 @@
+import { TOOLS } from '../ai/tools.mjs';
+import { researchMemory } from '../domain/research-memory.mjs';
 import { listNotebooks, getNotebook, notebookHistory, saveNotebook } from '../domain/notebooks.mjs';
 import { createPlan, getPlan, listPlans, evaluatePlan } from '../domain/convergence.mjs';
 import { reply } from '../router.mjs';
@@ -32,6 +34,7 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.context': ctx => handle(ctx, ['GET'], () => ({ ...researchMemory(ctx.db), tools: TOOLS.map(t => ({ name:t.name, label:t.label, description:t.description, parameters:t.parameters })), coverage: 'Tool catalog only. Provider availability, coverage and as-of are checked on retrieval; no live feeds are prefetched here.' })),
   'research.notebooks': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'POST' ? { ok: true, notebook: saveNotebook(ctx.db, body) } : { ok: true, items: listNotebooks(ctx.db, new URL(ctx.req.url, 'http://localhost').searchParams.get('q'), new URL(ctx.req.url, 'http://localhost').searchParams.get('status')) }),
   'research.notebook': ctx => handle(ctx, ['GET', 'POST'], body => {
     if (ctx.req.method === 'POST') return { ok: true, notebook: saveNotebook(ctx.db, body, ctx.params.id) };

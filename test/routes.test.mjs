@@ -45,6 +45,7 @@ after(async () => {
 
 /** [sample url, status, keys] — keys are the sorted top-level JSON keys, or a content type for non-JSON. */
 export const SMOKE = [
+  ['/api/research/context', 200, 'asOf,coverage,datasets,experiments,latency,note,notebooks,ok,plans,source,tools'],
   ['/api/research/notebooks', 200, 'items,ok'],
   ['/api/research/notebooks/nb_0000', 404, 'error,ok'],
   ['/api/research/convergence', 200, 'items,ok'],

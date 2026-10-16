@@ -41,7 +41,7 @@ export function BrandHome({ onHome }: { onHome: () => void }) {
       type="button"
       className="brand-home"
       aria-label="TradeSimple Intel home"
-      title="Home · Today"
+      title="Home · Research"
       onClick={onHome}
       onPointerMove={aim}
       onPointerLeave={(event) => settle(event.currentTarget)}

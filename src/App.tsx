@@ -117,10 +117,11 @@ export function App() {
     const hash = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
     if (hash) return hash;
     if (location.hash) return null;
-    try { return DEMO || !localStorage.getItem(TODAY_SEEN) ? "week" : null; } catch { return "week"; }
+    return DEMO ? "week" : "research";
   });
   const [btSeed, setBtSeed] = useState(() => (location.hash.startsWith("#bt=") ? `token:${location.hash.slice(4)}` : ""));
   const ask = useAsk();
+  useEffect(() => { ask.setHome(today === "research"); }, [today, ask.setHome]);
   const [askAbout, setAskAbout] = useState<AgentContext | null>(null);
   const [clock, setClock] = useState(utcNow);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -568,7 +569,7 @@ export function App() {
     <div className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
-          <BrandHome onHome={() => go("today:week")} />
+          <BrandHome onHome={() => go("today:research")} />
           {DEMO ? <DemoChip /> : null}
         </div>
         <nav className="nav">
@@ -581,12 +582,12 @@ export function App() {
               <kbd>{index + 1}</kbd><IconLabel icon={item.id} hide>{item.label}</IconLabel>
             </button>
           ))}
-          <button aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Saved experiments and versioned datasets">Research</button>
+          <button aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Research home, conversations and saved evidence"><IconLabel icon="research">Research</IconLabel></button>
           <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
           <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Search destinations, companies, members and saved research"><Icon name="search" /> Find <kbd>⌘K</kbd></button>
-          <button className="panels-btn" aria-expanded={ask.open} aria-haspopup="dialog" onClick={() => (ask.open ? ask.close() : openAsk())} title={`Ask · ${contextLine(askContext)}`}>ASK</button>
+          <button className="panels-btn" aria-expanded={ask.open} aria-haspopup="dialog" onClick={() => (ask.open ? ask.close() : openAsk())} title={`Ask · ${contextLine(askContext)}`}>Research chat</button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
           <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) { setPanelsOpen(false); ask.close(); } }} onFollow={follow} />
           <PanelsMenu
@@ -694,7 +695,7 @@ export function App() {
             {phone && !timelineId && !today && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
             ) : today === "research" ? (
-              <ResearchBoard onFollow={follow} onClose={closeToday} onList={reportList} />
+              <ResearchBoard ask={ask} context={askContext} onFollow={follow} onClose={closeToday} onList={reportList} />
             ) : today === "bt" ? (
               <BacktestBoard key={btSeed} seed={btSeed} onFollow={follow} onClose={closeToday} onList={reportList} />
             ) : today ? (

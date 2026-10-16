@@ -1,3 +1,4 @@
+import { ResearchEmblem } from '../research/ResearchEmblem';
 import { useEffect, useRef, useState } from "react";
 import { describeValue } from "../../shared/backtestAsk.mjs";
 import { cleanTheory } from "../../shared/theories.mjs";
@@ -118,7 +119,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
       >
         <div className="ask-frame">
           <header className="ask-head">
-            <b className="ask-mark">ASK</b>
+            <span className="portable-emblem"><ResearchEmblem active={busy}/></span><b className="ask-mark">RESEARCH</b><button className="panels-btn" onClick={() => { ask.close(); onFollow("today:research"); }}>Research home</button>
             <div className="ask-context">
               {attachedCtx ? (
                 <span className="ask-ctx-chip" title="Sent with the next question so it can say 'this one'">
@@ -246,7 +247,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
   );
 }
 
-function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: boolean; ask: AskApi; prompts: string[]; onFollow: (action: string) => void }) {
+export function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; busy: boolean; ask: AskApi; prompts: string[]; onFollow: (action: string) => void }) {
   const done = turn.done;
   const chip = (s: Step) => {
     revealStep(turn.id, s.id);

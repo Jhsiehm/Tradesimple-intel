@@ -4,6 +4,7 @@
  */
 export const ICON_NAMES = [
   // Sections
+  "research",
   "today", "congress", "markets", "contracts", "news", "districts", "strait", "map", "calendar", "globe", "city",
   // Congress and records
   "house", "senate", "votes", "bills", "members", "committees", "floor", "filings", "form4", "hearing", "roll", "trade", "pac", "leaders", "timeline",

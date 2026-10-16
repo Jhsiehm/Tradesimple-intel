@@ -2,6 +2,8 @@ import type { Glyph, IconName } from "./names";
 
 /** Top-nav sections. Circles are written as two arcs so these files need no runtime imports. */
 export const NAV = {
+  // Evidence lens and three indexed observations.
+  research: ["M10.5 6.5a4 4 0 1 1-8 0 4 4 0 1 1 8 0", "M9.5 9.5l4 4", "M4.5 6.5h4", "M6.5 4.5v4", "M12 2.5h2", "M12.5 5h1.5"],
   // Sunrise over a horizon: this week, starting today.
   today: ["M2 12.5h12", "M4.5 12.5a3.5 3.5 0 0 1 7 0", "M8 3.5V6", "M3.2 6.2l1.3 1.3", "M12.8 6.2l-1.3 1.3"],
   // Capitol: dome, spire, three columns, steps.

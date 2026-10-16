@@ -27,6 +27,8 @@ export const hasContext = (ctx: AgentContext) => Boolean(ctx.node || ctx.theory)
 
 /** The one Ask: sheet state, this chat's turns with their live steps, kept chats, model choice, and preferences. */
 export function useAsk() {
+  const homeRef = useRef(false);
+  const homeTargetRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState(0);
   const [draft, setDraft] = useState("");
@@ -81,7 +83,7 @@ export function useAsk() {
     ctl.current?.abort();
     const mine = new AbortController();
     ctl.current = mine;
-    setOpen(true);
+    setOpen(!homeRef.current);
     setDraft("");
     const s = state.current;
     const ctx = hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
@@ -232,13 +234,14 @@ export function useAsk() {
   }, [loadStatus, persist]);
 
   const show = useCallback((prefill = "", size: "half" | null = null) => {
+    homeRef.current = false;
     setOpen(true);
     setSnapTo(size);
     setShown((n) => n + 1);
     if (prefill) setDraft(prefill);
     void loadStatus();
   }, [loadStatus]);
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => { homeRef.current = homeTargetRef.current; setOpen(false); }, []);
   const stop = useCallback(() => { ctl.current?.abort(); ctl.current = null; setBusy(false); }, []);
   const newChat = useCallback(() => { stop(); setTurns([]); setChatId(null); setKept(false); setAttachId(""); setDraft(""); }, [stop]);
 
@@ -271,7 +274,7 @@ export function useAsk() {
     setChatId(null);
     setKept(false);
     setAttachId("");
-    setOpen(true);
+    setOpen(!homeRef.current);
     setShown((n) => n + 1);
   }, [stop]);
 
@@ -316,8 +319,9 @@ export function useAsk() {
 
   useEffect(() => { if (open) void loadStatus(); }, [open, loadStatus]);
 
+  const setHome = useCallback((value: boolean) => { homeTargetRef.current = value; homeRef.current = value; if (value) { setOpen(false); void loadStatus(); } }, [loadStatus]);
   return {
-    open, shown, show, snapTo, close, draft, setDraft, turns, busy, run, stop, newChat,
+    setHome, open, shown, show, snapTo, close, draft, setDraft, turns, busy, run, stop, newChat,
     chats, chatId, kept, keep, openSaved, forget, undoForget, dropUndo, deleted, rename, pin, attachId, setAttachId,
     status, model, models, small, chooseModel,
     prefs, removePref, clearPrefs,

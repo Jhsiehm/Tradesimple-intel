@@ -1,3 +1,6 @@
+import type { AskApi } from '../ask/useAsk';
+import type { AgentContext } from '../agent/context';
+import { ResearchHome } from './ResearchHome';
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_RULES } from '../../shared/backtestSpec.mjs';
 import type { StageList } from '../types';
@@ -9,8 +12,8 @@ import { DataHub, EventTable } from './DataHub';
 import { read, write, message, type DatasetSummary, type Experiment, type ExperimentSummary } from './api';
 import '../backtest/backtest.css';
 import './research.css';
-export function ResearchBoard({ onClose, onFollow, onList }: { onClose: () => void; onFollow: (action: string) => void; onList: (list: StageList) => void }) {
-  const [tab, setTab] = useState<'experiments' | 'data' | 'convergence' | 'notebooks'>('experiments');
+export function ResearchBoard({ ask, context, onClose, onFollow, onList }: { ask: AskApi; context: AgentContext; onClose: () => void; onFollow: (action: string) => void; onList: (list: StageList) => void }) {
+  const [tab, setTab] = useState<'experiments' | 'data' | 'convergence' | 'notebooks' | 'home'>('home');
   const [items, setItems] = useState<ExperimentSummary[]>([]), [selected, setSelected] = useState<Experiment | null>(null);
   const [dataset, setDataset] = useState<DatasetSummary | null>(null), [title, setTitle] = useState(''), [hypothesis, setHypothesis] = useState('');
   const [holdDays, setHoldDays] = useState(30), [costBps, setCostBps] = useState(5), [slippageBps, setSlippageBps] = useState(5), [sides, setSides] = useState('buy');
@@ -20,13 +23,13 @@ export function ResearchBoard({ onClose, onFollow, onList }: { onClose: () => vo
   const load = async () => { const out = await read<{ items: ExperimentSummary[] }>('experiments'); setItems(out.items || []); };
   useEffect(() => { void load().catch(e => setError(message(e))).finally(() => setLoading(false)); }, []);
   useEffect(() => { onList({ title: 'Research', blurb: 'Experiments and versioned datasets', empty: 'Inspect saved experiments in the center board.', items: [], status: { source: 'Local research registry', asOf: selected?.createdAt || '', latency: 'Frozen snapshots; original feed timing is preserved per run.' } }); }, [onList, selected]);
-  const open = async (id: string) => { const t = ++ticket.current; setError(''); setNotice(''); setDataset(null); setBusy(true); try { const out = await read<{ experiment: Experiment }>(`experiments/${id}`); if (t === ticket.current) { setSelected(out.experiment); setCopied(false); history.replaceState(null, "", `#research/${out.experiment.id}`); } } catch (e) { if (t === ticket.current) setError(message(e)); } finally { if (t === ticket.current) setBusy(false); } };
+  const open = async (id: string) => { const t = ++ticket.current; setError(''); setNotice(''); setDataset(null); setBusy(true); try { const out = await read<{ experiment: Experiment }>(`experiments/${id}`); if (t === ticket.current) { setSelected(out.experiment); setTab('experiments'); setCopied(false); history.replaceState(null, "", `#research/${out.experiment.id}`); } } catch (e) { if (t === ticket.current) setError(message(e)); } finally { if (t === ticket.current) setBusy(false); } };
   useEffect(() => { const onHash = () => { const id = location.hash.match(/^#research\/(exp_[a-f0-9]+)$/)?.[1]; if (id) void open(id); }; onHash(); window.addEventListener('hashchange', onHash); return () => { ticket.current++; window.removeEventListener('hashchange', onHash); }; }, []);
   const run = async (fresh?: Experiment) => {
     setBusy(true); setError(''); setNotice('');
     try {
       const out = await write<{ experiment: Experiment }>('run', fresh ? { title: `${fresh.title.slice(0, 180)} · rerun`, hypothesis: fresh.hypothesis, parentId: fresh.id, spec: fresh.run.result.spec, datasetId: fresh.run.provenance.dataset?.id, rules: fresh.run.result.spec.rules } : { title, hypothesis, datasetId: dataset?.id, rules: { ...DEFAULT_RULES, holdDays, costBps, slippageBps, sides } });
-      setSelected(out.experiment); setCopied(false); history.replaceState(null, "", `#research/${out.experiment.id}`); setDataset(null); await load();
+      setSelected(out.experiment); setTab('experiments'); setCopied(false); history.replaceState(null, "", `#research/${out.experiment.id}`); setDataset(null); await load();
       setNotice(out.experiment.run.result.ok ? 'Saved a new immutable run. Inspect its coverage and caveats below.' : 'The run failed and its error was preserved. You can rerun it later.');
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   };
@@ -36,9 +39,9 @@ export function ResearchBoard({ onClose, onFollow, onList }: { onClose: () => vo
     catch (e) { setError(message(e)); } finally { setBusy(false); }
   };
   const result = selected?.run.result;
-  return <div className="board bt research"><header className="board-head"><div className="board-title"><strong>Research</strong><span>Preserve what you tested and the evidence behind it.</span><button className="tl-close" onClick={onClose} aria-label="Close research">×</button></div><div className="bt-tabs"><button className={tab === 'experiments' ? 'on' : ''} onClick={() => setTab('experiments')}>Experiments</button><button className={tab === 'data' ? 'on' : ''} onClick={() => setTab('data')}>Data Hub</button><button className={tab === 'convergence' ? 'on' : ''} onClick={() => setTab('convergence')}>Convergence</button><button className={tab === 'notebooks' ? 'on' : ''} onClick={() => setTab('notebooks')}>Notebooks</button></div></header>
+  return <div className="board bt research" data-home={tab === 'home'}><header className="board-head"><div className="board-title"><strong>Research</strong><span>Preserve what you tested and the evidence behind it.</span><button className="tl-close" onClick={onClose} aria-label="Close research">×</button></div><div className="bt-tabs"><button className={tab === 'home' ? 'on' : ''} onClick={() => setTab('home')}>Research home</button><button className={tab === 'experiments' ? 'on' : ''} onClick={() => setTab('experiments')}>Experiments</button><button className={tab === 'data' ? 'on' : ''} onClick={() => setTab('data')}>Data Hub</button><button className={tab === 'convergence' ? 'on' : ''} onClick={() => setTab('convergence')}>Convergence</button><button className={tab === 'notebooks' ? 'on' : ''} onClick={() => setTab('notebooks')}>Notebooks</button></div></header>
     <div className="board-scroll bt-body">
-      {DEMO ? <p className="bt-note">The research registry requires the local server and is not available in the static demo.</p> : tab === 'notebooks' ? <Notebooks /> : tab === 'convergence' ? <ConvergenceLab /> : tab === 'data' ? <DataHub onRun={d => { ticket.current++; setDataset(d); setTitle(`${d.name} v${d.version}`); setHypothesis(''); setSelected(null); history.replaceState(null, '', '#research'); setTab('experiments'); setNotice(''); setError(''); }} /> : <>
+      {DEMO ? <p className="bt-note">The research registry requires the local server and is not available in the static demo.</p> : tab === 'home' ? (ask.open ? <div className="research-portable-placeholder"><p>Your investigation is open in the portable panel.</p><button className="bt-run" onClick={ask.close}>Return conversation here</button></div> : <ResearchHome ask={ask} context={context} onFollow={onFollow} onTool={setTab} />) : tab === 'notebooks' ? <Notebooks /> : tab === 'convergence' ? <ConvergenceLab /> : tab === 'data' ? <DataHub onRun={d => { ticket.current++; setDataset(d); setTitle(`${d.name} v${d.version}`); setHypothesis(''); setSelected(null); history.replaceState(null, '', '#research'); setTab('experiments'); setNotice(''); setError(''); }} /> : <>
         <p className="bt-note">Saved runs are immutable. Replay uses frozen inputs; rerun creates a new record. Imports and experiments belong to this server’s owner. Source timestamps are retained; institutional team permissions are not part of this release.</p>
         {loading && <p role="status">Loading experiments…</p>}
         <div className="research-actions"><button className="panels-btn" onClick={() => onFollow('bt:')}>Open Backtest</button><button className="panels-btn" onClick={() => setTab('data')}>Import dataset</button></div>

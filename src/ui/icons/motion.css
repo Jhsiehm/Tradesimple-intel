@@ -169,3 +169,6 @@
 @media (prefers-reduced-motion: reduce) {
   .ic-glyph, .ic-glyph > path { animation: none !important; transform: none !important; }
 }
+
+.ic[data-motion="research-scan"] { --ic-whole: ic-research-scan; --ic-duration: 700ms; }
+@keyframes ic-research-scan { 0%,100% { transform: rotate(0deg); } 35% { transform: rotate(-14deg) scale(.92); } 65% { transform: rotate(7deg) scale(1.07); } }

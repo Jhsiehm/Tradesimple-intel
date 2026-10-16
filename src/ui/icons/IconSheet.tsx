@@ -8,6 +8,7 @@ import { ACTIONS } from "./actions";
 import { RELATIONS } from "./relations";
 
 const MEANING: Record<IconName, string> = {
+  research: "Research · evidence lens and indexed observations",
   today: "Today · this week's filings", congress: "Congress section", markets: "Markets section", contracts: "Federal contracts",
   news: "News wires", districts: "Districts · location", strait: "Nav · shipping", map: "Map section · map view",
   calendar: "Calendar", globe: "Globe view · global indices", city: "City skyline",

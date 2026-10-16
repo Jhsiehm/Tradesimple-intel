@@ -85,3 +85,17 @@ test('notebook HTTP API enforces origins, methods, revision checks and search', 
   assert.equal((await call('GET', '/api/research/notebooks?q=AAPL&status=needs-data')).body.items.length, 1);
   assert.equal((await call('GET', '/api/research/notebooks?q=unmatched')).body.items.length, 0);
 });
+test('research home exposes the real tool catalog and memory obeys sourcing boundaries', async () => {
+  const { runTool, toolDefs } = await import('../server/ai/tools.mjs');
+  const catalog = await call('GET', '/api/research/context');
+  assert.equal(catalog.status, 200);
+  assert.ok(catalog.body.tools.some(t => t.name === 'research_memory'));
+  assert.ok(catalog.body.tools.some(t => t.name === 'weather_hazards'));
+  assert.match(catalog.body.coverage, /no live feeds are prefetched/);
+  assert.equal((await runTool(db, 'research_memory', {}, undefined, null, 'web')).ok, false);
+  const memory = await runTool(db, 'research_memory', {}, undefined, null, 'platform');
+  assert.equal(memory.ok, true); assert.ok(memory.experiments.length);
+  const detail = await runTool(db, 'research_memory', { kind: 'experiment', id: experiment.id });
+  assert.equal(detail.record.runId, experiment.runId); assert.equal(detail.record.inputs, undefined);
+  assert.ok(toolDefs('platform').some(t => t.name === 'research_memory'));
+});

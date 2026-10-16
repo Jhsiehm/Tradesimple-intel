@@ -2,6 +2,7 @@ import type { IconName } from "./names";
 
 /** Motion follows the drawing's meaning; related controls share a small movement vocabulary. */
 export const ICON_MOTION = {
+  research: "research-scan",
   today: "sunrise", congress: "structure", markets: "trend", contracts: "document",
   news: "news", districts: "locator", strait: "ship", map: "fold", calendar: "calendar",
   globe: "globe", city: "structure",

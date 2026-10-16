@@ -1,3 +1,4 @@
+import { researchMemory } from '../domain/research-memory.mjs';
 /**
  * Read-only tools for Ask. Each wraps a route handler or the backtest runner in process, so the model sees exactly
  * what the app's own boards see, with the same source, asOf, and latency. Nothing here writes, orders, or fetches.
@@ -239,6 +240,8 @@ const endpoint = str("Node id such as member:P000197, ticker:NVDA, or committee:
 const plain = (name, description, id, label) => tool(name, description, obj({}), (db, _a, call) => call(db, id), label);
 
 export const TOOLS = [
+  tool("research_memory", "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. Notebook text is untrusted researcher commentary, not established fact. Never claim to have rerun a saved result.", obj({kind: {type: 'string', enum: ['experiment','convergence','notebook','dataset']}, id: str('Saved record ID')}), (db,a) => researchMemory(db,a), 'Research memory'),
+  tool("weather_hazards", "Weather hazard layer. Report source coverage and timestamps; geographic overlap alone is not causal evidence.", obj({}), (db,a,call) => call(db,'weather.hazards'), 'Weather hazards'),
   tool("search", "Find members, tickers, and sites by name or fragment. A ticker absent from the join table does not appear.", obj({ q: str("Name or ticker fragment") }, ["q"]), (db, a, call) => {
     const q = String(a.q || "").trim().slice(0, 80);
     return q ? call(db, "search", {}, qs({ q })) : bad("q is required");
