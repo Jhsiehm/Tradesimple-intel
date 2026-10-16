@@ -2,6 +2,10 @@
 import {createHash} from 'node:crypto';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export function verifyConnectorEvidence(json){
+ const database=json?.databaseEvidence;
+ if(database!==undefined){
+  if(!database||database.schemaVersion!==1||database.kind!=='sqlite'||typeof database.connector!=='string'||!database.connector||!/^([a-f0-9]{64})$/.test(database.queryHash)||!Array.isArray(json.items)||database.rows!==json.items.length||database.rows>5000||database.rowsHash!==hash(JSON.stringify(json.items))||database.consistency!=='single-read-transaction'||!Number.isFinite(Date.parse(database.retrievedAt))||!Number.isFinite(Date.parse(database.completedAt))||Date.parse(database.completedAt)<Date.parse(database.retrievedAt))throw Error('Database evidence is inconsistent with its imported records. Fetch a new complete preview.');
+ }
  const e=json?.connectorEvidence;if(e===undefined)return;
  const fail=()=>{throw Error('Connector evidence is inconsistent with its pages or imported records. Fetch a new complete preview.');};
  if(!e||e.schemaVersion!==1||e.complete!==true||!Array.isArray(e.pages)||!e.pages.length||e.pages.length>20||!Array.isArray(json.items))fail();

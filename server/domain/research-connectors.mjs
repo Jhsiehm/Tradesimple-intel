@@ -1,3 +1,4 @@
+import {sqliteConfigs,readSqliteConnector} from './sqlite-connectors.mjs';
 /** Fixed, server-configured read-only connectors; secrets never enter browser requests or saved datasets. */
 import dns from 'node:dns/promises';
 import { createHash } from 'node:crypto';
@@ -12,7 +13,9 @@ function configs(env) {
   return entries;
 }
 export function listConnectors(env = process.env) {
-  return Object.keys(configs(env)).map(id => ({ id, label: id, resumable: Boolean(configs(env)[id]?.pagination) }));
+  const http=configs(env),databases=sqliteConfigs(env);
+  if(Object.keys(databases).some(id=>Object.hasOwn(http,id)))throw Error('Connector IDs must be unique across HTTP and database connections.');
+  return [...Object.keys(http).map(id=>({id,label:id,resumable:Boolean(http[id]?.pagination)})),...Object.keys(databases).map(id=>({id,label:id,kind:'sqlite',resumable:false}))];
 }
 function connectorConfig(id, env) {
   const entries = configs(env);
@@ -35,6 +38,8 @@ export function connectorDescriptor(id,env=process.env){
  return {endpoint:url.href,pagination:pagination?Object.fromEntries(['cursorParam','nextCursorField','itemsField','maxPages'].map(k=>[k,pagination[k]])):null,credentialSlot:c.tokenEnv||null};
 }
 export async function readConnector(id, { env = process.env, lookup = dns.lookup, request = fetchPinnedResponse, onPage } = {}) {
+  const databases=sqliteConfigs(env);
+  if(Object.hasOwn(databases,id)){if(Object.hasOwn(configs(env),id))throw Error('Connector IDs must be unique across HTTP and database connections.');return readSqliteConnector(id,{env});}
   const {c,url,pagination}=connectorConfig(id,env);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);

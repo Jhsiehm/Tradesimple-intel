@@ -10,14 +10,14 @@ export function EventTable({ events }: { events: EventRow[] }) {
 }
 export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void }) {
   const [kind, setKind] = useState<'signals' | 'observations'>('signals');
-  const [datasets, setDatasets] = useState<DatasetSummary[]>([]), [connectors, setConnectors] = useState<{ id: string; label: string; resumable?: boolean }[]>([]);
+  const [datasets, setDatasets] = useState<DatasetSummary[]>([]), [connectors, setConnectors] = useState<{ id: string; label: string; resumable?: boolean; kind?: string }[]>([]);
   const [name, setName] = useState(''), [source, setSource] = useState(''), [content, setContent] = useState(''), [format, setFormat] = useState('csv'), [connector, setConnector] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({}), [preview, setPreview] = useState<Preview | null>(null), [selected, setSelected] = useState<Dataset | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const selectedHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (selected) selectedHeading.current?.focus(); }, [selected?.id]);
   const revision = useRef(0), selectedRequest = useRef(0);
-  const load = async () => { const out = await read<{ items: DatasetSummary[]; connectors: { id: string; label: string; resumable?: boolean }[] }>('datasets'); setDatasets(out.items || []); setConnectors(out.connectors || []); };
+  const load = async () => { const out = await read<{ items: DatasetSummary[]; connectors: { id: string; label: string; resumable?: boolean; kind?: string }[] }>('datasets'); setDatasets(out.items || []); setConnectors(out.connectors || []); };
   useEffect(() => { void load().catch(e => setError(message(e))); }, []);
   const change = () => { revision.current++; setPreview(null); setNotice(''); setError(''); };
   const inspect = async (id: string) => { const ticket = ++selectedRequest.current; try { const out = await read<{ dataset: Dataset }>(`datasets/${id}`); if (ticket === selectedRequest.current) setSelected(out.dataset); } catch (e) { if (ticket === selectedRequest.current) setError(message(e)); } };
@@ -47,7 +47,7 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
     <fieldset className="research-form" disabled={busy || DEMO}>
       <label>Dataset name<input value={name} maxLength={120} onChange={e => { change(); setName(e.target.value); }} placeholder="Utility insider events" /></label>
       <label>Source label<input value={source} maxLength={300} onChange={e => { change(); setSource(e.target.value); }} placeholder="Your data source and coverage" /></label>
-      <label>Input<select value={connector ? `api:${connector}` : format} onChange={e => { change(); if (e.target.value === 'csv' || e.target.value === 'json') { setFormat(e.target.value); setConnector(''); } else setConnector(e.target.value.slice(4)); }}><option value="csv">CSV file or pasted CSV</option><option value="json">JSON array or items array</option>{connectors.map(c => <option value={`api:${c.id}`} key={c.id}>API · {c.label}</option>)}</select></label>
+      <label>Input<select value={connector ? `api:${connector}` : format} onChange={e => { change(); if (e.target.value === 'csv' || e.target.value === 'json') { setFormat(e.target.value); setConnector(''); } else setConnector(e.target.value.slice(4)); }}><option value="csv">CSV file or pasted CSV</option><option value="json">JSON array or items array</option>{connectors.map(c => <option value={`api:${c.id}`} key={c.id}>{c.kind === 'sqlite' ? 'Database' : 'API'} · {c.label}</option>)}</select></label>
       {!connector && <>
         <label>Choose file<input type="file" accept=".csv,.json,text/csv,application/json" onChange={async e => { const file = e.target.files?.[0]; if (!file) return; change(); const ticket = revision.current; if (file.size > 2 * 1024 * 1024) { setError('File exceeds 2 MiB.'); return; } try { const text = await file.text(); if (ticket !== revision.current) return; setContent(text); setFormat(/\.json$/i.test(file.name) ? 'json' : 'csv'); if (!name) setName(file.name.replace(/\.(csv|json)$/i, '')); } catch (error) { setError(message(error)); } }} /></label>
         <details><summary>Paste or inspect file contents</summary><label>Import content<textarea className="research-data" value={content} onChange={e => { change(); setContent(e.target.value); }} placeholder="id,symbol,eventAt,availableAt,side,sourceUrl,value" /></label></details>
