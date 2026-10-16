@@ -94,3 +94,5 @@
 .research-stress pre { white-space: pre-wrap; }
 .research-stress .panels-btn, .research-stress .bt-run { max-width: 100%; white-space: normal; }
 @media (max-width: 720px) { .research-stress .research-mapping { grid-template-columns: 1fr; } }
+.event-study-results details { min-width: 0; }
+.event-study-results p { overflow-wrap: anywhere; white-space: normal; }
