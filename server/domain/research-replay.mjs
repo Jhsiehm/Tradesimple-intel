@@ -37,7 +37,7 @@ export function replayRun(run) {
   const actual = { ...result, reality };
   return { ok: true, matches: hashOf(actual) === hashOf(expected), inputHash: run.inputHash, engineId: run.engineId, result, reality };
 }
-const replayScript = `import fs from 'node:fs';
+export const replayScript = `import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { runBacktest } from './engine/backtest.mjs';
 import { realityCheck } from './engine/backtestStats.mjs';
