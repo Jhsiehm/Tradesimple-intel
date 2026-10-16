@@ -77,10 +77,10 @@ export function RelationshipHistory() {
         <label>Subject (optional)<input value={draft.subject} placeholder="company:example" onChange={e => update('subject', e.target.value)} /></label>
         <label>Relationship<select value={draft.predicate} onChange={e => update('predicate', e.target.value)}><option value="">All relationships</option>{predicates.map(p => <option key={p}>{p}</option>)}</select></label>
       </div>
-      <p>“Effective on” selects when the relationship applied. “Known by” excludes later publications and corrections. Date-only availability is eligible at the end of that UTC day.</p>
+      <details><summary>How the two dates work</summary><p>“Effective on” selects when the relationship applied. “Known by” excludes later publications and corrections. Date-only availability is eligible at the end of that UTC day.</p></details>
       <div className="research-actions"><button className="bt-run" disabled={!selected || !draft.effectiveAt || !draft.knownAt} onClick={() => void query()}>Look up relationships</button><button className="panels-btn" disabled={!selected} onClick={() => void exportSnapshot()}>Export snapshot JSON</button></div>
     </fieldset>}
-    {busy && <p role="status">Working…</p>}
+    {busy && <p role="status" className="research-working">Working…</p>}
     {result && <section aria-live="polite"><h3>{result.items.length} resolved · {result.ambiguous.length} ambiguous</h3><p>Effective {result.effectiveAt} · known by {result.knownAt}</p>
       {!result.items.length && <p>No resolved relationships match this lookup. This does not prove that no relationship existed.</p>}
       {result.items.length > 0 && <div className="research-table" tabIndex={0} role="region" aria-label="Resolved historical relationships"><table><thead><tr><th scope="col">Subject and relationship</th><th scope="col">Object</th><th scope="col">Effective interval</th><th scope="col">Available / evidence</th></tr></thead><tbody>{result.items.map(r => <tr key={r.id}><td>{r.subject}<small>{r.predicate} · {r.relationshipId}</small></td><td>{r.object}</td><td>{r.effectiveFrom}<small>Until {r.effectiveTo || 'unspecified'}{r.effectiveTo ? ' (exclusive)' : ''}</small></td><td>{r.availableAt}<small><a href={r.sourceUrl} target="_blank" rel="noreferrer">Source evidence</a> · {r.documentHash ? 'Document archived' : 'Link only'}</small></td></tr>)}</tbody></table></div>}

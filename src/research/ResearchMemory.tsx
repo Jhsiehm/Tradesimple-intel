@@ -36,7 +36,7 @@ export function ResearchMemory({ask,onStart,onNotebooks,onPairs}:{ask:AskApi;onS
  </fieldset>
  <fieldset className="research-form" disabled={busy||loading}><legend>Freeze approved context</legend><p>Select up to 30 approvals. Later notebook edits are excluded. Revoked or superseded approvals cannot be used for a new analysis.</p>
  {!active.length&&<p>No active approvals. Review a finding above first.</p>}{active.map(a=><label className="memory-selection" key={a.id}><input type="checkbox" checked={selected.includes(a.id)} disabled={!selected.includes(a.id)&&selected.length>=30} onChange={e=>setSelected(old=>e.target.checked?[...old,a.id]:old.filter(id=>id!==a.id))}/><span>{a.title} · revision {a.revision}<small>Approved {a.createdAt}</small></span></label>)}
- <label>Known by (UTC timestamp, optional)<input value={cutoff} onChange={e=>setCutoff(e.target.value)} placeholder="Current time when frozen"/></label><p>For an earlier cutoff, use an ISO timestamp ending in Z. Notebook creation, approval and evidence must all precede it.</p>
+ <label>Known by (UTC timestamp, optional)<input value={cutoff} onChange={e=>setCutoff(e.target.value)} placeholder="Current time when frozen"/></label><details><summary>Using a historical cutoff</summary><p>For an earlier cutoff, use an ISO timestamp ending in Z. Notebook creation, approval and evidence must all precede it.</p></details>
  <button className="bt-run" disabled={!selected.length} onClick={()=>void freeze()}>Freeze selected context</button>
  </fieldset>
  <fieldset className="research-form" disabled={busy||loading||ask.busy}><legend>Start a controlled analysis</legend>

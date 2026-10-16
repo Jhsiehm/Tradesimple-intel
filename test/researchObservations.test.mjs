@@ -143,3 +143,46 @@ test('history merge refuses conflicting IDs, changed identities, incompatible ri
   assert.equal(listObservations(db).filter(s=>s.name==='Refused history').length,0);
  }finally{db.close();}
 });
+
+const forecast={...records[0],id:'forecast-first',observationId:'forecast-issue-1',observationType:'forecast',eventAt:'2025-01-01',availableAt:'2025-01-02',targetAt:'2025-01-10',value:-8};
+test('forecast contract distinguishes issuance, publication and target and rejects identity drift',()=>{
+ const prepared=prepareObservations(request([forecast]));assert.equal(prepared.ok,true);assert.equal(prepared.payload.schemaVersion,3);
+ for(const patch of [{targetAt:''},{targetAt:'2025-01-01'},{observationType:'estimate'},{observationType:false},{availableAt:'2024-12-31'},{observationType:'realized'}])assert.equal(prepareObservations(request([{...forecast,...patch}])).ok,false);
+ for(const patch of [{targetAt:'2025-01-11'},{eventAt:'2025-01-02'},{observationType:'realized',targetAt:''}])assert.equal(prepareObservations(request([forecast,{...forecast,id:'changed',...patch}])).ok,false);
+ const lateCorrection={...forecast,id:'late-correction',availableAt:'2025-01-15',value:12};
+ assert.equal(prepareObservations(request([forecast,lateCorrection])).ok,true,'late corrections are historical evidence, not a reason to discard the history');
+});
+
+test('forecast thresholds preserve first publication, exclude late first publications and never substitute outcomes',async()=>{
+ const db=database();try{
+  const correction={...forecast,id:'correction',availableAt:'2025-01-15',value:12};
+  const actual={...records[0],id:'actual',observationId:'realized-target',eventAt:'2025-01-10',availableAt:'2025-01-11',value:-20};
+  const late={...forecast,id:'late-first',observationId:'late-issue',availableAt:'2025-01-10',value:-30};
+  const snapshot=importObservations(db,request([forecast,correction,actual,late])).snapshot;
+  assert.throws(()=>deriveObservationSignals(db,snapshot.id,policy),/Explicitly choose/);
+  const derived=deriveObservationSignals(db,snapshot.id,{...policy,observationType:'forecast'});
+  assert.equal(derived.dataset.events.length,1);assert.equal(derived.dataset.events[0].eventAt,forecast.eventAt);assert.equal(derived.dataset.events[0].availableAt,forecast.availableAt);
+  assert.equal(derived.transformation.lineage[0].targetAt,forecast.targetAt);assert.equal(derived.transformation.lineage[0].observationId,forecast.id);
+  assert.deepEqual(derived.transformation.forecastExclusions,[{id:'late-first',reason:'first-publication-not-before-target'}]);
+  assert.equal(resolveObservations(snapshot,{mode:'latest-known',knownAt:'2025-01-16'}).items.find(e=>e.observationId===forecast.observationId).value,12);
+  const realized=deriveObservationSignals(db,snapshot.id,{...policy,observationType:'realized'});assert.equal(realized.transformation.lineage[0].observationId,'actual');
+  assert.throws(()=>deriveObservationSignals(db,snapshot.id,{...policy,observationType:'forecast',knownAt:'2025-01-01'}),/No observations/);
+  verifyObservationDerivation(derived.dataset);
+  const broken=structuredClone(derived.dataset);broken.manifest.observation.forecastExclusions=[];assert.throws(()=>verifyObservationDerivation(broken),/timing exclusions/);
+  const altered=structuredClone(derived.dataset);altered.manifest.observation.snapshot.events[0].targetAt='2025-02-01';assert.throws(()=>verifyObservationDerivation(altered),/original source/);
+  const bars=Array.from({length:80},(_,i)=>[dayOf('2025-01-01')+i,100+i,101+i]);
+  const result=await runSpec(db,{source:'dataset',datasetId:derived.dataset.id,rules:{holdDays:10}},{sourceFn:async()=>datasetSource(derived.dataset),loadBarsFn:async()=>({bars:{AAPL:bars,SPY:bars},pending:[],stale:[],cached:2,fetched:0,missing:[],oldestStoredAt:Date.now()})});
+  const run=getRun(db,result.runId);assert.equal(replayRun(run).matches,true);assert.equal(archiveEvidence(db,run).datasets[derived.dataset.id].manifest.observation.snapshot.events[0].targetAt,forecast.targetAt);
+ }finally{db.close();}
+});
+
+test('forecast merging retains targets and rejects conflicting forecast identities',()=>{
+ const db=database();try{
+  const first=importObservations(db,{...request([forecast]),name:'Forecast delivery 1'}).snapshot;
+  const second=importObservations(db,{...request([{...forecast,id:'correction',availableAt:'2025-01-15',value:12}]),name:'Forecast delivery 2'}).snapshot;
+  const merged=mergeObservationSnapshots(db,{name:'Forecast history',reason:'Join publications',identityNamespace:'Synthetic issuance IDs',snapshotIds:[first.id,second.id]}).snapshot;
+  verifyObservationComposition(merged);assert.equal(merged.events.length,2);assert.ok(merged.events.every(e=>e.targetAt===forecast.targetAt));
+  const conflict=importObservations(db,{...request([{...forecast,id:'changed-target',targetAt:'2025-01-11'}]),name:'Conflicting identity'}).snapshot;
+  assert.throws(()=>mergeObservationSnapshots(db,{name:'Invalid',reason:'Fixture',identityNamespace:'Same',snapshotIds:[first.id,conflict.id]}),/retain/);
+ }finally{db.close();}
+});
