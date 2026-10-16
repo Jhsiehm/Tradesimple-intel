@@ -8,9 +8,21 @@ export type ConfidenceDone = {
   uncited?: boolean;
   unknown?: string[];
   model?: string;
-  grounding?: { checked?: number; unmatched?: string[]; miscited?: unknown[]; mislabeled?: unknown[]; scope?: unknown[]; uncitedRows?: string[] };
+  grounding?: {
+    checked?: number;
+    unmatched?: string[];
+    miscited?: unknown[];
+    mislabeled?: unknown[];
+    scope?: unknown[];
+    uncitedRows?: string[];
+  };
   backtests?: { ok: boolean; counts?: Record<string, number> | null }[];
   revision?: { status: string; model: string } | null;
 };
 export type Confidence = { parts: string[]; tone: "neutral" | "amber"; text: string };
-export function confidenceLine(opts: { steps?: ConfidenceStep[]; done: ConfidenceDone | null | undefined; model?: string; now?: number }): Confidence | null;
+export function confidenceLine(opts: {
+  steps?: ConfidenceStep[];
+  done: ConfidenceDone | null | undefined;
+  model?: string;
+  now?: number;
+}): Confidence | null;

@@ -93,5 +93,5 @@ export const KEY = {
   watchSet: "watch:set:v1",
 
   // Negative cache: the last upstream failure for another key (lib/cache.mjs throughCache)
-  down: (key) => `down:v1:${key}`
+  down: (key) => `down:v1:${key}`,
 };

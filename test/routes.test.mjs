@@ -19,10 +19,18 @@ let server;
 before(async () => {
   server = spawn(process.execPath, ["--import", "./test/fixtures/offline.mjs", "server/index.mjs"], {
     cwd: new URL("..", import.meta.url),
-    env: serverEnv({ PORT: String(port), INTEL_CACHE: cache, TMPDIR: temp, TMP: temp, TEMP: temp,
-      CONGRESS_API_KEY: "offline-placeholder", FEC_API_KEY: "offline-placeholder",
-      LDA_API_KEY: "offline-placeholder", AISSTREAM_API_KEY: "offline-placeholder" }),
-    stdio: ["ignore", "pipe", "pipe"]
+    env: serverEnv({
+      PORT: String(port),
+      INTEL_CACHE: cache,
+      TMPDIR: temp,
+      TMP: temp,
+      TEMP: temp,
+      CONGRESS_API_KEY: "offline-placeholder",
+      FEC_API_KEY: "offline-placeholder",
+      LDA_API_KEY: "offline-placeholder",
+      AISSTREAM_API_KEY: "offline-placeholder",
+    }),
+    stdio: ["ignore", "pipe", "pipe"],
   });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("API did not start")), 10000);
@@ -38,7 +46,10 @@ before(async () => {
 
 after(async () => {
   if (server && server.exitCode == null && server.signalCode == null) {
-    await new Promise((resolve) => { server.once("exit", resolve); server.kill(); });
+    await new Promise((resolve) => {
+      server.once("exit", resolve);
+      server.kill();
+    });
   }
   fs.rmSync(temp, { recursive: true, force: true });
 });
@@ -77,34 +88,34 @@ export const SMOKE = [
   ["/api/research/retrievals/retrieval_deadbeef", 400, "error,ok"],
   ["/api/research/retrievals/retrieval_deadbeef/resume", 405, "error,ok"],
   ["/api/research/analyses/analysis_deadbeef", 400, "error,ok"],
-  ['/api/research/memory/approvals', 200, 'items,ok'],
-  ['/api/research/memory/snapshots', 200, 'items,ok'],
-  ['/api/research/memory/snapshots/mem_0000', 400, 'error,ok'],
-  ['/api/research/relationships', 200, 'items,ok'],
-  ['/api/research/relationships/rel_0000', 400, 'error,ok'],
-  ['/api/research/relationships/rel_0000/query', 405, 'error,ok'],
-  ['/api/universe', 200, 'asOf,contractors,core,historicalInsiderScope,ok,onDemand,selection,sources,total'],
-  ['/api/research/context', 200, 'asOf,coverage,datasets,experiments,latency,note,notebooks,ok,plans,source,tools'],
-  ['/api/research/notebooks/nb_0000/export', 400, 'error,ok'],
-  ['/api/research/notebooks', 200, 'items,ok'],
-  ['/api/research/notebooks/nb_0000', 404, 'error,ok'],
-  ['/api/research/convergence', 200, 'items,ok'],
-  ['/api/research/convergence/cv_0000', 400, 'error,ok'],
-  ['/api/research/convergence/cv_0000/evaluate', 405, 'error,ok'],
-  ['/api/research/experiments', 200, 'items,ok'],
-  ['/api/research/experiments/exp_0000', 404, 'error,ok'],
-  ['/api/research/datasets', 200, 'connectors,items,ok'],
-  ['/api/research/contract-jobs', 200, 'items,ok'],
-  ['/api/research/contract-jobs/ev_0000', 400, 'error,ok'],
-  ['/api/research/contract-jobs/ev_0000/resume', 405, 'error,ok'],
-  ['/api/research/contract-jobs/ev_0000/pause', 405, 'error,ok'],
-  ['/api/research/contract-jobs/ev_0000/freeze', 405, 'error,ok'],
-  ['/api/research/contract-jobs/ev_0000/export', 400, 'error,ok'],
-  ['/api/research/datasets/ds_0000', 404, 'error,ok'],
-  ['/api/research/preview', 405, 'error,ok'],
-  ['/api/research/run', 405, 'error,ok'],
-  ['/api/research/runs/run_0000/replay', 405, 'error,ok'],
-  ['/api/research/runs/run_0000/export', 404, 'error,ok'],
+  ["/api/research/memory/approvals", 200, "items,ok"],
+  ["/api/research/memory/snapshots", 200, "items,ok"],
+  ["/api/research/memory/snapshots/mem_0000", 400, "error,ok"],
+  ["/api/research/relationships", 200, "items,ok"],
+  ["/api/research/relationships/rel_0000", 400, "error,ok"],
+  ["/api/research/relationships/rel_0000/query", 405, "error,ok"],
+  ["/api/universe", 200, "asOf,contractors,core,historicalInsiderScope,ok,onDemand,selection,sources,total"],
+  ["/api/research/context", 200, "asOf,coverage,datasets,experiments,latency,note,notebooks,ok,plans,source,tools"],
+  ["/api/research/notebooks/nb_0000/export", 400, "error,ok"],
+  ["/api/research/notebooks", 200, "items,ok"],
+  ["/api/research/notebooks/nb_0000", 404, "error,ok"],
+  ["/api/research/convergence", 200, "items,ok"],
+  ["/api/research/convergence/cv_0000", 400, "error,ok"],
+  ["/api/research/convergence/cv_0000/evaluate", 405, "error,ok"],
+  ["/api/research/experiments", 200, "items,ok"],
+  ["/api/research/experiments/exp_0000", 404, "error,ok"],
+  ["/api/research/datasets", 200, "connectors,items,ok"],
+  ["/api/research/contract-jobs", 200, "items,ok"],
+  ["/api/research/contract-jobs/ev_0000", 400, "error,ok"],
+  ["/api/research/contract-jobs/ev_0000/resume", 405, "error,ok"],
+  ["/api/research/contract-jobs/ev_0000/pause", 405, "error,ok"],
+  ["/api/research/contract-jobs/ev_0000/freeze", 405, "error,ok"],
+  ["/api/research/contract-jobs/ev_0000/export", 400, "error,ok"],
+  ["/api/research/datasets/ds_0000", 404, "error,ok"],
+  ["/api/research/preview", 405, "error,ok"],
+  ["/api/research/run", 405, "error,ok"],
+  ["/api/research/runs/run_0000/replay", 405, "error,ok"],
+  ["/api/research/runs/run_0000/export", 404, "error,ok"],
   ["/geo/states.geojson", 200, "application/geo+json"],
   ["/geo/nope.geojson", 404, "error,ok"],
   ["/api/health", 200, "ok"],
@@ -114,7 +125,11 @@ export const SMOKE = [
   ["/api/backtest/replicate", 400, "error,missing,ok"],
   ["/api/backtest/search", 200, "defaults,ok,state"],
   ["/api/backtest/search?id=nope", 404, "error,missing,ok"],
-  ["/api/ask", 200, "configured,limits,missing,model,models,notice,ok,provider,small,sourcing,spend,strong,styles,tools,web"],
+  [
+    "/api/ask",
+    200,
+    "configured,limits,missing,model,models,notice,ok,provider,small,sourcing,spend,strong,styles,tools,web",
+  ],
   ["/api/tasks", 200, "asOf,budget,control,items,latency,ok,scheduler,source"],
   ["/api/tasks/runs/rn_none", 404, "error,missing,ok"],
   ["/api/tasks/tk_none/run", 405, "error,missing,ok"],
@@ -136,7 +151,11 @@ export const SMOKE = [
   ["/api/congress/committees", 500, "error,ok"],
   ["/api/congress/committees/HSAS", 500, "error,ok"],
   ["/api/congress/member/P000197/trades", 200, "items,ok"],
-  ["/api/congress/member/P000197/timeline", 200, "asOf,building,committees,coverage,member,nearDays,ok,proximity,range,returns,sources,trades,votes"],
+  [
+    "/api/congress/member/P000197/timeline",
+    200,
+    "asOf,building,committees,coverage,member,nearDays,ok,proximity,range,returns,sources,trades,votes",
+  ],
   ["/api/congress/member/P000197?chamber=house", 500, "error,ok"],
   ["/api/congress/member/bogus", 404, "error,ok"],
   ["/api/lobby?client=Boeing", 200, "error,filings,ok,retryAt,source,unavailable"],
@@ -147,7 +166,11 @@ export const SMOKE = [
   ["/api/contracts/dod", 200, "asOf,error,items,latency,ok,source"],
   ["/api/tickers/AAPL", 200, "contracts,fec,hq,lobby,ok,positions,quote,seats,ticker"],
   ["/api/tickers/ZZ-Q", 200, "error,ok"],
-  ["/api/congress/leaders", 200, "active,asOf,basis,benchmarkComparison,benchmarkComparisonReason,building,excessBottom,excessTop,late,latency,longest,minBuys,ok,progress,scoredMembers,source,tickers,tradesSource,window"],
+  [
+    "/api/congress/leaders",
+    200,
+    "active,asOf,basis,benchmarkComparison,benchmarkComparisonReason,building,excessBottom,excessTop,late,latency,longest,minBuys,ok,progress,scoredMembers,source,tickers,tradesSource,window",
+  ],
   ["/api/congress/feed", 200, "asOf,biggest,building,counts,late,latency,latest,ok,source,tickers,window"],
   ["/api/markets/politicians", 200, "asOf,building,dedupe,errors,from,items,latency,ok,progress,source"],
   ["/api/markets/insiders", 200, "asOf,errors,items,latency,ok,scanned,source"],
@@ -155,7 +178,11 @@ export const SMOKE = [
   ["/api/markets/shorts", 200, "asOf,items,latency,ok,scanned,source"],
   ["/api/markets/shorts?symbol=AAPL", 500, "error,ok"],
   ["/api/markets/positions", 200, "asOf,feeds,items,latency,ok,source"],
-  ["/api/markets/positions/AAPL", 200, "asOf,congress,coverage,inJoin,insiders,name,ok,pacNote,pacs,shorts,symbol,whales"],
+  [
+    "/api/markets/positions/AAPL",
+    200,
+    "asOf,congress,coverage,inJoin,insiders,name,ok,pacNote,pacs,shorts,symbol,whales",
+  ],
   ["/api/news", 200, "asOf,errors,feeds,items,latency,ok,source"],
   ["/api/news/xpulse", 200, "accounts,asOf,latency,ok,posts,source,trends"],
   ["/api/markets/globals", 200, "adrs,arbNote,asOf,etfs,fx,indices,latency,ok,ratioNote,source"],
@@ -191,8 +218,16 @@ export const SMOKE = [
   ["/api/intel/scope", 200, "arcs,asOf,days,events,from,kinds,len,ms,ok,partial,scope,to"],
   ["/api/intel/case/ticker/AAPL", 200, "asOf,headline,kind,latency,ok,signal,sources,stats,sub,subject"],
   ["/api/relations/node?id=ticker:NVDA", 200, "categories,node,ok"],
-  ["/api/relations/expand?node=ticker:NVDA&category=supply", 200, "asOf,category,edges,label,latency,limit,more,node,nodes,offset,ok,source,total"],
-  ["/api/relations/path?node=ticker:NVDA", 200, "asOf,category,edges,label,latency,limit,more,node,nodes,note,offset,ok,source,total"],
+  [
+    "/api/relations/expand?node=ticker:NVDA&category=supply",
+    200,
+    "asOf,category,edges,label,latency,limit,more,node,nodes,offset,ok,source,total",
+  ],
+  [
+    "/api/relations/path?node=ticker:NVDA",
+    200,
+    "asOf,category,edges,label,latency,limit,more,node,nodes,note,offset,ok,source,total",
+  ],
   ["/api/relations/expand?node=member:bogus&category=trade", 400, "error,ok"],
   ["/api/calendar/lobbying", 200, "asOf,items,latency,ok,source,totals"],
   ["/api/calendar/pacs", 500, "error,ok"],
@@ -209,7 +244,7 @@ export const SMOKE = [
   ["/api/earth/lanes", 500, "error,ok"],
   ["/api/strait/theaters", 200, "items,ok"],
   ["/api/search?q=AM", 200, "members,ok,sites,tickers"],
-  ["/api/nope", 404, "error,ok"]
+  ["/api/nope", 404, "error,ok"],
 ];
 
 test("every manifest route has a smoke case", () => {
@@ -219,7 +254,10 @@ test("every manifest route has a smoke case", () => {
     const found = table.find((r) => r.match(new URL(route, base).pathname));
     if (found) hit.add(found.id);
   }
-  assert.deepEqual(MANIFEST.map((r) => r.id).filter((id) => !hit.has(id)), []);
+  assert.deepEqual(
+    MANIFEST.map((r) => r.id).filter((id) => !hit.has(id)),
+    [],
+  );
 });
 
 async function probe(route) {

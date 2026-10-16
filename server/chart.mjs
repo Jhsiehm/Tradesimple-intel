@@ -17,7 +17,7 @@ const SPANS = {
   "1mo": { interval: "1d", range: "1mo", note: "Daily bars for one month, split-adjusted." },
   "6mo": { interval: "1d", range: "6mo", note: "Daily bars for six months, split-adjusted." },
   "1y": { interval: "1d", range: "1y", note: "Daily bars for one year, split-adjusted." },
-  "5y": { interval: "1d", range: "5y", note: "Daily bars for five years, split-adjusted." }
+  "5y": { interval: "1d", range: "5y", note: "Daily bars for five years, split-adjusted." },
 };
 const TTL = 15 * 60 * 1000;
 
@@ -35,7 +35,7 @@ export async function priceChart(db, symbol, spanId) {
     interval: spec.interval,
     range: spec.range,
     includeAdjustedClose: spec.interval === "1d" ? "true" : "false",
-    events: "div,splits"
+    events: "div,splits",
   });
   const result = body?.chart?.result?.[0];
   const error = body?.chart?.error?.description;
@@ -59,7 +59,7 @@ export async function priceChart(db, symbol, spanId) {
       h: round(high * factor),
       l: round(low * factor),
       c: round(close * factor),
-      v: quote.volume?.[i] || 0
+      v: quote.volume?.[i] || 0,
     });
   }
   if (!bars.length) return { ok: false, error: "Chart returned no bars" };
@@ -71,7 +71,9 @@ export async function priceChart(db, symbol, spanId) {
   const payload = {
     ok: true,
     source: "Yahoo Finance chart",
-    asOf: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : new Date(lastBar.t).toISOString(),
+    asOf: meta.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString()
+      : new Date(lastBar.t).toISOString(),
     latency: `${spec.note} Delayed, not a live book.${kind !== "fx" && kind !== "crypto" ? "" : " Trades around the clock; volume is exchange-reported where Yahoo has it."}`,
     symbol: ticker.symbol,
     code: ticker.code || ticker.symbol,
@@ -89,7 +91,7 @@ export async function priceChart(db, symbol, spanId) {
     dayVolume: meta.regularMarketVolume || null,
     yearHigh: round(meta.fiftyTwoWeekHigh),
     yearLow: round(meta.fiftyTwoWeekLow),
-    bars
+    bars,
   };
   writeCache(db, cacheKey, payload, TTL);
   return payload;
@@ -98,19 +100,24 @@ export async function priceChart(db, symbol, spanId) {
 export async function quoteBoard(db) {
   const tickers = listTickers(db);
   const hit = readCache(db, KEY.screener);
-  const registered = new Set(tickers.map(t => t.symbol));
-  const matchesRegistry = hit && new Set([...(hit.items || []).map(t => t.symbol), ...(hit.missing || [])]).size === registered.size
-    && [...(hit.items || []).map(t => t.symbol), ...(hit.missing || [])].every(s => registered.has(s));
+  const registered = new Set(tickers.map((t) => t.symbol));
+  const matchesRegistry =
+    hit &&
+    new Set([...(hit.items || []).map((t) => t.symbol), ...(hit.missing || [])]).size === registered.size &&
+    [...(hit.items || []).map((t) => t.symbol), ...(hit.missing || [])].every((s) => registered.has(s));
   if (matchesRegistry) return hit;
   const stale = readStale(db, KEY.screener)?.value;
   if (stale?.items?.length) {
     // Keep the board responsive during upstream outages. One background refresh is shared.
     const failure = readCache(db, `${KEY.screener}:refresh-failure`);
     if (!failure) void once(KEY.screener, () => refreshQuotes(db, tickers)).catch(() => {});
-    return { ...stale, stale: true, refreshing: !failure,
+    return {
+      ...stale,
+      stale: true,
+      refreshing: !failure,
       ...(failure ? { refreshFailure: failure } : {}),
-      latency: `${failure ? `STALE QUOTES: Nasdaq ${failure.reason}; retry after ${failure.retryAt}.` : "REFRESHING QUOTES: cached snapshot expired; checking Nasdaq."} Showing the last successful fetch from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
-
+      latency: `${failure ? `STALE QUOTES: Nasdaq ${failure.reason}; retry after ${failure.retryAt}.` : "REFRESHING QUOTES: cached snapshot expired; checking Nasdaq."} Showing the last successful fetch from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.`,
+    };
   }
   return once(KEY.screener, () => refreshQuotes(db, tickers));
 }
@@ -123,10 +130,20 @@ async function refreshQuotes(db, tickers) {
     if (!body?.data?.rows?.length) throw new Error("Empty Nasdaq screener response");
   } catch (err) {
     const at = Date.now();
-    writeCache(db, `${KEY.screener}:refresh-failure`, { at: new Date(at).toISOString(), reason: failureText(err, 30000), retryAt: new Date(at + 30000).toISOString() }, 30000);
+    writeCache(
+      db,
+      `${KEY.screener}:refresh-failure`,
+      { at: new Date(at).toISOString(), reason: failureText(err, 30000), retryAt: new Date(at + 30000).toISOString() },
+      30000,
+    );
     const stale = readStale(db, KEY.screener)?.value;
-    if (!stale?.items?.length) return { ok: false, error: "Nasdaq quotes temporarily unavailable; retry shortly.", items: [] };
-    return { ...stale, stale: true, latency: `STALE QUOTES: refresh failed; showing the last stored snapshot from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
+    if (!stale?.items?.length)
+      return { ok: false, error: "Nasdaq quotes temporarily unavailable; retry shortly.", items: [] };
+    return {
+      ...stale,
+      stale: true,
+      latency: `STALE QUOTES: refresh failed; showing the last stored snapshot from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.`,
+    };
   }
   db.prepare("DELETE FROM cache WHERE key = ?").run(`${KEY.screener}:refresh-failure`);
   const bySymbol = new Map((body?.data?.rows || []).map((r) => [String(r.symbol).trim().replace(/[/.^]/g, "-"), r]));
@@ -152,7 +169,7 @@ async function refreshQuotes(db, tickers) {
       changePct: num(r.pctchange),
       previousClose: last != null && change != null ? Number((last - change).toFixed(4)) : null,
       volume: num(r.volume) || 0,
-      marketCap: num(r.marketCap) || 0
+      marketCap: num(r.marketCap) || 0,
     });
   }
   const asOf = new Date().toISOString();
@@ -162,7 +179,7 @@ async function refreshQuotes(db, tickers) {
     asOf,
     latency: `Exchange-delayed last sale (about 15 min in session) · refreshed every 60s · fetched in ${Date.now() - started} ms · ${items.length} of ${tickers.length} join-table names matched`,
     missing: tickers.filter((t) => !bySymbol.has(t.symbol)).map((t) => t.symbol),
-    items: items.map((item) => ({ ...item, asOf }))
+    items: items.map((item) => ({ ...item, asOf })),
   };
   if (items.length) writeCache(db, KEY.screener, payload, 60 * 1000);
   return payload;

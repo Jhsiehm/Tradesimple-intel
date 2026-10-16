@@ -1,7 +1,11 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 /** Track one pointer from `event` until release. `onEnd` gets whether it moved past a click's jitter. */
-export function startDrag(event: ReactPointerEvent, onMove: (dx: number, dy: number) => void, onEnd: (moved: boolean) => void) {
+export function startDrag(
+  event: ReactPointerEvent,
+  onMove: (dx: number, dy: number) => void,
+  onEnd: (moved: boolean) => void,
+) {
   if (event.button !== 0) return;
   const el = event.currentTarget as HTMLElement;
   const sx = event.clientX;

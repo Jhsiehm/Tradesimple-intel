@@ -25,4 +25,14 @@ export function tradeAge(input?: { kind?: string; eventAt?: string; filedAt?: st
 export function ageSteps(kind: string, tier: Freshness | null): number;
 export function ageSeverity<S extends string | undefined>(severity: S, kind: string, tier: Freshness | null): S;
 export function ageLine(age: TradeAge | null | undefined, now?: number): string;
-export function ageAlert<T extends { kind: string; date?: string; severity?: string; eventAt?: string; filedAt?: string; baseSeverity?: string; live?: { eventAt?: string; publishedAt?: string } }>(row: T, now?: number): T & { age: TradeAge; baseSeverity?: string };
+export function ageAlert<
+  T extends {
+    kind: string;
+    date?: string;
+    severity?: string;
+    eventAt?: string;
+    filedAt?: string;
+    baseSeverity?: string;
+    live?: { eventAt?: string; publishedAt?: string };
+  },
+>(row: T, now?: number): T & { age: TradeAge; baseSeverity?: string };

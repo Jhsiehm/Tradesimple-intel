@@ -9,9 +9,16 @@ export const MAX_THEORIES = 200;
 export const MAX_NOTES = 100;
 const MAX_TEXT = 280;
 
-const text = (v, max = MAX_TEXT) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const text = (v, max = MAX_TEXT) =>
+  String(v ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 const conf = (v) => (["low", "medium", "high"].includes(v) ? v : "medium");
-const endpoint = (v) => (v && typeof v === "object" && typeof v.id === "string" && v.id.includes(":") ? { id: v.id.slice(0, 160), type: text(v.type, 20) || v.id.split(":")[0], label: text(v.label, 120) || v.id } : null);
+const endpoint = (v) =>
+  v && typeof v === "object" && typeof v.id === "string" && v.id.includes(":")
+    ? { id: v.id.slice(0, 160), type: text(v.type, 20) || v.id.split(":")[0], label: text(v.label, 120) || v.id }
+    : null;
 
 /** A clean theory, or null. Endpoints keep id, type, and label so a theory can bring its nodes back. */
 export function cleanTheory(raw) {
@@ -21,12 +28,13 @@ export function cleanTheory(raw) {
   if (!a || !b || a.id === b.id) return null;
   return {
     id: text(raw.id, 80) || `t-${a.id}-${b.id}`,
-    a, b,
+    a,
+    b,
     label: text(raw.label, 80),
     note: text(raw.note),
     confidence: conf(raw.confidence),
     created: text(raw.created, 30),
-    updated: text(raw.updated, 30)
+    updated: text(raw.updated, 30),
   };
 }
 
@@ -34,7 +42,14 @@ export function cleanNote(raw) {
   if (!raw || typeof raw !== "object") return null;
   const id = text(raw.id, 80);
   if (!/^note:[A-Za-z0-9\-_]{1,60}$/.test(id)) return null;
-  return { id, type: "note", label: text(raw.label, 80) || "Untitled", note: text(raw.note), kind: ["person", "event", "company", "other"].includes(raw.kind) ? raw.kind : "other", created: text(raw.created, 30) };
+  return {
+    id,
+    type: "note",
+    label: text(raw.label, 80) || "Untitled",
+    note: text(raw.note),
+    kind: ["person", "event", "company", "other"].includes(raw.kind) ? raw.kind : "other",
+    created: text(raw.created, 30),
+  };
 }
 
 /** Newest kept first when over the cap. */
@@ -56,7 +71,7 @@ export function migrate(raw) {
     const theories = (raw.theories || []).map((t) => ({
       ...t,
       a: t.a || { id: t.from, label: t.from },
-      b: t.b || { id: t.to, label: t.to }
+      b: t.b || { id: t.to, label: t.to },
     }));
     return cleanDoc({ theories, notes: raw.notes });
   }
@@ -75,7 +90,10 @@ export const serialize = (doc) => JSON.stringify(cleanDoc(doc));
 
 /** Import: theories and notes from a file join the current ones; same id, the file wins. */
 export function mergeDocs(current, incoming) {
-  return cleanDoc({ theories: [...current.theories, ...incoming.theories], notes: [...current.notes, ...incoming.notes] });
+  return cleanDoc({
+    theories: [...current.theories, ...incoming.theories],
+    notes: [...current.notes, ...incoming.notes],
+  });
 }
 
 // Share links: the document as base64url JSON after `#rel=`. Nothing is uploaded.

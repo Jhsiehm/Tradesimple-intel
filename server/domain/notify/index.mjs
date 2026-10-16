@@ -1,6 +1,13 @@
 import { postNtfy } from "../../feeds/ntfy.mjs";
 import { ageAlert } from "../../../shared/tradeAge.mjs";
-import { buildMessage, envSettings, mergeSettings, publicSettings, shouldNotify, underLimit } from "../../../shared/notify.mjs";
+import {
+  buildMessage,
+  envSettings,
+  mergeSettings,
+  publicSettings,
+  shouldNotify,
+  underLimit,
+} from "../../../shared/notify.mjs";
 
 /**
  * Phone notifications through ntfy for live alerts. State in the server's cache database:
@@ -35,32 +42,51 @@ export function loadSaved(db) {
 }
 
 function claim(db, row, now, status) {
-  const out = db.prepare("INSERT OR IGNORE INTO notify_sent (id, at, status, severity, title) VALUES (?, ?, ?, ?, ?)").run(row.id, now, status, String(row.severity || ""), String(row.title || "").slice(0, 200));
+  const out = db
+    .prepare("INSERT OR IGNORE INTO notify_sent (id, at, status, severity, title) VALUES (?, ?, ?, ?, ?)")
+    .run(row.id, now, status, String(row.severity || ""), String(row.title || "").slice(0, 200));
   return out.changes > 0;
 }
 
-const mark = (db, id, status, error = "") => db.prepare("UPDATE notify_sent SET status = ?, error = ? WHERE id = ?").run(status, error.slice(0, 200), id);
+const mark = (db, id, status, error = "") =>
+  db.prepare("UPDATE notify_sent SET status = ?, error = ? WHERE id = ?").run(status, error.slice(0, 200), id);
 
 /**
  * The notifier for one database. `env` is read on every call (so .env.local edits apply after a restart only, as
  * everywhere else). `post` and `now` are injectable for tests.
  */
-export function createNotifier(db, { env = process.env, post = postNtfy, now = () => Date.now(), log = (m) => console.log(m) } = {}) {
+export function createNotifier(
+  db,
+  { env = process.env, post = postNtfy, now = () => Date.now(), log = (m) => console.log(m) } = {},
+) {
   ensure(db);
-  let sentTimes = db.prepare("SELECT at FROM notify_sent WHERE at >= ? AND status IN ('sent','test')").all(now() - 3_600_000).map((r) => r.at);
+  let sentTimes = db
+    .prepare("SELECT at FROM notify_sent WHERE at >= ? AND status IN ('sent','test')")
+    .all(now() - 3_600_000)
+    .map((r) => r.at);
   let held = 0;
   let lastTest = 0;
   let chain = Promise.resolve();
 
   const settings = () => mergeSettings(envSettings(env), loadSaved(db));
 
-  const deliver = (s, message) => post({ server: s.server, topic: s.topic, token: String(env.NTFY_TOKEN || "").trim(), message });
+  const deliver = (s, message) =>
+    post({ server: s.server, topic: s.topic, token: String(env.NTFY_TOKEN || "").trim(), message });
 
   function view() {
     const s = settings();
-    const recent = db.prepare("SELECT id, at, status, severity, title, error FROM notify_sent ORDER BY at DESC LIMIT 8").all();
+    const recent = db
+      .prepare("SELECT id, at, status, severity, title, error FROM notify_sent ORDER BY at DESC LIMIT 8")
+      .all();
     const lim = underLimit(sentTimes, s.maxPerHour, now());
-    return { ok: true, asOf: new Date(now()).toISOString(), settings: publicSettings(s), sentLastHour: lim.recent.length, held, recent };
+    return {
+      ok: true,
+      asOf: new Date(now()).toISOString(),
+      settings: publicSettings(s),
+      sentLastHour: lim.recent.length,
+      held,
+      recent,
+    };
   }
 
   function save(input = {}) {
@@ -71,7 +97,9 @@ export function createNotifier(db, { env = process.env, post = postNtfy, now = (
     if (Array.isArray(input.kinds)) next.kinds = input.kinds.map(String).slice(0, 20);
     if (typeof input.quiet === "string") next.quiet = input.quiet.slice(0, 20);
     if (typeof input.quietHigh === "boolean") next.quietHigh = input.quietHigh;
-    db.prepare("INSERT INTO notify_settings (k, body) VALUES ('settings', ?) ON CONFLICT(k) DO UPDATE SET body = excluded.body").run(JSON.stringify(next));
+    db.prepare(
+      "INSERT INTO notify_settings (k, body) VALUES ('settings', ?) ON CONFLICT(k) DO UPDATE SET body = excluded.body",
+    ).run(JSON.stringify(next));
     return view();
   }
 
@@ -125,7 +153,7 @@ export function createNotifier(db, { env = process.env, post = postNtfy, now = (
       priority: 3,
       tags: ["white_check_mark"],
       click: s.clickUrl ? `${s.clickUrl}/` : "",
-      actions: []
+      actions: [],
     };
     try {
       const res = await deliver(s, message);
@@ -138,7 +166,14 @@ export function createNotifier(db, { env = process.env, post = postNtfy, now = (
     }
   }
 
-  const sentIds = () => new Set(db.prepare("SELECT id, status FROM notify_sent").all().filter((r) => SENT.has(r.status)).map((r) => r.id));
+  const sentIds = () =>
+    new Set(
+      db
+        .prepare("SELECT id, status FROM notify_sent")
+        .all()
+        .filter((r) => SENT.has(r.status))
+        .map((r) => r.id),
+    );
 
   return { settings, view, save, handle: enqueue, test, sentIds };
 }
@@ -156,6 +191,8 @@ export function startNotify(db, bus, opts) {
   const onAlert = (row) => void n.handle(row).catch(() => {});
   bus.on("alert", onAlert);
   const s = n.settings();
-  (opts?.log || console.log)(`phone notifications: ${s.topic ? `${s.enabled ? "on" : "off"} · ntfy ${new URL(s.server).host} · ${s.minSeverity}+` : "off (NTFY_TOPIC not set)"}`);
+  (opts?.log || console.log)(
+    `phone notifications: ${s.topic ? `${s.enabled ? "on" : "off"} · ntfy ${new URL(s.server).host} · ${s.minSeverity}+` : "off (NTFY_TOPIC not set)"}`,
+  );
   return () => bus.off("alert", onAlert);
 }

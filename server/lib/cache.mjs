@@ -11,7 +11,8 @@ export function readStale(db, key) {
 
 /** "timed out after 45 s", "returned HTTP 503", or the error message. */
 export function failureText(err, timeoutMs) {
-  if (err?.name === "AbortError" || err?.name === "TimeoutError" || /did not answer/.test(err?.message || "")) return `timed out${timeoutMs ? ` after ${Math.round(timeoutMs / 1000)} s` : ""}`;
+  if (err?.name === "AbortError" || err?.name === "TimeoutError" || /did not answer/.test(err?.message || ""))
+    return `timed out${timeoutMs ? ` after ${Math.round(timeoutMs / 1000)} s` : ""}`;
   if (err?.status) return `returned HTTP ${err.status}`;
   return String(err?.message || "failed");
 }
@@ -39,7 +40,11 @@ export async function throughCache(db, key, { ttlMs, downMs, timeoutMs = 0, load
       return { value };
     } catch (err) {
       const at = new Date();
-      down = { at: at.toISOString(), why: failureText(err, timeoutMs), retryAt: new Date(at.getTime() + downMs).toISOString() };
+      down = {
+        at: at.toISOString(),
+        why: failureText(err, timeoutMs),
+        retryAt: new Date(at.getTime() + downMs).toISOString(),
+      };
       writeCache(db, downKey, down, downMs);
     }
   }

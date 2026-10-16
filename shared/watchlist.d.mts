@@ -1,6 +1,23 @@
-export type WatchSourceKey = "congress" | "insiders" | "whales" | "stakes" | "contracts" | "lobbying" | "filings" | "news";
+export type WatchSourceKey =
+  | "congress"
+  | "insiders"
+  | "whales"
+  | "stakes"
+  | "contracts"
+  | "lobbying"
+  | "filings"
+  | "news";
 
-export type F4Line = { code: string; side: string; shares: number | null; price: number | null; value: number | null; plan: boolean; traded: string; owned: number | null };
+export type F4Line = {
+  code: string;
+  side: string;
+  shares: number | null;
+  price: number | null;
+  value: number | null;
+  plan: boolean;
+  traded: string;
+  owned: number | null;
+};
 
 export type WatchEvent = {
   id: string;
@@ -44,8 +61,19 @@ export type WatchEvent = {
 
 export type WatchBadge = { count: number; newest: string; age: string };
 export type WatchAlertRow = {
-  id: string; kind: string; date: string; eventAt: string; filedAt: string; title: string; detail: string; link: string; action: string; late: boolean;
-  severity: "high" | "elevated" | "routine"; source: string; pins: { kind: "symbol"; id: string; label: string }[];
+  id: string;
+  kind: string;
+  date: string;
+  eventAt: string;
+  filedAt: string;
+  title: string;
+  detail: string;
+  link: string;
+  action: string;
+  late: boolean;
+  severity: "high" | "elevated" | "routine";
+  source: string;
+  pins: { kind: "symbol"; id: string; label: string }[];
 };
 
 export const WATCH_MAX: number;
@@ -58,7 +86,11 @@ export const CONTRACT_ALERT_MIN: number;
 export const WHALE_ALERT_SHARE: number;
 
 export function normSymbol(s: unknown): string;
-export function cleanTickers(list: Iterable<string>, known: Set<string>, max?: number): { valid: string[]; invalid: string[] };
+export function cleanTickers(
+  list: Iterable<string>,
+  known: Set<string>,
+  max?: number,
+): { valid: string[]; invalid: string[] };
 export function addSymbol(list: string[], symbol: string, max?: number): string[];
 export function removeSymbol(list: string[], symbol: string): string[];
 export function moveSymbol(list: string[], symbol: string, delta: number): string[];
@@ -79,7 +111,10 @@ export function newsEvent(n: Record<string, any>, symbol: string): WatchEvent;
 
 export function mergeEvents(events: WatchEvent[]): WatchEvent[];
 export function groupRepeats(events: WatchEvent[]): WatchEvent[];
-export function namesTicker(item: { title?: string; summary?: string } | null | undefined, ticker: { symbol?: string; name?: string }): boolean;
+export function namesTicker(
+  item: { title?: string; summary?: string } | null | undefined,
+  ticker: { symbol?: string; name?: string },
+): boolean;
 export function withinDays(events: WatchEvent[], days: number, now?: number): WatchEvent[];
 export function badgesOf(events: WatchEvent[], days: number, now?: number): Partial<Record<WatchSourceKey, WatchBadge>>;
 export function watchAlertRows(events: WatchEvent[], since?: string, opts?: { news?: boolean }): WatchAlertRow[];

@@ -13,43 +13,114 @@ const LeadersBoard = lazy(() => import("./LeadersBoard").then((m) => ({ default:
 export type TodayTab = "week" | "leaders";
 
 export type FeedRow = {
-  id: string; bioguide: string; person: string; chamber: string; party: string; state: string; district: string;
-  symbol: string; asset: string; side: string; type: string; amount: string; amountLow: number;
-  traded: string; filed: string; lag: number | null; link: string; inJoin: boolean; text: string; more?: number;
+  id: string;
+  bioguide: string;
+  person: string;
+  chamber: string;
+  party: string;
+  state: string;
+  district: string;
+  symbol: string;
+  asset: string;
+  side: string;
+  type: string;
+  amount: string;
+  amountLow: number;
+  traded: string;
+  filed: string;
+  lag: number | null;
+  link: string;
+  inJoin: boolean;
+  text: string;
+  more?: number;
 };
-type TickerRow = { symbol: string; asset: string; inJoin: boolean; trades: number; buys: number; sells: number; members: number; low: number; last: string };
+type TickerRow = {
+  symbol: string;
+  asset: string;
+  inJoin: boolean;
+  trades: number;
+  buys: number;
+  sells: number;
+  members: number;
+  low: number;
+  last: string;
+};
 type FeedRes = {
-  ok: boolean; error?: string; source?: string; asOf?: string; latency?: string; building?: boolean;
+  ok: boolean;
+  error?: string;
+  source?: string;
+  asOf?: string;
+  latency?: string;
+  building?: boolean;
   window?: { from: string; to: string; days: number; fallback: boolean };
   counts?: { trades: number; reports: number; members: number; lateThisWindow: number };
-  latest?: FeedRow[]; late?: FeedRow[]; biggest?: FeedRow[]; tickers?: TickerRow[];
+  latest?: FeedRow[];
+  late?: FeedRow[];
+  biggest?: FeedRow[];
+  tickers?: TickerRow[];
 };
 
 const LATE = 45;
 
 /** One disclosed trade in plain words. Name → timeline, ticker → chart, ↗ → the filing itself. */
-export function TradeLine({ t, refYear, onFollow }: { t: FeedRow; refYear: number; onFollow: (action: string) => void }) {
+export function TradeLine({
+  t,
+  refYear,
+  onFollow,
+}: {
+  t: FeedRow;
+  refYear: number;
+  onFollow: (action: string) => void;
+}) {
   const late = t.lag != null && t.lag > LATE;
   return (
     <li className="trade-line">
       <span>
         {honorific(t)}{" "}
-        {t.bioguide ? <button className="link" onClick={() => onFollow(`timeline:${t.bioguide}`)} title="Open their timeline">{t.person}</button> : t.person}
+        {t.bioguide ? (
+          <button className="link" onClick={() => onFollow(`timeline:${t.bioguide}`)} title="Open their timeline">
+            {t.person}
+          </button>
+        ) : (
+          t.person
+        )}
         <small> ({partyTag(t)})</small>{" "}
         <b className={t.side === "buy" ? "up" : t.side === "sell" ? "down" : ""}>{verbOf(t)}</b> {amountShort(t.amount)}{" "}
         {t.symbol && t.inJoin ? (
-          <button className="link sym" onClick={() => onFollow(`chart:${t.symbol}`)} title={`${t.asset} · chart with trades marked`}>{t.symbol}</button>
+          <button
+            className="link sym"
+            onClick={() => onFollow(`chart:${t.symbol}`)}
+            title={`${t.asset} · chart with trades marked`}
+          >
+            {t.symbol}
+          </button>
         ) : (
-          <span className="sym" title={t.asset}>{t.symbol || t.asset}</span>
+          <span className="sym" title={t.asset}>
+            {t.symbol || t.asset}
+          </span>
         )}
       </span>
       <small className="when">
         traded {dayLabel(t.traded, refYear)}, filed {dayLabel(t.filed, refYear)}
-        {t.lag != null ? <> (<b className={late ? "late" : ""}>{t.lag}d</b>)</> : null}
-        {late ? <b className="late"> · filed {t.lag! - LATE} days past the {LATE}-day limit</b> : null}
+        {t.lag != null ? (
+          <>
+            {" "}
+            (<b className={late ? "late" : ""}>{t.lag}d</b>)
+          </>
+        ) : null}
+        {late ? (
+          <b className="late">
+            {" "}
+            · filed {t.lag! - LATE} days past the {LATE}-day limit
+          </b>
+        ) : null}
         {t.more ? <> · +{t.more} more in this filing</> : null}
       </small>
-      {t.link ? <a href={t.link} target="_blank" rel="noopener noreferrer" title="Open the original filing">filing <Icon name="external" size={12} /></a> : null}
+      {t.link ? (
+        <a href={t.link} target="_blank" rel="noopener noreferrer" title="Open the original filing">
+          filing <Icon name="external" size={12} />
+        </a>
+      ) : null}
     </li>
   );
 }
@@ -60,10 +131,11 @@ function weekList(res: FeedRes | null, refYear: number): StageList {
   const status = {
     source: res?.source || "House Clerk · Senate eFD",
     asOf: res?.asOf ? when(res.asOf) : "",
-    latency: res?.latency || "Filed up to 45 days after the trade."
+    latency: res?.latency || "Filed up to 45 days after the trade.",
   };
   if (!res) return { title: "Today", blurb: WEEK_BLURB, empty: "Loading this week's filings…", items: [], status };
-  if (!res.ok) return { title: "Today", blurb: WEEK_BLURB, empty: res.error || "No disclosures loaded yet.", items: [], status };
+  if (!res.ok)
+    return { title: "Today", blurb: WEEK_BLURB, empty: res.error || "No disclosures loaded yet.", items: [], status };
   return {
     title: "Today",
     blurb: WEEK_BLURB,
@@ -71,16 +143,30 @@ function weekList(res: FeedRes | null, refYear: number): StageList {
     status,
     items: (res.latest || []).map((t) => ({
       id: t.id,
-      title: `${honorific(t)} ${t.person} ${verbOf(t)} ${amountShort(t.amount)} ${t.symbol || t.asset}`.replace(/\s+/g, " ").trim(),
+      title: `${honorific(t)} ${t.person} ${verbOf(t)} ${amountShort(t.amount)} ${t.symbol || t.asset}`
+        .replace(/\s+/g, " ")
+        .trim(),
       meta: `traded ${dayLabel(t.traded, refYear)}, filed ${dayLabel(t.filed, refYear)}${t.lag != null ? ` (${t.lag}d)` : ""}`,
       tone: t.side === "buy" ? "up" : t.side === "sell" ? "down" : "",
-      action: t.bioguide ? `timeline:${t.bioguide}` : undefined
-    }))
+      action: t.bioguide ? `timeline:${t.bioguide}` : undefined,
+    })),
   };
 }
 
 /** Center-stage landing view: what Congress disclosed this week, in sentences, plus leaderboards. */
-export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: TodayTab; onTab: (t: TodayTab) => void; onFollow: (action: string) => void; onClose: () => void; onList?: (list: StageList) => void }) {
+export function TodayBoard({
+  tab,
+  onTab,
+  onFollow,
+  onClose,
+  onList,
+}: {
+  tab: TodayTab;
+  onTab: (t: TodayTab) => void;
+  onFollow: (action: string) => void;
+  onClose: () => void;
+  onList?: (list: StageList) => void;
+}) {
   const [res, setRes] = useState<FeedRes | null>(null);
   const [evidence, setEvidence] = useState<"latest" | "late" | "biggest" | "tickers">("latest");
   const evidenceRef = useRef<HTMLElement>(null);
@@ -94,11 +180,21 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
     if (tab !== "week") return;
     let cancel = false;
     let timer = 0;
-    const load = () => api<FeedRes>("/api/congress/feed")
-      .then((body) => { if (cancel) return; setRes(body); if (body.building) timer = window.setTimeout(load, 30_000); })
-      .catch((err: Error) => { if (!cancel) setRes({ ok: false, error: err.message }); });
+    const load = () =>
+      api<FeedRes>("/api/congress/feed")
+        .then((body) => {
+          if (cancel) return;
+          setRes(body);
+          if (body.building) timer = window.setTimeout(load, 30_000);
+        })
+        .catch((err: Error) => {
+          if (!cancel) setRes({ ok: false, error: err.message });
+        });
     void load();
-    return () => { cancel = true; window.clearTimeout(timer); };
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
   }, [tab]);
 
   const refYear = Number((res?.window?.to || new Date().toISOString()).slice(0, 4));
@@ -115,100 +211,232 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
         <div className="board-title">
           <strong>{tab === "week" ? "THIS WEEK IN CONGRESS TRADING" : "LEADERBOARDS"}</strong>
           <span className="scope">
-            <button className={tab === "week" ? "on" : ""} onClick={() => onTab("week")}><IconLabel icon="today">This week</IconLabel></button>
-            <button className={tab === "leaders" ? "on" : ""} onClick={() => onTab("leaders")}><IconLabel icon="leaders">Leaderboards</IconLabel></button>
+            <button className={tab === "week" ? "on" : ""} onClick={() => onTab("week")}>
+              <IconLabel icon="today">This week</IconLabel>
+            </button>
+            <button className={tab === "leaders" ? "on" : ""} onClick={() => onTab("leaders")}>
+              <IconLabel icon="leaders">Leaderboards</IconLabel>
+            </button>
           </span>
-          <button className="tl-close" onClick={onClose} aria-label="Close" title="Close (esc)"><Icon name="close" /></button>
+          <button className="tl-close" onClick={onClose} aria-label="Close" title="Close (esc)">
+            <Icon name="close" />
+          </button>
         </div>
         {tab === "week" ? (
           <>
-            <p className="today-explain">Newest stock trades members of Congress filed, each due within {LATE} days of the trade.</p>
+            <p className="today-explain">
+              Newest stock trades members of Congress filed, each due within {LATE} days of the trade.
+            </p>
             <dl className="today-provenance">
-              <div><dt>Source</dt><dd>{res?.source || "House Clerk · Senate eFD"}</dd></div>
-              <div><dt>As of</dt><dd>{res?.asOf ? when(res.asOf) : "—"}</dd></div>
-              <div><dt>Filing window</dt><dd>{w ? `${dayLabel(w.from, refYear)} – ${dayLabel(w.to, refYear)}` : "—"}</dd></div>
+              <div>
+                <dt>Source</dt>
+                <dd>{res?.source || "House Clerk · Senate eFD"}</dd>
+              </div>
+              <div>
+                <dt>As of</dt>
+                <dd>{res?.asOf ? when(res.asOf) : "—"}</dd>
+              </div>
+              <div>
+                <dt>Filing window</dt>
+                <dd>{w ? `${dayLabel(w.from, refYear)} – ${dayLabel(w.to, refYear)}` : "—"}</dd>
+              </div>
             </dl>
             <details className="today-coverage">
               <summary>Timing &amp; coverage{w?.fallback ? ` · ${w.days}-day expanded window` : ""}</summary>
               <div className="today-coverage-body">
-                {w?.fallback ? <p><b>Expanded window.</b> Widened to {w.days} days: fewer than 5 members filed in the last 7.</p> : null}
-                <p><b>Reporting latency.</b> {res?.latency || "—"}</p>
+                {w?.fallback ? (
+                  <p>
+                    <b>Expanded window.</b> Widened to {w.days} days: fewer than 5 members filed in the last 7.
+                  </p>
+                ) : null}
+                <p>
+                  <b>Reporting latency.</b> {res?.latency || "—"}
+                </p>
               </div>
             </details>
           </>
         ) : null}
       </header>
       {tab === "leaders" ? (
-        <Suspense fallback={<p className="stage-loading">Loading…</p>}><LeadersBoard onFollow={onFollow} onList={onList} /></Suspense>
+        <Suspense fallback={<p className="stage-loading">Loading…</p>}>
+          <LeadersBoard onFollow={onFollow} onList={onList} />
+        </Suspense>
       ) : (
         <div className="board-scroll today-scroll">
           {res?.ok ? (
-            <section className={`today-overview${import.meta.env.VITE_MATERIAL_OVERVIEW !== "0" ? " tsi-theme tsi-overview-pilot" : ""}`} aria-label="Disclosure overview">
+            <section
+              className={`today-overview${import.meta.env.VITE_MATERIAL_OVERVIEW !== "0" ? " tsi-theme tsi-overview-pilot" : ""}`}
+              aria-label="Disclosure overview"
+            >
               <h2>Disclosure overview</h2>
-              <p>{res.counts ? <><strong>{res.counts.reports.toLocaleString()} reports</strong> from <strong>{res.counts.members.toLocaleString()} members</strong>, covering {res.counts.trades.toLocaleString()} disclosed trades in this feed.</> : "Explore the latest loaded public filings below."}</p>
-              {res.building ? <p className="today-overview-note" role="status">Filings are still loading; this overview is incomplete.</p> : null}
+              <p>
+                {res.counts ? (
+                  <>
+                    <strong>{res.counts.reports.toLocaleString()} reports</strong> from{" "}
+                    <strong>{res.counts.members.toLocaleString()} members</strong>, covering{" "}
+                    {res.counts.trades.toLocaleString()} disclosed trades in this feed.
+                  </>
+                ) : (
+                  "Explore the latest loaded public filings below."
+                )}
+              </p>
+              {res.building ? (
+                <p className="today-overview-note" role="status">
+                  Filings are still loading; this overview is incomplete.
+                </p>
+              ) : null}
               <div className="today-overview-links">
-                <button onClick={() => showEvidence("latest")}>Review filings <Icon name="chevron-right" size={12} /></button>
-                {res.tickers?.[0] ? <button onClick={() => showEvidence("tickers")}>{res.tickers[0].symbol} · most members trading ({res.tickers[0].members}) <Icon name="chevron-right" size={12} /></button> : null}
-                <button onClick={() => showEvidence("late")}>Review late filings · all history <Icon name="chevron-right" size={12} /></button>
+                <button onClick={() => showEvidence("latest")}>
+                  Review filings <Icon name="chevron-right" size={12} />
+                </button>
+                {res.tickers?.[0] ? (
+                  <button onClick={() => showEvidence("tickers")}>
+                    {res.tickers[0].symbol} · most members trading ({res.tickers[0].members}){" "}
+                    <Icon name="chevron-right" size={12} />
+                  </button>
+                ) : null}
+                <button onClick={() => showEvidence("late")}>
+                  Review late filings · all history <Icon name="chevron-right" size={12} />
+                </button>
               </div>
-              <p className="today-overview-note">Not real-time. Loaded when this view opens; grouped by disclosure date, not trade date. Verify each record using its filing link.</p>
+              <p className="today-overview-note">
+                Not real-time. Loaded when this view opens; grouped by disclosure date, not trade date. Verify each
+                record using its filing link.
+              </p>
             </section>
           ) : null}
           {!res ? (
             <p className="stage-loading">Loading this week's filings…</p>
           ) : !res.ok ? (
-            <p className="stage-loading">{res.error || "No disclosures loaded yet. The first backfill takes a few minutes."}</p>
+            <p className="stage-loading">
+              {res.error || "No disclosures loaded yet. The first backfill takes a few minutes."}
+            </p>
           ) : (
             <section className="today-evidence" ref={evidenceRef} tabIndex={-1} aria-label="Filing evidence">
               <div className="today-evidence-head">
                 <h2>Explore the evidence</h2>
                 <div className="today-evidence-tabs" role="group" aria-label="Evidence view">
-                  {([ ["latest", "Latest filings"], ["biggest", "Biggest trades"], ["tickers", "By ticker"], ["late", "Late filings"] ] as const).map(([key, label]) => (
-                    <button key={key} aria-pressed={evidence === key} onClick={() => setEvidence(key)}>{label}</button>
+                  {(
+                    [
+                      ["latest", "Latest filings"],
+                      ["biggest", "Biggest trades"],
+                      ["tickers", "By ticker"],
+                      ["late", "Late filings"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button key={key} aria-pressed={evidence === key} onClick={() => setEvidence(key)}>
+                      {label}
+                    </button>
                   ))}
                 </div>
               </div>
-              <p className="today-evidence-scope">{evidence === "late" ? "All loaded history · filing lag exceeds 45 days · newest first" : w ? `Filed ${dayLabel(w.from, refYear)} – ${dayLabel(w.to, refYear)} · ${w.days}-day window${w.fallback ? " (widened for coverage)" : ""}` : "Loaded filings"}</p>
-            <div className="today-grid">
-              <section className="today-card" hidden={evidence !== "latest"}>
-                <h3>Latest filings <small>{res.counts?.trades ?? 0} trades in {res.counts?.reports ?? 0} reports from {res.counts?.members ?? 0} members · one row per report</small></h3>
-                {!res.latest?.length ? <p className="today-empty">No filings in this feed yet.</p> : null}
-                <ol>{(res.latest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-              </section>
-              <section className="today-card" hidden={evidence !== "late"}>
-                <h3>Filed more than {LATE} days after trading <small>newest first · any trade date</small></h3>
-                <ol>{(res.late || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-                {!res.late?.length ? <p className="today-empty">No late filings on record.</p> : null}
-              </section>
-              <section className="today-card" hidden={evidence !== "biggest"}>
-                <h3>Biggest trades <small>by the low end of the disclosed range · same window</small></h3>
-                {!res.biggest?.length ? <p className="today-empty">No disclosed trade amounts in this feed yet.</p> : null}
-                <ol>{(res.biggest || []).map((t) => <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />)}</ol>
-              </section>
-              <section className="today-card" hidden={evidence !== "tickers"}>
-                <h3>Most-traded tickers <small>by members trading it · same window</small></h3>
-                {!res.tickers?.length ? <p className="today-empty">No tickers in this feed yet.</p> : null}
-                <table>
-                  <thead><tr><th>Ticker</th><th>Members</th><th>Trades</th><th>Buys</th><th>Sells</th><th>Disclosed ≥</th></tr></thead>
-                  <tbody>
-                    {(res.tickers || []).map((s) => (
-                      <tr key={s.symbol} onClick={() => s.inJoin && onFollow(`pos:${s.symbol}`)} title={s.inJoin ? `${s.asset} · every filer in this ticker` : `${s.asset} · not in the ticker join table`} style={s.inJoin ? undefined : { cursor: "default" }}>
-                        <td>{s.inJoin ? <button className="link sym" onClick={(e) => { e.stopPropagation(); onFollow(`pos:${s.symbol}`); }} aria-label={`Open positions for ${s.symbol}`}>{s.symbol}</button> : s.symbol}</td>
-                        <td>{s.members}</td>
-                        <td>{s.trades}</td>
-                        <td className="up">{s.buys}</td>
-                        <td className="down">{s.sells}</td>
-                        <td>${Math.round(s.low / 1000).toLocaleString("en-US")}k</td>
-                      </tr>
+              <p className="today-evidence-scope">
+                {evidence === "late"
+                  ? "All loaded history · filing lag exceeds 45 days · newest first"
+                  : w
+                    ? `Filed ${dayLabel(w.from, refYear)} – ${dayLabel(w.to, refYear)} · ${w.days}-day window${w.fallback ? " (widened for coverage)" : ""}`
+                    : "Loaded filings"}
+              </p>
+              <div className="today-grid">
+                <section className="today-card" hidden={evidence !== "latest"}>
+                  <h3>
+                    Latest filings{" "}
+                    <small>
+                      {res.counts?.trades ?? 0} trades in {res.counts?.reports ?? 0} reports from{" "}
+                      {res.counts?.members ?? 0} members · one row per report
+                    </small>
+                  </h3>
+                  {!res.latest?.length ? <p className="today-empty">No filings in this feed yet.</p> : null}
+                  <ol>
+                    {(res.latest || []).map((t) => (
+                      <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />
                     ))}
-                  </tbody>
-                </table>
-              </section>
-            </div>
+                  </ol>
+                </section>
+                <section className="today-card" hidden={evidence !== "late"}>
+                  <h3>
+                    Filed more than {LATE} days after trading <small>newest first · any trade date</small>
+                  </h3>
+                  <ol>
+                    {(res.late || []).map((t) => (
+                      <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />
+                    ))}
+                  </ol>
+                  {!res.late?.length ? <p className="today-empty">No late filings on record.</p> : null}
+                </section>
+                <section className="today-card" hidden={evidence !== "biggest"}>
+                  <h3>
+                    Biggest trades <small>by the low end of the disclosed range · same window</small>
+                  </h3>
+                  {!res.biggest?.length ? (
+                    <p className="today-empty">No disclosed trade amounts in this feed yet.</p>
+                  ) : null}
+                  <ol>
+                    {(res.biggest || []).map((t) => (
+                      <TradeLine key={t.id} t={t} refYear={refYear} onFollow={onFollow} />
+                    ))}
+                  </ol>
+                </section>
+                <section className="today-card" hidden={evidence !== "tickers"}>
+                  <h3>
+                    Most-traded tickers <small>by members trading it · same window</small>
+                  </h3>
+                  {!res.tickers?.length ? <p className="today-empty">No tickers in this feed yet.</p> : null}
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ticker</th>
+                        <th>Members</th>
+                        <th>Trades</th>
+                        <th>Buys</th>
+                        <th>Sells</th>
+                        <th>Disclosed ≥</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(res.tickers || []).map((s) => (
+                        <tr
+                          key={s.symbol}
+                          onClick={() => s.inJoin && onFollow(`pos:${s.symbol}`)}
+                          title={
+                            s.inJoin
+                              ? `${s.asset} · every filer in this ticker`
+                              : `${s.asset} · not in the ticker join table`
+                          }
+                          style={s.inJoin ? undefined : { cursor: "default" }}
+                        >
+                          <td>
+                            {s.inJoin ? (
+                              <button
+                                className="link sym"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onFollow(`pos:${s.symbol}`);
+                                }}
+                                aria-label={`Open positions for ${s.symbol}`}
+                              >
+                                {s.symbol}
+                              </button>
+                            ) : (
+                              s.symbol
+                            )}
+                          </td>
+                          <td>{s.members}</td>
+                          <td>{s.trades}</td>
+                          <td className="up">{s.buys}</td>
+                          <td className="down">{s.sells}</td>
+                          <td>${Math.round(s.low / 1000).toLocaleString("en-US")}k</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              </div>
             </section>
           )}
-          <div className="today-watchlist"><WatchlistCard onFollow={onFollow} /></div>
+          <div className="today-watchlist">
+            <WatchlistCard onFollow={onFollow} />
+          </div>
         </div>
       )}
     </div>

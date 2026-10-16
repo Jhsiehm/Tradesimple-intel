@@ -51,8 +51,19 @@ export function selectionKey(section: string, mode: string, selectedId: string |
 /** The context a card's Ask button attaches: its case key, watched symbol, or selection key, named by its title. */
 export function aboutContext(model: AskModel, section: string): AgentContext {
   const label = clean(model.title);
-  const key = model.caseKey && itemKind(model.caseKey) ? model.caseKey : model.askKey || (model.watch ? `ticker:${model.watch}` : "");
-  const node = key && itemKind(key) ? key : `item:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) || "card"}`;
+  const key =
+    model.caseKey && itemKind(model.caseKey)
+      ? model.caseKey
+      : model.askKey || (model.watch ? `ticker:${model.watch}` : "");
+  const node =
+    key && itemKind(key)
+      ? key
+      : `item:${
+          label
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .slice(0, 60) || "card"
+        }`;
   return { section, node, theory: null, label };
 }
 
@@ -89,14 +100,26 @@ export function itemStarters(ctx: AgentContext): string[] {
   switch (kind) {
     case "member": {
       const who = name && !MEMBER.test(name) ? name : "this member";
-      return [`How have ${possessive(who)} buys done after filing?`, "Which committees and trades overlap?", `What did ${who} file most recently?`, `Backtest ${possessive(who)} disclosed buys vs SPY`];
+      return [
+        `How have ${possessive(who)} buys done after filing?`,
+        "Which committees and trades overlap?",
+        `What did ${who} file most recently?`,
+        `Backtest ${possessive(who)} disclosed buys vs SPY`,
+      ];
     }
     case "ticker": {
       const t = symbolOf(ctx);
-      return [`Who in Congress traded ${t} in the last 90 days?`, `Insider buys in ${t} since 2025 — backtest`, `Largest federal contract actions for ${t} in the last 90 days`];
+      return [
+        `Who in Congress traded ${t} in the last 90 days?`,
+        `Insider buys in ${t} since 2025 — backtest`,
+        `Largest federal contract actions for ${t} in the last 90 days`,
+      ];
     }
     case "bill":
-      return ["Who traded related stocks around this vote?", "Which sectors does this bill touch, and who in Congress traded them?"];
+      return [
+        "Who traded related stocks around this vote?",
+        "Which sectors does this bill touch, and who in Congress traded them?",
+      ];
     case "vote":
       return ["Who traded related stocks around this vote?", "How did members who traded affected stocks vote?"];
     case "committee":
@@ -104,7 +127,10 @@ export function itemStarters(ctx: AgentContext): string[] {
     case "district":
       return [`What federal contracts and Congress trades tie to ${name || "this district"}?`];
     case "edge":
-      return [`Explain this link and its timing: ${name || "this relationship"}`, "Was anything traded around the dates on this link?"];
+      return [
+        `Explain this link and its timing: ${name || "this relationship"}`,
+        "Was anything traded around the dates on this link?",
+      ];
     case "rel":
       return [`What links ${name || "this"} to Congress trades, lobbying, and contracts?`];
     case "item":
@@ -114,20 +140,37 @@ export function itemStarters(ctx: AgentContext): string[] {
   }
 }
 
-const TODAY = ["How are the markets today?", "Backtest the last 30 days from all data sources", "Top disclosed buys vs SPY in the last 30 days"];
+const TODAY = [
+  "How are the markets today?",
+  "Backtest the last 30 days from all data sources",
+  "Top disclosed buys vs SPY in the last 30 days",
+];
 const SECTION: Record<string, string[]> = {
-  markets: ["How are the markets today?", "Which sectors moved most today?", "Top disclosed buys vs SPY in the last 30 days"],
-  congress: ["What did Congress file this week?", "Top disclosed buys vs SPY in the last 30 days", "Backtest the last 30 days from all data sources"],
-  contracts: ["Largest federal contract actions in the last 30 days", "Which contractors did members of Congress trade?"],
+  markets: [
+    "How are the markets today?",
+    "Which sectors moved most today?",
+    "Top disclosed buys vs SPY in the last 30 days",
+  ],
+  congress: [
+    "What did Congress file this week?",
+    "Top disclosed buys vs SPY in the last 30 days",
+    "Backtest the last 30 days from all data sources",
+  ],
+  contracts: [
+    "Largest federal contract actions in the last 30 days",
+    "Which contractors did members of Congress trade?",
+  ],
   news: ["How are the markets today?", "Which headlines name stocks Congress traded?"],
   map: ["Which members trade most in companies that lobby them?", "Top disclosed buys vs SPY in the last 30 days"],
-  calendar: ["Which earnings this week are in stocks Congress traded?", "How are the markets today?"]
+  calendar: ["Which earnings this week are in stocks Congress traded?", "How are the markets today?"],
 };
 
 /** Up to four example questions for the empty sheet and the greeting reply, picked from the screen. */
 export function starters(f: StarterFacts): string[] {
   const out: string[] = [];
-  const add = (list: readonly string[]) => { for (const q of list) if (q && !out.includes(q)) out.push(q); };
+  const add = (list: readonly string[]) => {
+    for (const q of list) if (q && !out.includes(q)) out.push(q);
+  };
   if (f.attached) add(itemStarters(f.ctx));
   if (f.region && f.region.toLowerCase() !== "all") add([`Tell me about the ${f.region} market today`]);
   if (f.today) add(TODAY);

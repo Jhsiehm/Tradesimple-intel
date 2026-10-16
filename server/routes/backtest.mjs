@@ -13,13 +13,22 @@ function specFromQuery(raw) {
   const s = String(raw || "").trim();
   if (!s) return undefined;
   if (s.startsWith("{")) {
-    try { return JSON.parse(s); } catch { return null; }
+    try {
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
   }
   return decodeSpec(s);
 }
 
 async function guarded(fn) {
-  if (running >= MAX_RUNNING) return reply(429, { ok: false, error: "Two backtests are already running. Try again in a few seconds.", missing: "" });
+  if (running >= MAX_RUNNING)
+    return reply(429, {
+      ok: false,
+      error: "Two backtests are already running. Try again in a few seconds.",
+      missing: "",
+    });
   running += 1;
   try {
     const out = await fn();
@@ -38,7 +47,8 @@ export const handlers = {
       raw = body.value?.spec ?? body.value;
     } else {
       raw = specFromQuery(query.str("spec"));
-      if (raw === null) return reply(400, { ok: false, error: "spec must be a JSON object or a #bt= token.", missing: "" });
+      if (raw === null)
+        return reply(400, { ok: false, error: "spec must be a JSON object or a #bt= token.", missing: "" });
       if (raw === undefined) return backtestOptions(db);
     }
     return guarded(() => runSpec(db, raw));
@@ -46,7 +56,8 @@ export const handlers = {
   /** The spec, the trades, and the daily bars one run used, so it can be re-run outside the app. */
   "backtest.replicate": async ({ db, query }) => {
     const raw = specFromQuery(query.str("spec"));
-    if (!raw && !query.str("runId")) return reply(400, { ok: false, error: "spec is required: a JSON object or a #bt= token.", missing: "" });
+    if (!raw && !query.str("runId"))
+      return reply(400, { ok: false, error: "spec is required: a JSON object or a #bt= token.", missing: "" });
     return guarded(() => replicateSpec(db, raw, { runId: query.str("runId") || null }));
   },
   /** POST starts a signal search (options in the body); GET ?id= polls one; GET alone shows the latest or idle. */
@@ -59,6 +70,9 @@ export const handlers = {
     }
     const id = query.str("id");
     if (!id) return latestSearch(db);
-    return searchView(db, id) || reply(404, { ok: false, error: "No signal search with that id. Start one with POST.", missing: "" });
-  }
+    return (
+      searchView(db, id) ||
+      reply(404, { ok: false, error: "No signal search with that id. Start one with POST.", missing: "" })
+    );
+  },
 };

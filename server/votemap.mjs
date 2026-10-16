@@ -3,7 +3,6 @@ import { ladderFromActions } from "./geo.mjs";
 import { indexedVotes, indexStatus } from "./timeline.mjs";
 import { DAY } from "./lib/time.mjs";
 
-
 const BILL_TYPES = /^(HR|HRES|HJRES|HCONRES|S|SRES|SJRES|SCONRES)(\d+)$/;
 const SOURCE = "House Clerk EVS roll call XML · Senate.gov LIS roll call XML · Congress.gov bill actions";
 
@@ -11,7 +10,9 @@ const plain = (text) => cleanText(String(text || "").replace(/<[^>]+>/g, ""));
 
 /** "H.R. 2400", "HR 2400" and "hr2400" all key to "HR2400". */
 export function billKey(label) {
-  return String(label || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return String(label || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 /** Higher is closer to final passage; procedural votes (rules, cloture, tabling, amendments) rank 0. Clearing the other chamber's version outranks first passage. */
@@ -19,8 +20,16 @@ export function passageRank(question) {
   const q = String(question || "").toLowerCase();
   if (/veto/.test(q)) return 5;
   if (/concur|agree to the (senate|house) amendment/.test(q)) return 4;
-  if (/recommit|table|cloture|amendment|previous question|adjourn|motion to proceed|point of order|waive|quorum/.test(q)) return 0;
-  if (/passage|suspend the rules and (pass|agree)|(on|agreeing to) the (joint |concurrent )?resolution|on the bill/.test(q)) return 3;
+  if (
+    /recommit|table|cloture|amendment|previous question|adjourn|motion to proceed|point of order|waive|quorum/.test(q)
+  )
+    return 0;
+  if (
+    /passage|suspend the rules and (pass|agree)|(on|agreeing to) the (joint |concurrent )?resolution|on the bill/.test(
+      q,
+    )
+  )
+    return 3;
   return 1;
 }
 
@@ -29,7 +38,12 @@ export function markFinal(rolls) {
   for (const chamber of ["house", "senate"]) {
     const best = rolls
       .filter((r) => r.chamber === chamber)
-      .sort((a, b) => passageRank(b.question) - passageRank(a.question) || String(b.date).localeCompare(String(a.date)) || b.roll - a.roll)[0];
+      .sort(
+        (a, b) =>
+          passageRank(b.question) - passageRank(a.question) ||
+          String(b.date).localeCompare(String(a.date)) ||
+          b.roll - a.roll,
+      )[0];
     if (best) best.final = true;
   }
   return rolls;
@@ -49,13 +63,15 @@ function indexRow(chamber, v) {
     result: v.result,
     yea: casts.filter((c) => c === "Y").length,
     nay: casts.filter((c) => c === "N").length,
-    final: false
+    final: false,
   };
 }
 
 /** Every recorded roll call on one bill, both chambers, newest first. */
 export async function billRolls(db, id) {
-  const m = String(id || "").toLowerCase().match(/^([a-z]+)-(\d+)-(\d+)$/);
+  const m = String(id || "")
+    .toLowerCase()
+    .match(/^([a-z]+)-(\d+)-(\d+)$/);
   if (!m) return { ok: false, error: "Unknown bill id", items: [] };
   const [, type, congress, number] = m;
   const key = billKey(type + number);
@@ -73,7 +89,9 @@ export async function billRolls(db, id) {
       if (!chamber || !rv.rollNumber) continue;
       const session = Number(rv.sessionNumber || rv.session || 1);
       const rid = `${chamber}-${rv.congress || congress}-${session}-${rv.rollNumber}`;
-      const text = plain(action.text).replace(/\s*\(Roll no\.\s*\d+\)\.?$/i, "").slice(0, 160);
+      const text = plain(action.text)
+        .replace(/\s*\(Roll no\.\s*\d+\)\.?$/i, "")
+        .slice(0, 160);
       const known = found.get(rid);
       if (known) {
         if (/^roll call$/i.test(known.question)) known.question = text;
@@ -90,18 +108,22 @@ export async function billRolls(db, id) {
         result: "",
         yea: null,
         nay: null,
-        final: false
+        final: false,
       });
     }
   }
-  const items = markFinal([...found.values()]).sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.roll - a.roll);
+  const items = markFinal([...found.values()]).sort(
+    (a, b) => String(b.date).localeCompare(String(a.date)) || b.roll - a.roll,
+  );
   const index = indexStatus();
   return {
     ok: true,
     source: SOURCE,
     asOf: index.builtAt || new Date().toISOString(),
-    latency: index.builtAt ? "Roll-call index refreshes every 6 h; today's votes come from Congress.gov actions." : "Roll-call index still building; showing Congress.gov actions only.",
-    items
+    latency: index.builtAt
+      ? "Roll-call index refreshes every 6 h; today's votes come from Congress.gov actions."
+      : "Roll-call index still building; showing Congress.gov actions only.",
+    items,
   };
 }
 
@@ -113,9 +135,18 @@ export function votedBills(limit = 25) {
       const hit = billKey(v.bill).match(BILL_TYPES);
       if (!hit) continue;
       const id = `${hit[1].toLowerCase()}-119-${hit[2]}`;
-      const row = byBill.get(id) || { id, type: hit[1], number: hit[2], votes: 0, lastVote: "", question: "", result: "" };
+      const row = byBill.get(id) || {
+        id,
+        type: hit[1],
+        number: hit[2],
+        votes: 0,
+        lastVote: "",
+        question: "",
+        result: "",
+      };
       row.votes += 1;
-      if (String(v.date) >= row.lastVote) Object.assign(row, { lastVote: v.date, question: plain(v.question), result: v.result });
+      if (String(v.date) >= row.lastVote)
+        Object.assign(row, { lastVote: v.date, question: plain(v.question), result: v.result });
       byBill.set(id, row);
     }
   }
@@ -128,7 +159,9 @@ export async function billsWithVotes(db) {
   if (!base.ok) return base;
   const voted = votedBills();
   const counts = new Map(voted.map((v) => [v.id, v]));
-  const items = base.items.map((b) => (counts.has(b.id) ? { ...b, votes: counts.get(b.id).votes, lastVote: counts.get(b.id).lastVote } : b));
+  const items = base.items.map((b) =>
+    counts.has(b.id) ? { ...b, votes: counts.get(b.id).votes, lastVote: counts.get(b.id).lastVote } : b,
+  );
   const have = new Set(items.map((b) => b.id));
   const extra = voted.filter((v) => !have.has(v.id));
   const queue = [...extra];
@@ -148,7 +181,7 @@ export async function billsWithVotes(db) {
         latest: bill.latestAction?.text || `${v.question} · ${v.result}`,
         stage: ladderFromActions(bill.latestAction ? [bill.latestAction] : []).current,
         votes: v.votes,
-        lastVote: v.lastVote
+        lastVote: v.lastVote,
       });
     }
   };

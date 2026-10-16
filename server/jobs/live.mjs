@@ -11,7 +11,10 @@ export const TICK_MS = 2000;
 export const SEC_COOL_MS = 10 * 60 * 1000;
 
 /** Off with LIVE_POLLER=off, under the test runner (INTEL_TEST=1) and with background jobs off (INTEL_NO_WARM). */
-export const pollerOn = (env = process.env) => !["off", "0", "false"].includes(String(env.LIVE_POLLER || "").toLowerCase()) && env.INTEL_TEST !== "1" && !env.INTEL_NO_WARM;
+export const pollerOn = (env = process.env) =>
+  !["off", "0", "false"].includes(String(env.LIVE_POLLER || "").toLowerCase()) &&
+  env.INTEL_TEST !== "1" &&
+  !env.INTEL_NO_WARM;
 
 /** The test hook that injects a fake event; on only with WATCH_SIMULATE=1. */
 export const simulateOn = (env = process.env) => env.WATCH_SIMULATE === "1";
@@ -19,14 +22,29 @@ export const simulateOn = (env = process.env) => env.WATCH_SIMULATE === "1";
 const iso = (ms) => (ms ? new Date(ms).toISOString() : "");
 
 const SIM = {
-  insiders: { title: "Jane Doe (CFO) · P · 1 open-market buy", detail: "12,000 sh · $1.4M · 1 line", amount: 1.4e6, buys: 1, side: "buy", lag: 2 },
-  congress: { title: "Jane Doe bought $15,001 - $50,000", who: "Jane Doe", chamber: "senate", side: "buy", amount: 15001, amountLabel: "$15,001 - $50,000", lag: 21 },
+  insiders: {
+    title: "Jane Doe (CFO) · P · 1 open-market buy",
+    detail: "12,000 sh · $1.4M · 1 line",
+    amount: 1.4e6,
+    buys: 1,
+    side: "buy",
+    lag: 2,
+  },
+  congress: {
+    title: "Jane Doe bought $15,001 - $50,000",
+    who: "Jane Doe",
+    chamber: "senate",
+    side: "buy",
+    amount: 15001,
+    amountLabel: "$15,001 - $50,000",
+    lag: 21,
+  },
   whales: { title: "Example Fund new position", change: "new", amount: 2.5e8, lag: 44 },
   filings: { title: "8-K · Material agreement", items: ["1.01"], lag: 1 },
   contracts: { title: "Department of Defense · $42.0M", amount: 4.2e7, lag: null },
   lobbying: { title: "Example Strategies LLC · $120K", amount: 1.2e5, lag: 18 },
   news: { title: "Example headline for the live pipeline test", lag: null },
-  stakes: { title: "Example Capital · 13D · 5.2% of class", activist: true, lag: 9 }
+  stakes: { title: "Example Capital · 13D · 5.2% of class", activist: true, lag: 9 },
 };
 
 /**
@@ -35,13 +53,41 @@ const SIM = {
  * is seen; events from a (symbol, check) pair that has not finished a first pass are stored as backfill and not pushed,
  * so adding a ticker or restarting the server never pops old filings. Everything is injectable.
  */
-export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bus = new EventEmitter(), log = (m) => console.log(m) }) {
+export function createLivePoller({
+  db,
+  checks = makeChecks(),
+  now = Date.now,
+  bus = new EventEmitter(),
+  log = (m) => console.log(m),
+}) {
   bus.setMaxListeners(200);
   const stored = store.loadStatus(db);
-  const state = new Map(LIVE_CHECKS.map((c) => {
-    const s = stored.get(c.id) || {};
-    return [c.id, { id: c.id, label: c.label, source: c.source, everyMs: c.everyMs, publishes: c.publishes, lastChecked: s.lastChecked || "", lastOk: s.lastOk || "", nextAt: Date.parse(s.nextAt || "") || 0, failures: s.failures || 0, lastError: s.lastError || "", ms: s.ms ?? null, note: s.note || "", off: s.off || "", running: false, symbols: s.symbols || 0, data: s.data || {} }];
-  }));
+  const state = new Map(
+    LIVE_CHECKS.map((c) => {
+      const s = stored.get(c.id) || {};
+      return [
+        c.id,
+        {
+          id: c.id,
+          label: c.label,
+          source: c.source,
+          everyMs: c.everyMs,
+          publishes: c.publishes,
+          lastChecked: s.lastChecked || "",
+          lastOk: s.lastOk || "",
+          nextAt: Date.parse(s.nextAt || "") || 0,
+          failures: s.failures || 0,
+          lastError: s.lastError || "",
+          ms: s.ms ?? null,
+          note: s.note || "",
+          off: s.off || "",
+          running: false,
+          symbols: s.symbols || 0,
+          data: s.data || {},
+        },
+      ];
+    }),
+  );
   const chains = new Map();
   const queued = new Set();
   let timer = null;
@@ -69,7 +115,11 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
     const s = state.get(id);
     const symbols = only || watched();
     if (!symbols.length) {
-      if (!only) { s.nextAt = now() + check.everyMs; s.note = "No tickers on the watchlist."; save(s); }
+      if (!only) {
+        s.nextAt = now() + check.everyMs;
+        s.note = "No tickers on the watchlist.";
+        save(s);
+      }
       return { pushed: [], errors: [] };
     }
     const primed = store.primedAt(db, id);
@@ -80,7 +130,18 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
     try {
       res = await checks[id]({ db, symbols, fresh, state: s.data || {}, backfill: Boolean(only) });
     } catch (err) {
-      res = { events: [], ok: [], errors: [{ symbol: "", message: String(err?.message || err).slice(0, 200), status: err?.status || 0, retryAfterMs: err?.retryAfterMs || 0 }] };
+      res = {
+        events: [],
+        ok: [],
+        errors: [
+          {
+            symbol: "",
+            message: String(err?.message || err).slice(0, 200),
+            status: err?.status || 0,
+            retryAfterMs: err?.retryAfterMs || 0,
+          },
+        ],
+      };
     }
     s.running = false;
     const detectedAt = now();
@@ -109,9 +170,16 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
       } else {
         s.failures = 0;
         if (!s.off) s.lastOk = iso(detectedAt);
-        s.lastError = errors.length ? `${errors.length} of ${symbols.length} unreadable · ${errors[0].symbol ? `${errors[0].symbol}: ` : ""}${errors[0].message}` : "";
+        s.lastError = errors.length
+          ? `${errors.length} of ${symbols.length} unreadable · ${errors[0].symbol ? `${errors[0].symbol}: ` : ""}${errors[0].message}`
+          : "";
       }
-      const cool = id === "sec" || id === "whales" ? (errors.some((e) => e.status === 403 || e.status === 429) ? SEC_COOL_MS : 0) : 0;
+      const cool =
+        id === "sec" || id === "whales"
+          ? errors.some((e) => e.status === 403 || e.status === 429)
+            ? SEC_COOL_MS
+            : 0
+          : 0;
       const retryAfter = Math.max(cool, ...errors.map((e) => e.retryAfterMs || 0));
       s.nextAt = detectedAt + nextDelay(check, failed ? s.failures : 0, retryAfter);
     }
@@ -126,7 +194,10 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
   function run(id, { only = null, fresh = true } = {}) {
     const prev = chains.get(id) || Promise.resolve();
     const job = prev.then(() => execute(id, only, fresh));
-    chains.set(id, job.catch(() => {}));
+    chains.set(
+      id,
+      job.catch(() => {}),
+    );
     return job;
   }
 
@@ -136,13 +207,19 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
       const s = state.get(c.id);
       if (queued.has(c.id) || t < s.nextAt) continue;
       queued.add(c.id);
-      run(c.id).catch((err) => log(`live ${c.id}: ${err.message}`)).finally(() => queued.delete(c.id));
+      run(c.id)
+        .catch((err) => log(`live ${c.id}: ${err.message}`))
+        .finally(() => queued.delete(c.id));
     }
   }
 
   /** First pass for new tickers: everything found is stored as already seen. Costly checks read caches only. */
   function backfill(symbols) {
-    return Promise.all(LIVE_CHECKS.map((c) => run(c.id, { only: symbols, fresh: c.id !== "congress" && c.id !== "whales" }).catch(() => null)));
+    return Promise.all(
+      LIVE_CHECKS.map((c) =>
+        run(c.id, { only: symbols, fresh: c.id !== "congress" && c.id !== "whales" }).catch(() => null),
+      ),
+    );
   }
 
   /** Replaces the watched list (validated against data/tickers.json); new tickers are backfilled without pushes. */
@@ -169,7 +246,7 @@ export function createLivePoller({ db, checks = makeChecks(), now = Date.now, bu
       publishedAt: iso(t - 37_000),
       late: false,
       link: "",
-      simulated: true
+      simulated: true,
     };
     const detectedAt = t;
     const seq = store.remember(db, ev, { detectedAt, backfill: false });
@@ -212,6 +289,8 @@ export function startLive(db, env = process.env) {
   const poller = livePoller(db);
   if (!pollerOn(env)) return false;
   poller.start();
-  console.log(`live poller: ${poller.watched().length} tickers · ${LIVE_CHECKS.map((c) => `${c.id} ${Math.round(c.everyMs / 1000)}s`).join(" · ")}`);
+  console.log(
+    `live poller: ${poller.watched().length} tickers · ${LIVE_CHECKS.map((c) => `${c.id} ${Math.round(c.everyMs / 1000)}s`).join(" · ")}`,
+  );
   return true;
 }

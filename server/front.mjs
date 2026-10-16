@@ -5,7 +5,20 @@
  * outside /api and /geo, and finally the API router. In development on loopback this is a pass-through.
  */
 import path from "node:path";
-import { authConfig, checkTotp, clientIp, createLimiter, formOriginOk, needsLogin, parseCookies, readSession, safeNext, sessionCookie, signSession, verifyPassword } from "./lib/auth.mjs";
+import {
+  authConfig,
+  checkTotp,
+  clientIp,
+  createLimiter,
+  formOriginOk,
+  needsLogin,
+  parseCookies,
+  readSession,
+  safeNext,
+  sessionCookie,
+  signSession,
+  verifyPassword,
+} from "./lib/auth.mjs";
 import { readBody } from "./lib/body.mjs";
 import { staticSite } from "./lib/static.mjs";
 import { PAGE_HEADERS, loginPage, logoutPage } from "./lib/loginPage.mjs";
@@ -19,10 +32,13 @@ const OPEN = new Set(["/healthz", "/api/health"]);
  */
 export function createFront({ handle, root, env = process.env, now = () => Date.now(), log = console.log }) {
   const cfg = authConfig(env);
-  if (cfg.production && cfg.problems.length) throw new Error(`Sign-in is not configured:\n  - ${cfg.problems.join("\n  - ")}`);
-  if (cfg.production && !cfg.secure) log(`intel auth: WARNING ${cfg.origin} is plain http; the password and session cookie travel unencrypted.`);
+  if (cfg.production && cfg.problems.length)
+    throw new Error(`Sign-in is not configured:\n  - ${cfg.problems.join("\n  - ")}`);
+  if (cfg.production && !cfg.secure)
+    log(`intel auth: WARNING ${cfg.origin} is plain http; the password and session cookie travel unencrypted.`);
   const limiter = createLimiter();
-  const serveStatic = cfg.production || env.INTEL_SERVE_DIST === "1" ? staticSite(path.join(root, env.INTEL_DIST || "dist")) : null;
+  const serveStatic =
+    cfg.production || env.INTEL_SERVE_DIST === "1" ? staticSite(path.join(root, env.INTEL_DIST || "dist")) : null;
   let lastTotp = -1;
 
   function session(req) {
@@ -57,7 +73,15 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
     const gate = limiter.check(ip, now());
     if (!gate.ok) {
       log(`intel auth: rate limited ${ip}`);
-      return page(res, 429, loginPage({ error: `Too many attempts. Try again in ${Math.ceil(gate.retryAfterS / 60)} min.`, totp: Boolean(cfg.totp) }), { "Retry-After": String(gate.retryAfterS) });
+      return page(
+        res,
+        429,
+        loginPage({
+          error: `Too many attempts. Try again in ${Math.ceil(gate.retryAfterS / 60)} min.`,
+          totp: Boolean(cfg.totp),
+        }),
+        { "Retry-After": String(gate.retryAfterS) },
+      );
     }
     let form;
     try {
@@ -71,7 +95,11 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
     if (!passOk || step < 0) {
       limiter.fail(ip, now());
       log(`intel auth: failed login from ${ip}`);
-      return page(res, 401, loginPage({ next, error: cfg.totp ? "Wrong password or code." : "Wrong password.", totp: Boolean(cfg.totp) }));
+      return page(
+        res,
+        401,
+        loginPage({ next, error: cfg.totp ? "Wrong password or code." : "Wrong password.", totp: Boolean(cfg.totp) }),
+      );
     }
     if (cfg.totp) lastTotp = step;
     limiter.reset(ip);
@@ -112,7 +140,8 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
         }
         if (s.exp - now() < cfg.ttlMs / 2) issue(res);
       }
-      if (serveStatic && !API.test(p) && (req.method === "GET" || req.method === "HEAD")) return await serveStatic(req, res, url);
+      if (serveStatic && !API.test(p) && (req.method === "GET" || req.method === "HEAD"))
+        return await serveStatic(req, res, url);
       return await handle(req, res);
     } catch (err) {
       if (res.headersSent) return res.destroy();

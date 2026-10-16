@@ -17,7 +17,9 @@ export async function politicianTrades(db) {
   const hit = readCache(db, KEY.ptr);
   if (hit) return hit;
   const items = [];
-  const errors = ["Senate eFD has no public bulk file in this slice. House rows are Clerk periodic-report filings, not parsed trade lines."];
+  const errors = [
+    "Senate eFD has no public bulk file in this slice. House rows are Clerk periodic-report filings, not parsed trade lines.",
+  ];
   for (const year of [2026, 2025]) {
     try {
       const text = await clerkIndex(year);
@@ -31,9 +33,10 @@ export async function politicianTrades(db) {
     ok: items.length > 0,
     source: "House Clerk financial disclosure index",
     asOf: new Date().toISOString(),
-    latency: "STOCK Act filing window is up to 45 days after the trade. These rows are the filing, not the ticker line inside the PDF.",
+    latency:
+      "STOCK Act filing window is up to 45 days after the trade. These rows are the filing, not the ticker line inside the PDF.",
     errors,
-    items: items.slice(0, 40).map(({ sort, ...row }) => row)
+    items: items.slice(0, 40).map(({ sort, ...row }) => row),
   };
   if (items.length) writeCache(db, KEY.ptr, result, TTL);
   return result;
@@ -75,14 +78,16 @@ function parseClerk(text, year) {
       disclosure: filed,
       latency: "Up to 45 days",
       link: `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${year}/${docId}.pdf`,
-      sort: parseUsDate(filed)
+      sort: parseUsDate(filed),
     });
   }
   return rows;
 }
 
 function parseUsDate(value) {
-  const [month, day, year] = String(value || "").split("/").map(Number);
+  const [month, day, year] = String(value || "")
+    .split("/")
+    .map(Number);
   if (!year) return 0;
   return Date.UTC(year, (month || 1) - 1, day || 1);
 }
@@ -96,7 +101,7 @@ export async function whaleFilings(db) {
     db,
     "13F-HR",
     "SEC EDGAR 13F-HR",
-    "Hedge-fund holdings are quarterly and filed about 45 days after quarter end. These rows are filings, not a live blotter."
+    "Hedge-fund holdings are quarterly and filed about 45 days after quarter end. These rows are filings, not a live blotter.",
   );
 }
 
@@ -108,17 +113,21 @@ export async function shortInterest(db, symbol) {
   if (hit) return hit;
   const items = [];
   for (const date of settlementDates()) {
-    const res = await fetchResponse("https://api.finra.org/data/group/otcMarket/name/consolidatedShortInterest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        compareFilters: [
-          { compareType: "EQUAL", fieldName: "symbolCode", fieldValue: sym },
-          { compareType: "EQUAL", fieldName: "settlementDate", fieldValue: date }
-        ],
-        limit: 1
-      })
-    }, 20000);
+    const res = await fetchResponse(
+      "https://api.finra.org/data/group/otcMarket/name/consolidatedShortInterest",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          compareFilters: [
+            { compareType: "EQUAL", fieldName: "symbolCode", fieldValue: sym },
+            { compareType: "EQUAL", fieldName: "settlementDate", fieldValue: date },
+          ],
+          limit: 1,
+        }),
+      },
+      20000,
+    );
     const text = await res.text();
     if (!res.ok || text.startsWith("{")) continue;
     const row = parseCsv(text)[0];
@@ -128,7 +137,7 @@ export async function shortInterest(db, symbol) {
       symbol: sym,
       date: row.settlementDate,
       shares: Number(row.currentShortPositionQuantity) || null,
-      change: row.changePercent || ""
+      change: row.changePercent || "",
     });
     if (items.length >= 4) break;
   }
@@ -139,7 +148,7 @@ export async function shortInterest(db, symbol) {
       missing: "FINRA data access",
       source: "FINRA",
       latency: "Short interest is published twice a month.",
-      items: []
+      items: [],
     };
   }
   const result = {
@@ -147,7 +156,7 @@ export async function shortInterest(db, symbol) {
     source: "FINRA consolidated short interest",
     asOf: new Date().toISOString(),
     latency: "Short interest is published twice a month, not a live tape.",
-    items
+    items,
   };
   writeCache(db, cacheKey, result, TTL);
   return result;
@@ -180,7 +189,7 @@ function splitCsv(line) {
   let cur = "";
   let quoted = false;
   for (const char of line) {
-    if (char === "\"") {
+    if (char === '"') {
       quoted = !quoted;
       continue;
     }
@@ -216,7 +225,7 @@ async function edgarList(db, form, source, latency) {
       link,
       form,
       symbol: known?.symbol || "",
-      disclosure: updated
+      disclosure: updated,
     };
   });
   items.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
@@ -225,13 +234,17 @@ async function edgarList(db, form, source, latency) {
     source,
     asOf: new Date().toISOString(),
     latency,
-    items
+    items,
   };
   writeCache(db, cacheKey, result, 30 * 60 * 1000);
   return result;
 }
 
 function tag(block, name) {
-  return new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`).exec(block)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "";
+  return (
+    new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)
+      .exec(block)?.[1]
+      ?.replace(/<!\[CDATA\[|\]\]>/g, "")
+      .trim() || ""
+  );
 }
-

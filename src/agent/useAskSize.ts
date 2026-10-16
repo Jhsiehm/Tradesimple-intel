@@ -25,7 +25,7 @@ const CURSOR: Record<Edge, string> = {
   nw: "ask-sizing-nwse",
   se: "ask-sizing-nwse",
   ne: "ask-sizing-nesw",
-  sw: "ask-sizing-nesw"
+  sw: "ask-sizing-nesw",
 };
 
 type Limits = {
@@ -50,7 +50,7 @@ export function measure(): Limits {
     minW: Math.min(PREFERRED_MIN_W, maxW),
     minH: Math.min(PREFERRED_MIN_H, maxH),
     maxW,
-    maxH
+    maxH,
   };
 }
 
@@ -67,12 +67,15 @@ export function clampBox(box: Box, m: Limits = measure()): Box {
 }
 
 function centerTop(w: number, h: number, m: Limits): Box {
-  return clampBox({
-    x: Math.round((m.vw - w) / 2),
-    y: Math.max(m.margin, Math.round(m.vh * 0.08)),
-    w,
-    h
-  }, m);
+  return clampBox(
+    {
+      x: Math.round((m.vw - w) / 2),
+      y: Math.max(m.margin, Math.round(m.vh * 0.08)),
+      w,
+      h,
+    },
+    m,
+  );
 }
 
 /**
@@ -96,7 +99,7 @@ export function snapBox(snap: Snap, m: Limits = measure()): Box {
     return centerTop(
       Math.min(m.maxW, Math.max(m.minW, Math.round(m.vw * 0.5))),
       Math.min(m.maxH, Math.max(m.minH, Math.round(m.vh * 0.5))),
-      m
+      m,
     );
   }
   return clampBox({ x: m.margin, y: m.margin, w: m.maxW, h: m.maxH }, m);
@@ -105,11 +108,7 @@ export function snapBox(snap: Snap, m: Limits = measure()): Box {
 export function defaultGeom(m: Limits = measure()): AskGeom {
   return {
     snap: null,
-    box: centerTop(
-      Math.min(680, m.maxW),
-      Math.min(820, m.maxH, Math.max(m.minH, Math.round(m.vh * 0.78))),
-      m
-    )
+    box: centerTop(Math.min(680, m.maxW), Math.min(820, m.maxH, Math.max(m.minH, Math.round(m.vh * 0.78))), m),
   };
 }
 
@@ -151,8 +150,8 @@ export function readGeom(): AskGeom {
         x: finite(row.x) ?? 0,
         y: finite(row.y) ?? 0,
         w,
-        h
-      })
+        h,
+      }),
     };
   } catch {
     return defaultGeom();
@@ -182,9 +181,9 @@ export function useAskSize() {
 
   useEffect(() => {
     const onResize = () => {
-      setGeom((cur) => (
-        cur.snap ? { snap: cur.snap, box: snapBox(cur.snap) } : { snap: null, box: clampBox(cur.box) }
-      ));
+      setGeom((cur) =>
+        cur.snap ? { snap: cur.snap, box: snapBox(cur.snap) } : { snap: null, box: clampBox(cur.box) },
+      );
     };
     window.addEventListener("resize", onResize);
     return () => {

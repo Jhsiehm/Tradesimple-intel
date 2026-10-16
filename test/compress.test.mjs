@@ -15,7 +15,16 @@ test("pickEncoding prefers brotli, then gzip, and honors q=0", () => {
 
 function fakeRes() {
   const out = { status: 0, headers: {}, body: null };
-  return { out, writeHead: (s, h) => { out.status = s; out.headers = h; }, end: (b) => { out.body = b; } };
+  return {
+    out,
+    writeHead: (s, h) => {
+      out.status = s;
+      out.headers = h;
+    },
+    end: (b) => {
+      out.body = b;
+    },
+  };
 }
 
 test("sendEncoded compresses large bodies, leaves small ones, and reuses the encoding for the same object", () => {

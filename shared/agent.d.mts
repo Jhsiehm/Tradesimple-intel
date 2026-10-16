@@ -20,6 +20,10 @@ export function greetingText(): string;
 export function rowCount(body: unknown): number;
 export function figureCount(answer: string): number;
 export function wantsBacktest(question: string): boolean;
-export function retryReason(question: string, answer: string, evidence: { id: string; tool: string; ok: boolean; rows: number }[]): string;
+export function retryReason(
+  question: string,
+  answer: string,
+  evidence: { id: string; tool: string; ok: boolean; rows: number }[],
+): string;
 export type FallbackTable = { columns: string[]; rows: string[][]; total: number };
 export function fallbackTable(body: unknown, maxRows?: number): FallbackTable | null;

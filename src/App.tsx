@@ -21,7 +21,18 @@ import { RecordList } from "./shell/RecordList";
 import { TimeBar } from "./shell/TimeBar";
 import { PanelsMenu } from "./shell/PanelsMenu";
 import { SearchBox, type SearchHit } from "./shell/SearchBox";
-import { CongressBar, ContractsBar, DistrictsBar, EarthBar, ImageryToggle, MarketsBar, NavPicture, NewsBar, StraitBar, type StraitFeed } from "./shell/MapBar";
+import {
+  CongressBar,
+  ContractsBar,
+  DistrictsBar,
+  EarthBar,
+  ImageryToggle,
+  MarketsBar,
+  NavPicture,
+  NewsBar,
+  StraitBar,
+  type StraitFeed,
+} from "./shell/MapBar";
 import { useRelations } from "./relations/useRelations";
 import { FilingOverlay } from "./congress/FilingOverlay";
 import { VoteLegend } from "./congress/VoteLegend";
@@ -66,21 +77,41 @@ const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) =
 const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
 const TodayBoard = lazy(() => import("./congress/TodayBoard").then((m) => ({ default: m.TodayBoard })));
 const ContractsBoard = lazy(() => import("./contracts/ContractsBoard").then((m) => ({ default: m.ContractsBoard })));
-const ResearchBoard = lazy(() => import("./research/ResearchBoard").then(m => ({ default: m.ResearchBoard })));
+const ResearchBoard = lazy(() => import("./research/ResearchBoard").then((m) => ({ default: m.ResearchBoard })));
 const BacktestBoard = lazy(() => import("./backtest/BacktestBoard").then((m) => ({ default: m.BacktestBoard })));
 /** The demo snapshot has no intraday bars. */
 const OPEN_SPAN: ChartSpan = DEMO ? "1y" : "5m";
 
 const TRAIL_KEY = "intel:trail:v1";
 const TODAY_SEEN = "intel:today:seen";
-const TODAY_STATUS: StatusLine = { source: "House Clerk · Senate eFD", asOf: "", latency: "Filed up to 45 days after the trade." };
-const TIMELINE_STATUS: StatusLine = { source: "House Clerk PTR PDFs / Senate eFD", asOf: "", latency: "Trade date as disclosed; filed up to 45 days later by law." };
+const TODAY_STATUS: StatusLine = {
+  source: "House Clerk · Senate eFD",
+  asOf: "",
+  latency: "Filed up to 45 days after the trade.",
+};
+const TIMELINE_STATUS: StatusLine = {
+  source: "House Clerk PTR PDFs / Senate eFD",
+  asOf: "",
+  latency: "Trade date as disclosed; filed up to 45 days later by law.",
+};
 type TodayTab = "week" | "leaders" | "bt" | "research";
 
 export function App() {
   const nav = useView();
-  const { section, chamber, mode, voteView, mapLayer, districtLayer, marketView, layer, newsView, selectedId } = nav.view;
-  const { setSection, setChamber, setMode, setVoteView, setMapLayer, setDistrictLayer, setMarketView, setLayer, setNewsView, setSelectedId } = nav;
+  const { section, chamber, mode, voteView, mapLayer, districtLayer, marketView, layer, newsView, selectedId } =
+    nav.view;
+  const {
+    setSection,
+    setChamber,
+    setMode,
+    setVoteView,
+    setMapLayer,
+    setDistrictLayer,
+    setMarketView,
+    setLayer,
+    setNewsView,
+    setSelectedId,
+  } = nav;
   const [query, setQuery] = useState("");
   const [party, setParty] = useState<PartyFilter>("all");
   const [filingId, setFilingId] = useState<string | null>(null);
@@ -108,7 +139,9 @@ export function App() {
   const [calendar, setCalendar] = useState<Meeting[]>([]);
   const [calendarNote, setCalendarNote] = useState("");
   const [dossier, setDossier] = useState<DrawerModel | null>(null);
-  const [timelineId, setTimelineId] = useState<string | null>(() => location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null);
+  const [timelineId, setTimelineId] = useState<string | null>(
+    () => location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null,
+  );
   const [stageList, setStageList] = useState<StageList | null>(null);
   const [timelineStatus, setTimelineStatus] = useState<StatusLine | null>(null);
   const reportList = useCallback((list: StageList) => setStageList(list), []);
@@ -119,26 +152,48 @@ export function App() {
     if (location.hash) return null;
     return DEMO ? "week" : "research";
   });
-  const [btSeed, setBtSeed] = useState(() => (location.hash.startsWith("#bt=") ? `token:${location.hash.slice(4)}` : ""));
+  const [btSeed, setBtSeed] = useState(() =>
+    location.hash.startsWith("#bt=") ? `token:${location.hash.slice(4)}` : "",
+  );
   const ask = useAsk();
-  useEffect(() => { ask.setHome(today === "research"); }, [today, ask.setHome]);
+  useEffect(() => {
+    ask.setHome(today === "research");
+  }, [today, ask.setHome]);
   const [askAbout, setAskAbout] = useState<AgentContext | null>(null);
   const [clock, setClock] = useState(utcNow);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [trail, setTrail] = useState<(TrailEntry & { view?: View })[]>(() => {
-    try { return JSON.parse(localStorage.getItem(TRAIL_KEY) || "[]"); } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem(TRAIL_KEY) || "[]");
+    } catch {
+      return [];
+    }
   });
   const trailRef = useRef(trail);
   trailRef.current = trail;
-  useEffect(() => { localStorage.setItem(TRAIL_KEY, JSON.stringify(trail)); }, [trail]);
-  useEffect(() => { try { localStorage.setItem(TODAY_SEEN, "1"); } catch { /* private mode */ } }, []);
+  useEffect(() => {
+    localStorage.setItem(TRAIL_KEY, JSON.stringify(trail));
+  }, [trail]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(TODAY_SEEN, "1");
+    } catch {
+      /* private mode */
+    }
+  }, []);
 
   const phone = usePhone();
   const rail = useRail();
   const cards = useCards();
   const { earth, settings: earthSettings, update: updateEarth } = useEarth();
 
-  const congress = useCongress(chamber, mode, query, section === "congress" && !today && !timelineId ? selectedId : null, party);
+  const congress = useCongress(
+    chamber,
+    mode,
+    query,
+    section === "congress" && !today && !timelineId ? selectedId : null,
+    party,
+  );
   const congressMapOn = section === "congress" && voteView === "map" && !today && !timelineId && !calendarTab;
   const filingMapOn = congressMapOn && mapLayer === "filings";
   const weekFilings = useWeekFilings(filingMapOn);
@@ -152,32 +207,73 @@ export function App() {
   const markets = useMarkets(layer, query, section === "markets" ? selectedId : null, party, section === "markets");
   const news = useNews(newsDesk, query, section === "news" ? selectedId : null, section === "news", newsRegion);
   const districts = useDistricts(query, section === "districts" ? selectedId : null, congress.roster, districtLayer);
-  const strait = useStrait(theaterId, section === "strait" ? selectedId : null, section === "strait" && straitFeed !== "weather" ? straitFeed : "ships", airMil, section === "strait" && straitFeed !== "weather");
+  const strait = useStrait(
+    theaterId,
+    section === "strait" ? selectedId : null,
+    section === "strait" && straitFeed !== "weather" ? straitFeed : "ships",
+    airMil,
+    section === "strait" && straitFeed !== "weather",
+  );
   const weatherOn = section === "strait" && straitFeed === "weather";
   const weather = useWeather(weatherOn, strait.theater, selectedId);
-  const pickWeather = (point: WeatherPoint) => { weather.setPoint(point); weather.setPicking(false); setSelectedId("weather:point"); setDossier(null); weather.setPhoneMap(false); rail.show(); };
+  const pickWeather = (point: WeatherPoint) => {
+    weather.setPoint(point);
+    weather.setPicking(false);
+    setSelectedId("weather:point");
+    setDossier(null);
+    weather.setPhoneMap(false);
+    rail.show();
+  };
   const boardOn = section === "map" && !today && !timelineId && !calendarTab;
-  const recordsOn = !today && !timelineId && !calendarTab && (section === "districts" || (section === "congress" && voteView === "map" && mapLayer !== "filings"));
+  const recordsOn =
+    !today &&
+    !timelineId &&
+    !calendarTab &&
+    (section === "districts" || (section === "congress" && voteView === "map" && mapLayer !== "filings"));
   const intelOn = recordsOn;
   const intel = useIntelScope(intelScope, intelOn);
   const board = useRelations(intelScope, section === "map" ? selectedId : null, boardOn);
 
-  const contracts = useContracts(contractScope, contractSort, contractDays, query, section === "contracts" ? selectedId : null, section === "contracts", congress.roster);
+  const contracts = useContracts(
+    contractScope,
+    contractSort,
+    contractDays,
+    query,
+    section === "contracts" ? selectedId : null,
+    section === "contracts",
+    congress.roster,
+  );
 
   const straitView = {
     ...strait,
     items: straitFeed === "air" ? strait.airItems : straitFeed === "news" ? strait.newsItems : strait.items,
-    empty: straitFeed === "air" ? strait.airEmpty : straitFeed === "news" ? (strait.newsItems.length ? "" : strait.newsEmpty) : strait.empty
+    empty:
+      straitFeed === "air"
+        ? strait.airEmpty
+        : straitFeed === "news"
+          ? strait.newsItems.length
+            ? ""
+            : strait.newsEmpty
+          : strait.empty,
   };
-  const view = { congress, markets, contracts, news, districts, strait: weatherOn ? weather : straitView, map: board }[section];
+  const view = { congress, markets, contracts, news, districts, strait: weatherOn ? weather : straitView, map: board }[
+    section
+  ];
   const items = view.items;
   const onToday = Boolean(today) && !timelineId;
   const listItems = onToday ? (stageList?.items ?? []) : items;
-  const shownDrawer = onToday || timelineId ? null : (dossier || view.drawer);
-  const selAsk = shownDrawer && !dossier && !shownDrawer.caseKey && !shownDrawer.askKey ? selectionKey(section, mode, selectedId) : null;
+  const shownDrawer = onToday || timelineId ? null : dossier || view.drawer;
+  const selAsk =
+    shownDrawer && !dossier && !shownDrawer.caseKey && !shownDrawer.askKey
+      ? selectionKey(section, mode, selectedId)
+      : null;
   const drawer = selAsk && shownDrawer ? { ...shownDrawer, askKey: selAsk } : shownDrawer;
   const ids = useMemo(() => listItems.map((item) => item.id), [listItems]);
-  const dossierScope = drawer?.watch ? `symbol:${drawer.watch}` : section === "districts" ? drawer?.links?.find((l) => l.label === "Representative")?.action || "" : "";
+  const dossierScope = drawer?.watch
+    ? `symbol:${drawer.watch}`
+    : section === "districts"
+      ? drawer?.links?.find((l) => l.label === "Representative")?.action || ""
+      : "";
   useDossierScope(dossierScope, setIntelScope);
   const recordRef = useRef((action: string) => record(action));
   recordRef.current = (action) => record(action);
@@ -189,12 +285,21 @@ export function App() {
       const board = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
       if (board === "bt" && location.hash.startsWith("#bt=")) setBtSeed(`token:${location.hash.slice(4)}`);
       if (id || board) recordRef.current(id ? `timeline:${id}` : `today:${board}`);
-      if (id) { setSection("congress"); setCalendarTab(null); }
-      if (board) { setCalendarTab(null); setToday(board); }
+      if (id) {
+        setSection("congress");
+        setCalendarTab(null);
+      }
+      if (board) {
+        setCalendarTab(null);
+        setToday(board);
+      }
       setTimelineId(id);
     };
     window.addEventListener("hashchange", onHash);
-    return () => { window.clearInterval(timer); window.removeEventListener("hashchange", onHash); };
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("hashchange", onHash);
+    };
   }, []);
 
   useEffect(() => {
@@ -291,22 +396,34 @@ export function App() {
     setMarketView("supply");
   }
 
-  const trailLabel = (action: string) => labelFor(action, (id) => congress.roster.find((m) => m.bioguide === id)?.name || id);
+  const trailLabel = (action: string) =>
+    labelFor(action, (id) => congress.roster.find((m) => m.bioguide === id)?.name || id);
 
   /** The leaving entry keeps the view as it was left, so back restores toggles changed after arriving. */
   function record(action: string, label?: string) {
     const entry = { action, label: label || trailLabel(action) };
     const left = viewOnly(nav.current.current);
-    setTrail(([head, ...t]) => [entry, ...(head ? [{ ...head, view: left }, ...t] : []).filter((e) => e.action !== action)].slice(0, 12));
+    setTrail(([head, ...t]) =>
+      [entry, ...(head ? [{ ...head, view: left }, ...t] : []).filter((e) => e.action !== action)].slice(0, 12),
+    );
   }
 
   /** Apply a navigation patch from `viewFor`: the view fields plus stage, dossier, scope, contracts, cards, rail. */
   function apply(p: ViewPatch) {
-    if (p.stage) { closeStage(); setCalendarTab(null); }
+    if (p.stage) {
+      closeStage();
+      setCalendarTab(null);
+    }
     nav.applyPatch(p);
     if (p.dossier === null) setDossier(null);
-    if (p.contracts) { setContractScope(p.contracts); if (p.contracts.kind !== "all") setContractSort("recent"); }
-    if (p.scope) { setIntelScope(scopeOf(p.scope)); if (p.scope !== "all") setScrubMin(false); }
+    if (p.contracts) {
+      setContractScope(p.contracts);
+      if (p.contracts.kind !== "all") setContractSort("recent");
+    }
+    if (p.scope) {
+      setIntelScope(scopeOf(p.scope));
+      if (p.scope !== "all") setScrubMin(false);
+    }
     if (p.dropCards) cards.dropUnpinned();
     if (p.rail) rail.show();
     if (phone) cards.collapseAll();
@@ -317,10 +434,15 @@ export function App() {
     const [kind, ...rest] = action.split(":");
     const v = rest.join(":");
     if (kind === "map") apply(viewFor("section:map", { intelOn })!);
-    else if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
-    else if (kind === "today") openToday(v === "leaders" || v === "bt" || v === "research" ? v : "week");
-    else if (kind === "alerts") { setPanelsOpen(false); setAlertsOpen(true); }
-    else routeAction(action);
+    else if (kind === "calendar") {
+      closeStage();
+      setCalendarTab("earnings");
+      void openCalendarData();
+    } else if (kind === "today") openToday(v === "leaders" || v === "bt" || v === "research" ? v : "week");
+    else if (kind === "alerts") {
+      setPanelsOpen(false);
+      setAlertsOpen(true);
+    } else routeAction(action);
   }
 
   /** Every Ask entry (nav ASK, ⌘K ASK, the search Ask row, `#ask=`, ⌘K BT, a card's Ask button) opens the one sheet. */
@@ -338,9 +460,18 @@ export function App() {
       setAskAbout(ctx);
       return openAsk(itemStarters(ctx)[0] || "", "half");
     }
-    if (action.startsWith("ask:saved:")) { openAsk(); return ask.openSaved(action.slice(10)); }
-    if (action.startsWith("ask:research:")) { openAsk(); return void openStored(action.slice(13), ask.openTurns); }
-    if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
+    if (action.startsWith("ask:saved:")) {
+      openAsk();
+      return ask.openSaved(action.slice(10));
+    }
+    if (action.startsWith("ask:research:")) {
+      openAsk();
+      return void openStored(action.slice(13), ask.openTurns);
+    }
+    if (action.startsWith("ask:q:")) {
+      openAsk();
+      return void ask.run(decodeURIComponent(action.slice(6)));
+    }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
     if (action.split(":")[0] === "ask") return openAsk();
     record(action, label);
@@ -364,29 +495,44 @@ export function App() {
   const routeAction = (action: string) => {
     const patch = viewFor(action, { intelOn: intelOn || boardOn });
     if (patch) apply(patch);
-    else route(action, {
-      roll: (id) => {
-        if (section !== "congress" || mode !== "bills") return;
-        setChamber(id.startsWith("senate") ? "senate" : "house");
-        congress.pickRoll(id);
-        setVoteView("map");
-        setMapLayer("votes");
-        setDossier(null);
-      },
-      member: (id) => openMember(id),
-      news: (id) => { setDossier(null); setSelectedId(id); },
-      meeting: (id) => { const meeting = calendar.find((m) => m.id === id); if (meeting) setDossier(meetingModel(meeting)); },
-      ticker: (symbol) => { showChart(symbol, OPEN_SPAN); setSelectedId(null); void openTickerDossier(symbol, ""); },
-      inst: (symbol) => showChart(symbol, "6mo"),
-      chart: (symbol) => {
-        showChart(symbol, "6mo", chartSymbol === symbol ? chartMarks : []);
-        loadPositions(symbol).then((res) => { if (res?.marks.length) setChartMarks(res.marks); }).catch(() => null);
-      },
-      pos: (symbol) => void cards.openPositions(symbol),
-      supply: openSupply,
-      timeline: openTimeline,
-      bt: openBacktest
-    });
+    else
+      route(action, {
+        roll: (id) => {
+          if (section !== "congress" || mode !== "bills") return;
+          setChamber(id.startsWith("senate") ? "senate" : "house");
+          congress.pickRoll(id);
+          setVoteView("map");
+          setMapLayer("votes");
+          setDossier(null);
+        },
+        member: (id) => openMember(id),
+        news: (id) => {
+          setDossier(null);
+          setSelectedId(id);
+        },
+        meeting: (id) => {
+          const meeting = calendar.find((m) => m.id === id);
+          if (meeting) setDossier(meetingModel(meeting));
+        },
+        ticker: (symbol) => {
+          showChart(symbol, OPEN_SPAN);
+          setSelectedId(null);
+          void openTickerDossier(symbol, "");
+        },
+        inst: (symbol) => showChart(symbol, "6mo"),
+        chart: (symbol) => {
+          showChart(symbol, "6mo", chartSymbol === symbol ? chartMarks : []);
+          loadPositions(symbol)
+            .then((res) => {
+              if (res?.marks.length) setChartMarks(res.marks);
+            })
+            .catch(() => null);
+        },
+        pos: (symbol) => void cards.openPositions(symbol),
+        supply: openSupply,
+        timeline: openTimeline,
+        bt: openBacktest,
+      });
   };
 
   /** `bt:member:ID`, `bt:ticker:SYM`, `bt:token:XYZ` open the board with that spec and run it; `bt:` opens the last one. */
@@ -406,20 +552,23 @@ export function App() {
 
   function closeTimeline() {
     setTimelineId(null);
-    if (location.hash.startsWith("#timeline/")) history.replaceState(null, "", today ? `#${today}` : location.pathname + location.search);
+    if (location.hash.startsWith("#timeline/"))
+      history.replaceState(null, "", today ? `#${today}` : location.pathname + location.search);
   }
 
   function closeToday() {
     setToday(null);
     setSelectedId(null);
-    if (/^#(week|leaders|bt|research)\b/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+    if (/^#(week|leaders|bt|research)\b/.test(location.hash))
+      history.replaceState(null, "", location.pathname + location.search);
   }
 
   /** Timeline and the Today board both own the center stage; navigating elsewhere closes both. */
   function closeStage() {
     setTimelineId(null);
     setToday(null);
-    if (/^#(timeline\/|week$|leaders$|bt\b|research\b)/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+    if (/^#(timeline\/|week$|leaders$|bt\b|research\b)/.test(location.hash))
+      history.replaceState(null, "", location.pathname + location.search);
   }
 
   function openToday(tab: TodayTab) {
@@ -471,7 +620,9 @@ export function App() {
     setDossier(tickerShell(symbol, name));
     const loaded = await loadDossier(symbol).catch(() => null);
     if (!loaded) {
-      setDossier((d) => (still(d) ? { ...d!, meta: "Ticker dossier did not load. Retry from search.", blocks: [] } : d));
+      setDossier((d) =>
+        still(d) ? { ...d!, meta: "Ticker dossier did not load. Retry from search.", blocks: [] } : d,
+      );
       return;
     }
     const { lobbyClient, ...model } = loaded;
@@ -500,11 +651,39 @@ export function App() {
 
   const newsGlobe = section === "news" && newsView === "globe";
   const lanesOn = section === "strait";
-  const showMap = section === "strait" || section === "districts" || section === "map" || newsGlobe || (section === "congress" && voteView === "map");
-  const look = mapLook(nav.view, { onMap: showMap && !calendarTab && !today && !timelineId, scoped: intelScope.kind !== "all", settings: earthSettings });
-  const mapSettings = newsGlobe ? { ...earthSettings, view: "globe" as const, lanes: false } : section === "strait" ? { ...earthSettings, base: earthSettings.base === "live" ? "live" as const : earthSettings.base === "dark" ? "dark" as const : "sat" as const } : look.earth;
+  const showMap =
+    section === "strait" ||
+    section === "districts" ||
+    section === "map" ||
+    newsGlobe ||
+    (section === "congress" && voteView === "map");
+  const look = mapLook(nav.view, {
+    onMap: showMap && !calendarTab && !today && !timelineId,
+    scoped: intelScope.kind !== "all",
+    settings: earthSettings,
+  });
+  const mapSettings = newsGlobe
+    ? { ...earthSettings, view: "globe" as const, lanes: false }
+    : section === "strait"
+      ? {
+          ...earthSettings,
+          base:
+            earthSettings.base === "live"
+              ? ("live" as const)
+              : earthSettings.base === "dark"
+                ? ("dark" as const)
+                : ("sat" as const),
+        }
+      : look.earth;
   const earthCredit = look.imagery ? earthCreditFor(earth, mapSettings) : "";
-  const time = useMapClock({ mapOn: look.imagery, base: mapSettings.base, newsGlobe, headlines: news.all, clock, mapTime });
+  const time = useMapClock({
+    mapOn: look.imagery,
+    base: mapSettings.base,
+    newsGlobe,
+    headlines: news.all,
+    clock,
+    mapTime,
+  });
   const outlets = regionOutlets(news.wire?.feeds, newsRegion);
   const lagWindow = useDeferredValue(intelWindow);
   const arcs = useMemo(() => {
@@ -512,32 +691,67 @@ export function App() {
     return arcView(intel.data, lagWindow || presetWindow(intel.data.len, 90), arcKinds);
   }, [intelOn, phone, intel.data, lagWindow, arcKinds]);
   const seatRoster = useMemo(
-    () => congress.roster.filter((m) => m.chamber === chamber).map((m) => ({ name: m.name, state: m.state, district: m.district, party: m.party, bioguide: m.bioguide, vote: "Seat", geoid: null })),
-    [congress.roster, chamber]
+    () =>
+      congress.roster
+        .filter((m) => m.chamber === chamber)
+        .map((m) => ({
+          name: m.name,
+          state: m.state,
+          district: m.district,
+          party: m.party,
+          bioguide: m.bioguide,
+          vote: "Seat",
+          geoid: null,
+        })),
+    [congress.roster, chamber],
   );
   const map = mapView({
     section,
     chamber,
-    strait: { theater: strait.theater, markers: strait.markers, airMarkers: strait.airMarkers, air: straitFeed === "air" },
+    strait: {
+      theater: strait.theater,
+      markers: strait.markers,
+      airMarkers: strait.airMarkers,
+      air: straitFeed === "air",
+    },
     news: { globe: newsGlobe, region: newsRegion, markers: time.globe.markers },
     districts: { geojson: districts.geojson, markers: districts.markers, selected: districts.selected },
     congress: {
       geojson: filingMapOn ? placed.geojson : congress.geojson,
       voted: filingMapOn ? false : congress.positions.length > 0,
-      markers: filingMapOn ? placed.markers : []
+      markers: filingMapOn ? placed.markers : [],
     },
   });
   const active = SECTIONS.find((item) => item.id === section)!;
   const barFor: Section | null = calendarTab || (today && !timelineId) ? null : section;
-  const focusSymbol = section === "markets" && (marketView === "chart" || marketView === "supply")
-    ? (marketView === "supply" ? supplySymbol : chartSymbol)
-    : drawer?.watch || "";
-  const foot = timelineId ? (timelineStatus || TIMELINE_STATUS) : onToday ? (stageList?.status || TODAY_STATUS) : view.status;
-  const footLabel = timelineId ? "TIMELINE" : today === "research" ? "RESEARCH" : onToday ? "TODAY" : rail.rail.open ? "LIST SOURCE" : "LIST (HIDDEN)";
-  const reset = () => { setSelectedId(null); setDossier(null); };
-  const askTheory = boardOn && selectedId?.startsWith("theory:")
-    ? board.graph.theories.find((t) => selectedId === `theory:${t.id}`) || null
-    : null;
+  const focusSymbol =
+    section === "markets" && (marketView === "chart" || marketView === "supply")
+      ? marketView === "supply"
+        ? supplySymbol
+        : chartSymbol
+      : drawer?.watch || "";
+  const foot = timelineId
+    ? timelineStatus || TIMELINE_STATUS
+    : onToday
+      ? stageList?.status || TODAY_STATUS
+      : view.status;
+  const footLabel = timelineId
+    ? "TIMELINE"
+    : today === "research"
+      ? "RESEARCH"
+      : onToday
+        ? "TODAY"
+        : rail.rail.open
+          ? "LIST SOURCE"
+          : "LIST (HIDDEN)";
+  const reset = () => {
+    setSelectedId(null);
+    setDossier(null);
+  };
+  const askTheory =
+    boardOn && selectedId?.startsWith("theory:")
+      ? board.graph.theories.find((t) => selectedId === `theory:${t.id}`) || null
+      : null;
   const screenAsk = screenContext({
     section,
     mode,
@@ -553,47 +767,140 @@ export function App() {
     watch: drawer?.watch || null,
     theory: askTheory,
     label: drawer?.title || null,
-    askKey: drawer?.askKey || null
+    askKey: drawer?.askKey || null,
   });
   const screenKey = `${screenAsk.section}|${screenAsk.node || ""}|${screenAsk.theory?.id || ""}`;
   /** A card's Ask button attaches that card until the screen selection changes. */
-  useEffect(() => { setAskAbout(null); }, [screenKey]);
+  useEffect(() => {
+    setAskAbout(null);
+  }, [screenKey]);
   const askContext = askAbout || screenAsk;
   ask.bindContext(askContext);
-  const askRegion = section === "news" && newsRegion !== "all" ? REGIONS.find((r) => r.id === newsRegion)?.label || null : null;
+  const askRegion =
+    section === "news" && newsRegion !== "all" ? REGIONS.find((r) => r.id === newsRegion)?.label || null : null;
   const askKey = `${askContext.node || ""}|${askContext.theory?.id || ""}`;
   const { setDetached } = ask;
-  useEffect(() => { setDetached(false); }, [askKey, setDetached]);
+  useEffect(() => {
+    setDetached(false);
+  }, [askKey, setDetached]);
 
   return (
-    <div data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section} className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
+    <div
+      data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section}
+      className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}
+    >
       <header className="topbar">
         <div className="brand">
           <BrandHome onHome={() => go("today:research")} />
           {DEMO ? <DemoChip /> : null}
-          {import.meta.env.VITE_HISTORY_PREVIEW === "1" ? <span className="demo-chip" title="Previously collected public data, not live. Original source timestamps are preserved. Coverage varies by feed; weather may refresh separately.">Historical preview</span> : null}
+          {import.meta.env.VITE_HISTORY_PREVIEW === "1" ? (
+            <span
+              className="demo-chip"
+              title="Previously collected public data, not live. Original source timestamps are preserved. Coverage varies by feed; weather may refresh separately."
+            >
+              Historical preview
+            </span>
+          ) : null}
         </div>
         <nav className="nav">
-          <button className="compact-find" aria-label="Search TradeSimple" aria-haspopup="dialog" onClick={() => { ask.close(); setCmdOpen(true); }}><Icon name="search" /> Find</button>
-          <button data-destination="today" aria-current={(today === "week" || today === "leaders") ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
-            <kbd>0</kbd><IconLabel icon="today" hide>Today</IconLabel>
+          <button
+            className="compact-find"
+            aria-label="Search TradeSimple"
+            aria-haspopup="dialog"
+            onClick={() => {
+              ask.close();
+              setCmdOpen(true);
+            }}
+          >
+            <Icon name="search" /> Find
+          </button>
+          <button
+            data-destination="today"
+            aria-current={today === "week" || today === "leaders" ? "page" : undefined}
+            onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)}
+            title="This week in Congress trading, and leaderboards"
+          >
+            <kbd>0</kbd>
+            <IconLabel icon="today" hide>
+              Today
+            </IconLabel>
           </button>
           {SECTIONS.map((item, index) => (
-            <button key={item.id} data-destination={item.id} aria-current={section === item.id && !today && !calendarTab ? "page" : undefined} onClick={() => go(`section:${item.id}`)} title={`${item.label} · ${item.blurb}`}>
-              <kbd>{index + 1}</kbd><IconLabel icon={item.id} hide>{item.label}</IconLabel>
+            <button
+              key={item.id}
+              data-destination={item.id}
+              aria-current={section === item.id && !today && !calendarTab ? "page" : undefined}
+              onClick={() => go(`section:${item.id}`)}
+              title={`${item.label} · ${item.blurb}`}
+            >
+              <kbd>{index + 1}</kbd>
+              <IconLabel icon={item.id} hide>
+                {item.label}
+              </IconLabel>
             </button>
           ))}
-          <button data-destination="research" aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Research home, conversations and saved evidence"><IconLabel icon="research">Research</IconLabel></button>
-          <button className="ghost" data-destination="calendar" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
+          <button
+            data-destination="research"
+            aria-current={today === "research" ? "page" : undefined}
+            onClick={() => go("today:research")}
+            title="Research home, conversations and saved evidence"
+          >
+            <IconLabel icon="research">Research</IconLabel>
+          </button>
+          <button
+            className="ghost"
+            data-destination="calendar"
+            aria-pressed={calendarTab != null}
+            aria-current={calendarTab ? "page" : undefined}
+            onClick={openCalendar}
+            title="Calendar"
+          >
+            <IconLabel icon="calendar" hide>
+              Calendar
+            </IconLabel>
+          </button>
         </nav>
         <div className="tools">
-          <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Search destinations, companies, members and saved research"><Icon name="search" /> Find <kbd>⌘K</kbd></button>
-          <button className="panels-btn" aria-expanded={ask.open} aria-haspopup="dialog" onClick={() => (ask.open ? ask.close() : openAsk())} title={`Ask · ${contextLine(askContext)}`}>Research chat</button>
+          <button
+            className="go-btn panels-btn"
+            onClick={() => {
+              ask.close();
+              setCmdOpen(true);
+            }}
+            title="Search destinations, companies, members and saved research"
+          >
+            <Icon name="search" /> Find <kbd>⌘K</kbd>
+          </button>
+          <button
+            className="panels-btn"
+            aria-expanded={ask.open}
+            aria-haspopup="dialog"
+            onClick={() => (ask.open ? ask.close() : openAsk())}
+            title={`Ask · ${contextLine(askContext)}`}
+          >
+            Research chat
+          </button>
           <SearchBox query={query} onQuery={setQuery} onHit={chooseHit} resetOn={section} />
-          <AlertsMenu open={alertsOpen} onOpen={(v) => { setAlertsOpen(v); if (v) { setPanelsOpen(false); ask.close(); } }} onFollow={follow} />
+          <AlertsMenu
+            open={alertsOpen}
+            onOpen={(v) => {
+              setAlertsOpen(v);
+              if (v) {
+                setPanelsOpen(false);
+                ask.close();
+              }
+            }}
+            onFollow={follow}
+          />
           <PanelsMenu
             open={panelsOpen}
-            onOpen={(v) => { setPanelsOpen(v); if (v) { setAlertsOpen(false); ask.close(); } }}
+            onOpen={(v) => {
+              setPanelsOpen(v);
+              if (v) {
+                setAlertsOpen(false);
+                ask.close();
+              }
+            }}
             section={section}
             focusSymbol={focusSymbol}
             fallbackSymbol={chartSymbol}
@@ -608,21 +915,46 @@ export function App() {
             pinSymbol={(s) => void cards.pinSymbol(s)}
             showChart={(s) => showChart(s, "6mo")}
           />
-          <time className="clock" dateTime={clock}>{clock.slice(11, 19)} UTC</time>
+          <time className="clock" dateTime={clock}>
+            {clock.slice(11, 19)} UTC
+          </time>
           <SignOut />
         </div>
       </header>
-      <main className="stage" style={phone ? undefined : { gridTemplateColumns: timelineId ? "minmax(0, 1fr)" : rail.columns }}>
+      <main
+        className="stage"
+        style={phone ? undefined : { gridTemplateColumns: timelineId ? "minmax(0, 1fr)" : rail.columns }}
+      >
         <div className="map-wrap">
           <div className="map-bar toggle">
-            {today && !timelineId ? <span className="bar-note">{today === "research" ? "Research · frozen experiments and versioned datasets · " : today === "bt" ? "Backtest · entries are the day after a record became public · caveats below every result · " : "Today · newest Congress trade disclosures and leaderboards · names open timelines, tickers open charts · "}<kbd>esc</kbd> closes</span> : null}
-            {calendarTab ? <span className="bar-note">Calendar · Earnings, macro, lobbying, and PAC events · rows open in the dossier · <kbd>esc</kbd> closes</span> : null}
+            {today && !timelineId ? (
+              <span className="bar-note">
+                {today === "research"
+                  ? "Research · frozen experiments and versioned datasets · "
+                  : today === "bt"
+                    ? "Backtest · entries are the day after a record became public · caveats below every result · "
+                    : "Today · newest Congress trade disclosures and leaderboards · names open timelines, tickers open charts · "}
+                <kbd>esc</kbd> closes
+              </span>
+            ) : null}
+            {calendarTab ? (
+              <span className="bar-note">
+                Calendar · Earnings, macro, lobbying, and PAC events · rows open in the dossier · <kbd>esc</kbd> closes
+              </span>
+            ) : null}
             {barFor === "congress" ? (
               <CongressBar
                 chamber={chamber}
-                onChamber={(c) => { setChamber(c); if (mode === "bills") setDossier(null); else reset(); }}
+                onChamber={(c) => {
+                  setChamber(c);
+                  if (mode === "bills") setDossier(null);
+                  else reset();
+                }}
                 mode={mode}
-                onMode={(m) => { setMode(m); reset(); }}
+                onMode={(m) => {
+                  setMode(m);
+                  reset();
+                }}
                 voteView={voteView}
                 onVoteView={setVoteView}
                 party={party}
@@ -635,34 +967,71 @@ export function App() {
                 onMapLayer={setMapLayer}
               />
             ) : null}
-            {barFor === "districts" ? <DistrictsBar layer={districtLayer} onLayer={(l) => { setDistrictLayer(l); reset(); }} /> : null}
+            {barFor === "districts" ? (
+              <DistrictsBar
+                layer={districtLayer}
+                onLayer={(l) => {
+                  setDistrictLayer(l);
+                  reset();
+                }}
+              />
+            ) : null}
             {barFor === "markets" ? (
               <MarketsBar
                 view={marketView}
-                onView={(v) => { if (v === "supply") setSupplySymbol(chartSymbol); setMarketView(v); }}
+                onView={(v) => {
+                  if (v === "supply") setSupplySymbol(chartSymbol);
+                  setMarketView(v);
+                }}
                 layer={layer}
-                onLayer={(l) => { setLayer(l); reset(); }}
+                onLayer={(l) => {
+                  setLayer(l);
+                  reset();
+                }}
                 party={party}
                 onParty={setParty}
               />
             ) : null}
             {barFor === "news" ? (
               <>
-              <NewsBar
-                view={newsView}
-                onView={(v) => { setNewsView(v); if (v === "globe") setMapTime(null); }}
-                desk={newsDesk}
-                onDesk={(d) => { setNewsDesk(d); setSelectedId(null); }}
-                region={newsRegion}
-                onRegion={(r) => { setNewsRegion(r); reset(); }}
-              />
-              <NewsControls outlets={news.outlets} selected={news.outletIds} onChange={(ids) => { news.setOutletIds(ids); setSelectedId(null); }} items={news.all} scopedCount={news.scopedCount} wire={news.wire} social={news.x} />
+                <NewsBar
+                  view={newsView}
+                  onView={(v) => {
+                    setNewsView(v);
+                    if (v === "globe") setMapTime(null);
+                  }}
+                  desk={newsDesk}
+                  onDesk={(d) => {
+                    setNewsDesk(d);
+                    setSelectedId(null);
+                  }}
+                  region={newsRegion}
+                  onRegion={(r) => {
+                    setNewsRegion(r);
+                    reset();
+                  }}
+                />
+                <NewsControls
+                  outlets={news.outlets}
+                  selected={news.outletIds}
+                  onChange={(ids) => {
+                    news.setOutletIds(ids);
+                    setSelectedId(null);
+                  }}
+                  items={news.all}
+                  scopedCount={news.scopedCount}
+                  wire={news.wire}
+                  social={news.x}
+                />
               </>
             ) : null}
             {barFor === "contracts" ? (
               <ContractsBar
                 scope={contractScope}
-                onScope={(s) => { setContractScope(s); reset(); }}
+                onScope={(s) => {
+                  setContractScope(s);
+                  reset();
+                }}
                 sort={contractSort}
                 onSort={setContractSort}
                 days={contractDays}
@@ -671,136 +1040,305 @@ export function App() {
             ) : null}
             {barFor === "strait" ? (
               <label className="theater">
-                <select value={theaterId} onChange={(e) => { setTheaterId(e.target.value); setSelectedId(null); }} aria-label="Nav region">
+                <select
+                  value={theaterId}
+                  onChange={(e) => {
+                    setTheaterId(e.target.value);
+                    setSelectedId(null);
+                  }}
+                  aria-label="Nav region"
+                >
                   {(["World", "Continents", "Regions"] as const).map((group) => (
                     <optgroup key={group} label={group}>
-                      {strait.theaters.filter((t) => t.group === group).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {strait.theaters
+                        .filter((t) => t.group === group)
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
                     </optgroup>
                   ))}
                 </select>
               </label>
             ) : null}
-            {barFor === "strait" ? <StraitBar feed={straitFeed} onFeed={(f) => { setStraitFeed(f); setSelectedId(null); }} mil={airMil} onMil={setAirMil} /> : null}
-            {barFor === "strait" && (!phone || !weatherOn || weather.phoneMap) ? <>
-              <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} imagery={false} lanes={false} />
-              <NavPicture base={mapSettings.base} onBase={(base) => { updateEarth({ base }); setMapTime(null); }} />
-              {theaterId === "antarctica" && earthSettings.view !== "globe" ? <span className="bar-note">Choose Globe for a polar view.</span> : null}
-            </> : null}
-            {weatherOn && barFor === "strait" ? <WeatherControls weather={weather} region={strait.theater.name} phone={phone} onPoint={pickWeather} onLive={() => { updateEarth({ base: "live" }); setMapTime(null); if (phone) weather.setPhoneMap(true); }} /> : null}
-            {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
-            {look.data && look.imagery && !phone ? <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} /> : null}
-            {barFor === "map" ? <span className="bar-note">Each line is the latest trade and how many days later it was filed. A hearing is within 14 days, calendar only. T draws your own.</span> : null}
-          </div>
-          <div className="map-body">
-            <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
-            {phone && !timelineId && !today && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
-              <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
-            ) : today === "research" ? (
-              <ResearchBoard ask={ask} context={askContext} onFollow={follow} onClose={closeToday} onList={reportList} />
-            ) : today === "bt" ? (
-              <BacktestBoard key={btSeed} seed={btSeed} onFollow={follow} onClose={closeToday} onList={reportList} />
-            ) : today ? (
-              <TodayBoard tab={today} onTab={(t) => go(`today:${t}`)} onFollow={follow} onClose={closeToday} onList={reportList} />
-            ) : calendarTab ? (
-              <CalendarBoard
-                tab={calendarTab}
-                onTab={setCalendarTab}
-                meetings={calendar}
-                meetingNote={calendarNote}
-                onMeeting={(item) => setDossier(meetingModel(item))}
-                onDossier={setDossier}
-                onClose={() => setCalendarTab(null)}
+            {barFor === "strait" ? (
+              <StraitBar
+                feed={straitFeed}
+                onFeed={(f) => {
+                  setStraitFeed(f);
+                  setSelectedId(null);
+                }}
+                mil={airMil}
+                onMil={setAirMil}
               />
-            ) : section === "markets" ? (
-              <MarketStage
-                view={marketView}
-                chart={{ symbol: chartSymbol, span: chartSpan, marks: chartMarks, onSpan: setChartSpan, onBack: () => setMarketView(chartFrom) }}
-                supplySymbol={supplySymbol}
-                onSupplySymbol={setSupplySymbol}
-                showChart={(s, span) => showChart(s, span)}
-                openPositions={(s) => void cards.openPositions(s)}
-                openMember={(id) => openMember(id)}
-                pinSymbol={(s) => void cards.pinSymbol(s)}
-                onDossier={setDossier}
-                onFollow={follow}
-              />
-            ) : section === "contracts" ? (
-              <ContractsBoard board={contracts.board} dod={contracts.dod} onSymbol={(s) => follow(`contracts:symbol:${s}`)} />
-            ) : section === "news" && !newsGlobe ? (
-              <NewsBoard
-                wire={news.wire}
-                x={news.x}
-                items={news.all}
-                selectedId={selectedId}
-                onSelect={(id) => { setDossier(null); setSelectedId(id); }}
-                onTicker={(symbol) => void cards.openPositions(symbol)}
-              />
-            ) : section === "congress" && voteView === "floor" ? (
-              <FloorMap
-                chamber={chamber}
-                members={congress.positions.length ? congress.positions : seatRoster}
-                party={party}
-                caption={congress.positions.length ? congress.voteCaption : "No roll call loaded · seats from the current roster"}
-                source={congress.voteSource}
-                highlight={mode === "committees" ? congress.committeeFocus : null}
-                onSelect={(seat) => (/^[A-Z]\d{6}$/.test(seat.bioguide) ? openMember(seat.bioguide, chamber) : setDossier(seatModel(seat, chamber, congress.voteCaption)))}
-              />
-            ) : section === "map" ? (
-              <RelationsMap rel={board} selectedId={selectedId} onSelect={(id) => { setDossier(null); setSelectedId(id); if (id) rail.show(); }} onFollow={follow} />
-            ) : (
+            ) : null}
+            {barFor === "strait" && (!phone || !weatherOn || weather.phoneMap) ? (
               <>
-                <MapFrame
-                  geojson={map.geojson}
-                  colorProp={map.colorProp}
-                  fill={look.fill}
-                  markers={weatherOn ? weather.markers : map.markers}
-                  earth={earth}
-                  settings={mapSettings}
-                  center={weatherOn && weather.target ? [weather.target.lon, weather.target.lat] : map.center}
-                  zoom={weatherOn && weather.target ? 6 : map.zoom}
-                  onPoint={weatherOn && weather.picking ? (lon, lat) => pickWeather({ lon: Number(lon.toFixed(2)), lat: Number(lat.toFixed(2)), label: `${lat.toFixed(2)}, ${lon.toFixed(2)}` }) : undefined}
-                  selectedId={filingMapOn ? (activeFiling?.state || null) : section === "congress" ? null : selectedId}
-                  live={time.liveLayers}
-                  dailyTiles={time.dailyLayer?.tiles}
-                  flash={newsGlobe ? time.globe.flash : null}
-                  lanes={lanesOn}
-                  arcs={look.arcs ? arcs : null}
-                  onArc={follow}
-                  onSelect={(id) => {
-                    if (filingMapOn) {
-                      const hit = placed.byState[id];
-                      if (hit) setFilingId(hit);
-                      return;
-                    }
-                    rail.show();
-                    if (weatherOn) weather.setPhoneMap(false);
-                    if (section === "congress") openSeat(id);
-                    else if (id.startsWith("place:")) setDossier(time.globe.placeModel(id));
-                    else setSelectedId(id);
+                <EarthBar
+                  settings={earthSettings}
+                  update={updateEarth}
+                  onBase={() => setMapTime(null)}
+                  imagery={false}
+                  lanes={false}
+                />
+                <NavPicture
+                  base={mapSettings.base}
+                  onBase={(base) => {
+                    updateEarth({ base });
+                    setMapTime(null);
                   }}
                 />
-                <div className="map-frame" />
-                {earthCredit && (section === "strait" || newsGlobe || look.data) ? <p className="map-cred" title={earthCredit}><em>{section === "strait" ? "NAV" : newsGlobe ? "GLOBE" : "IMAGERY"}</em>{earthCredit}</p> : null}
-                {newsGlobe ? (
-                  <p className="map-outlets">
-                    <em>{REGIONS.find((r) => r.id === newsRegion)?.label.toUpperCase()}</em>
-                    {newsRegion === "all" ? (
-                      <span>{outlets.filter((f) => f.ok).length} regional outlets live across {REGIONS.length - 1} regions · pick a region to list them</span>
-                    ) : outlets.length ? outlets.map((f) => (
-                      <span key={f.id} className={f.ok ? undefined : "stale"} title={`${f.count} items · fetched in ${f.ms} ms`}>{f.name} <b>{f.count}</b></span>
-                    )) : <span>No regional outlet for this view yet</span>}
-                  </p>
+                {theaterId === "antarctica" && earthSettings.view !== "globe" ? (
+                  <span className="bar-note">Choose Globe for a polar view.</span>
                 ) : null}
-                {time.domain ? <TimeBar domain={time.domain} value={mapTime} onChange={setMapTime} notes={time.notes} title={time.title} /> : null}
               </>
-            )}
-            </Suspense></ErrorBoundary>
-            {filingMapOn ? (
-              <FilingOverlay rows={weekFilings.rows} status={weekFilings.status} selectedId={activeFiling?.id || null} onSelect={setFilingId} onFollow={follow} />
-            ) : congressMapOn ? (
-              <VoteLegend chamber={chamber} counts={congress.mapCounts} source={congress.positions.length ? congress.voteSource : null} />
             ) : null}
-            {barFor === "districts" && districtLayer === "hq" && !phone ? <HqLegend top={districts.top} source={districts.status.source} /> : null}
+            {weatherOn && barFor === "strait" ? (
+              <WeatherControls
+                weather={weather}
+                region={strait.theater.name}
+                phone={phone}
+                onPoint={pickWeather}
+                onLive={() => {
+                  updateEarth({ base: "live" });
+                  setMapTime(null);
+                  if (phone) weather.setPhoneMap(true);
+                }}
+              />
+            ) : null}
+            {look.data && !phone ? <ImageryToggle on={look.imagery} onChange={nav.setImagery} /> : null}
+            {look.data && look.imagery && !phone ? (
+              <EarthBar settings={earthSettings} update={updateEarth} onBase={() => setMapTime(null)} lanes={lanesOn} />
+            ) : null}
+            {barFor === "map" ? (
+              <span className="bar-note">
+                Each line is the latest trade and how many days later it was filed. A hearing is within 14 days,
+                calendar only. T draws your own.
+              </span>
+            ) : null}
+          </div>
+          <div className="map-body">
+            <ErrorBoundary
+              name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"}
+              resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}
+            >
+              <Suspense fallback={<p className="stage-loading">Loading…</p>}>
+                {phone &&
+                !timelineId &&
+                !today &&
+                section !== "map" &&
+                !(weatherOn && weather.phoneMap) ? null : timelineId ? (
+                  <MemberTimeline
+                    bioguide={timelineId}
+                    onClose={closeTimeline}
+                    onFollow={follow}
+                    onStatus={reportTimeline}
+                  />
+                ) : today === "research" ? (
+                  <ResearchBoard
+                    ask={ask}
+                    context={askContext}
+                    onFollow={follow}
+                    onClose={closeToday}
+                    onList={reportList}
+                  />
+                ) : today === "bt" ? (
+                  <BacktestBoard
+                    key={btSeed}
+                    seed={btSeed}
+                    onFollow={follow}
+                    onClose={closeToday}
+                    onList={reportList}
+                  />
+                ) : today ? (
+                  <TodayBoard
+                    tab={today}
+                    onTab={(t) => go(`today:${t}`)}
+                    onFollow={follow}
+                    onClose={closeToday}
+                    onList={reportList}
+                  />
+                ) : calendarTab ? (
+                  <CalendarBoard
+                    tab={calendarTab}
+                    onTab={setCalendarTab}
+                    meetings={calendar}
+                    meetingNote={calendarNote}
+                    onMeeting={(item) => setDossier(meetingModel(item))}
+                    onDossier={setDossier}
+                    onClose={() => setCalendarTab(null)}
+                  />
+                ) : section === "markets" ? (
+                  <MarketStage
+                    view={marketView}
+                    chart={{
+                      symbol: chartSymbol,
+                      span: chartSpan,
+                      marks: chartMarks,
+                      onSpan: setChartSpan,
+                      onBack: () => setMarketView(chartFrom),
+                    }}
+                    supplySymbol={supplySymbol}
+                    onSupplySymbol={setSupplySymbol}
+                    showChart={(s, span) => showChart(s, span)}
+                    openPositions={(s) => void cards.openPositions(s)}
+                    openMember={(id) => openMember(id)}
+                    pinSymbol={(s) => void cards.pinSymbol(s)}
+                    onDossier={setDossier}
+                    onFollow={follow}
+                  />
+                ) : section === "contracts" ? (
+                  <ContractsBoard
+                    board={contracts.board}
+                    dod={contracts.dod}
+                    onSymbol={(s) => follow(`contracts:symbol:${s}`)}
+                  />
+                ) : section === "news" && !newsGlobe ? (
+                  <NewsBoard
+                    wire={news.wire}
+                    x={news.x}
+                    items={news.all}
+                    selectedId={selectedId}
+                    onSelect={(id) => {
+                      setDossier(null);
+                      setSelectedId(id);
+                    }}
+                    onTicker={(symbol) => void cards.openPositions(symbol)}
+                  />
+                ) : section === "congress" && voteView === "floor" ? (
+                  <FloorMap
+                    chamber={chamber}
+                    members={congress.positions.length ? congress.positions : seatRoster}
+                    party={party}
+                    caption={
+                      congress.positions.length
+                        ? congress.voteCaption
+                        : "No roll call loaded · seats from the current roster"
+                    }
+                    source={congress.voteSource}
+                    highlight={mode === "committees" ? congress.committeeFocus : null}
+                    onSelect={(seat) =>
+                      /^[A-Z]\d{6}$/.test(seat.bioguide)
+                        ? openMember(seat.bioguide, chamber)
+                        : setDossier(seatModel(seat, chamber, congress.voteCaption))
+                    }
+                  />
+                ) : section === "map" ? (
+                  <RelationsMap
+                    rel={board}
+                    selectedId={selectedId}
+                    onSelect={(id) => {
+                      setDossier(null);
+                      setSelectedId(id);
+                      if (id) rail.show();
+                    }}
+                    onFollow={follow}
+                  />
+                ) : (
+                  <>
+                    <MapFrame
+                      geojson={map.geojson}
+                      colorProp={map.colorProp}
+                      fill={look.fill}
+                      markers={weatherOn ? weather.markers : map.markers}
+                      earth={earth}
+                      settings={mapSettings}
+                      center={weatherOn && weather.target ? [weather.target.lon, weather.target.lat] : map.center}
+                      zoom={weatherOn && weather.target ? 6 : map.zoom}
+                      onPoint={
+                        weatherOn && weather.picking
+                          ? (lon, lat) =>
+                              pickWeather({
+                                lon: Number(lon.toFixed(2)),
+                                lat: Number(lat.toFixed(2)),
+                                label: `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
+                              })
+                          : undefined
+                      }
+                      selectedId={
+                        filingMapOn ? activeFiling?.state || null : section === "congress" ? null : selectedId
+                      }
+                      live={time.liveLayers}
+                      dailyTiles={time.dailyLayer?.tiles}
+                      flash={newsGlobe ? time.globe.flash : null}
+                      lanes={lanesOn}
+                      arcs={look.arcs ? arcs : null}
+                      onArc={follow}
+                      onSelect={(id) => {
+                        if (filingMapOn) {
+                          const hit = placed.byState[id];
+                          if (hit) setFilingId(hit);
+                          return;
+                        }
+                        rail.show();
+                        if (weatherOn) weather.setPhoneMap(false);
+                        if (section === "congress") openSeat(id);
+                        else if (id.startsWith("place:")) setDossier(time.globe.placeModel(id));
+                        else setSelectedId(id);
+                      }}
+                    />
+                    <div className="map-frame" />
+                    {earthCredit && (section === "strait" || newsGlobe || look.data) ? (
+                      <p className="map-cred" title={earthCredit}>
+                        <em>{section === "strait" ? "NAV" : newsGlobe ? "GLOBE" : "IMAGERY"}</em>
+                        {earthCredit}
+                      </p>
+                    ) : null}
+                    {newsGlobe ? (
+                      <p className="map-outlets">
+                        <em>{REGIONS.find((r) => r.id === newsRegion)?.label.toUpperCase()}</em>
+                        {newsRegion === "all" ? (
+                          <span>
+                            {outlets.filter((f) => f.ok).length} regional outlets live across {REGIONS.length - 1}{" "}
+                            regions · pick a region to list them
+                          </span>
+                        ) : outlets.length ? (
+                          outlets.map((f) => (
+                            <span
+                              key={f.id}
+                              className={f.ok ? undefined : "stale"}
+                              title={`${f.count} items · fetched in ${f.ms} ms`}
+                            >
+                              {f.name} <b>{f.count}</b>
+                            </span>
+                          ))
+                        ) : (
+                          <span>No regional outlet for this view yet</span>
+                        )}
+                      </p>
+                    ) : null}
+                    {time.domain ? (
+                      <TimeBar
+                        domain={time.domain}
+                        value={mapTime}
+                        onChange={setMapTime}
+                        notes={time.notes}
+                        title={time.title}
+                      />
+                    ) : null}
+                  </>
+                )}
+              </Suspense>
+            </ErrorBoundary>
+            {filingMapOn ? (
+              <FilingOverlay
+                rows={weekFilings.rows}
+                status={weekFilings.status}
+                selectedId={activeFiling?.id || null}
+                onSelect={setFilingId}
+                onFollow={follow}
+              />
+            ) : congressMapOn ? (
+              <VoteLegend
+                chamber={chamber}
+                counts={congress.mapCounts}
+                source={congress.positions.length ? congress.voteSource : null}
+              />
+            ) : null}
+            {barFor === "districts" && districtLayer === "hq" && !phone ? (
+              <HqLegend top={districts.top} source={districts.status.source} />
+            ) : null}
           </div>
           {intelOn ? (
             <Scrubber
@@ -823,51 +1361,104 @@ export function App() {
           ) : null}
         </div>
         {timelineId ? null : (
-        <div
-          className={rail.rail.open ? "splitter" : "splitter closed"}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize list panel"
-          title="Drag to resize · double-click to hide or show · \ key toggles"
-          onPointerDown={rail.drag}
-          onDoubleClick={rail.toggle}
-        >
-          <button className="splitter-tab" aria-label={rail.rail.open ? "Hide list panel" : "Show list panel"} onClick={rail.toggle}>{rail.rail.open ? "▸" : "◂"}</button>
-        </div>
+          <div
+            className={rail.rail.open ? "splitter" : "splitter closed"}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize list panel"
+            title="Drag to resize · double-click to hide or show · \ key toggles"
+            onPointerDown={rail.drag}
+            onDoubleClick={rail.toggle}
+          >
+            <button
+              className="splitter-tab"
+              aria-label={rail.rail.open ? "Hide list panel" : "Show list panel"}
+              onClick={rail.toggle}
+            >
+              {rail.rail.open ? "▸" : "◂"}
+            </button>
+          </div>
         )}
         {timelineId ? null : (
-        <section className={rail.rail.open || phone ? "rail" : "rail hidden"} aria-label="Records" aria-hidden={!rail.rail.open && !phone}>
-          <header className="rail-head">
-            <div>
-              <h1>{onToday ? (stageList?.title || (today === "leaders" ? "Leaderboards" : "Today")) : `${active.label}${section === "congress" ? ` · ${mode}` : section === "contracts" ? ` · ${scopeLabel(contractScope, contracts.feed)}` : ""}`}</h1>
-              <p>{onToday ? (stageList?.blurb || "Newest disclosed trades in this window.") : section === "congress" ? MODE_BLURB[mode] : section === "contracts" ? `${contractSort === "largest" ? "Largest" : "Latest"} actions · last ${contractDays} days · click a row for the award` : weatherOn ? "Forecast points and regional hazard reports · select for details" : active.blurb}</p>
+          <section
+            className={rail.rail.open || phone ? "rail" : "rail hidden"}
+            aria-label="Records"
+            aria-hidden={!rail.rail.open && !phone}
+          >
+            <header className="rail-head">
+              <div>
+                <h1>
+                  {onToday
+                    ? stageList?.title || (today === "leaders" ? "Leaderboards" : "Today")
+                    : `${active.label}${section === "congress" ? ` · ${mode}` : section === "contracts" ? ` · ${scopeLabel(contractScope, contracts.feed)}` : ""}`}
+                </h1>
+                <p>
+                  {onToday
+                    ? stageList?.blurb || "Newest disclosed trades in this window."
+                    : section === "congress"
+                      ? MODE_BLURB[mode]
+                      : section === "contracts"
+                        ? `${contractSort === "largest" ? "Largest" : "Latest"} actions · last ${contractDays} days · click a row for the award`
+                        : weatherOn
+                          ? "Forecast points and regional hazard reports · select for details"
+                          : active.blurb}
+                </p>
+              </div>
+              <span className="count">{String(listItems.length).padStart(2, "0")}</span>
+            </header>
+            <div className="rail-pane">
+              {drawer ? (
+                <Drawer
+                  model={drawer}
+                  onFollow={follow}
+                  onPin={() =>
+                    cards.openCard({
+                      title: drawer.title,
+                      model: { ...drawer, source: drawer.source || view.status.source },
+                    })
+                  }
+                  onClose={closeDossier}
+                  source={view.status.source}
+                />
+              ) : null}
+              <div className="rail-body">
+                <RecordList
+                  items={listItems}
+                  selectedId={selectedId}
+                  onSelect={selectRow}
+                  empty={onToday ? stageList?.empty || "Loading…" : view.empty || "Nothing in this list."}
+                />
+              </div>
             </div>
-            <span className="count">{String(listItems.length).padStart(2, "0")}</span>
-          </header>
-          <div className="rail-pane">
-            {drawer ? (
-              <Drawer
-                model={drawer}
-                onFollow={follow}
-                onPin={() => cards.openCard({ title: drawer.title, model: { ...drawer, source: drawer.source || view.status.source } })}
-                onClose={closeDossier}
-                source={view.status.source}
-              />
-            ) : null}
-            <div className="rail-body">
-              <RecordList items={listItems} selectedId={selectedId} onSelect={selectRow} empty={onToday ? (stageList?.empty || "Loading…") : (view.empty || "Nothing in this list.")} />
-            </div>
-          </div>
-        </section>
+          </section>
         )}
       </main>
       <footer className="status">
-        <span title={foot.source}><em>{footLabel}</em><strong>{foot.source}</strong></span>
-        <span title={foot.asOf}><em>AS OF</em>{foot.asOf || "—"}</span>
-        <span title={foot.latency}><em>NOTE</em>{foot.latency || "—"}</span>
-        <span className="keys"><kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd> search · <kbd>esc</kbd> close</span>
+        <span title={foot.source}>
+          <em>{footLabel}</em>
+          <strong>{foot.source}</strong>
+        </span>
+        <span title={foot.asOf}>
+          <em>AS OF</em>
+          {foot.asOf || "—"}
+        </span>
+        <span title={foot.latency}>
+          <em>NOTE</em>
+          {foot.latency || "—"}
+        </span>
+        <span className="keys">
+          <kbd>0</kbd> today · <kbd>1</kbd>–<kbd>{SECTIONS.length}</kbd> sections · <kbd>⌘K</kbd> go · <kbd>/</kbd>{" "}
+          search · <kbd>esc</kbd> close
+        </span>
       </footer>
-      <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} go={go} roster={congress.roster} trail={trail} chats={ask.chats} />
+      <CommandBar
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        go={go}
+        roster={congress.roster}
+        trail={trail}
+        chats={ask.chats}
+      />
       <DeferredAskSheet ask={ask} context={askContext} region={askRegion} onFollow={follow} />
       <ApiBanner />
       <WidgetLayer cards={cards.cards} onFollow={follow} onClose={cards.close} onChange={cards.change} />

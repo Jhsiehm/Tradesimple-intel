@@ -24,7 +24,10 @@ test("offline tests never load local credentials; normal startup still loads uns
     assert.equal(process.env[key], "explicit");
     assert.equal(serverEnv()[key], undefined, "test server environments pass only OS essentials");
   } finally {
-    for (const [name, value] of [["INTEL_TEST", before.test], [key, before.value]]) {
+    for (const [name, value] of [
+      ["INTEL_TEST", before.test],
+      [key, before.value],
+    ]) {
       if (value == null) delete process.env[name];
       else process.env[name] = value;
     }

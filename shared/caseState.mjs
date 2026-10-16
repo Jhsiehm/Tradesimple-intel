@@ -4,7 +4,11 @@ const MAX_KEYS = 200;
 
 /** Stable id for a dossier section: subject kind plus a slug of its title, so "PAC money" folds for every member. */
 export function sectionId(kind, title) {
-  const slug = String(title || "").toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const slug = String(title || "")
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   return `${kind || "dossier"}:${slug || "section"}`;
 }
 

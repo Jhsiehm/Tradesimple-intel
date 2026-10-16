@@ -22,7 +22,12 @@ test("norm keeps distinct companies distinct", () => {
 });
 
 test("ldaMatches accepts only exact normalized names and collapses variants", () => {
-  const names = ["AGILENT TECHNOLOGIES", "Agilent Technologies, Inc.", "AGILENT TECHNOLOGIES FOUNDATION", "Keysight (formerly Agilent)"];
+  const names = [
+    "AGILENT TECHNOLOGIES",
+    "Agilent Technologies, Inc.",
+    "AGILENT TECHNOLOGIES FOUNDATION",
+    "Keysight (formerly Agilent)",
+  ];
   assert.deepEqual(ldaMatches(names, ["AGILENT TECHNOLOGIES"]), ["AGILENT TECHNOLOGIES"]);
   assert.deepEqual(ldaMatches(["Oracle America"], ["ORACLE"]), [], "a subsidiary name is not the parent");
 });
@@ -36,13 +41,14 @@ test("districtCode pads numbered seats and refuses at-large or delegate seats", 
 });
 
 test("pacsByOrg keeps corporate PACs whose connected organization is the company", () => {
-  const row = (id, name, type, orgType, org) => [id, name, "", "", "", "", "", "", "U", type, "", "Q", orgType, org, ""].join("|");
+  const row = (id, name, type, orgType, org) =>
+    [id, name, "", "", "", "", "", "", "U", type, "", "Q", orgType, org, ""].join("|");
   const map = pacsByOrg([
     row("C00000001", "ACME CORP PAC", "Q", "C", "ACME CORPORATION"),
     row("C00000002", "ACME WORKERS UNION", "Q", "L", "ACME CORPORATION"),
     row("C00000003", "FRIENDS OF ACME", "O", "C", "ACME CORPORATION"),
     row("C00000004", "ACME INC EMPLOYEES", "N", "W", "Acme, Inc."),
-    row("C00000005", "XY PAC", "Q", "C", "XY")
+    row("C00000005", "XY PAC", "Q", "C", "XY"),
   ]);
   assert.deepEqual([...map.get("ACME")].sort(), ["C00000001", "C00000004"], "labor PACs and super PACs are excluded");
   assert.equal(map.has("XY"), false, "names under four letters are too ambiguous to join");
@@ -52,12 +58,12 @@ test("matchSeats finds the House member for a district code, never a senator", (
   const index = new Map([
     ["K000389", { name: "Khanna, Ro", state: "California", district: "17", party: "Democratic" }],
     ["S000033", { name: "Simpson, Mike", state: "Idaho", district: "2", party: "Republican" }],
-    ["P000145", { name: "Padilla, Alex", state: "California", district: "", party: "Democratic" }]
+    ["P000145", { name: "Padilla, Alex", state: "California", district: "", party: "Democratic" }],
   ]);
   assert.deepEqual(matchSeats(["CA-17", "ID-02", "CA-99", "junk"], index), [
     { code: "CA-17", members: [{ bioguide: "K000389", name: "Khanna, Ro", party: "Democratic", district: "CA-17" }] },
     { code: "ID-2", members: [{ bioguide: "S000033", name: "Simpson, Mike", party: "Republican", district: "ID-2" }] },
-    { code: "CA-99", members: [] }
+    { code: "CA-99", members: [] },
   ]);
 });
 
@@ -66,7 +72,11 @@ test("coverage separates 'filed nothing' from 'never scanned'", () => {
   const joined = { symbol: "AMD", core: true };
   assert.deepEqual(coverage(scan, "AMD", joined, "Form 4 scan"), { scanned: true, note: "" });
   assert.equal(coverage(scan, "MU", { symbol: "MU", core: true }, "Form 4 scan").scanned, false);
-  assert.equal(coverage({ items: [] }, "AMD", joined, "Form 4 scan").scanned, false, "a failed or old-format scan cannot vouch for zero");
+  assert.equal(
+    coverage({ items: [] }, "AMD", joined, "Form 4 scan").scanned,
+    false,
+    "a failed or old-format scan cannot vouch for zero",
+  );
   assert.match(coverage(scan, "A", { symbol: "A", core: false }, "Form 4 scan").note, /quotes-only/);
   assert.match(coverage(scan, "ZZZZ", undefined, "Form 4 scan").note, /not in data\/tickers\.json/);
 });

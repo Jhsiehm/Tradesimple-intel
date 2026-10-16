@@ -1,4 +1,4 @@
-import { ResearchEmblem } from '../research/ResearchEmblem';
+import { ResearchEmblem } from "../research/ResearchEmblem";
 import { stepAnchor } from "../../shared/citations.mjs";
 import { when } from "../lib/api";
 import type { Step, Turn } from "./types";
@@ -32,24 +32,48 @@ function argLine(args: unknown) {
 }
 
 function StepRow({ s, turnId }: { s: Step; turnId: string }) {
-  const icon = s.state === "running" ? <ResearchEmblem active compact /> : s.state === "ok" ? <span className="st-ok" aria-label="done">✓</span> : <span className="st-bad" aria-label="failed">×</span>;
+  const icon =
+    s.state === "running" ? (
+      <ResearchEmblem active compact />
+    ) : s.state === "ok" ? (
+      <span className="st-ok" aria-label="done">
+        ✓
+      </span>
+    ) : (
+      <span className="st-bad" aria-label="failed">
+        ×
+      </span>
+    );
   const args = argLine(s.args);
   return (
     <li id={stepAnchor(turnId, s.id)} className={`st-row ${s.state}`}>
       {icon}
       <div className="st-main">
-        <p className="st-title"><b>{s.label}</b> <span className="st-ref">{s.id}</span> <span className="st-ms">{secs(s.ms)}</span>{s.state !== "running" && s.rows ? <span className="st-rows">{s.rows} row{s.rows === 1 ? "" : "s"}</span> : null}</p>
+        <p className="st-title">
+          <b>{s.label}</b> <span className="st-ref">{s.id}</span> <span className="st-ms">{secs(s.ms)}</span>
+          {s.state !== "running" && s.rows ? (
+            <span className="st-rows">
+              {s.rows} row{s.rows === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </p>
         {args ? <p className="st-args">{args}</p> : null}
         {s.using ? <p className="st-using">{s.using}</p> : null}
         {s.diff?.length ? <p className="st-diff">Changed: {s.diff.join(" · ")}</p> : null}
         {s.state !== "running" && (s.source || s.asOf || s.latency) ? (
-          <p className="st-src">{s.source || "no source reported"}{s.asOf ? ` · as of ${when(s.asOf)}` : ""}{s.latency ? ` · ${s.latency}` : ""}</p>
+          <p className="st-src">
+            {s.source || "no source reported"}
+            {s.asOf ? ` · as of ${when(s.asOf)}` : ""}
+            {s.latency ? ` · ${s.latency}` : ""}
+          </p>
         ) : null}
         {s.state === "error" && s.note ? <p className="st-err">{s.note}</p> : null}
         {s.requests.length || s.preview ? (
           <details className="st-more">
             <summary>Request and response</summary>
-            {s.requests.map((r, i) => <code key={i}>{r}</code>)}
+            {s.requests.map((r, i) => (
+              <code key={i}>{r}</code>
+            ))}
             {s.preview ? <pre>{s.preview}</pre> : null}
           </details>
         ) : null}
@@ -69,14 +93,32 @@ export function Steps({ turn }: { turn: Turn }) {
         {live ? (
           <span className="st-phases" role="status">
             <ResearchEmblem active compact />
-            {PHASES.map((p, i) => <span key={p} className={i < at ? "past" : i === at ? "now" : ""}>{PHASE_WORD[p]}</span>)}
+            {PHASES.map((p, i) => (
+              <span key={p} className={i < at ? "past" : i === at ? "now" : ""}>
+                {PHASE_WORD[p]}
+              </span>
+            ))}
           </span>
         ) : (
-          <span>{turn.steps.length} step{turn.steps.length === 1 ? "" : "s"}{turn.done ? ` · ${secs(turn.done.ms)}` : ""}{turn.model ? ` · ${turn.model}` : ""}</span>
+          <span>
+            {turn.steps.length} step{turn.steps.length === 1 ? "" : "s"}
+            {turn.done ? ` · ${secs(turn.done.ms)}` : ""}
+            {turn.model ? ` · ${turn.model}` : ""}
+          </span>
         )}
       </summary>
-      {turn.steps.length ? <ol>{turn.steps.map((s) => <StepRow key={s.id} s={s} turnId={turn.id} />)}</ol> : null}
-      {turn.notes.map((n, i) => <p key={i} className="st-note">{n}</p>)}
+      {turn.steps.length ? (
+        <ol>
+          {turn.steps.map((s) => (
+            <StepRow key={s.id} s={s} turnId={turn.id} />
+          ))}
+        </ol>
+      ) : null}
+      {turn.notes.map((n, i) => (
+        <p key={i} className="st-note">
+          {n}
+        </p>
+      ))}
     </details>
   );
 }

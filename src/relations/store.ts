@@ -1,15 +1,34 @@
 import { EMPTY_GRAPH, MAX_EDGES, MAX_NODES, type Graph, type RelNode } from "../../shared/relations.mjs";
-import { THEORY_KEY, cleanDoc, cleanTheory, decodeShare, encodeShare, mergeDocs, parseDoc, serialize, type TheoryDoc } from "../../shared/theories.mjs";
+import {
+  THEORY_KEY,
+  cleanDoc,
+  cleanTheory,
+  decodeShare,
+  encodeShare,
+  mergeDocs,
+  parseDoc,
+  serialize,
+  type TheoryDoc,
+} from "../../shared/theories.mjs";
 
 /** Data nodes and edges on the canvas, with where you left them. Feeds are re-asked on expand, not here. */
 const CANVAS_KEY = "intel:relations:canvas:v1";
 
 function read(key: string) {
-  try { return localStorage.getItem(key); } catch { return null; }
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function write(key: string, value: string) {
-  try { localStorage.setItem(key, value); return true; } catch { return false; }
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function loadDoc(): TheoryDoc {
@@ -41,9 +60,20 @@ export function saveTheory(raw: unknown): "saved" | "invalid" | "refused" {
 /** The graph as stored: canvas data plus your notes and theories. Theory endpoints missing from the canvas come back too. */
 export function loadGraph(): Graph {
   let canvas: { nodes?: RelNode[]; edges?: Graph["edges"] } = {};
-  try { canvas = JSON.parse(read(CANVAS_KEY) || "{}"); } catch { canvas = {}; }
+  try {
+    canvas = JSON.parse(read(CANVAS_KEY) || "{}");
+  } catch {
+    canvas = {};
+  }
   const doc = loadDoc();
-  return fromDoc({ ...EMPTY_GRAPH, nodes: (canvas.nodes || []).filter((n) => n && n.id && !n.user).slice(0, MAX_NODES), edges: (canvas.edges || []).filter((e) => e && e.id).slice(0, MAX_EDGES) }, doc);
+  return fromDoc(
+    {
+      ...EMPTY_GRAPH,
+      nodes: (canvas.nodes || []).filter((n) => n && n.id && !n.user).slice(0, MAX_NODES),
+      edges: (canvas.edges || []).filter((e) => e && e.id).slice(0, MAX_EDGES),
+    },
+    doc,
+  );
 }
 
 /** Notes become user nodes; each theory endpoint not on the canvas is put back near the other end. */
@@ -60,11 +90,20 @@ export function fromDoc(graph: Graph, doc: TheoryDoc): Graph {
     nodes.set(note.id, { ...note, user: true, x: was?.x ?? spot().x, y: was?.y ?? spot().y, pinned: true });
   }
   for (const t of doc.theories) {
-    for (const [end, other] of [[t.a, t.b], [t.b, t.a]] as const) {
+    for (const [end, other] of [
+      [t.a, t.b],
+      [t.b, t.a],
+    ] as const) {
       if (nodes.has(end.id)) continue;
       const near = nodes.get(other.id);
       const p = spot();
-      nodes.set(end.id, { id: end.id, type: (end.type as RelNode["type"]) || "note", label: end.label, x: (near?.x ?? 0) + p.x * 0.6, y: (near?.y ?? 0) + p.y * 0.6 });
+      nodes.set(end.id, {
+        id: end.id,
+        type: (end.type as RelNode["type"]) || "note",
+        label: end.label,
+        x: (near?.x ?? 0) + p.x * 0.6,
+        y: (near?.y ?? 0) + p.y * 0.6,
+      });
     }
   }
   return { ...graph, nodes: [...nodes.values()], theories: doc.theories };
@@ -73,7 +112,16 @@ export function fromDoc(graph: Graph, doc: TheoryDoc): Graph {
 export function docOf(graph: Graph): TheoryDoc {
   return cleanDoc({
     theories: graph.theories,
-    notes: graph.nodes.filter((n) => n.user).map((n) => ({ id: n.id, type: "note", label: n.label, note: n.note || "", kind: n.kind || "other", created: "" }))
+    notes: graph.nodes
+      .filter((n) => n.user)
+      .map((n) => ({
+        id: n.id,
+        type: "note",
+        label: n.label,
+        note: n.note || "",
+        kind: n.kind || "other",
+        created: "",
+      })),
   });
 }
 

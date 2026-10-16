@@ -32,7 +32,7 @@ const ALIASES = {
   MSFT: ["MICROSOFT"],
   DELL: ["DELL FEDERAL SYSTEMS"],
   HPE: ["HEWLETT PACKARD ENTERPRISE"],
-  GE: ["GENERAL ELECTRIC", "GE AEROSPACE"]
+  GE: ["GENERAL ELECTRIC", "GE AEROSPACE"],
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,7 +42,7 @@ async function recipients(keyword) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keyword, award_type: "contracts", limit: 50, page: 1, order: "desc", sort: "amount" }),
-      signal: AbortSignal.timeout(45000)
+      signal: AbortSignal.timeout(45000),
     }).catch(() => null);
     if (res?.ok) return (await res.json()).results || [];
     if (res && res.status !== 429 && res.status < 500) return [];
@@ -53,9 +53,11 @@ async function recipients(keyword) {
 
 async function pool(list, size, fn) {
   let next = 0;
-  await Promise.all(Array.from({ length: size }, async () => {
-    while (next < list.length) await fn(list[next++]);
-  }));
+  await Promise.all(
+    Array.from({ length: size }, async () => {
+      while (next < list.length) await fn(list[next++]);
+    }),
+  );
 }
 
 const rows = JSON.parse(fs.readFileSync(FILE, "utf8"));
@@ -83,10 +85,12 @@ await pool(targets, 4, async (row) => {
     ...(row.joinBasis || {}),
     contracts: parents.length
       ? `USAspending parent recipients named ${[...new Set(parents.map((p) => p.token))].join(" / ")} plus legal-form or division words; derived ${today}${alias.length ? "; includes curated subsidiary aliases" : ""}`
-      : `No USAspending parent recipient matched ${tokens.join(" / ")}; checked ${today}`
+      : `No USAspending parent recipient matched ${tokens.join(" / ")}; checked ${today}`,
   };
   if (parents.length) console.log(`${row.symbol.padEnd(6)} ${parents.map((p) => p.name).join(" | ")}`);
 });
 
 fs.writeFileSync(FILE, `${JSON.stringify(rows, null, 2)}\n`);
-console.log(`${targets.filter((r) => r.contractParents?.length).length} of ${targets.length} rows joined to contract parents${failed ? ` · ${failed} lookups failed (rerun with --only)` : ""}`);
+console.log(
+  `${targets.filter((r) => r.contractParents?.length).length} of ${targets.length} rows joined to contract parents${failed ? ` · ${failed} lookups failed (rerun with --only)` : ""}`,
+);

@@ -65,17 +65,46 @@ test("severity: stale trades drop one level, old two; other kinds keep theirs", 
 });
 
 test("a Congress buy traded 38 days ago ranks below an insider buy from yesterday", () => {
-  const congress = ageAlert({ id: "trade:1", kind: "symbol-trade", date: "2026-10-09", eventAt: "2026-09-01", filedAt: "2026-10-09", severity: "elevated" }, NOW);
-  const insider = ageAlert({ id: "f4:X:1", kind: "form4", date: "2026-10-09", eventAt: "2026-10-08", filedAt: "2026-10-09T13:05:00Z", severity: "elevated" }, NOW);
+  const congress = ageAlert(
+    {
+      id: "trade:1",
+      kind: "symbol-trade",
+      date: "2026-10-09",
+      eventAt: "2026-09-01",
+      filedAt: "2026-10-09",
+      severity: "elevated",
+    },
+    NOW,
+  );
+  const insider = ageAlert(
+    {
+      id: "f4:X:1",
+      kind: "form4",
+      date: "2026-10-09",
+      eventAt: "2026-10-08",
+      filedAt: "2026-10-09T13:05:00Z",
+      severity: "elevated",
+    },
+    NOW,
+  );
   assert.equal(congress.severity, "routine");
   assert.equal(congress.baseSeverity, "elevated");
   assert.equal(insider.severity, "elevated");
   assert.equal(insider.baseSeverity, undefined);
-  assert.deepEqual(triageAlerts([congress, insider]).map((a) => a.id), ["f4:X:1", "trade:1"]);
+  assert.deepEqual(
+    triageAlerts([congress, insider]).map((a) => a.id),
+    ["f4:X:1", "trade:1"],
+  );
 });
 
 test("ageAlert reads live times, and ageing twice does not downgrade twice", () => {
-  const row = { id: "f4:A:1", kind: "form4", date: "2026-10-09", severity: "high", live: { eventAt: "2026-09-20", publishedAt: "2026-10-09T13:00:00Z" } };
+  const row = {
+    id: "f4:A:1",
+    kind: "form4",
+    date: "2026-10-09",
+    severity: "high",
+    live: { eventAt: "2026-09-20", publishedAt: "2026-10-09T13:00:00Z" },
+  };
   const once = ageAlert(row, NOW);
   assert.equal(once.age.eventDays, 19);
   assert.equal(once.age.filedAt, "2026-10-09T13:00:00Z");

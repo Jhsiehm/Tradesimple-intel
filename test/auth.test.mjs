@@ -1,8 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  authConfig, base32Decode, base32Encode, checkTotp, clientIp, createLimiter, formOriginOk, hashPassword, isLocal,
-  needsLogin, parseCookies, parseHash, readSession, safeNext, sessionCookie, signSession, totpAt, verifyPassword
+  authConfig,
+  base32Decode,
+  base32Encode,
+  checkTotp,
+  clientIp,
+  createLimiter,
+  formOriginOk,
+  hashPassword,
+  isLocal,
+  needsLogin,
+  parseCookies,
+  parseHash,
+  readSession,
+  safeNext,
+  sessionCookie,
+  signSession,
+  totpAt,
+  verifyPassword,
 } from "../server/lib/auth.mjs";
 import { allowedOrigins, crossSiteRefusal } from "../server/lib/guard.mjs";
 
@@ -39,7 +55,10 @@ test("cookie header parsing and Set-Cookie attributes", () => {
   assert.deepEqual(parseCookies("a=1; intel_session=x.y; b"), { a: "1", intel_session: "x.y" });
   const https = authConfig({ PUBLIC_ORIGIN: "https://intel.example.com/", INTEL_SESSION_SECRET: SECRET });
   assert.equal(https.cookie, "__Host-intel_session");
-  assert.equal(sessionCookie(https, "v", 60), "__Host-intel_session=v; Path=/; HttpOnly; SameSite=Lax; Max-Age=60; Secure");
+  assert.equal(
+    sessionCookie(https, "v", 60),
+    "__Host-intel_session=v; Path=/; HttpOnly; SameSite=Lax; Max-Age=60; Secure",
+  );
   const http = authConfig({ PUBLIC_ORIGIN: "http://127.0.0.1:8815" });
   assert.equal(sessionCookie(http, "v", 0), "intel_session=v; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
 });
@@ -102,20 +121,43 @@ test("config lists every problem; production needs hash, secret and PUBLIC_ORIGI
   const hash = await hashPassword("pw-for-config", { N: 1024 });
   const prod = authConfig({ NODE_ENV: "production" });
   assert.equal(prod.problems.length, 3);
-  const ok = authConfig({ NODE_ENV: "production", INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: SECRET, PUBLIC_ORIGIN: "https://x.example" });
+  const ok = authConfig({
+    NODE_ENV: "production",
+    INTEL_PASSWORD_HASH: hash,
+    INTEL_SESSION_SECRET: SECRET,
+    PUBLIC_ORIGIN: "https://x.example",
+  });
   assert.deepEqual(ok.problems, []);
   assert.equal(ok.configured, true);
   assert.equal(ok.ttlMs, 30 * 86_400_000);
   assert.match(authConfig({ INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: "short" }).problems[0], /SESSION_SECRET/);
-  assert.match(authConfig({ INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: SECRET, INTEL_TOTP_SECRET: "abc" }).problems[0], /TOTP/);
-  assert.equal(authConfig({ INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: SECRET }).configured, true, "dev with keys");
+  assert.match(
+    authConfig({ INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: SECRET, INTEL_TOTP_SECRET: "abc" }).problems[0],
+    /TOTP/,
+  );
+  assert.equal(
+    authConfig({ INTEL_PASSWORD_HASH: hash, INTEL_SESSION_SECRET: SECRET }).configured,
+    true,
+    "dev with keys",
+  );
 });
 
 test("the hosted origin may POST to the API; the demo (PUBLIC_URL) still may not", () => {
-  const origins = allowedOrigins({ PUBLIC_ORIGIN: "https://intel.example.com/", PUBLIC_URL: "https://user.github.io/intel/" });
+  const origins = allowedOrigins({
+    PUBLIC_ORIGIN: "https://intel.example.com/",
+    PUBLIC_URL: "https://user.github.io/intel/",
+  });
   assert.ok(origins.has("https://intel.example.com"));
   assert.ok(!origins.has("https://user.github.io"));
-  const post = { method: "POST", headers: { origin: "https://intel.example.com", "content-type": "application/json", "x-forwarded-for": "203.0.113.7" }, socket: { remoteAddress: "127.0.0.1" } };
+  const post = {
+    method: "POST",
+    headers: {
+      origin: "https://intel.example.com",
+      "content-type": "application/json",
+      "x-forwarded-for": "203.0.113.7",
+    },
+    socket: { remoteAddress: "127.0.0.1" },
+  };
   assert.equal(crossSiteRefusal(post, origins), null);
 });
 
@@ -128,5 +170,6 @@ test("form origin and next-path checks", () => {
   assert.ok(formOriginOk({ headers: { origin: "http://127.0.0.1:8815", host: "127.0.0.1:8815" } }, authConfig({})));
   assert.equal(safeNext("/#backtest"), "/#backtest");
   assert.equal(safeNext("/x?y=1"), "/x?y=1");
-  for (const bad of ["//evil.example", "/\\evil", "https://evil.example", "javascript:alert(1)", "", "/login", "/ x"]) assert.equal(safeNext(bad), "/", bad);
+  for (const bad of ["//evil.example", "/\\evil", "https://evil.example", "javascript:alert(1)", "", "/login", "/ x"])
+    assert.equal(safeNext(bad), "/", bad);
 });

@@ -12,7 +12,8 @@ const idsOf = (group) => group.split(/\s*,\s*/);
 /** Refs a text uses, first appearance order, no repeats. */
 export function refsIn(text) {
   const out = [];
-  for (const m of String(text || "").matchAll(refRe())) for (const id of idsOf(m[1])) if (!out.includes(id)) out.push(id);
+  for (const m of String(text || "").matchAll(refRe()))
+    for (const id of idsOf(m[1])) if (!out.includes(id)) out.push(id);
   return out;
 }
 
@@ -49,7 +50,7 @@ export function chipTitle(step) {
     s.label || s.tool || "tool",
     s.source || "no source reported",
     s.asOf ? `as of ${s.asOf}` : "as-of time not reported",
-    s.latency || "latency not reported"
+    s.latency || "latency not reported",
   ];
   if (s.state === "running") parts.push("still running");
   if (s.state === "error") parts.push(`failed${s.note ? `: ${s.note}` : ""}`);
@@ -107,7 +108,8 @@ export function citationCheck(answer, evidence) {
   const miscited = [];
   const uncitedRows = [];
   const flag = (raw, refs, foundIn) => {
-    if (foundIn.length && !miscited.some((m) => m.raw === raw && m.cited.join() === refs.join())) miscited.push({ raw, cited: refs, foundIn });
+    if (foundIn.length && !miscited.some((m) => m.raw === raw && m.cited.join() === refs.join()))
+      miscited.push({ raw, cited: refs, foundIn });
   };
   for (const unit of citationUnits(answer)) {
     const figures = numbersIn(unit.text).filter((n) => !grounded(n, []));
@@ -121,12 +123,20 @@ export function citationCheck(answer, evidence) {
     const pool = cited.flatMap((id) => nums.get(id));
     for (const n of figures) {
       if (grounded(n, pool)) continue;
-      flag(n.raw, refs, ok.filter((e) => !refs.includes(e.id) && grounded(n, nums.get(e.id))).map((e) => e.id));
+      flag(
+        n.raw,
+        refs,
+        ok.filter((e) => !refs.includes(e.id) && grounded(n, nums.get(e.id))).map((e) => e.id),
+      );
     }
     if (unit.kind !== "row") continue;
     for (const [sym] of unit.text.replace(new RegExp(REF_SOURCE, "g"), " ").matchAll(SYMBOL_IN_TEXT)) {
       if (cited.some((id) => syms.get(id).has(sym))) continue;
-      flag(sym, refs, ok.filter((e) => !refs.includes(e.id) && syms.get(e.id).has(sym)).map((e) => e.id));
+      flag(
+        sym,
+        refs,
+        ok.filter((e) => !refs.includes(e.id) && syms.get(e.id).has(sym)).map((e) => e.id),
+      );
     }
   }
   return { miscited: miscited.slice(0, 12), uncitedRows: uncitedRows.slice(0, 8) };

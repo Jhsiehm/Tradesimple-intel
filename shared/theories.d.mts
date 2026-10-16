@@ -1,6 +1,13 @@
 import type { Theory } from "./relations.mjs";
 
-export type Note = { id: string; type: "note"; label: string; note: string; kind: "person" | "event" | "company" | "other"; created: string };
+export type Note = {
+  id: string;
+  type: "note";
+  label: string;
+  note: string;
+  kind: "person" | "event" | "company" | "other";
+  created: string;
+};
 export type TheoryDoc = { v: number; theories: Theory[]; notes: Note[] };
 
 export const THEORY_KEY: string;

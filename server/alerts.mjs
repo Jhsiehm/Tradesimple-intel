@@ -14,7 +14,15 @@ export const LATE_DAYS = 45;
  * public could first see the record: filed date for disclosures, posted date for LDA. Each row carries a
  * triage `severity`, the member and ticker a pin can add to the watchlist, and its `source`.
  */
-export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols = [], members = [], since = "", allLate = false }) {
+export function buildAlerts({
+  trades = [],
+  insiders = [],
+  lobbying = [],
+  symbols = [],
+  members = [],
+  since = "",
+  allLate = false,
+}) {
   const syms = new Set(symbols.map((s) => s.toUpperCase()));
   const ids = new Set(members);
   const after = (d) => !since || String(d || "") >= since;
@@ -22,7 +30,7 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
   const tradeSource = (t) => (t.chamber === "senate" ? "Senate eFD PTR" : "House Clerk PTR");
   const tradePins = (t) => [
     ...(t.bioguide ? [{ kind: "member", id: t.bioguide, label: t.person, chamber: t.chamber }] : []),
-    ...(t.symbol ? [{ kind: "symbol", id: t.symbol, label: t.symbol }] : [])
+    ...(t.symbol ? [{ kind: "symbol", id: t.symbol, label: t.symbol }] : []),
   ];
 
   for (const t of trades) {
@@ -45,7 +53,7 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
         late,
         severity: alertSeverity({ kind, late, lag: t.lag, amountLow: t.amountLow, buy: t.side === "buy" }),
         source: tradeSource(t),
-        pins: tradePins(t)
+        pins: tradePins(t),
       });
     } else if (late && allLate) {
       out.push({
@@ -61,7 +69,7 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
         late: true,
         severity: alertSeverity({ kind: "late-filing", late: true, lag: t.lag, amountLow: t.amountLow }),
         source: tradeSource(t),
-        pins: tradePins(t)
+        pins: tradePins(t),
       });
     }
   }
@@ -82,7 +90,7 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
       severity: alertSeverity({ kind: "form4", value: g.openValue, planned: g.planned, buy: g.buys > 0 }),
       source: "SEC EDGAR Form 4",
       pins: [{ kind: "symbol", id: g.symbol, label: g.symbol }],
-      form4: { lines: g.lines, buys: g.buys, sells: g.sells, other: g.other, value: g.value, planned: g.planned }
+      form4: { lines: g.lines, buys: g.buys, sells: g.sells, other: g.other, value: g.value, planned: g.planned },
     });
   }
 
@@ -99,7 +107,7 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
       late: false,
       severity: alertSeverity({ kind: "lobbying", amount: l.amount }),
       source: "LDA.gov",
-      pins: [{ kind: "symbol", id: l.symbol, label: l.symbol }]
+      pins: [{ kind: "symbol", id: l.symbol, label: l.symbol }],
     });
   }
 
@@ -107,7 +115,14 @@ export function buildAlerts({ trades = [], insiders = [], lobbying = [], symbols
   return out;
 }
 
-const usd = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`);
+const usd = (v) =>
+  v >= 1e9
+    ? `$${(v / 1e9).toFixed(1)}B`
+    : v >= 1e6
+      ? `$${(v / 1e6).toFixed(1)}M`
+      : v >= 1e3
+        ? `$${Math.round(v / 1e3)}K`
+        : `$${Math.round(v)}`;
 
 /**
  * One group per Form 4 filing (accession) from per-line insider rows. `value` sums every priced line;
@@ -121,7 +136,23 @@ export function groupForm4(rows) {
     const key = `${f.symbol}:${accession}`;
     let g = groups.get(key);
     if (!g) {
-      g = { symbol: f.symbol, accession, person: f.person, title: f.title, filed: f.filed, link: f.link, from: f.traded, to: f.traded, lines: 0, buys: 0, sells: 0, other: 0, value: 0, openValue: 0, plannedSells: 0 };
+      g = {
+        symbol: f.symbol,
+        accession,
+        person: f.person,
+        title: f.title,
+        filed: f.filed,
+        link: f.link,
+        from: f.traded,
+        to: f.traded,
+        lines: 0,
+        buys: 0,
+        sells: 0,
+        other: 0,
+        value: 0,
+        openValue: 0,
+        plannedSells: 0,
+      };
       groups.set(key, g);
     }
     const value = f.value ?? (f.shares || 0) * (f.price || 0);
@@ -135,7 +166,12 @@ export function groupForm4(rows) {
     if (f.traded && (!g.from || f.traded < g.from)) g.from = f.traded;
     if (f.traded && (!g.to || f.traded > g.to)) g.to = f.traded;
   }
-  return [...groups.values()].map(({ plannedSells, ...g }) => ({ ...g, value: Math.round(g.value), openValue: Math.round(g.openValue), planned: g.sells > 0 && plannedSells === g.sells && g.buys === 0 }));
+  return [...groups.values()].map(({ plannedSells, ...g }) => ({
+    ...g,
+    value: Math.round(g.value),
+    openValue: Math.round(g.openValue),
+    planned: g.sells > 0 && plannedSells === g.sells && g.buys === 0,
+  }));
 }
 
 /** Keeps watchlist rows ahead of unwatched late filings when trimming, so a late-filing batch cannot push them out. */
@@ -146,17 +182,33 @@ export function capAlerts(items, cap) {
 }
 
 export async function alertsFor(db, params) {
-  const symbols = String(params.get("symbols") || "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z.\-]{1,8}$/.test(s)).slice(0, 100);
-  const members = String(params.get("members") || "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]\d{6}$/.test(s)).slice(0, 100);
+  const symbols = String(params.get("symbols") || "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => /^[A-Z.\-]{1,8}$/.test(s))
+    .slice(0, 100);
+  const members = String(params.get("members") || "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => /^[A-Z]\d{6}$/.test(s))
+    .slice(0, 100);
   const since = /^\d{4}-\d{2}-\d{2}$/.test(params.get("since") || "") ? params.get("since") : "";
   const allLate = params.get("late") === "all";
   const watching = symbols.length || members.length || allLate;
   const [trades, insiders, lobbying] = await Promise.all([
     watching ? congressTrades(db).catch(() => ({ items: [] })) : { items: [] },
     symbols.length ? insiderTrades(db).catch(() => ({ items: [] })) : { items: [] },
-    symbols.length ? lobbyingBoard(db).catch(() => ({ items: [] })) : { items: [] }
+    symbols.length ? lobbyingBoard(db).catch(() => ({ items: [] })) : { items: [] },
   ]);
-  const items = buildAlerts({ trades: trades.items || [], insiders: insiders.items || [], lobbying: lobbying.items || [], symbols, members, since, allLate });
+  const items = buildAlerts({
+    trades: trades.items || [],
+    insiders: insiders.items || [],
+    lobbying: lobbying.items || [],
+    symbols,
+    members,
+    since,
+    allLate,
+  });
   const research = researchAlerts(db, since);
   const watched = watchAlerts(db, symbols, since);
   const live = mergeLive([...research, ...capAlerts(items, 200)], liveAlerts(db, symbols, since));
@@ -166,14 +218,41 @@ export async function alertsFor(db, params) {
   return {
     ok: true,
     asOf: new Date().toISOString(),
-    items: [...base, ...extra.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 200)].map((a) => ageAlert(a)),
+    items: [...base, ...extra.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 200)].map((a) =>
+      ageAlert(a),
+    ),
     sources: [
       ...(research.length ? [RESEARCH_SOURCE] : []),
       ...(live.extra.length || live.rows.some((a) => a.live) ? [LIVE_SOURCE] : []),
-      ...(symbols.length ? [{ label: "Watchlist filings", source: "SEC EDGAR 8-K · 13D/13G · 13F · USAspending", asOf: watched.asOf || undefined, latency: "From each watched ticker's last activity pass (refreshed every 15 min). 8-K due 4 business days after the event, 13D 5, 13G and 13F up to 45 days after quarter end; contract actions carry their action date (DoD posts ~90 days late)." }] : []),
-      { label: "Congress trades", source: trades.source || "House Clerk PTRs · Senate eFD", asOf: trades.asOf, latency: "Filed up to 45 days after the trade; alert date is the filed date." },
-      { label: "Form 4", source: insiders.source || "SEC EDGAR Form 4", asOf: insiders.asOf, latency: "Due 2 business days after the trade. One row per filing; 10b5-1 planned sales are ROUTINE." },
-      { label: "Lobbying", source: lobbying.source || "LDA.gov", asOf: lobbying.asOf, latency: "Quarterly LD-2 reports, due 20 days after quarter end." }
-    ]
+      ...(symbols.length
+        ? [
+            {
+              label: "Watchlist filings",
+              source: "SEC EDGAR 8-K · 13D/13G · 13F · USAspending",
+              asOf: watched.asOf || undefined,
+              latency:
+                "From each watched ticker's last activity pass (refreshed every 15 min). 8-K due 4 business days after the event, 13D 5, 13G and 13F up to 45 days after quarter end; contract actions carry their action date (DoD posts ~90 days late).",
+            },
+          ]
+        : []),
+      {
+        label: "Congress trades",
+        source: trades.source || "House Clerk PTRs · Senate eFD",
+        asOf: trades.asOf,
+        latency: "Filed up to 45 days after the trade; alert date is the filed date.",
+      },
+      {
+        label: "Form 4",
+        source: insiders.source || "SEC EDGAR Form 4",
+        asOf: insiders.asOf,
+        latency: "Due 2 business days after the trade. One row per filing; 10b5-1 planned sales are ROUTINE.",
+      },
+      {
+        label: "Lobbying",
+        source: lobbying.source || "LDA.gov",
+        asOf: lobbying.asOf,
+        latency: "Quarterly LD-2 reports, due 20 days after quarter end.",
+      },
+    ],
   };
 }

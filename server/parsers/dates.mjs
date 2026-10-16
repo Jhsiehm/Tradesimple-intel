@@ -2,7 +2,9 @@ import { DAY } from "../lib/time.mjs";
 
 /** "MM/DD/YYYY" → UTC ms, 0 when unparseable. */
 export function usDate(value) {
-  const [month, day, year] = String(value || "").split("/").map(Number);
+  const [month, day, year] = String(value || "")
+    .split("/")
+    .map(Number);
   if (!year) return 0;
   return Date.UTC(year, (month || 1) - 1, day || 1);
 }

@@ -13,18 +13,27 @@ const SPOTS = "intel:cardpos:v1";
 /** Cards live inside the map stage: below the top nav and the section bar, left of the list rail. */
 export function stageBox(): Box {
   const r = document.querySelector(".map-body")?.getBoundingClientRect();
-  if (r && r.width > 240 && r.height > 160) return { left: r.left + PAD, top: r.top + PAD, right: r.right - PAD, bottom: r.bottom - PAD };
+  if (r && r.width > 240 && r.height > 160)
+    return { left: r.left + PAD, top: r.top + PAD, right: r.right - PAD, bottom: r.bottom - PAD };
   const bar = document.querySelector(".topbar")?.getBoundingClientRect();
-  return { left: PAD, top: (bar?.bottom ?? 64) + PAD, right: window.innerWidth - PAD, bottom: window.innerHeight - PAD };
+  return {
+    left: PAD,
+    top: (bar?.bottom ?? 64) + PAD,
+    right: window.innerWidth - PAD,
+    bottom: window.innerHeight - PAD,
+  };
 }
 
 export function useStageBox() {
   const [box, setBox] = useState<Box>(stageBox);
   useEffect(() => {
-    const measure = () => setBox((cur) => {
-      const next = stageBox();
-      return cur.left === next.left && cur.top === next.top && cur.right === next.right && cur.bottom === next.bottom ? cur : next;
-    });
+    const measure = () =>
+      setBox((cur) => {
+        const next = stageBox();
+        return cur.left === next.left && cur.top === next.top && cur.right === next.right && cur.bottom === next.bottom
+          ? cur
+          : next;
+      });
     const ro = new ResizeObserver(measure);
     const body = document.querySelector(".map-body");
     if (body) ro.observe(body);

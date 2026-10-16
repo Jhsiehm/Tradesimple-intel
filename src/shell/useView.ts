@@ -11,7 +11,10 @@ export function useView() {
   const current = useRef(view);
   current.current = view;
   const setters = useMemo(() => {
-    const one = <K extends keyof View>(key: K) => (value: View[K]) => setView((v) => (v[key] === value ? v : { ...v, [key]: value }));
+    const one =
+      <K extends keyof View>(key: K) =>
+      (value: View[K]) =>
+        setView((v) => (v[key] === value ? v : { ...v, [key]: value }));
     return {
       setSection: one("section"),
       setChamber: one("chamber"),
@@ -25,7 +28,7 @@ export function useView() {
       setSelectedId: one("selectedId"),
       setImagery: one("imagery"),
       setArcs: one("arcs"),
-      applyPatch: (patch: ViewPatch) => setView((v) => applyView(v, patch))
+      applyPatch: (patch: ViewPatch) => setView((v) => applyView(v, patch)),
     } satisfies Setters & { applyPatch: unknown };
   }, []);
   return { view, current, ...setters };

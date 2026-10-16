@@ -35,7 +35,7 @@ type Guide = {
 
 const GUIDE: Record<"house" | "senate", Guide> = {
   house: { cx: 800, cy: 840, inner: 210, outer: 680, rows: 11 },
-  senate: { cx: 800, cy: 840, inner: 250, outer: 560, rows: 4 }
+  senate: { cx: 800, cy: 840, inner: 250, outer: 560, rows: 4 },
 };
 
 export function floorGuide(chamber: "house" | "senate") {
@@ -74,13 +74,7 @@ function rowCounts(n: number, radii: number[]) {
   return counts;
 }
 
-function placeBlock(
-  people: MemberLike[],
-  angle0: number,
-  angle1: number,
-  guide: Guide,
-  seatR: number
-) {
+function placeBlock(people: MemberLike[], angle0: number, angle1: number, guide: Guide, seatR: number) {
   if (!people.length) return [];
   const rows = Math.min(guide.rows, people.length);
   const radii = radiiFor(guide, rows);
@@ -102,7 +96,7 @@ function placeBlock(
         vote: member.vote,
         bioguide: member.bioguide || "",
         x: guide.cx + Math.cos(Math.PI - angle) * radii[row],
-        y: guide.cy - Math.sin(angle) * radii[row]
+        y: guide.cy - Math.sin(angle) * radii[row],
       });
       cursor += 1;
     }
@@ -131,7 +125,7 @@ export function layoutFloor(members: MemberLike[], chamber: "house" | "senate"):
   const draft = [
     ...placeBlock(dems, left0, left1, guide, 1),
     ...placeBlock(center, Math.PI * 0.475, Math.PI * 0.525, guide, 1),
-    ...placeBlock(gop, right0, right1, guide, 1)
+    ...placeBlock(gop, right0, right1, guide, 1),
   ];
   let minD = Infinity;
   for (let i = 0; i < draft.length; i += 1) {

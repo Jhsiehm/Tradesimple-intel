@@ -44,15 +44,19 @@ async function hit(path, { keep = false } = {}) {
   const ms = Math.round(performance.now() - t0);
   const fail = status !== 200;
   results.push({ path, status, ms, fail, note });
-  console.log(`${fail ? "FAIL" : note ? "SOFT" : " ok "} ${String(status).padStart(3)} ${String(ms).padStart(7)}ms  ${path}${note ? `  [${note}]` : ""}`);
+  console.log(
+    `${fail ? "FAIL" : note ? "SOFT" : " ok "} ${String(status).padStart(3)} ${String(ms).padStart(7)}ms  ${path}${note ? `  [${note}]` : ""}`,
+  );
   return keep ? body : null;
 }
 
 async function pool(paths, concurrency) {
   const queue = [...paths];
-  await Promise.all(Array.from({ length: concurrency }, async () => {
-    while (queue.length) await hit(queue.shift());
-  }));
+  await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      while (queue.length) await hit(queue.shift());
+    }),
+  );
 }
 
 const enc = encodeURIComponent;
@@ -80,21 +84,24 @@ async function main() {
   const senateVotes = bodyOf("congress.votes", "chamber=senate");
 
   console.log("— boards");
-  await pool([
-    ...warmSamples("board"),
-    ...(theaters?.items || []).map((t) => fillRoute("air", {}, `theater=${enc(t.id)}`))
-  ], 3);
+  await pool(
+    [...warmSamples("board"), ...(theaters?.items || []).map((t) => fillRoute("air", {}, `theater=${enc(t.id)}`))],
+    3,
+  );
 
   console.log("— congress detail");
   const latestVote = (chamber, list) => {
     const v = (list?.items || [])[0];
     return v ? [fillRoute("congress.vote", { chamber, congress: v.congress, session: v.session, roll: v.roll })] : [];
   };
-  await pool([
-    ...latestVote("house", houseVotes),
-    ...latestVote("senate", senateVotes),
-    ...(committees?.items || []).map((c) => fillRoute("congress.committee", { id: c.id }))
-  ], 3);
+  await pool(
+    [
+      ...latestVote("house", houseVotes),
+      ...latestVote("senate", senateVotes),
+      ...(committees?.items || []).map((c) => fillRoute("congress.committee", { id: c.id })),
+    ],
+    3,
+  );
 
   console.log(`— top ${TRADERS} traders`);
   const counts = new Map();
@@ -105,14 +112,20 @@ async function main() {
     counts.set(row.bioguide, seat);
   }
   const top = [...counts.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, TRADERS);
-  await pool(top.flatMap(([id, seat]) => [
-    fillRoute("congress.member", { id }, `chamber=${seat.chamber}`),
-    fillRoute("congress.memberTrades", { id }),
-    fillRoute("congress.memberTimeline", { id })
-  ]), 3);
+  await pool(
+    top.flatMap(([id, seat]) => [
+      fillRoute("congress.member", { id }, `chamber=${seat.chamber}`),
+      fillRoute("congress.memberTrades", { id }),
+      fillRoute("congress.memberTimeline", { id }),
+    ]),
+    3,
+  );
 
   console.log("— supply chains");
-  await pool((supply?.items || []).map((s) => fillRoute("markets.supplyChain", { symbol: s })), 3);
+  await pool(
+    (supply?.items || []).map((s) => fillRoute("markets.supplyChain", { symbol: s })),
+    3,
+  );
 
   if (TICKERS) {
     const rows = args.includes("--all-tickers") ? tickers?.items || [] : defaultWarmTickers(tickers?.items || []);
@@ -122,8 +135,17 @@ async function main() {
     const clients = [...new Set(rows.flatMap((t) => t.ldaClients || []).filter(Boolean))];
     console.log(`— ${symbols.length} ticker dossiers + positions · ${clients.length} LDA clients alongside`);
     await Promise.all([
-      pool(symbols.flatMap((s) => [fillRoute("ticker", { symbol: s }, "lobby=0"), fillRoute("markets.position", { symbol: s })]), 2),
-      pool(clients.map((c) => fillRoute("lobby", {}, `client=${enc(c)}`)), LOBBY_CONCURRENCY)
+      pool(
+        symbols.flatMap((s) => [
+          fillRoute("ticker", { symbol: s }, "lobby=0"),
+          fillRoute("markets.position", { symbol: s }),
+        ]),
+        2,
+      ),
+      pool(
+        clients.map((c) => fillRoute("lobby", {}, `client=${enc(c)}`)),
+        LOBBY_CONCURRENCY,
+      ),
     ]);
   }
 
@@ -133,10 +155,13 @@ async function main() {
   const times = results.map((r) => r.ms).sort((a, b) => a - b);
   const pct = (p) => times[Math.min(times.length - 1, Math.floor(p * times.length))];
   console.log("\n=== summary");
-  console.log(`routes ${total}  failures ${fails.length}  soft (ok=false) ${soft.length}  wall ${((performance.now() - started) / 1000).toFixed(1)}s`);
+  console.log(
+    `routes ${total}  failures ${fails.length}  soft (ok=false) ${soft.length}  wall ${((performance.now() - started) / 1000).toFixed(1)}s`,
+  );
   console.log(`median ${pct(0.5)}ms  p90 ${pct(0.9)}ms  max ${times[times.length - 1]}ms`);
   console.log("slowest:");
-  for (const r of [...results].sort((a, b) => b.ms - a.ms).slice(0, 8)) console.log(`  ${String(r.ms).padStart(7)}ms  ${r.path}`);
+  for (const r of [...results].sort((a, b) => b.ms - a.ms).slice(0, 8))
+    console.log(`  ${String(r.ms).padStart(7)}ms  ${r.path}`);
   if (fails.length) {
     console.log("failures:");
     for (const r of fails) console.log(`  ${r.status} ${r.path}  ${r.note}`);

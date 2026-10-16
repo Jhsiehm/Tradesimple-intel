@@ -34,7 +34,14 @@ export function reply(status, body) {
 
 /** JSON response; brotli or gzip when `req` accepts it (see lib/compress.mjs). */
 export function sendJson(res, status, body, req = null) {
-  sendEncoded(req, res, status, { "Content-Type": "application/json", "Cache-Control": "no-store" }, JSON.stringify(body), body);
+  sendEncoded(
+    req,
+    res,
+    status,
+    { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    JSON.stringify(body),
+    body,
+  );
 }
 
 /** Query helpers bound to one request's search params. */
@@ -42,7 +49,7 @@ export function queryOf(searchParams) {
   return {
     params: searchParams,
     str: (name, fallback = "") => searchParams.get(name) || fallback,
-    chamber: () => (searchParams.get("chamber") === "senate" ? "senate" : "house")
+    chamber: () => (searchParams.get("chamber") === "senate" ? "senate" : "house"),
   };
 }
 
@@ -53,7 +60,8 @@ export function queryOf(searchParams) {
 export function createRouter(manifest, handlers, { origins = allowedOrigins() } = {}) {
   const missing = manifest.filter((r) => !handlers[r.id]).map((r) => r.id);
   const extra = Object.keys(handlers).filter((id) => !manifest.some((r) => r.id === id));
-  if (missing.length || extra.length) throw new Error(`route table mismatch: missing ${missing.join(",") || "-"}; extra ${extra.join(",") || "-"}`);
+  if (missing.length || extra.length)
+    throw new Error(`route table mismatch: missing ${missing.join(",") || "-"}; extra ${extra.join(",") || "-"}`);
   const table = manifest.map((r) => ({ ...r, match: compile(r.path), handler: handlers[r.id] }));
 
   function match(pathname) {
@@ -71,7 +79,14 @@ export function createRouter(manifest, handlers, { origins = allowedOrigins() } 
       if (refused) return sendJson(res, 403, { ok: false, error: refused, missing: "" }, req);
       const found = match(url.pathname);
       if (!found) return sendJson(res, 404, { ok: false, error: "Not found" }, req);
-      const out = await found.route.handler({ ...ctx, req, res, url, params: found.params, query: queryOf(url.searchParams) });
+      const out = await found.route.handler({
+        ...ctx,
+        req,
+        res,
+        url,
+        params: found.params,
+        query: queryOf(url.searchParams),
+      });
       if (out === undefined) return;
       if (out?.[REPLY]) return sendJson(res, out.status, out.body, req);
       sendJson(res, 200, out, req);

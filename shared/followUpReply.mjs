@@ -12,14 +12,27 @@ const getPath = (obj, path) => {
 };
 
 /** Fields the follow-up's own words (or chip picks) set, in any run. */
-export const askedFields = (multi) => [...new Set((multi?.runs || []).flatMap((r) => Object.entries(r.from || {}).filter(([, how]) => how === "question" || how === "your pick").map(([p]) => p)))];
+export const askedFields = (multi) => [
+  ...new Set(
+    (multi?.runs || []).flatMap((r) =>
+      Object.entries(r.from || {})
+        .filter(([, how]) => how === "question" || how === "your pick")
+        .map(([p]) => p),
+    ),
+  ),
+];
 
 const ALTERNATIVES = {
-  "rules.holdDays": (v) => [30, 60, 90, 180, 365].filter((d) => d !== v).slice(0, 3).map((d) => `"hold ${d === 365 ? "1 year" : `${d} days`} instead"`),
-  "rules.benchmark": (v) => (v === "SECTOR" ? ["\"vs SPY instead\""] : ["\"vs sector ETF instead\""]),
-  "rules.sides": (v) => (v === "buy" ? ["\"both sides instead\""] : ["\"buys only instead\""]),
-  "rules.sizing": (v) => (v === "equal" ? ["\"weight by size instead\""] : ["\"equal weight instead\""]),
-  "rules.entry": (v) => (v === "nextOpen" ? ["\"enter at the next close instead\""] : ["\"enter at the next open instead\""])
+  "rules.holdDays": (v) =>
+    [30, 60, 90, 180, 365]
+      .filter((d) => d !== v)
+      .slice(0, 3)
+      .map((d) => `"hold ${d === 365 ? "1 year" : `${d} days`} instead"`),
+  "rules.benchmark": (v) => (v === "SECTOR" ? ['"vs SPY instead"'] : ['"vs sector ETF instead"']),
+  "rules.sides": (v) => (v === "buy" ? ['"both sides instead"'] : ['"buys only instead"']),
+  "rules.sizing": (v) => (v === "equal" ? ['"weight by size instead"'] : ['"equal weight instead"']),
+  "rules.entry": (v) =>
+    v === "nextOpen" ? ['"enter at the next close instead"'] : ['"enter at the next open instead"'],
 };
 
 /** Why a run already had that value, when it was not the user's own earlier pick. */
@@ -28,7 +41,8 @@ function whyAlready(path, prior) {
   const to = prior?.filters?.to;
   if (path === "rules.holdDays" && from && to) {
     const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-    if (days === getPath(prior, path)) return ` (a "last ${days} days" backtest holds each trade for the window's ${days} days unless told otherwise)`;
+    if (days === getPath(prior, path))
+      return ` (a "last ${days} days" backtest holds each trade for the window's ${days} days unless told otherwise)`;
   }
   return "";
 }
@@ -37,9 +51,13 @@ function whyAlready(path, prior) {
 export function handOffNote(priors = [], refs = []) {
   return [
     `The previous turn ran ${priors.length} backtest${priors.length === 1 ? "" : "s"}: ${priors.map((p) => `${SOURCE_LABEL[p.source] || p.source} ${JSON.stringify(p)}`).join("; ")}.`,
-    refs.length ? `The app re-ran ${refs.length > 1 ? "them" : "it"} unchanged so their figures are here as tool results ${refs.join(", ")}; answer from those, citing refs, and do not call run_backtest again for the same spec.` : "",
-    "The app did not find a spec change in this follow-up. Answer the follow-up itself. If it does ask to change the runs, call run_backtest once per source with the changed spec and compare each with its previous run. Every figure needs a ref from this turn."
-  ].filter(Boolean).join("\n");
+    refs.length
+      ? `The app re-ran ${refs.length > 1 ? "them" : "it"} unchanged so their figures are here as tool results ${refs.join(", ")}; answer from those, citing refs, and do not call run_backtest again for the same spec.`
+      : "",
+    "The app did not find a spec change in this follow-up. Answer the follow-up itself. If it does ask to change the runs, call run_backtest once per source with the changed spec and compare each with its previous run. Every figure needs a ref from this turn.",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**
@@ -56,7 +74,12 @@ export function followUpOutcome(multi) {
   const lines = [];
   const same = new Map();
   for (const r of runs) {
-    const matched = asked.filter((p) => r.from?.[p] && JSON.stringify(getPath(r.prior, p)) === JSON.stringify(getPath(r.spec, p)) && (r.locked || []).includes(p));
+    const matched = asked.filter(
+      (p) =>
+        r.from?.[p] &&
+        JSON.stringify(getPath(r.prior, p)) === JSON.stringify(getPath(r.spec, p)) &&
+        (r.locked || []).includes(p),
+    );
     for (const p of matched) {
       const key = `${p}=${JSON.stringify(getPath(r.spec, p))}`;
       const entry = same.get(key) || { path: p, value: getPath(r.spec, p), sources: [], why: whyAlready(p, r.prior) };
@@ -65,8 +88,13 @@ export function followUpOutcome(multi) {
     }
   }
   for (const e of same.values()) {
-    const who = e.sources.length === runs.length && runs.length > 1 ? `all ${runs.length} previous runs (${e.sources.join(", ")})` : e.sources.join(" and ");
-    lines.push(`${describeValue(e.path, e.value).replace(/^./, (c) => c.toUpperCase())} is already what ${who} used${e.why}, so nothing changed and nothing was re-run.`);
+    const who =
+      e.sources.length === runs.length && runs.length > 1
+        ? `all ${runs.length} previous runs (${e.sources.join(", ")})`
+        : e.sources.join(" and ");
+    lines.push(
+      `${describeValue(e.path, e.value).replace(/^./, (c) => c.toUpperCase())} is already what ${who} used${e.why}, so nothing changed and nothing was re-run.`,
+    );
   }
   const notes = runs.flatMap((r) => r.notes || []);
   const tries = [...same.values()].flatMap((e) => ALTERNATIVES[e.path]?.(e.value) || []);
@@ -74,7 +102,9 @@ export function followUpOutcome(multi) {
     ...lines,
     ...(lines.length ? [] : ["Nothing in the follow-up changes any previous run, so nothing was re-run."]),
     ...notes,
-    tries.length ? `To see a different result, try ${tries.slice(0, 3).join(", ")}.` : ""
-  ].filter(Boolean).join(" ");
+    tries.length ? `To see a different result, try ${tries.slice(0, 3).join(", ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return { understood: true, unchanged: true, text };
 }

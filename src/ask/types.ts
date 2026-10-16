@@ -1,5 +1,10 @@
-export type MemoryRequest = { mode: 'isolated' | 'context-aware'; snapshotId?: string };
-export type MemoryReceipt = { mode: 'isolated' | 'context-aware'; snapshotId: string; contentHash: string; knownAt: string };
+export type MemoryRequest = { mode: "isolated" | "context-aware"; snapshotId?: string };
+export type MemoryReceipt = {
+  mode: "isolated" | "context-aware";
+  snapshotId: string;
+  contentHash: string;
+  knownAt: string;
+};
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { TaskDraft } from "../../shared/taskSchedule.mjs";
 import type { BtRun } from "../backtest/types";
@@ -35,7 +40,15 @@ export type Step = {
   diff?: string[];
 };
 
-export type FallbackTable = { columns: string[]; rows: string[][]; total: number; ref: string; label: string; source: string; asOf: string };
+export type FallbackTable = {
+  columns: string[];
+  rows: string[][];
+  total: number;
+  ref: string;
+  label: string;
+  source: string;
+  asOf: string;
+};
 
 export type BacktestRef = {
   id: string;
@@ -57,7 +70,14 @@ export type Done = {
   answer: string;
   cited: string[];
   unknown: string[];
-  grounding: { checked: number; unmatched: string[]; mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[]; miscited?: Miscited[]; uncitedRows?: string[]; scope?: { kind: "window" | "benchmark"; raw: string; refs: string[]; note: string }[] };
+  grounding: {
+    checked: number;
+    unmatched: string[];
+    mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[];
+    miscited?: Miscited[];
+    uncitedRows?: string[];
+    scope?: { kind: "window" | "benchmark"; raw: string; refs: string[]; note: string }[];
+  };
   uncited: boolean;
   noTools: boolean;
   greeting: boolean;
@@ -86,7 +106,9 @@ export type Done = {
 };
 
 export type ClarifyAsk = {
-  questions: Array<Clarify | { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback?: unknown }>;
+  questions: Array<
+    Clarify | { path: string; prompt: string; chips: { label: string; value: unknown }[]; fallback?: unknown }
+  >;
   spec: BacktestSpec | null;
   from: Record<string, string>;
   sentence: string;
@@ -114,7 +136,14 @@ export type Turn = {
 };
 
 /** `named`: the user renamed it, so the automatic title stays off. `pinned`: listed first, never dropped at the cap. */
-export type SavedChat = { id: string; title: string; turns: Turn[]; updated: string; pinned?: boolean; named?: boolean };
+export type SavedChat = {
+  id: string;
+  title: string;
+  turns: Turn[];
+  updated: string;
+  pinned?: boolean;
+  named?: boolean;
+};
 
 export type AskStatus = {
   ok: boolean;

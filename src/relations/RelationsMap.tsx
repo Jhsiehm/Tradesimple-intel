@@ -39,7 +39,9 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
     return () => window.clearTimeout(timer);
   }, [notice, setNotice]);
 
-  useEffect(() => { if (selectedId) canvas.current?.focus(selectedId); }, [selectedId]);
+  useEffect(() => {
+    if (selectedId) canvas.current?.focus(selectedId);
+  }, [selectedId]);
 
   const bounds = () => ({ w: box.current?.clientWidth || 800, h: box.current?.clientHeight || 600 });
   const center = () => canvas.current?.center() || { x: 0, y: 0 };
@@ -60,8 +62,15 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
   }
 
   function linkClick(id: string) {
-    if (!pending) { setPending(id); onSelect(id); return; }
-    if (pending === id) { setPending(null); return; }
+    if (!pending) {
+      setPending(id);
+      onSelect(id);
+      return;
+    }
+    if (pending === id) {
+      setPending(null);
+      return;
+    }
     const t = rel.putTheory(pending, id);
     setPending(null);
     onSelect(theoryId(t));
@@ -69,10 +78,27 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
 
   function key(e: ReactKeyboardEvent) {
     const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) rel.redo(); else rel.undo(); return; }
-    if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); rel.redo(); return; }
-    if (e.key.toLowerCase() === "t" && !mod) { setTheoryMode((v) => !v); setPending(null); return; }
-    if (e.key === "Escape") { setMenu(null); setPending(null); setNoteOpen(false); }
+    if (mod && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) rel.redo();
+      else rel.undo();
+      return;
+    }
+    if (mod && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      rel.redo();
+      return;
+    }
+    if (e.key.toLowerCase() === "t" && !mod) {
+      setTheoryMode((v) => !v);
+      setPending(null);
+      return;
+    }
+    if (e.key === "Escape") {
+      setMenu(null);
+      setPending(null);
+      setNoteOpen(false);
+    }
   }
 
   const menuNode = menu ? graph.nodes.find((n) => n.id === menu.id) : null;
@@ -80,49 +106,152 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
   const label = (id: string, fallback: string) => graph.nodes.find((n) => n.id === id)?.label || fallback;
 
   return (
-    <div className={`relmap${theoryMode ? " drawing" : ""}`} ref={box} onKeyDown={(e) => { if (e.target === e.currentTarget) key(e); }}>
+    <div
+      className={`relmap${theoryMode ? " drawing" : ""}`}
+      ref={box}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget) key(e);
+      }}
+    >
       <div className="relmap-bar">
         <AddSearch onPick={(id) => void add(id)} />
         <span className="seg relmap-mode" role="radiogroup" aria-label="Mode">
-          <button role="radio" aria-checked={!theoryMode} aria-pressed={!theoryMode} onClick={() => { setTheoryMode(false); setPending(null); }} title="Click a node for its data relationships · drag to move and pin">
-            <IconLabel icon="filter" hide>Explore</IconLabel>
+          <button
+            role="radio"
+            aria-checked={!theoryMode}
+            aria-pressed={!theoryMode}
+            onClick={() => {
+              setTheoryMode(false);
+              setPending(null);
+            }}
+            title="Click a node for its data relationships · drag to move and pin"
+          >
+            <IconLabel icon="filter" hide>
+              Explore
+            </IconLabel>
           </button>
-          <button role="radio" aria-checked={theoryMode} aria-pressed={theoryMode} className="relmap-theory-btn" style={{ ["--tint" as string]: THEORY_LOOK.color }} onClick={() => { setTheoryMode(true); setMenu(null); }} title="Click two nodes, or drag from one to another, to draw your theory (T)">
-            <IconLabel icon="theory" hide>Theory</IconLabel>
+          <button
+            role="radio"
+            aria-checked={theoryMode}
+            aria-pressed={theoryMode}
+            className="relmap-theory-btn"
+            style={{ ["--tint" as string]: THEORY_LOOK.color }}
+            onClick={() => {
+              setTheoryMode(true);
+              setMenu(null);
+            }}
+            title="Click two nodes, or drag from one to another, to draw your theory (T)"
+          >
+            <IconLabel icon="theory" hide>
+              Theory
+            </IconLabel>
           </button>
         </span>
         <span className="seg">
-          <button onClick={() => setNoteOpen((v) => !v)} aria-pressed={noteOpen} title="Add a person, event, or company of your own"><IconLabel icon="user-node" hide>Add node</IconLabel></button>
-          <button onClick={rel.undo} disabled={!rel.canUndo} title="Undo (⌘Z)" aria-label="Undo"><Icon name="undo" /></button>
-          <button onClick={rel.redo} disabled={!rel.canRedo} title="Redo (⇧⌘Z)" aria-label="Redo"><Icon name="redo" /></button>
+          <button
+            onClick={() => setNoteOpen((v) => !v)}
+            aria-pressed={noteOpen}
+            title="Add a person, event, or company of your own"
+          >
+            <IconLabel icon="user-node" hide>
+              Add node
+            </IconLabel>
+          </button>
+          <button onClick={rel.undo} disabled={!rel.canUndo} title="Undo (⌘Z)" aria-label="Undo">
+            <Icon name="undo" />
+          </button>
+          <button onClick={rel.redo} disabled={!rel.canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
+            <Icon name="redo" />
+          </button>
         </span>
         <span className="seg">
-          <button onClick={() => canvas.current?.zoom(1 / 1.3)} title="Zoom out (−)" aria-label="Zoom out"><Icon name="zoom-out" /></button>
-          <button onClick={() => canvas.current?.zoom(1.3)} title="Zoom in (+)" aria-label="Zoom in"><Icon name="zoom-in" /></button>
-          <button onClick={() => canvas.current?.fit()} title="Fit to view (F)" aria-label="Fit to view"><Icon name="fit" /></button>
-          <button onClick={() => { rel.relayout(); window.setTimeout(() => canvas.current?.fit(), 30); }} title="Re-run layout (pinned nodes stay)" aria-label="Re-run layout"><Icon name="layout" /></button>
+          <button onClick={() => canvas.current?.zoom(1 / 1.3)} title="Zoom out (−)" aria-label="Zoom out">
+            <Icon name="zoom-out" />
+          </button>
+          <button onClick={() => canvas.current?.zoom(1.3)} title="Zoom in (+)" aria-label="Zoom in">
+            <Icon name="zoom-in" />
+          </button>
+          <button onClick={() => canvas.current?.fit()} title="Fit to view (F)" aria-label="Fit to view">
+            <Icon name="fit" />
+          </button>
+          <button
+            onClick={() => {
+              rel.relayout();
+              window.setTimeout(() => canvas.current?.fit(), 30);
+            }}
+            title="Re-run layout (pinned nodes stay)"
+            aria-label="Re-run layout"
+          >
+            <Icon name="layout" />
+          </button>
         </span>
         <span className="relmap-more">
-          <button className="ghost" aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)} title="Export, import, share, clear"><Icon name="more" /></button>
+          <button
+            className="ghost"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((v) => !v)}
+            title="Export, import, share, clear"
+          >
+            <Icon name="more" />
+          </button>
           {moreOpen ? (
             <div className="relmap-pop relmap-more-pop" role="menu" onMouseLeave={() => setMoreOpen(false)}>
-              <button role="menuitem" onClick={() => { downloadDoc(graph); setMoreOpen(false); }}><Icon name="export" /> Export theories (JSON)</button>
-              <button role="menuitem" onClick={() => file.current?.click()}><Icon name="import" /> Import theories…</button>
-              <button role="menuitem" onClick={async () => {
-                const url = shareUrl(graph);
-                setMoreOpen(false);
-                if (!url) { setNotice("Too many theories for a link; export a file instead."); return; }
-                try { await navigator.clipboard.writeText(url); setNotice("Share link copied. It carries your theories and notes in the address; nothing is uploaded."); } catch { window.prompt("Copy this link", url); }
-              }}><Icon name="link" /> Copy share link</button>
-              <button role="menuitem" onClick={() => { rel.clear(); setMoreOpen(false); }}><Icon name="reset" /> Clear data from canvas (keeps theories)</button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  downloadDoc(graph);
+                  setMoreOpen(false);
+                }}
+              >
+                <Icon name="export" /> Export theories (JSON)
+              </button>
+              <button role="menuitem" onClick={() => file.current?.click()}>
+                <Icon name="import" /> Import theories…
+              </button>
+              <button
+                role="menuitem"
+                onClick={async () => {
+                  const url = shareUrl(graph);
+                  setMoreOpen(false);
+                  if (!url) {
+                    setNotice("Too many theories for a link; export a file instead.");
+                    return;
+                  }
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setNotice(
+                      "Share link copied. It carries your theories and notes in the address; nothing is uploaded.",
+                    );
+                  } catch {
+                    window.prompt("Copy this link", url);
+                  }
+                }}
+              >
+                <Icon name="link" /> Copy share link
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  rel.clear();
+                  setMoreOpen(false);
+                }}
+              >
+                <Icon name="reset" /> Clear data from canvas (keeps theories)
+              </button>
             </div>
           ) : null}
-          <input ref={file} type="file" accept="application/json,.json" hidden onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            setMoreOpen(false);
-            if (f) rel.importDoc(await readDocFile(f));
-          }} />
+          <input
+            ref={file}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              setMoreOpen(false);
+              if (f) rel.importDoc(await readDocFile(f));
+            }}
+          />
         </span>
       </div>
       <FilterChips graph={graph} hidden={rel.hidden} onToggle={rel.toggleHidden} />
@@ -134,18 +263,35 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
         theoryMode={theoryMode}
         pendingFrom={pending}
         onSelect={onSelect}
-        onMenu={(id, at) => { if (!theoryMode) setMenu({ id, ...at }); }}
+        onMenu={(id, at) => {
+          if (!theoryMode) setMenu({ id, ...at });
+        }}
         onCloseMenu={() => setMenu(null)}
         onExpand={(id) => rel.expandDefaults(id)}
         onMove={rel.move}
         onLinkClick={linkClick}
-        onLinkDrop={(a, b) => { const t = rel.putTheory(a, b); setPending(null); onSelect(theoryId(t)); }}
-        onRemove={(id) => { rel.remove(id); setMenu(null); onSelect(null); }}
+        onLinkDrop={(a, b) => {
+          const t = rel.putTheory(a, b);
+          setPending(null);
+          onSelect(theoryId(t));
+        }}
+        onRemove={(id) => {
+          rel.remove(id);
+          setMenu(null);
+          onSelect(null);
+        }}
         onKey={key}
       />
       {theoryMode ? (
         <p className="relmap-hint" style={{ ["--tint" as string]: THEORY_LOOK.color }}>
-          <Icon name="theory" /> {pending ? <>From <b>{label(pending, pending)}</b> · click the second node, or Esc</> : "Theory: click a node, then another, or drag from one to the other. Your links are dashed magenta and never counted as data."}
+          <Icon name="theory" />{" "}
+          {pending ? (
+            <>
+              From <b>{label(pending, pending)}</b> · click the second node, or Esc
+            </>
+          ) : (
+            "Theory: click a node, then another, or drag from one to the other. Your links are dashed magenta and never counted as data."
+          )}
         </p>
       ) : null}
       {!graph.nodes.length ? (
@@ -153,8 +299,15 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
           <Icon name="map" size={20} />
           <p>{rel.empty}</p>
           <div className="relmap-starts">
-            {[["member:P000197", "Pelosi"], ["ticker:NVDA", "NVDA"], ["committee:HSAS", "House Armed Services"], ["ticker:LMT", "LMT"]].map(([id, l]) => (
-              <button key={id} onClick={() => void add(id)}>{l}</button>
+            {[
+              ["member:P000197", "Pelosi"],
+              ["ticker:NVDA", "NVDA"],
+              ["committee:HSAS", "House Armed Services"],
+              ["ticker:LMT", "LMT"],
+            ].map(([id, l]) => (
+              <button key={id} onClick={() => void add(id)}>
+                {l}
+              </button>
             ))}
           </div>
         </div>
@@ -166,10 +319,21 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
           at={menu}
           bounds={bounds()}
           onExpand={(cat, more) => void rel.expand(menuNode.id, cat, more, near(menuNode.id))}
-          onTheory={() => { setTheoryMode(true); setPending(menuNode.id); setMenu(null); }}
-          onRemove={() => { rel.remove(menuNode.id); setMenu(null); onSelect(null); }}
+          onTheory={() => {
+            setTheoryMode(true);
+            setPending(menuNode.id);
+            setMenu(null);
+          }}
+          onRemove={() => {
+            rel.remove(menuNode.id);
+            setMenu(null);
+            onSelect(null);
+          }}
           onClose={() => setMenu(null)}
-          onFollow={(a) => { setMenu(null); onFollow(a); }}
+          onFollow={(a) => {
+            setMenu(null);
+            onFollow(a);
+          }}
         />
       ) : null}
       {selTheory ? (
@@ -178,7 +342,11 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
           a={label(selTheory.a.id, selTheory.a.label)}
           b={label(selTheory.b.id, selTheory.b.label)}
           onSave={(patch) => rel.putTheory(selTheory.a.id, selTheory.b.id, patch, selTheory.id)}
-          onDelete={() => { rel.dropTheory(selTheory.id); onSelect(null); setNotice("Theory deleted. ⌘Z brings it back."); }}
+          onDelete={() => {
+            rel.dropTheory(selTheory.id);
+            onSelect(null);
+            setNotice("Theory deleted. ⌘Z brings it back.");
+          }}
           onClose={() => onSelect(null)}
         />
       ) : null}
@@ -196,7 +364,11 @@ export function RelationsMap({ rel, selectedId, onSelect, onFollow }: Props) {
         />
       ) : null}
       <Legend graph={graph} />
-      {notice ? <p className="relmap-notice" role="status">{notice}</p> : null}
+      {notice ? (
+        <p className="relmap-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
     </div>
   );
 }

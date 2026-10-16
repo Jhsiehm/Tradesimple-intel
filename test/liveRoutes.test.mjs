@@ -22,7 +22,9 @@ before(async () => {
   process.env.INTEL_CACHE = file;
   db = openDb(root);
   delete process.env.INTEL_CACHE;
-  const checks = Object.fromEntries(LIVE_CHECKS.map((c) => [c.id, async ({ symbols }) => ({ events: [], ok: symbols, errors: [] })]));
+  const checks = Object.fromEntries(
+    LIVE_CHECKS.map((c) => [c.id, async ({ symbols }) => ({ events: [], ok: symbols, errors: [] })]),
+  );
   livePoller(db, { checks, log: () => {} });
   const routes = createRouter(MANIFEST, handlers);
   server = http.createServer((req, res) => routes.handle(req, res, { db, root }));
@@ -38,13 +40,22 @@ after(() => {
 });
 
 const send = (method, p, body, headers = {}) =>
-  fetch(base + p, { method, headers: { origin: APP, "content-type": "application/json", ...headers }, body: body === undefined ? undefined : JSON.stringify(body) })
-    .then(async (r) => ({ status: r.status, body: (r.headers.get("content-type") || "").includes("json") ? await r.json() : await r.text() }));
+  fetch(base + p, {
+    method,
+    headers: { origin: APP, "content-type": "application/json", ...headers },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then(async (r) => ({
+    status: r.status,
+    body: (r.headers.get("content-type") || "").includes("json") ? await r.json() : await r.text(),
+  }));
 
 /** Reads SSE frames until `stop(frames)` is true or the timeout passes. */
 async function readStream(headers, stop, ms = 3000) {
   const ctrl = new AbortController();
-  const res = await fetch(`${base}/api/live/stream`, { headers: { accept: "text/event-stream", ...headers }, signal: ctrl.signal });
+  const res = await fetch(`${base}/api/live/stream`, {
+    headers: { accept: "text/event-stream", ...headers },
+    signal: ctrl.signal,
+  });
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type"), /text\/event-stream/);
   const reader = res.body.getReader();
@@ -80,10 +91,20 @@ async function readStream(headers, stop, ms = 3000) {
 
 test("mutations from another site or without JSON are refused", async () => {
   assert.equal((await send("PUT", "/api/live", { symbols: ["NVDA"] }, { origin: "https://evil.example" })).status, 403);
-  const form = await fetch(`${base}/api/live`, { method: "PUT", headers: { origin: APP, "content-type": "text/plain" }, body: JSON.stringify({ symbols: ["NVDA"] }) });
+  const form = await fetch(`${base}/api/live`, {
+    method: "PUT",
+    headers: { origin: APP, "content-type": "text/plain" },
+    body: JSON.stringify({ symbols: ["NVDA"] }),
+  });
   assert.equal(form.status, 403);
-  assert.equal((await send("POST", "/api/live/seen", { symbol: "NVDA" }, { origin: "https://evil.example" })).status, 403);
-  assert.equal((await send("POST", "/api/live/simulate", { symbol: "NVDA" }, { origin: "https://evil.example" })).status, 403);
+  assert.equal(
+    (await send("POST", "/api/live/seen", { symbol: "NVDA" }, { origin: "https://evil.example" })).status,
+    403,
+  );
+  assert.equal(
+    (await send("POST", "/api/live/simulate", { symbol: "NVDA" }, { origin: "https://evil.example" })).status,
+    403,
+  );
   assert.deepEqual((await send("GET", "/api/live")).body.symbols, []);
 });
 
@@ -114,7 +135,8 @@ test("SSE says hello, pushes a detection with its sequence id, and replays it af
   assert.equal((await send("POST", "/api/live/simulate", { symbol: "ZZZZQ" })).status, 404);
   let posted = null;
   const frames = await readStream({}, (fs) => {
-    if (fs.some((f) => f.event === "hello") && !posted) posted = send("POST", "/api/live/simulate", { symbol: "NVDA", source: "insiders" });
+    if (fs.some((f) => f.event === "hello") && !posted)
+      posted = send("POST", "/api/live/simulate", { symbol: "NVDA", source: "insiders" });
     return fs.some((f) => f.event === "alert");
   });
   const made = await posted;
@@ -130,9 +152,15 @@ test("SSE says hello, pushes a detection with its sequence id, and replays it af
   assert.equal(alert.id, String(alert.data.live.seq));
 
   const missed = await send("POST", "/api/live/simulate", { symbol: "NVDA", source: "news" });
-  const replay = await readStream({ "last-event-id": String(alert.data.live.seq) }, (fs) => fs.some((f) => f.event === "alert"));
+  const replay = await readStream({ "last-event-id": String(alert.data.live.seq) }, (fs) =>
+    fs.some((f) => f.event === "alert"),
+  );
   const again = replay.filter((f) => f.event === "alert");
-  assert.deepEqual(again.map((f) => f.data.id), [missed.body.item.id], "only what the client missed is replayed");
+  assert.deepEqual(
+    again.map((f) => f.data.id),
+    [missed.body.item.id],
+    "only what the client missed is replayed",
+  );
   assert.equal(again[0].data.replay, true);
 
   const live = await send("GET", "/api/live");
@@ -141,5 +169,8 @@ test("SSE says hello, pushes a detection with its sequence id, and replays it af
   assert.deepEqual(seen.body.fresh, { NVDA: { news: 1 } });
   assert.equal((await send("POST", "/api/live/seen", { symbol: "NVDA", source: "bogus" })).status, 400);
   const events = await send("GET", "/api/live/events?symbols=NVDA&live=1");
-  assert.deepEqual(events.body.items.map((r) => r.id), [missed.body.item.id, made.body.item.id]);
+  assert.deepEqual(
+    events.body.items.map((r) => r.id),
+    [missed.body.item.id, made.body.item.id],
+  );
 });

@@ -1,68 +1,597 @@
-import { ActivityFeedback } from './ActivityFeedback';
-import {useEffect,useState} from 'react';
-import type {AskApi} from '../ask/useAsk';
-import {read,write,message} from './api';
-type Mode='isolated'|'context-aware';
-type Summary={id:string;question:string;createdAt:string;mode?:string;status?:string};
-type Evidence={sequence:number;name:string;args:unknown;result:unknown};
-type Protocol={id:string;hypothesis:string;evaluation:string;conditionsHash:string;conditions:{question:string;provider:string;model:string;style:string;knownAt:string;evidence:Evidence[];contextSnapshotId:string}};
-type Arm={analysisId:string;status:string;answer:string;error:string|null;unknownReferences:string[]};
-type Run={status:string;execution:{order:Mode[]};result:null|{arms:Record<Mode,Arm>}};
-type Assessment={criteriaAssessment:string;strengths:string;limitations:string};
-type Excerpt={arm:Mode;quote:string;comment:string};
-type MemoryRecord={notebook:{title:string;revision:number;hypothesis:string;conclusion:string;decision:string};approval:{reason:string;createdAt:string}};
-type Review={revision:number;createdAt:string;verdict:string;rationale:string;reviewReason:string;assessments:Record<Mode,Assessment>;excerpts?:Excerpt[]};
-const modes:Mode[]=['isolated','context-aware'];
-const label=(mode:Mode)=>mode==='isolated'?'Isolated':'Context-aware';
-const blank=():Assessment=>({criteriaAssessment:'',strengths:'',limitations:''});
-export function ResearchPairs({ask,onBack}:{ask:AskApi;onBack:()=>void}) {
- const [items,setItems]=useState<Summary[]>([]),[sources,setSources]=useState<Summary[]>([]),[contexts,setContexts]=useState<{id:string;createdAt:string;mode:string;records:number}[]>([]);
- const [protocol,setProtocol]=useState<Protocol|null>(null),[run,setRun]=useState<Run|null>(null),[reviews,setReviews]=useState<Review[]>([]);
- const [sourceId,setSourceId]=useState(''),[evidence,setEvidence]=useState<Evidence[]>([]),[selected,setSelected]=useState<number[]>([]),[snapshotId,setSnapshotId]=useState('');
- const [question,setQuestion]=useState(''),[hypothesis,setHypothesis]=useState(''),[criteria,setCriteria]=useState(''),[model,setModel]=useState(''),[style,setStyle]=useState('professional');
- const [assessments,setAssessments]=useState<Record<Mode,Assessment>>({isolated:blank(),'context-aware':blank()}),[verdict,setVerdict]=useState('inconclusive'),[rationale,setRationale]=useState(''),[reason,setReason]=useState('');
- const [pinnedContext,setPinnedContext]=useState<MemoryRecord[]>([]),[excerpts,setExcerpts]=useState<Excerpt[]>([]),[excerptArm,setExcerptArm]=useState<Mode>('isolated'),[quote,setQuote]=useState(''),[comment,setComment]=useState('');
- const [creating,setCreating]=useState(false),[executing,setExecuting]=useState(false);
- const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const act=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(message(e));}finally{setBusy(false);}};
- const refresh=async()=>{const [p,a,s]=await Promise.all([read<{items:Summary[]}>('pairs'),read<{items:Summary[]}>('analyses'),read<{items:typeof contexts}>('memory/snapshots')]);setItems(p.items);setSources(a.items.filter(x=>x.mode==='isolated'&&x.status==='completed'));setContexts(s.items.filter(x=>x.mode==='context-aware'));};
- useEffect(()=>{void refresh().catch(e=>setError(message(e))).finally(()=>setLoading(false));void ask.refreshStatus();},[]);
- const open=async(id:string)=>{const [p,r,e]=await Promise.all([read<{protocol:Protocol}>(`pairs/${id}`),read<{execution:Run|null}>(`pairs/${id}/run`),read<{items:Review[]}>(`pairs/${id}/evaluations`)]);const context=await read<{snapshot:{records:MemoryRecord[]}}>(`memory/snapshots/${p.protocol.conditions.contextSnapshotId}`);setPinnedContext(context.snapshot.records);setProtocol(p.protocol);setRun(r.execution);setReviews(e.items);const latest=e.items[0];setAssessments(latest?.assessments||{isolated:blank(),'context-aware':blank()});setVerdict(latest?.verdict||'inconclusive');setRationale(latest?.rationale||'');setExcerpts(latest?.excerpts||[]);setQuote('');setComment('');setReason('');};
- const loadSource=(id:string)=>act(async()=>{setSourceId(id);setEvidence([]);setSelected([]);if(!id)return;const out=await read<{analysis:{events:{sequence:number;kind:string;data:{name:string;args:unknown;result?:{ok?:boolean}}}[]}}>(`analyses/${id}`);setEvidence(out.analysis.events.filter(e=>e.kind==='tool_output'&&e.data.name!=='research_memory'&&e.data.result&&e.data.result.ok!==false).map(e=>({sequence:e.sequence,...e.data,result:e.data.result})));});
- const register=()=>act(async()=>{const out=await write<{protocol:Protocol}>('pairs',{question,hypothesis,evaluation:criteria,provider:ask.status?.provider,model:model||ask.status?.model,style,snapshotId,evidenceAnalysisId:sourceId,evidenceSequences:selected});await refresh();await open(out.protocol.id);setCreating(false);setNotice('Registered immutable conditions. Review them before running both analyses.');});
- const execute=()=>act(async()=>{if(!protocol)return;setExecuting(true);try{await write(`pairs/${protocol.id}/run`,{});await open(protocol.id);setNotice('Execution records loaded. Review each arm’s status before evaluating.');}finally{setExecuting(false);}});
- const save=()=>act(async()=>{if(!protocol)return;const out=await write<{evaluation:Review}>(`pairs/${protocol.id}/evaluations`,{baseRevision:reviews[0]?.revision||0,verdict,rationale,reviewReason:reason,assessments,excerpts});setReviews(old=>[out.evaluation,...old]);setReason('');setNotice(`Saved review revision ${out.evaluation.revision}. Earlier judgments remain in the history.`);});
- const quoteMatches=Boolean(quote.trim()&&run?.result?.arms[excerptArm].answer.includes(quote.trim()));
- const addExcerpt=()=>{if(!quoteMatches||!comment.trim()||excerpts.length>=10)return;setExcerpts(old=>[...old,{arm:excerptArm,quote:quote.trim(),comment:comment.trim()}]);setQuote('');setComment('');};
- const ready=question.trim()&&hypothesis.trim()&&criteria.trim()&&sourceId&&snapshotId&&selected.length&&(model||ask.status?.model);
- return <section className="research-content research-pairs"><div className="research-actions"><button className="panels-btn" onClick={onBack}>Back to memory</button><button className="panels-btn" disabled={busy} onClick={()=>void act(async()=>{await refresh();if(protocol)await open(protocol.id);})}>Refresh comparisons</button></div>
- <h2>Paired research</h2><p>Compare two answers to the same question using identical frozen external evidence. Only the context-aware arm receives approved memory. This evaluates a fixed-evidence synthesis, not a live investigation or trading strategy.</p>
- {loading&&<ActivityFeedback className="research-working">Loading comparisons…</ActivityFeedback>}{busy&&<ActivityFeedback className="research-working">{executing?'Running both analyses… This can take several minutes. Keep this view open.':'Loading or saving comparison records…'}</ActivityFeedback>}{error&&<p role="alert">{error}</p>}{notice&&<ActivityFeedback>{notice}</ActivityFeedback>}
- <fieldset className="research-form" disabled={busy||loading}><legend>Saved comparisons</legend><label>Comparison<select value={protocol?.id||''} onChange={e=>{const id=e.target.value;if(id)void act(()=>open(id));}}><option value="">Choose a comparison</option>{items.map(p=><option key={p.id} value={p.id}>{p.question} · {p.createdAt}</option>)}</select></label></fieldset>
- <details open={creating} onToggle={e=>setCreating(e.currentTarget.open)}><summary>Register a new comparison</summary><fieldset className="research-form" disabled={busy||loading}>
- <label>Research question<textarea maxLength={800} value={question} onChange={e=>setQuestion(e.target.value)}/></label><label>Expected effect of memory<textarea maxLength={4000} value={hypothesis} onChange={e=>setHypothesis(e.target.value)}/></label><label>Evaluation criteria<textarea maxLength={4000} value={criteria} onChange={e=>setCriteria(e.target.value)}/></label>
- <label>Pinned model<select value={model||ask.status?.model||''} onChange={e=>setModel(e.target.value)}><option value="">Configure a provider to select a model</option>{ask.status?.models?.map(m=><option key={m.id} value={m.id}>{m.id}</option>)}</select></label><label>Writing style<select value={style} onChange={e=>setStyle(e.target.value)}><option value="professional">Professional brief</option><option value="terminal">Terminal</option><option value="simplified">Plain language</option></select></label>
- <label>Approved frozen context<select value={snapshotId} onChange={e=>setSnapshotId(e.target.value)}><option value="">Choose approved context</option>{contexts.map(s=><option key={s.id} value={s.id}>{s.createdAt} · {s.records} revisions</option>)}</select></label>{snapshotId&&<a href={`/api/research/memory/snapshots/${snapshotId}`} target="_blank" rel="noreferrer">Inspect approved context</a>}
- <label>Completed isolated evidence source<select value={sourceId} onChange={e=>void loadSource(e.target.value)}><option value="">Choose an isolated analysis</option>{sources.map(s=><option key={s.id} value={s.id}>{s.question} · {s.createdAt}</option>)}</select></label>
- {!sources.length&&<p>First run an isolated analysis from Memory that retrieves the external evidence you want to compare.</p>}{sourceId&&!evidence.length&&<p>This analysis has no eligible external tool outputs. Choose another source.</p>}
- {evidence.map(e=><div key={e.sequence}><label className="memory-selection"><input type="checkbox" checked={selected.includes(e.sequence)} disabled={!selected.includes(e.sequence)&&selected.length>=20} onChange={ev=>setSelected(old=>ev.target.checked?[...old,e.sequence]:old.filter(n=>n!==e.sequence))}/><span>{e.name} · event {e.sequence}</span></label><details><summary>Inspect evidence event {e.sequence}</summary><pre>{JSON.stringify(e.result,null,2)}</pre></details></div>)}
- <details><summary>What registration locks</summary><p>Select up to 20 successful outputs. Both arms receive the same selected payloads. Registration locks the conditions and makes no model calls.</p></details><button className="bt-run" disabled={!ready||!ask.status?.configured} onClick={()=>void register()}>Register comparison</button>
- </fieldset></details>
- {protocol&&<><h3>{protocol.conditions.question}</h3><p>Expected effect: {protocol.hypothesis}</p><p>Registered criteria: {protocol.evaluation}</p><p>{protocol.conditions.provider} · {protocol.conditions.model} · {protocol.conditions.style} · memory cutoff {protocol.conditions.knownAt}</p>
- <div className="research-actions"><a href={`/api/research/pairs/${protocol.id}/export`}>Export portable comparison ZIP</a><a href={`/api/research/pairs/${protocol.id}`} target="_blank" rel="noreferrer">Inspect locked protocol and evidence</a><a href={`/api/research/pairs/${protocol.id}/run`} target="_blank" rel="noreferrer">Inspect execution JSON</a></div>
- {!run?<><p>Running invokes the configured model twice and may incur provider charges. The protocol can execute once; incomplete attempts remain recorded.</p><button className="bt-run" disabled={busy||!ask.status?.configured} onClick={()=>void execute()}>Run both analyses</button></>:<p>Execution: {run.status}. Order: {run.execution.order.map(label).join(' → ')}.</p>}
- {run&&!run.result&&<ActivityFeedback>No terminal result is recorded. The execution may still be running or may have been interrupted. Refresh to inspect its current state; it will not silently rerun.</ActivityFeedback>}
- {run?.result&&<div className="pair-answers">{modes.map(mode=>{const a=run.result!.arms[mode];return <section key={mode}><h3>{label(mode)} · {a.status}</h3><div className="pair-answer">{a.answer||'No answer recorded.'}</div>{a.error&&<p role="alert">{a.error}</p>}{a.unknownReferences.length>0&&<p>Unknown references: {a.unknownReferences.join(', ')}</p>}<a href={`/api/research/analyses/${a.analysisId}`} target="_blank" rel="noreferrer">Inspect {label(mode).toLowerCase()} execution evidence</a></section>;})}</div>}
- <details><summary>Inspect frozen evidence and approved findings</summary><p>References E1–E{protocol.conditions.evidence.length} were supplied identically to both arms. M references were supplied only to the context-aware arm. Recorded evidence can still be incomplete or incorrect.</p>
- {protocol.conditions.evidence.map((e,i)=><details key={e.sequence}><summary>E{i+1} · {e.name}</summary><p>Source execution event {e.sequence}</p><pre>{JSON.stringify({arguments:e.args,result:e.result},null,2)}</pre></details>)}
- {pinnedContext.map((r,i)=><details key={i}><summary>M{i+1} · {r.notebook.title} · revision {r.notebook.revision}</summary><p className="pair-answer">Hypothesis: {r.notebook.hypothesis}</p><p className="pair-answer">Conclusion: {r.notebook.conclusion}</p><p className="pair-answer">Decision: {r.notebook.decision}</p><p>Approved {r.approval.createdAt}: {r.approval.reason}</p></details>)}</details>
- {run?.status==='completed'&&<fieldset className="research-form" disabled={busy}><legend>Evaluate against registered criteria</legend><p>This is your research judgment, not an automated verification of the answers. Citation identifiers alone do not establish claim support.</p>
- <div className="pair-answers">{modes.map(mode=><section key={mode}><h3>{label(mode)}</h3>{(['criteriaAssessment','strengths','limitations'] as const).map(key=><label key={key}>{label(mode)} {key==='criteriaAssessment'?'assessment against criteria':key}<textarea maxLength={4000} value={assessments[mode][key]} onChange={e=>setAssessments(old=>({...old,[mode]:{...old[mode],[key]:e.target.value}}))}/></label>)}</section>)}</div>
- <label>Comparative judgment<select value={verdict} onChange={e=>setVerdict(e.target.value)}><option value="inconclusive">Inconclusive</option><option value="tie">Tie</option><option value="isolated">Isolated answer is stronger</option><option value="context-aware">Context-aware answer is stronger</option></select></label><label>Comparative rationale<textarea maxLength={4000} value={rationale} onChange={e=>setRationale(e.target.value)}/></label><label>Reason for this review or revision<textarea maxLength={4000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
- <details><summary>Attach exact answer excerpts · {excerpts.length}/10</summary><p>Copy an exact passage from either answer and explain how it informs your judgment. Removing an excerpt affects only this draft; saved revisions remain intact.</p>
- {excerpts.map((e,i)=><div key={i}><blockquote><p className="pair-answer">{label(e.arm)}: {e.quote}</p><p className="pair-answer">{e.comment}</p></blockquote><button className="panels-btn" onClick={()=>setExcerpts(old=>old.filter((_,n)=>n!==i))}>Remove excerpt {i+1} from draft</button></div>)}
- <label>Excerpt answer<select value={excerptArm} onChange={e=>setExcerptArm(e.target.value as Mode)}><option value="isolated">Isolated</option><option value="context-aware">Context-aware</option></select></label><label>Exact answer passage<textarea value={quote} maxLength={2000} onChange={e=>setQuote(e.target.value)}/></label>{quote.trim()&&!quoteMatches&&<p role="alert">This passage does not match the selected answer. Copy its exact text.</p>}<label>Why this passage matters<textarea value={comment} maxLength={2000} onChange={e=>setComment(e.target.value)}/></label><button className="panels-btn" disabled={!quoteMatches||!comment.trim()||excerpts.length>=10} onClick={addExcerpt}>Add excerpt to draft</button></details>
- <button className="bt-run" disabled={!rationale.trim()||!reason.trim()||modes.some(m=>Object.values(assessments[m]).some(v=>!v.trim()))} onClick={()=>void save()}>Save evaluation revision</button></fieldset>}
- {reviews.length>0&&<section><h3>Evaluation history</h3>{reviews.map(r=><details key={r.revision}><summary>Revision {r.revision} · {r.verdict} · {r.createdAt}</summary><p className="pair-answer">{r.rationale}</p><p>{r.reviewReason}</p>{modes.map(m=><div key={m}><h4>{label(m)}</h4><p className="pair-answer">{r.assessments[m].criteriaAssessment}</p><p>Strengths: {r.assessments[m].strengths}</p><p>Limitations: {r.assessments[m].limitations}</p></div>)}{r.excerpts?.map((e,i)=><blockquote key={i}><p className="pair-answer">{label(e.arm)}: {e.quote}</p><p>{e.comment}</p></blockquote>)}</details>)}<a href={`/api/research/pairs/${protocol.id}/evaluations`} target="_blank" rel="noreferrer">Inspect complete review history JSON</a></section>}</>}
- </section>;
+import { ActivityFeedback } from "./ActivityFeedback";
+import { useEffect, useState } from "react";
+import type { AskApi } from "../ask/useAsk";
+import { read, write, message } from "./api";
+type Mode = "isolated" | "context-aware";
+type Summary = { id: string; question: string; createdAt: string; mode?: string; status?: string };
+type Evidence = { sequence: number; name: string; args: unknown; result: unknown };
+type Protocol = {
+  id: string;
+  hypothesis: string;
+  evaluation: string;
+  conditionsHash: string;
+  conditions: {
+    question: string;
+    provider: string;
+    model: string;
+    style: string;
+    knownAt: string;
+    evidence: Evidence[];
+    contextSnapshotId: string;
+  };
+};
+type Arm = { analysisId: string; status: string; answer: string; error: string | null; unknownReferences: string[] };
+type Run = { status: string; execution: { order: Mode[] }; result: null | { arms: Record<Mode, Arm> } };
+type Assessment = { criteriaAssessment: string; strengths: string; limitations: string };
+type Excerpt = { arm: Mode; quote: string; comment: string };
+type MemoryRecord = {
+  notebook: { title: string; revision: number; hypothesis: string; conclusion: string; decision: string };
+  approval: { reason: string; createdAt: string };
+};
+type Review = {
+  revision: number;
+  createdAt: string;
+  verdict: string;
+  rationale: string;
+  reviewReason: string;
+  assessments: Record<Mode, Assessment>;
+  excerpts?: Excerpt[];
+};
+const modes: Mode[] = ["isolated", "context-aware"];
+const label = (mode: Mode) => (mode === "isolated" ? "Isolated" : "Context-aware");
+const blank = (): Assessment => ({ criteriaAssessment: "", strengths: "", limitations: "" });
+export function ResearchPairs({ ask, onBack }: { ask: AskApi; onBack: () => void }) {
+  const [items, setItems] = useState<Summary[]>([]),
+    [sources, setSources] = useState<Summary[]>([]),
+    [contexts, setContexts] = useState<{ id: string; createdAt: string; mode: string; records: number }[]>([]);
+  const [protocol, setProtocol] = useState<Protocol | null>(null),
+    [run, setRun] = useState<Run | null>(null),
+    [reviews, setReviews] = useState<Review[]>([]);
+  const [sourceId, setSourceId] = useState(""),
+    [evidence, setEvidence] = useState<Evidence[]>([]),
+    [selected, setSelected] = useState<number[]>([]),
+    [snapshotId, setSnapshotId] = useState("");
+  const [question, setQuestion] = useState(""),
+    [hypothesis, setHypothesis] = useState(""),
+    [criteria, setCriteria] = useState(""),
+    [model, setModel] = useState(""),
+    [style, setStyle] = useState("professional");
+  const [assessments, setAssessments] = useState<Record<Mode, Assessment>>({
+      isolated: blank(),
+      "context-aware": blank(),
+    }),
+    [verdict, setVerdict] = useState("inconclusive"),
+    [rationale, setRationale] = useState(""),
+    [reason, setReason] = useState("");
+  const [pinnedContext, setPinnedContext] = useState<MemoryRecord[]>([]),
+    [excerpts, setExcerpts] = useState<Excerpt[]>([]),
+    [excerptArm, setExcerptArm] = useState<Mode>("isolated"),
+    [quote, setQuote] = useState(""),
+    [comment, setComment] = useState("");
+  const [creating, setCreating] = useState(false),
+    [executing, setExecuting] = useState(false);
+  const [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const act = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const refresh = async () => {
+    const [p, a, s] = await Promise.all([
+      read<{ items: Summary[] }>("pairs"),
+      read<{ items: Summary[] }>("analyses"),
+      read<{ items: typeof contexts }>("memory/snapshots"),
+    ]);
+    setItems(p.items);
+    setSources(a.items.filter((x) => x.mode === "isolated" && x.status === "completed"));
+    setContexts(s.items.filter((x) => x.mode === "context-aware"));
+  };
+  useEffect(() => {
+    void refresh()
+      .catch((e) => setError(message(e)))
+      .finally(() => setLoading(false));
+    void ask.refreshStatus();
+  }, []);
+  const open = async (id: string) => {
+    const [p, r, e] = await Promise.all([
+      read<{ protocol: Protocol }>(`pairs/${id}`),
+      read<{ execution: Run | null }>(`pairs/${id}/run`),
+      read<{ items: Review[] }>(`pairs/${id}/evaluations`),
+    ]);
+    const context = await read<{ snapshot: { records: MemoryRecord[] } }>(
+      `memory/snapshots/${p.protocol.conditions.contextSnapshotId}`,
+    );
+    setPinnedContext(context.snapshot.records);
+    setProtocol(p.protocol);
+    setRun(r.execution);
+    setReviews(e.items);
+    const latest = e.items[0];
+    setAssessments(latest?.assessments || { isolated: blank(), "context-aware": blank() });
+    setVerdict(latest?.verdict || "inconclusive");
+    setRationale(latest?.rationale || "");
+    setExcerpts(latest?.excerpts || []);
+    setQuote("");
+    setComment("");
+    setReason("");
+  };
+  const loadSource = (id: string) =>
+    act(async () => {
+      setSourceId(id);
+      setEvidence([]);
+      setSelected([]);
+      if (!id) return;
+      const out = await read<{
+        analysis: {
+          events: {
+            sequence: number;
+            kind: string;
+            data: { name: string; args: unknown; result?: { ok?: boolean } };
+          }[];
+        };
+      }>(`analyses/${id}`);
+      setEvidence(
+        out.analysis.events
+          .filter(
+            (e) =>
+              e.kind === "tool_output" &&
+              e.data.name !== "research_memory" &&
+              e.data.result &&
+              e.data.result.ok !== false,
+          )
+          .map((e) => ({ sequence: e.sequence, ...e.data, result: e.data.result })),
+      );
+    });
+  const register = () =>
+    act(async () => {
+      const out = await write<{ protocol: Protocol }>("pairs", {
+        question,
+        hypothesis,
+        evaluation: criteria,
+        provider: ask.status?.provider,
+        model: model || ask.status?.model,
+        style,
+        snapshotId,
+        evidenceAnalysisId: sourceId,
+        evidenceSequences: selected,
+      });
+      await refresh();
+      await open(out.protocol.id);
+      setCreating(false);
+      setNotice("Registered immutable conditions. Review them before running both analyses.");
+    });
+  const execute = () =>
+    act(async () => {
+      if (!protocol) return;
+      setExecuting(true);
+      try {
+        await write(`pairs/${protocol.id}/run`, {});
+        await open(protocol.id);
+        setNotice("Execution records loaded. Review each arm’s status before evaluating.");
+      } finally {
+        setExecuting(false);
+      }
+    });
+  const save = () =>
+    act(async () => {
+      if (!protocol) return;
+      const out = await write<{ evaluation: Review }>(`pairs/${protocol.id}/evaluations`, {
+        baseRevision: reviews[0]?.revision || 0,
+        verdict,
+        rationale,
+        reviewReason: reason,
+        assessments,
+        excerpts,
+      });
+      setReviews((old) => [out.evaluation, ...old]);
+      setReason("");
+      setNotice(`Saved review revision ${out.evaluation.revision}. Earlier judgments remain in the history.`);
+    });
+  const quoteMatches = Boolean(quote.trim() && run?.result?.arms[excerptArm].answer.includes(quote.trim()));
+  const addExcerpt = () => {
+    if (!quoteMatches || !comment.trim() || excerpts.length >= 10) return;
+    setExcerpts((old) => [...old, { arm: excerptArm, quote: quote.trim(), comment: comment.trim() }]);
+    setQuote("");
+    setComment("");
+  };
+  const ready =
+    question.trim() &&
+    hypothesis.trim() &&
+    criteria.trim() &&
+    sourceId &&
+    snapshotId &&
+    selected.length &&
+    (model || ask.status?.model);
+  return (
+    <section className="research-content research-pairs">
+      <div className="research-actions">
+        <button className="panels-btn" onClick={onBack}>
+          Back to memory
+        </button>
+        <button
+          className="panels-btn"
+          disabled={busy}
+          onClick={() =>
+            void act(async () => {
+              await refresh();
+              if (protocol) await open(protocol.id);
+            })
+          }
+        >
+          Refresh comparisons
+        </button>
+      </div>
+      <h2>Paired research</h2>
+      <p>
+        Compare two answers to the same question using identical frozen external evidence. Only the context-aware arm
+        receives approved memory. This evaluates a fixed-evidence synthesis, not a live investigation or trading
+        strategy.
+      </p>
+      {loading && <ActivityFeedback className="research-working">Loading comparisons…</ActivityFeedback>}
+      {busy && (
+        <ActivityFeedback className="research-working">
+          {executing
+            ? "Running both analyses… This can take several minutes. Keep this view open."
+            : "Loading or saving comparison records…"}
+        </ActivityFeedback>
+      )}
+      {error && <p role="alert">{error}</p>}
+      {notice && <ActivityFeedback>{notice}</ActivityFeedback>}
+      <fieldset className="research-form" disabled={busy || loading}>
+        <legend>Saved comparisons</legend>
+        <label>
+          Comparison
+          <select
+            value={protocol?.id || ""}
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) void act(() => open(id));
+            }}
+          >
+            <option value="">Choose a comparison</option>
+            {items.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.question} · {p.createdAt}
+              </option>
+            ))}
+          </select>
+        </label>
+      </fieldset>
+      <details open={creating} onToggle={(e) => setCreating(e.currentTarget.open)}>
+        <summary>Register a new comparison</summary>
+        <fieldset className="research-form" disabled={busy || loading}>
+          <label>
+            Research question
+            <textarea maxLength={800} value={question} onChange={(e) => setQuestion(e.target.value)} />
+          </label>
+          <label>
+            Expected effect of memory
+            <textarea maxLength={4000} value={hypothesis} onChange={(e) => setHypothesis(e.target.value)} />
+          </label>
+          <label>
+            Evaluation criteria
+            <textarea maxLength={4000} value={criteria} onChange={(e) => setCriteria(e.target.value)} />
+          </label>
+          <label>
+            Pinned model
+            <select value={model || ask.status?.model || ""} onChange={(e) => setModel(e.target.value)}>
+              <option value="">Configure a provider to select a model</option>
+              {ask.status?.models?.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Writing style
+            <select value={style} onChange={(e) => setStyle(e.target.value)}>
+              <option value="professional">Professional brief</option>
+              <option value="terminal">Terminal</option>
+              <option value="simplified">Plain language</option>
+            </select>
+          </label>
+          <label>
+            Approved frozen context
+            <select value={snapshotId} onChange={(e) => setSnapshotId(e.target.value)}>
+              <option value="">Choose approved context</option>
+              {contexts.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.createdAt} · {s.records} revisions
+                </option>
+              ))}
+            </select>
+          </label>
+          {snapshotId && (
+            <a href={`/api/research/memory/snapshots/${snapshotId}`} target="_blank" rel="noreferrer">
+              Inspect approved context
+            </a>
+          )}
+          <label>
+            Completed isolated evidence source
+            <select value={sourceId} onChange={(e) => void loadSource(e.target.value)}>
+              <option value="">Choose an isolated analysis</option>
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.question} · {s.createdAt}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!sources.length && (
+            <p>First run an isolated analysis from Memory that retrieves the external evidence you want to compare.</p>
+          )}
+          {sourceId && !evidence.length && (
+            <p>This analysis has no eligible external tool outputs. Choose another source.</p>
+          )}
+          {evidence.map((e) => (
+            <div key={e.sequence}>
+              <label className="memory-selection">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(e.sequence)}
+                  disabled={!selected.includes(e.sequence) && selected.length >= 20}
+                  onChange={(ev) =>
+                    setSelected((old) =>
+                      ev.target.checked ? [...old, e.sequence] : old.filter((n) => n !== e.sequence),
+                    )
+                  }
+                />
+                <span>
+                  {e.name} · event {e.sequence}
+                </span>
+              </label>
+              <details>
+                <summary>Inspect evidence event {e.sequence}</summary>
+                <pre>{JSON.stringify(e.result, null, 2)}</pre>
+              </details>
+            </div>
+          ))}
+          <details>
+            <summary>What registration locks</summary>
+            <p>
+              Select up to 20 successful outputs. Both arms receive the same selected payloads. Registration locks the
+              conditions and makes no model calls.
+            </p>
+          </details>
+          <button className="bt-run" disabled={!ready || !ask.status?.configured} onClick={() => void register()}>
+            Register comparison
+          </button>
+        </fieldset>
+      </details>
+      {protocol && (
+        <>
+          <h3>{protocol.conditions.question}</h3>
+          <p>Expected effect: {protocol.hypothesis}</p>
+          <p>Registered criteria: {protocol.evaluation}</p>
+          <p>
+            {protocol.conditions.provider} · {protocol.conditions.model} · {protocol.conditions.style} · memory cutoff{" "}
+            {protocol.conditions.knownAt}
+          </p>
+          <div className="research-actions">
+            <a href={`/api/research/pairs/${protocol.id}/export`}>Export portable comparison ZIP</a>
+            <a href={`/api/research/pairs/${protocol.id}`} target="_blank" rel="noreferrer">
+              Inspect locked protocol and evidence
+            </a>
+            <a href={`/api/research/pairs/${protocol.id}/run`} target="_blank" rel="noreferrer">
+              Inspect execution JSON
+            </a>
+          </div>
+          {!run ? (
+            <>
+              <p>
+                Running invokes the configured model twice and may incur provider charges. The protocol can execute
+                once; incomplete attempts remain recorded.
+              </p>
+              <button className="bt-run" disabled={busy || !ask.status?.configured} onClick={() => void execute()}>
+                Run both analyses
+              </button>
+            </>
+          ) : (
+            <p>
+              Execution: {run.status}. Order: {run.execution.order.map(label).join(" → ")}.
+            </p>
+          )}
+          {run && !run.result && (
+            <ActivityFeedback>
+              No terminal result is recorded. The execution may still be running or may have been interrupted. Refresh
+              to inspect its current state; it will not silently rerun.
+            </ActivityFeedback>
+          )}
+          {run?.result && (
+            <div className="pair-answers">
+              {modes.map((mode) => {
+                const a = run.result!.arms[mode];
+                return (
+                  <section key={mode}>
+                    <h3>
+                      {label(mode)} · {a.status}
+                    </h3>
+                    <div className="pair-answer">{a.answer || "No answer recorded."}</div>
+                    {a.error && <p role="alert">{a.error}</p>}
+                    {a.unknownReferences.length > 0 && <p>Unknown references: {a.unknownReferences.join(", ")}</p>}
+                    <a href={`/api/research/analyses/${a.analysisId}`} target="_blank" rel="noreferrer">
+                      Inspect {label(mode).toLowerCase()} execution evidence
+                    </a>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+          <details>
+            <summary>Inspect frozen evidence and approved findings</summary>
+            <p>
+              References E1–E{protocol.conditions.evidence.length} were supplied identically to both arms. M references
+              were supplied only to the context-aware arm. Recorded evidence can still be incomplete or incorrect.
+            </p>
+            {protocol.conditions.evidence.map((e, i) => (
+              <details key={e.sequence}>
+                <summary>
+                  E{i + 1} · {e.name}
+                </summary>
+                <p>Source execution event {e.sequence}</p>
+                <pre>{JSON.stringify({ arguments: e.args, result: e.result }, null, 2)}</pre>
+              </details>
+            ))}
+            {pinnedContext.map((r, i) => (
+              <details key={i}>
+                <summary>
+                  M{i + 1} · {r.notebook.title} · revision {r.notebook.revision}
+                </summary>
+                <p className="pair-answer">Hypothesis: {r.notebook.hypothesis}</p>
+                <p className="pair-answer">Conclusion: {r.notebook.conclusion}</p>
+                <p className="pair-answer">Decision: {r.notebook.decision}</p>
+                <p>
+                  Approved {r.approval.createdAt}: {r.approval.reason}
+                </p>
+              </details>
+            ))}
+          </details>
+          {run?.status === "completed" && (
+            <fieldset className="research-form" disabled={busy}>
+              <legend>Evaluate against registered criteria</legend>
+              <p>
+                This is your research judgment, not an automated verification of the answers. Citation identifiers alone
+                do not establish claim support.
+              </p>
+              <div className="pair-answers">
+                {modes.map((mode) => (
+                  <section key={mode}>
+                    <h3>{label(mode)}</h3>
+                    {(["criteriaAssessment", "strengths", "limitations"] as const).map((key) => (
+                      <label key={key}>
+                        {label(mode)} {key === "criteriaAssessment" ? "assessment against criteria" : key}
+                        <textarea
+                          maxLength={4000}
+                          value={assessments[mode][key]}
+                          onChange={(e) =>
+                            setAssessments((old) => ({ ...old, [mode]: { ...old[mode], [key]: e.target.value } }))
+                          }
+                        />
+                      </label>
+                    ))}
+                  </section>
+                ))}
+              </div>
+              <label>
+                Comparative judgment
+                <select value={verdict} onChange={(e) => setVerdict(e.target.value)}>
+                  <option value="inconclusive">Inconclusive</option>
+                  <option value="tie">Tie</option>
+                  <option value="isolated">Isolated answer is stronger</option>
+                  <option value="context-aware">Context-aware answer is stronger</option>
+                </select>
+              </label>
+              <label>
+                Comparative rationale
+                <textarea maxLength={4000} value={rationale} onChange={(e) => setRationale(e.target.value)} />
+              </label>
+              <label>
+                Reason for this review or revision
+                <textarea maxLength={4000} value={reason} onChange={(e) => setReason(e.target.value)} />
+              </label>
+              <details>
+                <summary>Attach exact answer excerpts · {excerpts.length}/10</summary>
+                <p>
+                  Copy an exact passage from either answer and explain how it informs your judgment. Removing an excerpt
+                  affects only this draft; saved revisions remain intact.
+                </p>
+                {excerpts.map((e, i) => (
+                  <div key={i}>
+                    <blockquote>
+                      <p className="pair-answer">
+                        {label(e.arm)}: {e.quote}
+                      </p>
+                      <p className="pair-answer">{e.comment}</p>
+                    </blockquote>
+                    <button className="panels-btn" onClick={() => setExcerpts((old) => old.filter((_, n) => n !== i))}>
+                      Remove excerpt {i + 1} from draft
+                    </button>
+                  </div>
+                ))}
+                <label>
+                  Excerpt answer
+                  <select value={excerptArm} onChange={(e) => setExcerptArm(e.target.value as Mode)}>
+                    <option value="isolated">Isolated</option>
+                    <option value="context-aware">Context-aware</option>
+                  </select>
+                </label>
+                <label>
+                  Exact answer passage
+                  <textarea value={quote} maxLength={2000} onChange={(e) => setQuote(e.target.value)} />
+                </label>
+                {quote.trim() && !quoteMatches && (
+                  <p role="alert">This passage does not match the selected answer. Copy its exact text.</p>
+                )}
+                <label>
+                  Why this passage matters
+                  <textarea value={comment} maxLength={2000} onChange={(e) => setComment(e.target.value)} />
+                </label>
+                <button
+                  className="panels-btn"
+                  disabled={!quoteMatches || !comment.trim() || excerpts.length >= 10}
+                  onClick={addExcerpt}
+                >
+                  Add excerpt to draft
+                </button>
+              </details>
+              <button
+                className="bt-run"
+                disabled={
+                  !rationale.trim() ||
+                  !reason.trim() ||
+                  modes.some((m) => Object.values(assessments[m]).some((v) => !v.trim()))
+                }
+                onClick={() => void save()}
+              >
+                Save evaluation revision
+              </button>
+            </fieldset>
+          )}
+          {reviews.length > 0 && (
+            <section>
+              <h3>Evaluation history</h3>
+              {reviews.map((r) => (
+                <details key={r.revision}>
+                  <summary>
+                    Revision {r.revision} · {r.verdict} · {r.createdAt}
+                  </summary>
+                  <p className="pair-answer">{r.rationale}</p>
+                  <p>{r.reviewReason}</p>
+                  {modes.map((m) => (
+                    <div key={m}>
+                      <h4>{label(m)}</h4>
+                      <p className="pair-answer">{r.assessments[m].criteriaAssessment}</p>
+                      <p>Strengths: {r.assessments[m].strengths}</p>
+                      <p>Limitations: {r.assessments[m].limitations}</p>
+                    </div>
+                  ))}
+                  {r.excerpts?.map((e, i) => (
+                    <blockquote key={i}>
+                      <p className="pair-answer">
+                        {label(e.arm)}: {e.quote}
+                      </p>
+                      <p>{e.comment}</p>
+                    </blockquote>
+                  ))}
+                </details>
+              ))}
+              <a href={`/api/research/pairs/${protocol.id}/evaluations`} target="_blank" rel="noreferrer">
+                Inspect complete review history JSON
+              </a>
+            </section>
+          )}
+        </>
+      )}
+    </section>
+  );
 }

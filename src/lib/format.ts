@@ -1,5 +1,7 @@
 export function num(value: number | null | undefined, digits = 2) {
-  return value == null || !Number.isFinite(value) ? "—" : value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return value == null || !Number.isFinite(value)
+    ? "—"
+    : value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 export function signed(value: number | null | undefined, digits = 2, suffix = "") {
@@ -46,7 +48,7 @@ export function money(value: number | null | undefined) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(Number(value));
 }
 

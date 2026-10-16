@@ -1,174 +1,648 @@
 /* One bounded gesture per hover/focus. The target and label never move, and no JS runs per frame. */
-.ic[data-motion] { --ic-whole: none; --ic-part: none; --ic-duration: 520ms; --ic-delay: 0ms; }
-.ic-glyph, .ic-glyph > path { transform-box: view-box; transform-origin: 8px 8px; }
-.ic-glyph > path { --ic-part: none; --ic-delay: 0ms; }
+.ic[data-motion] {
+  --ic-whole: none;
+  --ic-part: none;
+  --ic-duration: 520ms;
+  --ic-delay: 0ms;
+}
+.ic-glyph,
+.ic-glyph > path {
+  transform-box: view-box;
+  transform-origin: 8px 8px;
+}
+.ic-glyph > path {
+  --ic-part: none;
+  --ic-delay: 0ms;
+}
 
 /* Only deliberate pointer hover starts motion; touch does not leave an animation latched on. */
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  :where(button:not(:disabled):not([aria-disabled="true"]), a[href], summary, [role="button"]:not([aria-disabled="true"]), [role="option"], [role="menuitem"], .icon-cell):hover .ic,
-  .ic:hover { --ic-whole-run: var(--ic-whole); }
+  :where(
+      button:not(:disabled):not([aria-disabled="true"]),
+      a[href],
+      summary,
+      [role="button"]:not([aria-disabled="true"]),
+      [role="option"],
+      [role="menuitem"],
+      .icon-cell
+    ):hover
+    .ic,
+  .ic:hover {
+    --ic-whole-run: var(--ic-whole);
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  :where(button:not(:disabled), a[href], summary, [role="button"], [role="option"], [role="menuitem"]):focus-visible .ic,
-  .cmd-list:focus-within [aria-selected="true"] .ic { --ic-whole-run: var(--ic-whole); }
+  :where(button:not(:disabled), a[href], summary, [role="button"], [role="option"], [role="menuitem"]):focus-visible
+    .ic,
+  .cmd-list:focus-within [aria-selected="true"] .ic {
+    --ic-whole-run: var(--ic-whole);
+  }
 
-  .ic-glyph { animation: var(--ic-whole-run, none) var(--ic-duration) cubic-bezier(.22, .7, .25, 1) 1; }
-  .ic-glyph > path { animation: var(--ic-active-part, none) var(--ic-duration) cubic-bezier(.22, .7, .25, 1) var(--ic-delay) 1; }
-  :where(button:not(:disabled):not([aria-disabled="true"]), a[href], summary, [role="button"]:not([aria-disabled="true"]), [role="option"], [role="menuitem"]):focus-visible .ic-glyph > path,
-  .cmd-list:focus-within [aria-selected="true"] .ic-glyph > path { --ic-active-part: var(--ic-part); }
+  .ic-glyph {
+    animation: var(--ic-whole-run, none) var(--ic-duration) cubic-bezier(0.22, 0.7, 0.25, 1) 1;
+  }
+  .ic-glyph > path {
+    animation: var(--ic-active-part, none) var(--ic-duration) cubic-bezier(0.22, 0.7, 0.25, 1) var(--ic-delay) 1;
+  }
+  :where(
+      button:not(:disabled):not([aria-disabled="true"]),
+      a[href],
+      summary,
+      [role="button"]:not([aria-disabled="true"]),
+      [role="option"],
+      [role="menuitem"]
+    ):focus-visible
+    .ic-glyph
+    > path,
+  .cmd-list:focus-within [aria-selected="true"] .ic-glyph > path {
+    --ic-active-part: var(--ic-part);
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  :where(button:not(:disabled):not([aria-disabled="true"]), a[href], summary, [role="button"]:not([aria-disabled="true"]), [role="option"], [role="menuitem"], .icon-cell):hover .ic-glyph > path,
-  .ic:hover .ic-glyph > path { --ic-active-part: var(--ic-part); }
+  :where(
+      button:not(:disabled):not([aria-disabled="true"]),
+      a[href],
+      summary,
+      [role="button"]:not([aria-disabled="true"]),
+      [role="option"],
+      [role="menuitem"],
+      .icon-cell
+    ):hover
+    .ic-glyph
+    > path,
+  .ic:hover .ic-glyph > path {
+    --ic-active-part: var(--ic-part);
+  }
 }
 /* Disabled controls never imply that an action is available. */
 :where(button:disabled, [aria-disabled="true"]) .ic-glyph,
-:where(button:disabled, [aria-disabled="true"]) .ic-glyph > path { animation: none; }
+:where(button:disabled, [aria-disabled="true"]) .ic-glyph > path {
+  animation: none;
+}
 
 /* Navigation: a rising sun, settled architecture, a drawn chart, a rocking vessel. */
-.ic[data-motion="sunrise"] path:nth-child(n+2) { --ic-part: ic-rise; transform-origin: 8px 12px; }
-.ic[data-motion="sunrise"] path:nth-child(n+3) { --ic-delay: 55ms; }
-.ic[data-motion="structure"] path { --ic-part: ic-build; transform-origin: 8px 14px; }
-.ic[data-motion="structure"] path:nth-child(2n) { --ic-delay: 45ms; }
-.ic[data-motion="structure"] path:nth-child(3n) { --ic-delay: 85ms; }
+.ic[data-motion="sunrise"] path:nth-child(n + 2) {
+  --ic-part: ic-rise;
+  transform-origin: 8px 12px;
+}
+.ic[data-motion="sunrise"] path:nth-child(n + 3) {
+  --ic-delay: 55ms;
+}
+.ic[data-motion="structure"] path {
+  --ic-part: ic-build;
+  transform-origin: 8px 14px;
+}
+.ic[data-motion="structure"] path:nth-child(2n) {
+  --ic-delay: 45ms;
+}
+.ic[data-motion="structure"] path:nth-child(3n) {
+  --ic-delay: 85ms;
+}
 .ic[data-motion="trend"] path:nth-child(2),
-.ic[data-icon="ticker"] path:first-child { --ic-part: ic-line; transform-origin: 2px 13px; }
-.ic[data-icon="ticker"] path:nth-child(2) { --ic-part: ic-northeast; }
-.ic[data-motion="document"] path:nth-child(n+3),
-.ic[data-motion="news"] path:nth-child(n+2) { --ic-part: ic-line; transform-origin: 4px 8px; }
+.ic[data-icon="ticker"] path:first-child {
+  --ic-part: ic-line;
+  transform-origin: 2px 13px;
+}
+.ic[data-icon="ticker"] path:nth-child(2) {
+  --ic-part: ic-northeast;
+}
+.ic[data-motion="document"] path:nth-child(n + 3),
+.ic[data-motion="news"] path:nth-child(n + 2) {
+  --ic-part: ic-line;
+  transform-origin: 4px 8px;
+}
 .ic[data-motion="document"] path:nth-child(2n),
-.ic[data-motion="news"] path:nth-child(2n) { --ic-delay: 55ms; }
-.ic[data-motion="locator"] { --ic-whole: ic-locate; }
-.ic[data-motion="ship"] { --ic-whole: ic-sail; --ic-duration: 680ms; }
-.ic[data-motion="fold"] { --ic-whole: ic-fold; }
-.ic[data-motion="calendar"] path:nth-child(n+5) { --ic-part: ic-tap; }
-.ic[data-motion="calendar"] path:nth-child(6) { --ic-delay: 60ms; }
-.ic[data-motion="calendar"] path:nth-child(7) { --ic-delay: 120ms; }
-.ic[data-motion="globe"] path:nth-child(2) { --ic-part: ic-meridian; }
+.ic[data-motion="news"] path:nth-child(2n) {
+  --ic-delay: 55ms;
+}
+.ic[data-motion="locator"] {
+  --ic-whole: ic-locate;
+}
+.ic[data-motion="ship"] {
+  --ic-whole: ic-sail;
+  --ic-duration: 680ms;
+}
+.ic[data-motion="fold"] {
+  --ic-whole: ic-fold;
+}
+.ic[data-motion="calendar"] path:nth-child(n + 5) {
+  --ic-part: ic-tap;
+}
+.ic[data-motion="calendar"] path:nth-child(6) {
+  --ic-delay: 60ms;
+}
+.ic[data-motion="calendar"] path:nth-child(7) {
+  --ic-delay: 120ms;
+}
+.ic[data-motion="globe"] path:nth-child(2) {
+  --ic-part: ic-meridian;
+}
 
 /* Congress: the gavel pivots at its handle; the block remains still. */
-.ic[data-motion="gavel"] path:nth-child(-n+2) { --ic-part: ic-strike; transform-origin: 2px 11px; }
-.ic[data-motion="people"] path:first-child { --ic-part: ic-nod; transform-origin: 8px 8px; }
+.ic[data-motion="gavel"] path:nth-child(-n + 2) {
+  --ic-part: ic-strike;
+  transform-origin: 2px 11px;
+}
+.ic[data-motion="people"] path:first-child {
+  --ic-part: ic-nod;
+  transform-origin: 8px 8px;
+}
 .ic[data-icon="committees"] path:nth-child(3),
-.ic[data-icon="committees"] path:nth-child(5) { --ic-part: ic-nod; --ic-delay: 65ms; }
-.ic[data-icon="insider"] path:nth-child(4) { --ic-part: ic-nod; }
-.ic[data-icon="insider"] path:first-child { --ic-part: none; }
-.ic[data-motion="wave"] path { --ic-part: ic-wave; }
-.ic[data-motion="wave"] path:first-child { --ic-delay: 100ms; }
-.ic[data-motion="wave"] path:nth-child(2) { --ic-delay: 50ms; }
-.ic[data-motion="signal"] path:last-child { --ic-part: ic-wave; }
-.ic[data-icon="hearing"] path:first-child { --ic-part: ic-tap; }
-.ic[data-motion="tally"] path { --ic-part: ic-build; transform-origin: 8px 13px; }
-.ic[data-motion="tally"] path:nth-child(2n) { --ic-delay: 60ms; }
-.ic[data-motion="exchange"] path:nth-child(-n+2) { --ic-part: ic-right; }
-.ic[data-motion="exchange"] path:nth-child(n+3) { --ic-part: ic-left; }
-.ic[data-motion="coin"] { --ic-whole: ic-coin; }
-.ic[data-motion="trophy"] { --ic-whole: ic-prize; }
-.ic[data-motion="trophy"] .ic-glyph { transform-origin: 8px 14px; }
-.ic[data-motion="timeline"] path:nth-child(n+2) { --ic-part: ic-tap; }
-.ic[data-motion="timeline"] path:nth-child(3) { --ic-delay: 50ms; }
-.ic[data-motion="timeline"] path:nth-child(4) { --ic-delay: 100ms; }
+.ic[data-icon="committees"] path:nth-child(5) {
+  --ic-part: ic-nod;
+  --ic-delay: 65ms;
+}
+.ic[data-icon="insider"] path:nth-child(4) {
+  --ic-part: ic-nod;
+}
+.ic[data-icon="insider"] path:first-child {
+  --ic-part: none;
+}
+.ic[data-motion="wave"] path {
+  --ic-part: ic-wave;
+}
+.ic[data-motion="wave"] path:first-child {
+  --ic-delay: 100ms;
+}
+.ic[data-motion="wave"] path:nth-child(2) {
+  --ic-delay: 50ms;
+}
+.ic[data-motion="signal"] path:last-child {
+  --ic-part: ic-wave;
+}
+.ic[data-icon="hearing"] path:first-child {
+  --ic-part: ic-tap;
+}
+.ic[data-motion="tally"] path {
+  --ic-part: ic-build;
+  transform-origin: 8px 13px;
+}
+.ic[data-motion="tally"] path:nth-child(2n) {
+  --ic-delay: 60ms;
+}
+.ic[data-motion="exchange"] path:nth-child(-n + 2) {
+  --ic-part: ic-right;
+}
+.ic[data-motion="exchange"] path:nth-child(n + 3) {
+  --ic-part: ic-left;
+}
+.ic[data-motion="coin"] {
+  --ic-whole: ic-coin;
+}
+.ic[data-motion="trophy"] {
+  --ic-whole: ic-prize;
+}
+.ic[data-motion="trophy"] .ic-glyph {
+  transform-origin: 8px 14px;
+}
+.ic[data-motion="timeline"] path:nth-child(n + 2) {
+  --ic-part: ic-tap;
+}
+.ic[data-motion="timeline"] path:nth-child(3) {
+  --ic-delay: 50ms;
+}
+.ic[data-motion="timeline"] path:nth-child(4) {
+  --ic-delay: 100ms;
+}
 
 /* Markets, mapping and imagery. */
-.ic[data-motion="candles"] path:nth-child(-n+2) { --ic-part: ic-up; }
-.ic[data-motion="candles"] path:nth-child(n+3) { --ic-part: ic-down; }
-.ic[data-motion="grid"] path { --ic-part: ic-tap; }
-.ic[data-motion="grid"] path:nth-child(2n) { --ic-delay: 60ms; }
-.ic[data-motion="orbit"] { --ic-whole: ic-orbit; }
-.ic[data-motion="network"] path { --ic-part: ic-wave; }
-.ic[data-motion="network"] path:nth-child(2n) { --ic-delay: 65ms; }
-.ic[data-motion="sparkle"] { --ic-whole: ic-sparkle; }
-.ic[data-motion="route"] path:nth-child(2) { --ic-part: ic-line; transform-origin: 2px 12px; }
-.ic[data-icon="arc"] path:first-child { --ic-part: ic-line; transform-origin: 2px 12px; }
-.ic[data-motion="image"] path:nth-child(3) { --ic-part: ic-rise; }
-.ic[data-motion="tag"] { --ic-whole: ic-tag; }
-.ic[data-motion="plane"] { --ic-whole: ic-fly; --ic-duration: 620ms; }
-.ic[data-motion="shield"] { --ic-whole: ic-shield; }
-.ic[data-motion="pulse"] { --ic-whole: ic-pulse; }
-.ic[data-motion="sun"] { --ic-whole: ic-sun; }
-.ic[data-motion="moon"] { --ic-whole: ic-moon; }
-.ic[data-motion="filter"] { --ic-whole: ic-filter; }
+.ic[data-motion="candles"] path:nth-child(-n + 2) {
+  --ic-part: ic-up;
+}
+.ic[data-motion="candles"] path:nth-child(n + 3) {
+  --ic-part: ic-down;
+}
+.ic[data-motion="grid"] path {
+  --ic-part: ic-tap;
+}
+.ic[data-motion="grid"] path:nth-child(2n) {
+  --ic-delay: 60ms;
+}
+.ic[data-motion="orbit"] {
+  --ic-whole: ic-orbit;
+}
+.ic[data-motion="network"] path {
+  --ic-part: ic-wave;
+}
+.ic[data-motion="network"] path:nth-child(2n) {
+  --ic-delay: 65ms;
+}
+.ic[data-motion="sparkle"] {
+  --ic-whole: ic-sparkle;
+}
+.ic[data-motion="route"] path:nth-child(2) {
+  --ic-part: ic-line;
+  transform-origin: 2px 12px;
+}
+.ic[data-icon="arc"] path:first-child {
+  --ic-part: ic-line;
+  transform-origin: 2px 12px;
+}
+.ic[data-motion="image"] path:nth-child(3) {
+  --ic-part: ic-rise;
+}
+.ic[data-motion="tag"] {
+  --ic-whole: ic-tag;
+}
+.ic[data-motion="plane"] {
+  --ic-whole: ic-fly;
+  --ic-duration: 620ms;
+}
+.ic[data-motion="shield"] {
+  --ic-whole: ic-shield;
+}
+.ic[data-motion="pulse"] {
+  --ic-whole: ic-pulse;
+}
+.ic[data-motion="sun"] {
+  --ic-whole: ic-sun;
+}
+.ic[data-motion="moon"] {
+  --ic-whole: ic-moon;
+}
+.ic[data-motion="filter"] {
+  --ic-whole: ic-filter;
+}
 
 /* Actions: directional travel matches what the control does. */
-.ic[data-motion="search"] { --ic-whole: ic-search; }
-.ic[data-motion="left"] { --ic-whole: ic-left; --ic-duration: 320ms; }
-.ic[data-motion="right"] { --ic-whole: ic-right; --ic-duration: 320ms; }
-.ic[data-motion="down"] { --ic-whole: ic-down; --ic-duration: 320ms; }
-.ic[data-motion="turn"] { --ic-whole: ic-turn; --ic-duration: 320ms; }
-.ic[data-motion="press"] { --ic-whole: ic-press; }
-.ic[data-motion="expand"] { --ic-whole: ic-expand; }
-.ic[data-motion="send"] path:nth-child(-n+2) { --ic-part: ic-up; }
-.ic[data-motion="receive"] path:nth-child(-n+2) { --ic-part: ic-down; }
-.ic[data-motion="link"] path:nth-child(2) { --ic-part: ic-northeast; }
-.ic[data-motion="link"] path:nth-child(3) { --ic-part: ic-southwest; }
-.ic[data-motion="diagonal"] path:nth-child(-n+2) { --ic-part: ic-northeast; }
-.ic[data-motion="tick"] { --ic-whole: ic-confirm; }
-.ic[data-motion="tray"] path:last-child { --ic-part: ic-down; }
-.ic[data-motion="undo"] { --ic-whole: ic-undo; }
-.ic[data-motion="redo"] { --ic-whole: ic-redo; }
-.ic[data-motion="bell"] { --ic-whole: ic-ring; --ic-duration: 640ms; }
-.ic[data-motion="bell"] .ic-glyph { transform-origin: 8px 3px; }
-.ic[data-motion="dots"] path { --ic-part: ic-dot; }
-.ic[data-motion="dots"] path:nth-child(2n) { --ic-delay: 60ms; }
-.ic[data-motion="dots"] path:nth-child(3n) { --ic-delay: 120ms; }
-.ic[data-motion="command"] path:first-child { --ic-part: ic-right; }
-.ic[data-motion="command"] path:last-child { --ic-part: ic-pulse; --ic-delay: 60ms; }
-.ic[data-motion="panels"] path:last-child { --ic-part: ic-left; }
-.ic[data-motion="clock"] path:last-child { --ic-part: ic-clock; }
-.ic[data-motion="question"] path:nth-child(n+2) { --ic-part: ic-question; }
-.ic[data-motion="case"] path:nth-child(2) { --ic-part: ic-up; }
-.ic[data-motion="bulb"] path:first-child { --ic-part: ic-light; }
-.ic[data-motion="pen"] { --ic-whole: ic-write; }
-.ic[data-motion="lid"] path:nth-child(-n+2) { --ic-part: ic-lid; transform-origin: 12px 4px; }
+.ic[data-motion="search"] {
+  --ic-whole: ic-search;
+}
+.ic[data-motion="left"] {
+  --ic-whole: ic-left;
+  --ic-duration: 320ms;
+}
+.ic[data-motion="right"] {
+  --ic-whole: ic-right;
+  --ic-duration: 320ms;
+}
+.ic[data-motion="down"] {
+  --ic-whole: ic-down;
+  --ic-duration: 320ms;
+}
+.ic[data-motion="turn"] {
+  --ic-whole: ic-turn;
+  --ic-duration: 320ms;
+}
+.ic[data-motion="press"] {
+  --ic-whole: ic-press;
+}
+.ic[data-motion="expand"] {
+  --ic-whole: ic-expand;
+}
+.ic[data-motion="send"] path:nth-child(-n + 2) {
+  --ic-part: ic-up;
+}
+.ic[data-motion="receive"] path:nth-child(-n + 2) {
+  --ic-part: ic-down;
+}
+.ic[data-motion="link"] path:nth-child(2) {
+  --ic-part: ic-northeast;
+}
+.ic[data-motion="link"] path:nth-child(3) {
+  --ic-part: ic-southwest;
+}
+.ic[data-motion="diagonal"] path:nth-child(-n + 2) {
+  --ic-part: ic-northeast;
+}
+.ic[data-motion="tick"] {
+  --ic-whole: ic-confirm;
+}
+.ic[data-motion="tray"] path:last-child {
+  --ic-part: ic-down;
+}
+.ic[data-motion="undo"] {
+  --ic-whole: ic-undo;
+}
+.ic[data-motion="redo"] {
+  --ic-whole: ic-redo;
+}
+.ic[data-motion="bell"] {
+  --ic-whole: ic-ring;
+  --ic-duration: 640ms;
+}
+.ic[data-motion="bell"] .ic-glyph {
+  transform-origin: 8px 3px;
+}
+.ic[data-motion="dots"] path {
+  --ic-part: ic-dot;
+}
+.ic[data-motion="dots"] path:nth-child(2n) {
+  --ic-delay: 60ms;
+}
+.ic[data-motion="dots"] path:nth-child(3n) {
+  --ic-delay: 120ms;
+}
+.ic[data-motion="command"] path:first-child {
+  --ic-part: ic-right;
+}
+.ic[data-motion="command"] path:last-child {
+  --ic-part: ic-pulse;
+  --ic-delay: 60ms;
+}
+.ic[data-motion="panels"] path:last-child {
+  --ic-part: ic-left;
+}
+.ic[data-motion="clock"] path:last-child {
+  --ic-part: ic-clock;
+}
+.ic[data-motion="question"] path:nth-child(n + 2) {
+  --ic-part: ic-question;
+}
+.ic[data-motion="case"] path:nth-child(2) {
+  --ic-part: ic-up;
+}
+.ic[data-motion="bulb"] path:first-child {
+  --ic-part: ic-light;
+}
+.ic[data-motion="pen"] {
+  --ic-whole: ic-write;
+}
+.ic[data-motion="lid"] path:nth-child(-n + 2) {
+  --ic-part: ic-lid;
+  transform-origin: 12px 4px;
+}
 
 /* Every gesture returns to the original drawing. No persistent transforms or infinite loops. */
-@keyframes ic-rise { 40% { transform: translateY(-1.4px); } }
-@keyframes ic-build { 35% { transform: scaleY(.86); opacity: .65; } }
-@keyframes ic-line { 30% { transform: scaleX(.7); opacity: .55; } }
-@keyframes ic-locate { 35% { transform: translateY(-1.7px); } 65% { transform: translateY(.3px); } }
-@keyframes ic-sail { 25% { transform: translateY(-.6px) rotate(-9deg); } 60% { transform: translateY(.3px) rotate(7deg); } }
-@keyframes ic-fold { 35% { transform: skewY(-7deg) scaleX(.93); } }
-@keyframes ic-tap { 40% { transform: scale(.82); opacity: .6; } }
-@keyframes ic-meridian { 45% { transform: scaleX(.35); } }
-@keyframes ic-strike { 30% { transform: rotate(-20deg); } 58% { transform: rotate(10deg); } }
-@keyframes ic-nod { 40% { transform: translateY(.8px) rotate(-7deg); } }
-@keyframes ic-wave { 40% { transform: scale(1.1); opacity: .45; } }
-@keyframes ic-left { 45% { transform: translateX(-1.6px); } }
-@keyframes ic-right { 45% { transform: translateX(1.6px); } }
-@keyframes ic-up { 45% { transform: translateY(-1.8px); } }
-@keyframes ic-down { 45% { transform: translateY(1.8px); } }
-@keyframes ic-coin { 45% { transform: scaleX(.65) rotate(-8deg); } }
-@keyframes ic-prize { 40% { transform: translateY(-1px) rotate(-8deg); } 70% { transform: rotate(4deg); } }
-@keyframes ic-orbit { 45% { transform: rotate(16deg); } }
-@keyframes ic-sparkle { 35% { transform: scale(1.16) rotate(12deg); } 65% { transform: scale(.96) rotate(-3deg); } }
-@keyframes ic-tag { 35% { transform: rotate(-12deg); } }
-@keyframes ic-fly { 35% { transform: translate(1px, -2px) rotate(8deg); } 70% { transform: translate(-.3px, -.5px) rotate(-3deg); } }
-@keyframes ic-shield { 40% { transform: scale(1.1); } }
-@keyframes ic-pulse { 35% { transform: scaleY(.7); opacity: .55; } 65% { transform: scaleY(1.1); } }
-@keyframes ic-sun { 50% { transform: rotate(30deg); } }
-@keyframes ic-moon { 45% { transform: rotate(-15deg); } }
-@keyframes ic-filter { 35% { transform: translateY(1px) scaleX(.9); } }
-@keyframes ic-search { 35% { transform: translate(-.8px, -.8px) scale(1.1); } }
-@keyframes ic-turn { 45% { transform: rotate(20deg); } }
-@keyframes ic-press { 40% { transform: translateY(1px) scale(.92); } }
-@keyframes ic-expand { 45% { transform: scale(1.12); } }
-@keyframes ic-northeast { 45% { transform: translate(1px, -1px); } }
-@keyframes ic-southwest { 45% { transform: translate(-1px, 1px); } }
-@keyframes ic-confirm { 30% { transform: scale(.85) rotate(-6deg); } 65% { transform: scale(1.08); } }
-@keyframes ic-undo { 45% { transform: rotate(-25deg); } }
-@keyframes ic-redo { 45% { transform: rotate(25deg); } }
-@keyframes ic-ring { 18% { transform: rotate(16deg); } 38% { transform: rotate(-13deg); } 58% { transform: rotate(8deg); } 78% { transform: rotate(-3deg); } }
-@keyframes ic-dot { 45% { transform: translateY(-1px); opacity: .5; } }
-@keyframes ic-clock { 50% { transform: rotate(45deg); } }
-@keyframes ic-question { 40% { transform: rotate(-9deg) translateY(-.5px); } }
-@keyframes ic-light { 40% { transform: scale(1.08); opacity: .5; } }
-@keyframes ic-write { 25% { transform: translate(.8px, -.8px); } 55% { transform: translate(-.8px, .8px); } 75% { transform: translate(.4px, -.4px); } }
-@keyframes ic-lid { 40% { transform: translateY(-1px) rotate(10deg); } }
+@keyframes ic-rise {
+  40% {
+    transform: translateY(-1.4px);
+  }
+}
+@keyframes ic-build {
+  35% {
+    transform: scaleY(0.86);
+    opacity: 0.65;
+  }
+}
+@keyframes ic-line {
+  30% {
+    transform: scaleX(0.7);
+    opacity: 0.55;
+  }
+}
+@keyframes ic-locate {
+  35% {
+    transform: translateY(-1.7px);
+  }
+  65% {
+    transform: translateY(0.3px);
+  }
+}
+@keyframes ic-sail {
+  25% {
+    transform: translateY(-0.6px) rotate(-9deg);
+  }
+  60% {
+    transform: translateY(0.3px) rotate(7deg);
+  }
+}
+@keyframes ic-fold {
+  35% {
+    transform: skewY(-7deg) scaleX(0.93);
+  }
+}
+@keyframes ic-tap {
+  40% {
+    transform: scale(0.82);
+    opacity: 0.6;
+  }
+}
+@keyframes ic-meridian {
+  45% {
+    transform: scaleX(0.35);
+  }
+}
+@keyframes ic-strike {
+  30% {
+    transform: rotate(-20deg);
+  }
+  58% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes ic-nod {
+  40% {
+    transform: translateY(0.8px) rotate(-7deg);
+  }
+}
+@keyframes ic-wave {
+  40% {
+    transform: scale(1.1);
+    opacity: 0.45;
+  }
+}
+@keyframes ic-left {
+  45% {
+    transform: translateX(-1.6px);
+  }
+}
+@keyframes ic-right {
+  45% {
+    transform: translateX(1.6px);
+  }
+}
+@keyframes ic-up {
+  45% {
+    transform: translateY(-1.8px);
+  }
+}
+@keyframes ic-down {
+  45% {
+    transform: translateY(1.8px);
+  }
+}
+@keyframes ic-coin {
+  45% {
+    transform: scaleX(0.65) rotate(-8deg);
+  }
+}
+@keyframes ic-prize {
+  40% {
+    transform: translateY(-1px) rotate(-8deg);
+  }
+  70% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes ic-orbit {
+  45% {
+    transform: rotate(16deg);
+  }
+}
+@keyframes ic-sparkle {
+  35% {
+    transform: scale(1.16) rotate(12deg);
+  }
+  65% {
+    transform: scale(0.96) rotate(-3deg);
+  }
+}
+@keyframes ic-tag {
+  35% {
+    transform: rotate(-12deg);
+  }
+}
+@keyframes ic-fly {
+  35% {
+    transform: translate(1px, -2px) rotate(8deg);
+  }
+  70% {
+    transform: translate(-0.3px, -0.5px) rotate(-3deg);
+  }
+}
+@keyframes ic-shield {
+  40% {
+    transform: scale(1.1);
+  }
+}
+@keyframes ic-pulse {
+  35% {
+    transform: scaleY(0.7);
+    opacity: 0.55;
+  }
+  65% {
+    transform: scaleY(1.1);
+  }
+}
+@keyframes ic-sun {
+  50% {
+    transform: rotate(30deg);
+  }
+}
+@keyframes ic-moon {
+  45% {
+    transform: rotate(-15deg);
+  }
+}
+@keyframes ic-filter {
+  35% {
+    transform: translateY(1px) scaleX(0.9);
+  }
+}
+@keyframes ic-search {
+  35% {
+    transform: translate(-0.8px, -0.8px) scale(1.1);
+  }
+}
+@keyframes ic-turn {
+  45% {
+    transform: rotate(20deg);
+  }
+}
+@keyframes ic-press {
+  40% {
+    transform: translateY(1px) scale(0.92);
+  }
+}
+@keyframes ic-expand {
+  45% {
+    transform: scale(1.12);
+  }
+}
+@keyframes ic-northeast {
+  45% {
+    transform: translate(1px, -1px);
+  }
+}
+@keyframes ic-southwest {
+  45% {
+    transform: translate(-1px, 1px);
+  }
+}
+@keyframes ic-confirm {
+  30% {
+    transform: scale(0.85) rotate(-6deg);
+  }
+  65% {
+    transform: scale(1.08);
+  }
+}
+@keyframes ic-undo {
+  45% {
+    transform: rotate(-25deg);
+  }
+}
+@keyframes ic-redo {
+  45% {
+    transform: rotate(25deg);
+  }
+}
+@keyframes ic-ring {
+  18% {
+    transform: rotate(16deg);
+  }
+  38% {
+    transform: rotate(-13deg);
+  }
+  58% {
+    transform: rotate(8deg);
+  }
+  78% {
+    transform: rotate(-3deg);
+  }
+}
+@keyframes ic-dot {
+  45% {
+    transform: translateY(-1px);
+    opacity: 0.5;
+  }
+}
+@keyframes ic-clock {
+  50% {
+    transform: rotate(45deg);
+  }
+}
+@keyframes ic-question {
+  40% {
+    transform: rotate(-9deg) translateY(-0.5px);
+  }
+}
+@keyframes ic-light {
+  40% {
+    transform: scale(1.08);
+    opacity: 0.5;
+  }
+}
+@keyframes ic-write {
+  25% {
+    transform: translate(0.8px, -0.8px);
+  }
+  55% {
+    transform: translate(-0.8px, 0.8px);
+  }
+  75% {
+    transform: translate(0.4px, -0.4px);
+  }
+}
+@keyframes ic-lid {
+  40% {
+    transform: translateY(-1px) rotate(10deg);
+  }
+}
 
 /* Existing button color, border and focus-ring feedback stays available without movement. */
 @media (prefers-reduced-motion: reduce) {
-  .ic-glyph, .ic-glyph > path { animation: none !important; transform: none !important; }
+  .ic-glyph,
+  .ic-glyph > path {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
-.ic[data-motion="research-scan"] { --ic-whole: ic-research-scan; --ic-duration: 700ms; }
-@keyframes ic-research-scan { 0%,100% { transform: rotate(0deg); } 35% { transform: rotate(-14deg) scale(.92); } 65% { transform: rotate(7deg) scale(1.07); } }
+.ic[data-motion="research-scan"] {
+  --ic-whole: ic-research-scan;
+  --ic-duration: 700ms;
+}
+@keyframes ic-research-scan {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-14deg) scale(0.92);
+  }
+  65% {
+    transform: rotate(7deg) scale(1.07);
+  }
+}

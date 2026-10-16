@@ -34,7 +34,7 @@ export const START_VIEW: View = {
   newsView: "board",
   selectedId: null,
   imagery: false,
-  arcs: false
+  arcs: false,
 };
 
 export type ViewPatch = Partial<View> & {
@@ -76,7 +76,13 @@ export function viewFor(action: string, at: { intelOn: boolean }): ViewPatch | n
     case "bill":
       return { ...leave("congress"), mode: "bills", voteView: "map", mapLayer: "votes", selectedId: v };
     case "vote":
-      return { ...leave("congress"), mode: "votes", mapLayer: "votes", chamber: v.startsWith("senate") ? "senate" : "house", selectedId: v };
+      return {
+        ...leave("congress"),
+        mode: "votes",
+        mapLayer: "votes",
+        chamber: v.startsWith("senate") ? "senate" : "house",
+        selectedId: v,
+      };
     case "committee": {
       const chamber: Chamber | undefined = v.startsWith("HS") ? "house" : v.startsWith("SS") ? "senate" : undefined;
       return { ...leave("congress"), mode: "committees", ...(chamber ? { chamber } : {}), selectedId: v };
@@ -92,10 +98,18 @@ export function viewFor(action: string, at: { intelOn: boolean }): ViewPatch | n
     case "contracts": {
       const [k, ...val] = v.split(":");
       const scoped = k === "symbol" || k === "place" || k === "member";
-      return { ...leave("contracts"), selectedId: null, contracts: scoped ? { kind: k as ContractScope["kind"], value: val.join(":").toUpperCase() } : { kind: "all", value: "" } };
+      return {
+        ...leave("contracts"),
+        selectedId: null,
+        contracts: scoped
+          ? { kind: k as ContractScope["kind"], value: val.join(":").toUpperCase() }
+          : { kind: "all", value: "" },
+      };
     }
     case "scope":
-      return at.intelOn ? { scope: v } : { ...leave("congress"), voteView: "map", mapLayer: "votes", selectedId: null, scope: v };
+      return at.intelOn
+        ? { scope: v }
+        : { ...leave("congress"), voteView: "map", mapLayer: "votes", selectedId: null, scope: v };
     default:
       return null;
   }
@@ -143,11 +157,19 @@ export function mapLook(view: View, at: { onMap: boolean; scoped: boolean; setti
     earth: data && !imagery ? { ...at.settings, base: "dark", view: "2d" } : at.settings,
     fill: !data ? 1 : imagery ? 0.7 : 0.92,
     arcs: data && !filings && (at.scoped || view.arcs),
-    records: !data ? null : filings ? "filings" : "window"
+    records: !data ? null : filings ? "filings" : "window",
   };
 }
 
-const SECTION_LABEL: Record<string, string> = { congress: "Congress", markets: "Markets", contracts: "Contracts", news: "News", districts: "Districts", strait: "Nav", map: "Map" };
+const SECTION_LABEL: Record<string, string> = {
+  congress: "Congress",
+  markets: "Markets",
+  contracts: "Contracts",
+  news: "News",
+  districts: "Districts",
+  strait: "Nav",
+  map: "Map",
+};
 
 /** Trail and ⌘K recents label. `who` names a bioguide id. */
 export function trailLabel(action: string, who: (bioguide: string) => string): string {
@@ -155,10 +177,15 @@ export function trailLabel(action: string, who: (bioguide: string) => string): s
   const v = rest.join(":");
   if (kind === "member") return `${who(v)} · card`;
   if (kind === "timeline") return `${who(v)} · timeline`;
-  if (kind === "scope") return `Map scope · ${v.startsWith("member:") ? who(v.slice(7)) : v.slice(7) || "all Congress"}`;
+  if (kind === "scope")
+    return `Map scope · ${v.startsWith("member:") ? who(v.slice(7)) : v.slice(7) || "all Congress"}`;
   if (kind === "contracts") {
     const [k, val] = v.split(":");
-    return k === "member" ? `Contracts · ${who(val)} district` : k === "all" || !val ? "Contracts · all agencies" : `Contracts · ${val}`;
+    return k === "member"
+      ? `Contracts · ${who(val)} district`
+      : k === "all" || !val
+        ? "Contracts · all agencies"
+        : `Contracts · ${val}`;
   }
   if (kind === "district") return `${v} · district dossier`;
   const label: Record<string, string> = {
@@ -180,7 +207,7 @@ export function trailLabel(action: string, who: (bioguide: string) => string): s
     calendar: "Calendar",
     alerts: "Alerts",
     today: v === "bt" ? "Backtest" : v === "leaders" ? "Leaderboards" : "This week in Congress trading",
-    bt: "Backtest"
+    bt: "Backtest",
   };
   return label[kind] || action;
 }

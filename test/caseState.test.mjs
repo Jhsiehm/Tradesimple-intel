@@ -5,7 +5,10 @@ import { isOpen, parseOpen, sectionId, withOpen } from "../shared/caseState.mjs"
 test("sectionId slugs titles per subject kind and drops parenthetical sources", () => {
   assert.equal(sectionId("member", "PAC money"), "member:pac-money");
   assert.equal(sectionId("ticker", "Lobbying (LDA)"), "ticker:lobbying");
-  assert.equal(sectionId("ticker", "Federal contracts, last 180 days (USAspending)"), "ticker:federal-contracts-last-180-days");
+  assert.equal(
+    sectionId("ticker", "Federal contracts, last 180 days (USAspending)"),
+    "ticker:federal-contracts-last-180-days",
+  );
   assert.equal(sectionId(undefined, "!!"), "dossier:section");
 });
 

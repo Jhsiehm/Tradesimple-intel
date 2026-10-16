@@ -40,4 +40,7 @@ export type DedupeStats = {
 export const REVISABLE: string[];
 export function publicDateOf(row: Pick<DisclosureRow, "filed" | "amended">): string;
 export function transactionKey(row: DisclosureRow): string;
-export function dedupeDisclosures<T extends DisclosureRow>(rows: T[], options?: { windowDays?: number }): { items: DedupedRow<T>[]; stats: DedupeStats };
+export function dedupeDisclosures<T extends DisclosureRow>(
+  rows: T[],
+  options?: { windowDays?: number },
+): { items: DedupedRow<T>[]; stats: DedupeStats };

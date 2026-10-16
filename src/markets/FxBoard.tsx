@@ -53,16 +53,55 @@ export type EconEvent = {
 };
 
 export const COUNTRY_CCY: Record<string, string> = {
-  "United States": "USD", "Euro Zone": "EUR", Germany: "EUR", France: "EUR", Italy: "EUR", Spain: "EUR",
-  "United Kingdom": "GBP", Japan: "JPY", Switzerland: "CHF", Canada: "CAD", Australia: "AUD", "New Zealand": "NZD",
-  Sweden: "SEK", Norway: "NOK", China: "CNY", "Hong Kong": "HKD", Singapore: "SGD", India: "INR", "South Korea": "KRW",
-  Taiwan: "TWD", Mexico: "MXN", Brazil: "BRL", "South Africa": "ZAR", Turkey: "TRY", Poland: "PLN"
+  "United States": "USD",
+  "Euro Zone": "EUR",
+  Germany: "EUR",
+  France: "EUR",
+  Italy: "EUR",
+  Spain: "EUR",
+  "United Kingdom": "GBP",
+  Japan: "JPY",
+  Switzerland: "CHF",
+  Canada: "CAD",
+  Australia: "AUD",
+  "New Zealand": "NZD",
+  Sweden: "SEK",
+  Norway: "NOK",
+  China: "CNY",
+  "Hong Kong": "HKD",
+  Singapore: "SGD",
+  India: "INR",
+  "South Korea": "KRW",
+  Taiwan: "TWD",
+  Mexico: "MXN",
+  Brazil: "BRL",
+  "South Africa": "ZAR",
+  Turkey: "TRY",
+  Poland: "PLN",
 };
 
 export const CCY_CHART: Record<string, string> = {
-  USD: "DX-Y.NYB", EUR: "EURUSD=X", GBP: "GBPUSD=X", JPY: "USDJPY=X", CHF: "USDCHF=X", CAD: "USDCAD=X", AUD: "AUDUSD=X",
-  NZD: "NZDUSD=X", SEK: "USDSEK=X", NOK: "USDNOK=X", CNY: "USDCNY=X", HKD: "USDHKD=X", SGD: "USDSGD=X", INR: "USDINR=X",
-  KRW: "USDKRW=X", TWD: "USDTWD=X", MXN: "USDMXN=X", BRL: "USDBRL=X", ZAR: "USDZAR=X", TRY: "USDTRY=X", PLN: "USDPLN=X"
+  USD: "DX-Y.NYB",
+  EUR: "EURUSD=X",
+  GBP: "GBPUSD=X",
+  JPY: "USDJPY=X",
+  CHF: "USDCHF=X",
+  CAD: "USDCAD=X",
+  AUD: "AUDUSD=X",
+  NZD: "NZDUSD=X",
+  SEK: "USDSEK=X",
+  NOK: "USDNOK=X",
+  CNY: "USDCNY=X",
+  HKD: "USDHKD=X",
+  SGD: "USDSGD=X",
+  INR: "USDINR=X",
+  KRW: "USDKRW=X",
+  TWD: "USDTWD=X",
+  MXN: "USDMXN=X",
+  BRL: "USDBRL=X",
+  ZAR: "USDZAR=X",
+  TRY: "USDTRY=X",
+  PLN: "USDPLN=X",
 };
 
 const GROUPS: FxItem["group"][] = ["Index", "G10", "EM", "Cross"];
@@ -86,13 +125,25 @@ export function useStrip() {
   const [strip, setStrip] = useState<Strip | null>(null);
   useEffect(() => {
     let cancel = false;
-    api<Strip>("/api/macro/strip").then((res) => { if (!cancel && res.ok) setStrip(res); }).catch(() => null);
-    return () => { cancel = true; };
+    api<Strip>("/api/macro/strip")
+      .then((res) => {
+        if (!cancel && res.ok) setStrip(res);
+      })
+      .catch(() => null);
+    return () => {
+      cancel = true;
+    };
   }, []);
   return strip;
 }
 
-export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void; onEvent: (event: EconEvent) => void }) {
+export function FxBoard({
+  onOpen,
+  onEvent,
+}: {
+  onOpen: (symbol: string) => void;
+  onEvent: (event: EconEvent) => void;
+}) {
   const [board, setBoard] = useState<FxPayload | null>(null);
   const [events, setEvents] = useState<EconEvent[]>([]);
   const [error, setError] = useState("");
@@ -100,20 +151,25 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
 
   useEffect(() => {
     let cancel = false;
-    const load = () => api<FxPayload>("/api/fx/board")
-      .then((res) => {
-        if (cancel) return;
-        if (!res.ok) setError(res.error || "No rates");
-        else {
-          setError("");
-          setBoard(res);
-        }
-      })
-      .catch((err: Error) => { if (!cancel) setError(err.message); });
+    const load = () =>
+      api<FxPayload>("/api/fx/board")
+        .then((res) => {
+          if (cancel) return;
+          if (!res.ok) setError(res.error || "No rates");
+          else {
+            setError("");
+            setBoard(res);
+          }
+        })
+        .catch((err: Error) => {
+          if (!cancel) setError(err.message);
+        });
     load();
     const timer = window.setInterval(load, 120000);
     api<{ ok: boolean; items: EconEvent[] }>("/api/calendar/macro?back=0&ahead=14")
-      .then((res) => { if (!cancel) setEvents((res.items || []).filter((e) => e.tier === "high")); })
+      .then((res) => {
+        if (!cancel) setEvents((res.items || []).filter((e) => e.tier === "high"));
+      })
       .catch(() => null);
     return () => {
       cancel = true;
@@ -162,7 +218,9 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
                 if (!rows.length) return null;
                 return (
                   <Fragment key={group}>
-                    <tr className="group-row"><td colSpan={9}>{group === "Index" ? "Dollar index" : group === "Cross" ? "Crosses" : group}</td></tr>
+                    <tr className="group-row">
+                      <td colSpan={9}>{group === "Index" ? "Dollar index" : group === "Cross" ? "Crosses" : group}</td>
+                    </tr>
                     {rows.map((item) => (
                       <tr key={item.symbol} onClick={() => onOpen(item.symbol)}>
                         <td>
@@ -175,8 +233,12 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
                         <td className={tone(item.changePct)}>{signed(item.changePct, 2, "%")}</td>
                         <td>{num(item.low, item.digits)}</td>
                         <td>{num(item.high, item.digits)}</td>
-                        <td><RangeBar low={item.yearLow} high={item.yearHigh} last={item.last} /></td>
-                        <td><Spark values={item.spark} /></td>
+                        <td>
+                          <RangeBar low={item.yearLow} high={item.yearHigh} last={item.last} />
+                        </td>
+                        <td>
+                          <Spark values={item.spark} />
+                        </td>
                       </tr>
                     ))}
                   </Fragment>
@@ -188,12 +250,16 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
         <aside className="side-stack">
           {board?.matrix ? (
             <section>
-              <h3>Cross rates <small>row per 1 unit of column</small></h3>
+              <h3>
+                Cross rates <small>row per 1 unit of column</small>
+              </h3>
               <table className="matrix">
                 <thead>
                   <tr>
                     <th />
-                    {board.matrix.ccys.map((c) => <th key={c}>{c}</th>)}
+                    {board.matrix.ccys.map((c) => (
+                      <th key={c}>{c}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -201,7 +267,9 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
                     <tr key={row.ccy}>
                       <td>{row.ccy}</td>
                       {row.cells.map((cell, i) => (
-                        <td key={i} className={cell == null ? "diag" : ""}>{cell == null ? "—" : crossFmt(cell)}</td>
+                        <td key={i} className={cell == null ? "diag" : ""}>
+                          {cell == null ? "—" : crossFmt(cell)}
+                        </td>
                       ))}
                     </tr>
                   ))}
@@ -210,11 +278,15 @@ export function FxBoard({ onOpen, onEvent }: { onOpen: (symbol: string) => void;
             </section>
           ) : null}
           <section>
-            <h3>High-impact prints <small>next 14 days · ET</small></h3>
+            <h3>
+              High-impact prints <small>next 14 days · ET</small>
+            </h3>
             <div className="mini-list">
               {upcoming.map((e) => (
                 <button key={e.id} onClick={() => onEvent(e)}>
-                  <time>{e.date.slice(5)} {e.time}</time>
+                  <time>
+                    {e.date.slice(5)} {e.time}
+                  </time>
                   <b>{COUNTRY_CCY[e.country] || e.country.slice(0, 3).toUpperCase()}</b>
                   <span>{e.event}</span>
                   <small>{e.consensus ? `c ${e.consensus}` : e.previous ? `p ${e.previous}` : ""}</small>

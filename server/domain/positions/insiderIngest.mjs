@@ -4,7 +4,15 @@
  * Form 4s are read one by one with the live path's parser. Both build rows with form4Rows, so ids and fields match.
  */
 import { zipEntryLines } from "../../lib/zip.mjs";
-import { ownerOf, parsedOf, parseFormIdx, plansNote, submissionOf, transLineOf, tsvReader } from "../../parsers/form345.mjs";
+import {
+  ownerOf,
+  parsedOf,
+  parseFormIdx,
+  plansNote,
+  submissionOf,
+  transLineOf,
+  tsvReader,
+} from "../../parsers/form345.mjs";
 import { pool } from "../../lib/pool.mjs";
 import { form4Rows } from "./insiders.mjs";
 import { storedAccessions, writeForms } from "./insiderStore.mjs";
@@ -15,7 +23,10 @@ const BATCH = 1500;
 async function eachRow(file, table, fn) {
   let read = null;
   for await (const line of zipEntryLines(file, table)) {
-    if (!read) { read = tsvReader(line); continue; }
+    if (!read) {
+      read = tsvReader(line);
+      continue;
+    }
     if (line) fn(read(line));
   }
 }
@@ -23,8 +34,15 @@ async function eachRow(file, table, fn) {
 /** Rows of one form for every join-table ticker of its issuer. */
 function formOf(sub, parsed, byCik, source) {
   const rows = [];
-  for (const ticker of byCik.get(Number(parsed.issuerCik) || sub.issuerCik) || []) rows.push(...form4Rows(ticker, { accession: sub.accession, filed: sub.filed }, parsed).rows);
-  return { accession: sub.accession, issuerCik: Number(parsed.issuerCik) || sub.issuerCik, form: sub.form, rows, source };
+  for (const ticker of byCik.get(Number(parsed.issuerCik) || sub.issuerCik) || [])
+    rows.push(...form4Rows(ticker, { accession: sub.accession, filed: sub.filed }, parsed).rows);
+  return {
+    accession: sub.accession,
+    issuerCik: Number(parsed.issuerCik) || sub.issuerCik,
+    form: sub.form,
+    rows,
+    source,
+  };
 }
 
 /** One quarterly zip on disk → stored rows. Returns counts for the progress line and the ingest record. */
@@ -57,13 +75,28 @@ export async function ingestDatasetZip(db, file, { byCik }) {
   });
   let rows = 0;
   let batch = [];
-  const flush = () => { if (batch.length) rows += writeForms(db, batch, "dataset").rows; batch = []; };
+  const flush = () => {
+    if (batch.length) rows += writeForms(db, batch, "dataset").rows;
+    batch = [];
+  };
   for (const sub of subs.values()) {
-    batch.push(formOf(sub, parsedOf(sub, owners.get(sub.accession), lines.get(sub.accession) || [], plans.get(sub.accession)), byCik, "dataset"));
+    batch.push(
+      formOf(
+        sub,
+        parsedOf(sub, owners.get(sub.accession), lines.get(sub.accession) || [], plans.get(sub.accession)),
+        byCik,
+        "dataset",
+      ),
+    );
     if (batch.length >= BATCH) flush();
   }
   flush();
-  return { forms: subs.size, amendments: [...subs.values()].filter((s) => s.form !== "4").length, lines: lineCount, rows };
+  return {
+    forms: subs.size,
+    amendments: [...subs.values()].filter((s) => s.form !== "4").length,
+    lines: lineCount,
+    rows,
+  };
 }
 
 /**
@@ -78,12 +111,26 @@ export async function ingestDailyIdx(db, text, { byCik, read, concurrency = 2 })
   const forms = [];
   let failed = 0;
   await pool(todo, concurrency, async (e) => {
-    const parsed = await read(db, e.cik, { accession: e.accession, filed: e.filed, doc: `${e.accession}.txt` }).catch(() => null);
-    if (!parsed) { failed += 1; return; }
+    const parsed = await read(db, e.cik, { accession: e.accession, filed: e.filed, doc: `${e.accession}.txt` }).catch(
+      () => null,
+    );
+    if (!parsed) {
+      failed += 1;
+      return;
+    }
     const issuer = Number(parsed.issuerCik) || e.cik;
     if (!byCik.has(issuer)) return;
-    forms.push(formOf({ accession: e.accession, filed: e.filed, form: e.form, issuerCik: issuer }, parsed, byCik, "daily"));
+    forms.push(
+      formOf({ accession: e.accession, filed: e.filed, form: e.form, issuerCik: issuer }, parsed, byCik, "daily"),
+    );
   });
   const out = writeForms(db, forms, "daily");
-  return { listed: seen.size, known: have.size, read: todo.length - failed, failed, forms: forms.length, rows: out.rows };
+  return {
+    listed: seen.size,
+    known: have.size,
+    read: todo.length - failed,
+    failed,
+    forms: forms.length,
+    rows: out.rows,
+  };
 }

@@ -4,8 +4,27 @@ import { KEY } from "../../lib/cacheKeys.mjs";
 import { MINUTE, DAY } from "../../lib/time.mjs";
 import { pool } from "../../lib/pool.mjs";
 import { once } from "../../lib/once.mjs";
-import { BADGE_DAYS, WATCH_MAX, WATCH_SOURCES, badgesOf, cleanTickers, mergeEvents, watchAlertRows } from "../../../shared/watchlist.mjs";
-import { congressSection, contractSection, filingSection, insiderSection, issuerFilings, lobbyingSection, newsSection, stakeSection, watchQuote, whaleSection } from "./sources.mjs";
+import {
+  BADGE_DAYS,
+  WATCH_MAX,
+  WATCH_SOURCES,
+  badgesOf,
+  cleanTickers,
+  mergeEvents,
+  watchAlertRows,
+} from "../../../shared/watchlist.mjs";
+import {
+  congressSection,
+  contractSection,
+  filingSection,
+  insiderSection,
+  issuerFilings,
+  lobbyingSection,
+  newsSection,
+  stakeSection,
+  watchQuote,
+  whaleSection,
+} from "./sources.mjs";
 
 const ACTIVITY_TTL = 10 * MINUTE;
 const WATCH_KEEP = 14 * DAY;
@@ -21,13 +40,33 @@ async function run(key, ms, load) {
   const job = Promise.resolve().then(load);
   job.catch(() => {});
   let timer;
-  const late = new Promise((resolve) => { timer = setTimeout(() => resolve(TIMEOUT), ms); timer.unref?.(); });
+  const late = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(TIMEOUT), ms);
+    timer.unref?.();
+  });
   try {
     const out = await Promise.race([job, late]);
-    if (out === TIMEOUT) return { key, status: "loading", source: "", latency: "", note: `Still fetching after ${Math.round(ms / 1000)} s; it fills in on the next refresh.`, events: [], building: true };
+    if (out === TIMEOUT)
+      return {
+        key,
+        status: "loading",
+        source: "",
+        latency: "",
+        note: `Still fetching after ${Math.round(ms / 1000)} s; it fills in on the next refresh.`,
+        events: [],
+        building: true,
+      };
     return { key, ...out, ms: Date.now() - t0 };
   } catch (err) {
-    return { key, status: "error", source: "", latency: "", note: String(err?.message || err).slice(0, 200), events: [], ms: Date.now() - t0 };
+    return {
+      key,
+      status: "error",
+      source: "",
+      latency: "",
+      note: String(err?.message || err).slice(0, 200),
+      events: [],
+      ms: Date.now() - t0,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -59,9 +98,11 @@ async function compose(db, ticker, key, fresh, deadlineMs) {
     contracts: () => contractSection(db, ticker),
     lobbying: () => lobbyingSection(db, ticker),
     filings: () => filingSection(db, ticker, filings),
-    news: () => newsSection(db, ticker)
+    news: () => newsSection(db, ticker),
   };
-  const sections = await Promise.all(WATCH_SOURCES.map((s) => run(s.key, deadlineMs, loaders[s.key]).then((out) => ({ ...out, label: s.label }))));
+  const sections = await Promise.all(
+    WATCH_SOURCES.map((s) => run(s.key, deadlineMs, loaders[s.key]).then((out) => ({ ...out, label: s.label }))),
+  );
   const events = mergeEvents(sections.flatMap((s) => s.events || []));
   const result = {
     ok: true,
@@ -70,7 +111,7 @@ async function compose(db, ticker, key, fresh, deadlineMs) {
     inJoin: true,
     asOf: new Date().toISOString(),
     sections: sections.map(({ events: list, ...s }) => ({ ...s, count: (list || []).length })),
-    events
+    events,
   };
   if (!sections.some((s) => s.building || s.status === "loading")) writeCache(db, key, result, ACTIVITY_TTL);
   return result;
@@ -81,9 +122,18 @@ export async function tickerDossier(db, symbol, { days = 30 } = {}) {
   const ticker = tickerBySymbol(db, String(symbol || ""));
   if (!ticker) return null;
   touchWatched(db, [ticker.symbol], { onlyKnown: true });
-  const [activity, quote] = await Promise.all([tickerActivity(db, ticker.symbol), watchQuote(db, ticker).catch((err) => ({ ok: false, source: "Yahoo Finance chart API", error: err.message }))]);
+  const [activity, quote] = await Promise.all([
+    tickerActivity(db, ticker.symbol),
+    watchQuote(db, ticker).catch((err) => ({ ok: false, source: "Yahoo Finance chart API", error: err.message })),
+  ]);
   const d = daysOf(days);
-  return { ...activity, days: d, badges: badgesOf(activity.events, d), quote, building: activity.sections.some((s) => s.building || s.status === "loading") };
+  return {
+    ...activity,
+    days: d,
+    badges: badgesOf(activity.events, d),
+    quote,
+    building: activity.sections.some((s) => s.building || s.status === "loading"),
+  };
 }
 
 /** Rows for the Today watchlist: badges and quote per valid ticker (no events), plus the symbols not in the join table. */
@@ -94,7 +144,11 @@ export async function watchSummary(db, requested, { days = 30 } = {}) {
   const d = daysOf(days);
   const out = new Map();
   await pool(valid, 8, async (symbol) => {
-    const row = await tickerDossier(db, symbol, { days: d }).catch((err) => ({ ok: false, symbol, error: err.message }));
+    const row = await tickerDossier(db, symbol, { days: d }).catch((err) => ({
+      ok: false,
+      symbol,
+      error: err.message,
+    }));
     if (row) {
       const { events, ...rest } = row;
       out.set(symbol, { ...rest, newest: events?.[0] || null });
@@ -107,7 +161,8 @@ export async function watchSummary(db, requested, { days = 30 } = {}) {
     max: WATCH_MAX,
     items: valid.map((s) => out.get(s)).filter(Boolean),
     invalid,
-    latency: "Each source keeps its own lag (see its section). Activity is recomposed at most every 10 min; watched names are refreshed in the background every 15 min."
+    latency:
+      "Each source keeps its own lag (see its section). Activity is recomposed at most every 10 min; watched names are refreshed in the background every 15 min.",
   };
 }
 
@@ -118,14 +173,26 @@ export function touchWatched(db, symbols, { onlyKnown = false } = {}) {
   const seen = readStale(db, KEY.watchSet)?.value || {};
   if (onlyKnown && !symbols.some((s) => s in seen)) return;
   let changed = false;
-  for (const s of symbols) if (!(now - (seen[s] || 0) < 10 * MINUTE)) { seen[s] = now; changed = true; }
-  for (const [s, t] of Object.entries(seen)) if (now - t > WATCH_KEEP) { delete seen[s]; changed = true; }
+  for (const s of symbols)
+    if (!(now - (seen[s] || 0) < 10 * MINUTE)) {
+      seen[s] = now;
+      changed = true;
+    }
+  for (const [s, t] of Object.entries(seen))
+    if (now - t > WATCH_KEEP) {
+      delete seen[s];
+      changed = true;
+    }
   if (changed) writeCache(db, KEY.watchSet, seen, 30 * DAY);
 }
 
 export function watchedSymbols(db, now = Date.now()) {
   const seen = readStale(db, KEY.watchSet)?.value || {};
-  return Object.entries(seen).filter(([, t]) => now - t <= WATCH_KEEP).sort((a, b) => b[1] - a[1]).map(([s]) => s).slice(0, WATCH_MAX);
+  return Object.entries(seen)
+    .filter(([, t]) => now - t <= WATCH_KEEP)
+    .sort((a, b) => b[1] - a[1])
+    .map(([s]) => s)
+    .slice(0, WATCH_MAX);
 }
 
 /**
@@ -151,7 +218,10 @@ export async function refreshWatched(db) {
   if (!symbols.length) return 0;
   let done = 0;
   await pool(symbols, 2, async (s) => {
-    const res = await tickerActivity(db, s, { fresh: true, deadlineMs: 90_000 }).catch((err) => { console.error(`watch ${s}`, err.message); return null; });
+    const res = await tickerActivity(db, s, { fresh: true, deadlineMs: 90_000 }).catch((err) => {
+      console.error(`watch ${s}`, err.message);
+      return null;
+    });
     if (res) done += 1;
   });
   console.log(`watchlist warm: ${done} of ${symbols.length} tickers`);

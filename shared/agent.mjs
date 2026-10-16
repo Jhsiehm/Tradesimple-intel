@@ -12,7 +12,7 @@ export const OPENROUTER_MENU = [
   "google/gemini-2.5-pro",
   "anthropic/claude-haiku-4.5",
   "openai/gpt-4.1-mini",
-  "openai/gpt-4o-mini"
+  "openai/gpt-4o-mini",
 ];
 
 /** Small or fast tiers that follow the citation and table rules less reliably. */
@@ -32,7 +32,11 @@ export function resolveModel(requested, cfg) {
   return want && modelOptions(cfg).includes(want) ? want : String(cfg?.model || "");
 }
 
-const text = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const text = (v, max) =>
+  String(v ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 
 /** What the screen attached: a member or ticker node, or a theory. Null when nothing is attached. */
 export function cleanContext(raw) {
@@ -45,8 +49,19 @@ export function cleanContext(raw) {
 }
 
 /** Members and tickers by id; bills, roll calls, committees, districts, map links and nodes, and other cards by key. */
-const NODE = /^(member:[A-Z]\d{6}|ticker:[A-Z][A-Z0-9.\-]{0,11}|(bill|vote|committee|district|edge|rel|item):\S.{0,149})$/;
-const NODE_KIND = { member: "Member", ticker: "Ticker", bill: "Bill", vote: "Roll call", committee: "Committee", district: "District", edge: "Relationship-map link", rel: "Relationship-map node", item: "Card" };
+const NODE =
+  /^(member:[A-Z]\d{6}|ticker:[A-Z][A-Z0-9.\-]{0,11}|(bill|vote|committee|district|edge|rel|item):\S.{0,149})$/;
+const NODE_KIND = {
+  member: "Member",
+  ticker: "Ticker",
+  bill: "Bill",
+  vote: "Roll call",
+  committee: "Committee",
+  district: "District",
+  edge: "Relationship-map link",
+  rel: "Relationship-map node",
+  item: "Card",
+};
 
 /** The line the model sees about the screen. Empty when nothing is attached, so nothing leaks in by default. */
 export function contextNote(ctx) {
@@ -55,10 +70,23 @@ export function contextNote(ctx) {
   if (ctx.node) {
     const [kind, ...rest] = ctx.node.split(":");
     const id = rest.join(":");
-    const keyed = kind === "member" || kind === "ticker" || kind === "bill" || kind === "vote" || kind === "committee" || kind === "district";
-    bits.push(keyed ? `${NODE_KIND[kind]} ${id}${ctx.label ? ` (${ctx.label})` : ""}` : `${NODE_KIND[kind] || "Card"}: ${ctx.label || id}`);
+    const keyed =
+      kind === "member" ||
+      kind === "ticker" ||
+      kind === "bill" ||
+      kind === "vote" ||
+      kind === "committee" ||
+      kind === "district";
+    bits.push(
+      keyed
+        ? `${NODE_KIND[kind]} ${id}${ctx.label ? ` (${ctx.label})` : ""}`
+        : `${NODE_KIND[kind] || "Card"}: ${ctx.label || id}`,
+    );
   }
-  if (ctx.theory) bits.push(`the user's own theory, not a filing: ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}${ctx.theory.label ? ` — ${ctx.theory.label}` : ""}`);
+  if (ctx.theory)
+    bits.push(
+      `the user's own theory, not a filing: ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}${ctx.theory.label ? ` — ${ctx.theory.label}` : ""}`,
+    );
   return `The user attached what is on screen: ${bits.join("; ")}. Use it only when the question refers to it.`;
 }
 
@@ -89,10 +117,11 @@ export const EXAMPLES = [
   "What did Nancy Pelosi file most recently?",
   "Latest markets headlines on semis",
   "Parse the latest GOES and Himawari satellite frames",
-  "Use TradeSimple and the web: what is moving NVDA today?"
+  "Use TradeSimple and the web: what is moving NVDA today?",
 ];
 
-const GREETING = /^(hi|hey|hello|yo|hiya|howdy|sup|hola|good (morning|afternoon|evening)|thanks|thank you|ok|okay|test|help|what can you do)[\s!.?,]*$/i;
+const GREETING =
+  /^(hi|hey|hello|yo|hiya|howdy|sup|hola|good (morning|afternoon|evening)|thanks|thank you|ok|okay|test|help|what can you do)[\s!.?,]*$/i;
 
 export function isGreeting(question) {
   return GREETING.test(String(question || "").trim());
@@ -104,7 +133,7 @@ export function greetingText() {
     "Say “use in-app and the web” (or pick the chip) to also search the open web. Say “professional” or “simplified” to change the writing style.",
     "",
     "Try one of these:",
-    ...EXAMPLES.map((q) => `- ${q}`)
+    ...EXAMPLES.map((q) => `- ${q}`),
   ].join("\n");
 }
 
@@ -169,7 +198,9 @@ const SKIP_COL = /^(id|url|link|href|source|asOf|latency|note|open|bioguide|cik|
 /** The first list of records in a result as a small table: up to 8 columns with values, up to 12 rows. */
 export function fallbackTable(body, maxRows = 12) {
   if (body && typeof body === "object" && body.stats && typeof body.stats === "object") {
-    const rows = Object.entries(body.stats).filter(([, v]) => typeof v === "number" || (typeof v === "string" && v.length <= 20)).map(([k, v]) => [k, typeof v === "number" ? String(Math.round(v * 10_000) / 10_000) : v]);
+    const rows = Object.entries(body.stats)
+      .filter(([, v]) => typeof v === "number" || (typeof v === "string" && v.length <= 20))
+      .map(([k, v]) => [k, typeof v === "number" ? String(Math.round(v * 10_000) / 10_000) : v]);
     return rows.length ? { columns: ["metric", "value"], rows, total: rows.length } : null;
   }
   const list = listIn(body);
@@ -183,6 +214,13 @@ export function fallbackTable(body, maxRows = 12) {
     }
   }
   if (!cols.length) return null;
-  const cell = (v) => (v == null ? "" : typeof v === "number" ? (Number.isInteger(v) ? String(v) : String(Math.round(v * 10_000) / 10_000)) : String(v).slice(0, 60));
+  const cell = (v) =>
+    v == null
+      ? ""
+      : typeof v === "number"
+        ? Number.isInteger(v)
+          ? String(v)
+          : String(Math.round(v * 10_000) / 10_000)
+        : String(v).slice(0, 60);
   return { columns: cols, rows: rows.map((r) => cols.map((c) => cell(r[c]))), total: rowCount(body) || list.length };
 }

@@ -13,14 +13,21 @@ export function parseSchedule13(xml) {
     return "";
   };
   const percent = Number(first("classPercent", "percentOfClass", "percentOfClassRepresented"));
-  const shares = Number(first("reportingPersonBeneficiallyOwnedAggregateNumberOfShares", "aggregateAmountOwned", "aggregateAmountBeneficiallyOwned"));
+  const shares = Number(
+    first(
+      "reportingPersonBeneficiallyOwnedAggregateNumberOfShares",
+      "aggregateAmountOwned",
+      "aggregateAmountBeneficiallyOwned",
+    ),
+  );
   return {
     form: first("submissionType"),
     person: first("reportingPersonName", "nameOfReportingPerson", "reportingPersonNames"),
     eventDate: usToIso(first("eventDateRequiresFilingThisStatement", "dateOfEvent", "eventDate")),
-    percent: Number.isFinite(percent) && first("classPercent", "percentOfClass", "percentOfClassRepresented") ? percent : null,
+    percent:
+      Number.isFinite(percent) && first("classPercent", "percentOfClass", "percentOfClassRepresented") ? percent : null,
     shares: Number.isFinite(shares) && shares > 0 ? shares : null,
-    issuerCik: first("issuerCik")
+    issuerCik: first("issuerCik"),
   };
 }
 
@@ -31,5 +38,11 @@ function usToIso(value) {
 }
 
 function decode(s) {
-  return s.replace(/&amp;/g, "&").replace(/&quot;/g, "\"").replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
 }

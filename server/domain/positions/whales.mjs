@@ -32,7 +32,7 @@ export function whaleHoldings(db) {
             cik: fund.cik,
             acc,
             filed: recent.filingDate[i],
-            link: `https://www.sec.gov/Archives/edgar/data/${Number(fund.cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`
+            link: `https://www.sec.gov/Archives/edgar/data/${Number(fund.cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`,
           });
         }
         if (!filings.length) return;
@@ -60,7 +60,17 @@ export function whaleHoldings(db) {
           const shares = a?.shares || 0;
           const was = b?.shares || 0;
           const delta = prior ? shares - was : null;
-          const action = !prior ? "held" : !was && shares ? "new" : was && !shares ? "exit" : delta > 0 ? "add" : delta < 0 ? "trim" : "hold";
+          const action = !prior
+            ? "held"
+            : !was && shares
+              ? "new"
+              : was && !shares
+                ? "exit"
+                : delta > 0
+                  ? "add"
+                  : delta < 0
+                    ? "trim"
+                    : "hold";
           rows.push({
             id: `13f-${filings[0].acc}-${symbol}`,
             symbol,
@@ -71,13 +81,14 @@ export function whaleHoldings(db) {
             prior: prior ? was : null,
             delta,
             action,
-            side: action === "new" || action === "add" ? "buy" : action === "exit" || action === "trim" ? "sell" : "hold",
+            side:
+              action === "new" || action === "add" ? "buy" : action === "exit" || action === "trim" ? "sell" : "hold",
             period: current.period,
             priorPeriod: prior?.period || "",
             traded: current.period,
             filed: filings[0].filed,
             lag: lagDays(current.period, filings[0].filed),
-            link: filings[0].link
+            link: filings[0].link,
           });
         }
       } catch (err) {
@@ -91,7 +102,7 @@ export function whaleHoldings(db) {
       asOf: new Date().toISOString(),
       latency: `Quarter-end holdings filed up to 45 days after quarter end. ${scanned} of ${funds.length} named funds in data/whales.json; change is this 13F against the one before. Issuers matched by name to the join table. Options excluded.`,
       errors,
-      items: rows
+      items: rows,
     };
     if (rows.length) writeCache(db, KEY.posWhales, result, 6 * HOUR);
     return result;
@@ -113,7 +124,11 @@ async function infoTable(db, filing, keys) {
   }
   let holdings = [];
   if (tableFile) holdings = parse13fTable(await secText(`${base}/${tableFile}`, { timeoutMs: 120000 }));
-  const keep = { period, total: holdings.length, holdings: holdings.filter((h) => h.issuer && h.value > 0 && keys.has(normIssuer(h.issuer))) };
+  const keep = {
+    period,
+    total: holdings.length,
+    holdings: holdings.filter((h) => h.issuer && h.value > 0 && keys.has(normIssuer(h.issuer))),
+  };
   writeCache(db, key, keep, 6 * MONTH);
   return keep;
 }

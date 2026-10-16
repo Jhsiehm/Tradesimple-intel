@@ -41,15 +41,16 @@ export async function fxBoard(db) {
   const majors = ["USD", "EUR", "JPY", "GBP", "CHF", "CAD", "AUD", "CNY"].filter((c) => usd[c]);
   const matrix = majors.map((row) => ({
     ccy: row,
-    cells: majors.map((col) => (row === col ? null : usd[row] / usd[col]))
+    cells: majors.map((col) => (row === col ? null : usd[row] / usd[col])),
   }));
   const payload = {
     ok: true,
     source: "Yahoo Finance chart (CCY and ICE DXY)",
     asOf: latest(items),
-    latency: "Delayed indicative rates. FX trades around the clock Sunday evening to Friday evening; crosses in the matrix are derived from USD legs.",
+    latency:
+      "Delayed indicative rates. FX trades around the clock Sunday evening to Friday evening; crosses in the matrix are derived from USD legs.",
     items,
-    matrix: { ccys: majors, rows: matrix }
+    matrix: { ccys: majors, rows: matrix },
   };
   if (items.length) writeCache(db, KEY.fxBoard, payload, BOARD_TTL);
   return payload;
@@ -61,7 +62,7 @@ export async function cryptoBoard(db) {
   const [items, gecko, global] = await Promise.all([
     quoteAll(CRYPTO, (_, last) => cryptoDigits(last)),
     geckoMarkets(db).catch(() => []),
-    geckoGlobal(db).catch(() => null)
+    geckoGlobal(db).catch(() => null),
   ]);
   const byId = new Map(gecko.map((g) => [g.id, g]));
   for (const row of items) {
@@ -78,7 +79,7 @@ export async function cryptoBoard(db) {
       maxSupply: g.max_supply,
       ath: g.ath,
       athDate: g.ath_date,
-      fromAth: g.ath_change_percentage
+      fromAth: g.ath_change_percentage,
     });
   }
   items.sort((a, b) => (a.rank || 999) - (b.rank || 999));
@@ -86,16 +87,17 @@ export async function cryptoBoard(db) {
     ok: true,
     source: "Yahoo Finance chart · CoinGecko markets",
     asOf: latest(items),
-    latency: "Crypto trades 24/7. Prices are delayed session quotes; market cap, supply, and ATH from CoinGecko's free API refresh every few minutes.",
+    latency:
+      "Crypto trades 24/7. Prices are delayed session quotes; market cap, supply, and ATH from CoinGecko's free API refresh every few minutes.",
     global: global && {
       marketCap: global.total_market_cap?.usd ?? null,
       volume: global.total_volume?.usd ?? null,
       btcDominance: global.market_cap_percentage?.btc ?? null,
       ethDominance: global.market_cap_percentage?.eth ?? null,
       change24h: global.market_cap_change_percentage_24h_usd ?? null,
-      coins: global.active_cryptocurrencies ?? null
+      coins: global.active_cryptocurrencies ?? null,
     },
-    items
+    items,
   };
   if (items.length) writeCache(db, KEY.cryptoBoard, payload, BOARD_TTL);
   return payload;
@@ -108,7 +110,16 @@ async function quoteAll(rows, digitsFor) {
     while (queue.length) {
       const row = queue.shift();
       const quote = await sessionQuote(row, (last) => digitsFor(row, last)).catch(() => null);
-      if (quote) items.push({ ...quote, code: row.code, name: row.name, group: row.group, base: row.base, quote: row.quote, gecko: row.gecko });
+      if (quote)
+        items.push({
+          ...quote,
+          code: row.code,
+          name: row.name,
+          group: row.group,
+          base: row.base,
+          quote: row.quote,
+          gecko: row.gecko,
+        });
     }
   }
   await Promise.all(Array.from({ length: 6 }, () => worker()));
@@ -132,12 +143,20 @@ async function geckoMarkets(db) {
 async function geckoGlobal(db) {
   const hit = readCache(db, KEY.geckoGlobal);
   if (hit) return hit;
-  const body = await fetchJson("https://api.coingecko.com/api/v3/global", { headers: { "User-Agent": BROWSER_UA, Accept: "application/json" } });
+  const body = await fetchJson("https://api.coingecko.com/api/v3/global", {
+    headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
+  });
   const data = body?.data || null;
   if (data) writeCache(db, KEY.geckoGlobal, data, 10 * 60 * 1000);
   return data;
 }
 
 function latest(items) {
-  return items.map((item) => item.asOf).filter(Boolean).sort().at(-1) || new Date().toISOString();
+  return (
+    items
+      .map((item) => item.asOf)
+      .filter(Boolean)
+      .sort()
+      .at(-1) || new Date().toISOString()
+  );
 }

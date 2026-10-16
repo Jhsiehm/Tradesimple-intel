@@ -16,7 +16,7 @@ before(async () => {
   server = spawn(process.execPath, ["server/index.mjs"], {
     cwd: new URL("..", import.meta.url),
     env: serverEnv({ PORT: String(port), INTEL_CACHE: cache }),
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
   });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("API did not start")), 10000);
@@ -59,7 +59,8 @@ test("GET /api/tickers exposes join flags and basis", async () => {
 test("GET /api/search matches tickers by symbol and name", async () => {
   const { body } = await get("/api/search?q=AM");
   assert.ok(body.tickers.length > 0 && body.tickers.length <= 6);
-  for (const t of body.tickers) assert.ok(t.symbol.includes("AM") || /am/i.test(t.name), `${t.symbol} does not match "AM"`);
+  for (const t of body.tickers)
+    assert.ok(t.symbol.includes("AM") || /am/i.test(t.name), `${t.symbol} does not match "AM"`);
   assert.deepEqual(body.members, [], "member search needs three characters");
 });
 

@@ -16,7 +16,10 @@ export function bucketDays(events, from, to) {
   let dropped = 0;
   for (const e of events) {
     const i = dayNum(e.date) - start;
-    if (!(i >= 0 && i < len)) { dropped += 1; continue; }
+    if (!(i >= 0 && i < len)) {
+      dropped += 1;
+      continue;
+    }
     (days[e.kind] ||= new Array(len).fill(0))[i] += 1;
   }
   return { start, len, days, dropped };
@@ -42,7 +45,8 @@ export function missedIn(misses, a, b, kinds) {
 export function binCounts(counts, bins) {
   const out = new Array(Math.max(0, bins)).fill(0);
   if (!counts?.length || !bins) return out;
-  for (let i = 0; i < counts.length; i += 1) out[Math.min(bins - 1, Math.floor((i * bins) / counts.length))] += counts[i];
+  for (let i = 0; i < counts.length; i += 1)
+    out[Math.min(bins - 1, Math.floor((i * bins) / counts.length))] += counts[i];
   return out;
 }
 
@@ -54,7 +58,8 @@ export function greatCircle(a, b, steps = 32) {
   const rad = Math.PI / 180;
   const [l1, p1] = [a[0] * rad, a[1] * rad];
   const [l2, p2] = [b[0] * rad, b[1] * rad];
-  const d = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2));
+  const d =
+    2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2));
   if (!(d > 1e-9)) return [];
   const out = [];
   for (let i = 0; i <= steps; i += 1) {
@@ -85,7 +90,10 @@ export function bundleArcs(links, { from = -Infinity, to = Infinity, kinds = nul
     if (d < from || d > to) continue;
     if (kinds && !kinds.has(ARC_KINDS[k])) continue;
     inWindow += 1;
-    if (f === t) { local += 1; continue; }
+    if (f === t) {
+      local += 1;
+      continue;
+    }
     const key = `${k}:${f}:${t}`;
     const g = groups.get(key);
     if (g) {
@@ -93,10 +101,27 @@ export function bundleArcs(links, { from = -Infinity, to = Infinity, kinds = nul
       g.amount += amount || 0;
       if (d < g.first) g.first = d;
       if (d > g.last) g.last = d;
-    } else groups.set(key, { key, kind: ARC_KINDS[k], from: f, to: t, n: 1, amount: amount || 0, first: d, last: d, action });
+    } else
+      groups.set(key, {
+        key,
+        kind: ARC_KINDS[k],
+        from: f,
+        to: t,
+        n: 1,
+        amount: amount || 0,
+        first: d,
+        last: d,
+        action,
+      });
   }
   const all = [...groups.values()].sort((a, b) => b.n - a.n || b.amount - a.amount || a.key.localeCompare(b.key));
-  return { arcs: all.slice(0, cap), bundles: all.length, hidden: Math.max(0, all.length - cap), links: inWindow, local };
+  return {
+    arcs: all.slice(0, cap),
+    bundles: all.length,
+    hidden: Math.max(0, all.length - cap),
+    links: inWindow,
+    local,
+  };
 }
 
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -105,10 +130,21 @@ export const SEVERITY_RULE = `Share of trade days within ${NEAR_DAYS} days of a 
 
 /** Hearing-proximity signal from server/timeline.mjs proximity(): trade-day share versus the calendar baseline. */
 export function severity(prox) {
-  if (!prox || prox.baseline == null) return { level: "thin", label: "NO DATA", why: "No hearing index or trade record yet." };
-  if (!prox.baseline) return { level: "thin", label: "NO HEARINGS", why: "No meetings on file for this member's current committees, so there is nothing to measure trades against." };
+  if (!prox || prox.baseline == null)
+    return { level: "thin", label: "NO DATA", why: "No hearing index or trade record yet." };
+  if (!prox.baseline)
+    return {
+      level: "thin",
+      label: "NO HEARINGS",
+      why: "No meetings on file for this member's current committees, so there is nothing to measure trades against.",
+    };
   const days = prox.tradeDays || 0;
-  if (days < 3 || prox.dayShare == null) return { level: "thin", label: "THIN DATA", why: `${days} trade day${days === 1 ? "" : "s"} since ${prox.from || "2025-01-03"}; too few to compare with the ${pct(prox.baseline)} baseline.` };
+  if (days < 3 || prox.dayShare == null)
+    return {
+      level: "thin",
+      label: "THIN DATA",
+      why: `${days} trade day${days === 1 ? "" : "s"} since ${prox.from || "2025-01-03"}; too few to compare with the ${pct(prox.baseline)} baseline.`,
+    };
   const excess = prox.dayShare - prox.baseline;
   const near = prox.nearTradeDays || 0;
   const why = `${pct(prox.dayShare)} of ${days} trade days fall within ${NEAR_DAYS} d of a hearing vs ${pct(prox.baseline)} of all days.`;
@@ -118,7 +154,8 @@ export function severity(prox) {
   return { level: "baseline", label: "BASELINE", why, excess };
 }
 
-export const ACTIVITY_RULE = "Congress trades in the last 30 days versus the 30-day rate over the prior 11 months. HIGH: ≥5 trades and ≥3× the rate. ELEVATED: ≥3 trades and ≥1.5×. Fewer than 3 trades in 12 months is THIN DATA.";
+export const ACTIVITY_RULE =
+  "Congress trades in the last 30 days versus the 30-day rate over the prior 11 months. HIGH: ≥5 trades and ≥3× the rate. ELEVATED: ≥3 trades and ≥1.5×. Fewer than 3 trades in 12 months is THIN DATA.";
 
 /** Last-30-day trade count against the trailing 11-month rate, for ticker dossiers. */
 export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
@@ -135,7 +172,13 @@ export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
   const ratio = expected > 0 ? recent / expected : null;
   const base = { recent, prior, expected, ratio };
   const why = `${recent} trade${recent === 1 ? "" : "s"} in ${recentDays} d vs ${expected.toFixed(1)} expected from the prior ${Math.round((baseDays - recentDays) / 30)} months.`;
-  if (recent + prior < 3) return { ...base, level: "thin", label: "THIN DATA", why: `${recent + prior} Congress trade${recent + prior === 1 ? "" : "s"} in 12 months.` };
+  if (recent + prior < 3)
+    return {
+      ...base,
+      level: "thin",
+      label: "THIN DATA",
+      why: `${recent + prior} Congress trade${recent + prior === 1 ? "" : "s"} in 12 months.`,
+    };
   const r = ratio ?? Infinity;
   if (recent >= 5 && r >= 3) return { ...base, level: "high", label: "HIGH", why };
   if (recent >= 3 && r >= 1.5) return { ...base, level: "elevated", label: "ELEVATED", why };
@@ -143,7 +186,8 @@ export function activitySignal(dates, today, recentDays = 30, baseDays = 365) {
   return { ...base, level: "baseline", label: "BASELINE", why };
 }
 
-export const ALERT_RULE = "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; a Form 4 filing with $1M+ of open-market buys and sells outside a 10b5-1 plan; a contract action of $100M+; or an 8-K reporting bankruptcy, a cybersecurity incident, debt acceleration or unreliable prior financials. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a watched Congress buy, a Form 4 with an open-market buy or $100K+ of such trades, lobbying of $500K+, a contract action of $10M+, a 13D (active >5% stake), a 13F new position or exit of $100M+, or an 8-K on a material agreement, acquisition, restructuring, impairment, delisting, auditor change, change in control or officer change. Otherwise ROUTINE. Form 4 is one row per filing; 10b5-1 planned sales, grants, exercises, tax withholding and gifts do not count toward its value, and a filing of planned sales only is ROUTINE. 13G (passive stakes) and other 8-K items are ROUTINE.";
+export const ALERT_RULE =
+  "HIGH: a watched trade filed more than 90 days late or of $250,001+; an unwatched late filing of $250,001+, filed a year or more late, or both 90+ days late and $50,001+; a Form 4 filing with $1M+ of open-market buys and sells outside a 10b5-1 plan; a contract action of $100M+; or an 8-K reporting bankruptcy, a cybersecurity incident, debt acceleration or unreliable prior financials. ELEVATED: filed past the 45-day STOCK Act limit (unwatched: 90+ days late or $15,001+), a trade of $50,001+, a watched Congress buy, a Form 4 with an open-market buy or $100K+ of such trades, lobbying of $500K+, a contract action of $10M+, a 13D (active >5% stake), a 13F new position or exit of $100M+, or an 8-K on a material agreement, acquisition, restructuring, impairment, delisting, auditor change, change in control or officer change. Otherwise ROUTINE. Form 4 is one row per filing; 10b5-1 planned sales, grants, exercises, tax withholding and gifts do not count toward its value, and a filing of planned sales only is ROUTINE. 13G (passive stakes) and other 8-K items are ROUTINE.";
 
 const ITEMS_HIGH = new Set(["1.03", "1.05", "2.04", "4.02"]);
 const ITEMS_ELEVATED = new Set(["1.01", "1.02", "2.01", "2.03", "2.05", "2.06", "3.01", "4.01", "5.01", "5.02"]);
@@ -168,11 +212,22 @@ export function alertSeverity(a) {
   if (a.kind === "whale") return (a.change === "new" || a.change === "exit") && value >= 1e8 ? "elevated" : "routine";
   if (a.kind === "8-k") {
     const items = a.items || [];
-    return items.some((i) => ITEMS_HIGH.has(i)) ? "high" : items.some((i) => ITEMS_ELEVATED.has(i)) ? "elevated" : "routine";
+    return items.some((i) => ITEMS_HIGH.has(i))
+      ? "high"
+      : items.some((i) => ITEMS_ELEVATED.has(i))
+        ? "elevated"
+        : "routine";
   }
   if (a.kind === "form4" && a.planned) return "routine";
   if (lag > 90 || low >= 250001 || (a.kind === "form4" && value >= 1e6)) return "high";
-  if (a.late || lag > 45 || low >= 50001 || (a.kind === "form4" && value >= 1e5) || (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)) return "elevated";
+  if (
+    a.late ||
+    lag > 45 ||
+    low >= 50001 ||
+    (a.kind === "form4" && value >= 1e5) ||
+    (a.kind === "lobbying" && (a.amount ?? 0) >= 5e5)
+  )
+    return "elevated";
   if (a.buy && (a.kind === "symbol-trade" || a.kind === "member-trade" || a.kind === "form4")) return "elevated";
   return "routine";
 }
@@ -187,8 +242,15 @@ const alertRank = (s) => {
 /** Queue order for alert rows: severity high → routine (missing counts as routine), then newest date, then id. */
 export function triageAlerts(items, { level = null, hide = null } = {}) {
   return items
-    .filter((a) => (!level || (ALERT_LEVELS.includes(a.severity) ? a.severity : "routine") === level) && !hide?.has(a.id))
-    .sort((a, b) => alertRank(a.severity) - alertRank(b.severity) || String(b.date).localeCompare(String(a.date)) || String(a.id).localeCompare(String(b.id)));
+    .filter(
+      (a) => (!level || (ALERT_LEVELS.includes(a.severity) ? a.severity : "routine") === level) && !hide?.has(a.id),
+    )
+    .sort(
+      (a, b) =>
+        alertRank(a.severity) - alertRank(b.severity) ||
+        String(b.date).localeCompare(String(a.date)) ||
+        String(a.id).localeCompare(String(b.id)),
+    );
 }
 
 /** Rows per severity level, for filter counts. */

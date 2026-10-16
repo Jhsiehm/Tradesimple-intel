@@ -45,25 +45,43 @@ const MEMBER = /^[A-Z]\d{6}$/;
 export function screenContext(s: ScreenFacts): AgentContext {
   const label = s.label ? { label: s.label } : {};
   if (s.theory) return { section: s.section, node: null, theory: s.theory };
-  if (s.timelineId && MEMBER.test(s.timelineId)) return { section: "congress", node: `member:${s.timelineId}`, theory: null };
-  if (s.caseKey?.startsWith("member:") || s.caseKey?.startsWith("ticker:")) return { section: s.section, node: s.caseKey, theory: null, ...label };
+  if (s.timelineId && MEMBER.test(s.timelineId))
+    return { section: "congress", node: `member:${s.timelineId}`, theory: null };
+  if (s.caseKey?.startsWith("member:") || s.caseKey?.startsWith("ticker:"))
+    return { section: s.section, node: s.caseKey, theory: null, ...label };
   if (s.watch) return { section: s.section, node: `ticker:${s.watch}`, theory: null, ...label };
-  if (s.askKey && /^(bill|vote|committee|edge|rel|member|ticker):/.test(s.askKey)) return { section: s.section, node: s.askKey, theory: null, ...label };
+  if (s.askKey && /^(bill|vote|committee|edge|rel|member|ticker):/.test(s.askKey))
+    return { section: s.section, node: s.askKey, theory: null, ...label };
   if (s.today) return { section: "today", node: null, theory: null };
   if (s.calendar) return { section: "calendar", node: null, theory: null };
-  if (s.section === "map" && s.selectedId && (s.selectedId.startsWith("member:") || s.selectedId.startsWith("ticker:"))) {
+  if (
+    s.section === "map" &&
+    s.selectedId &&
+    (s.selectedId.startsWith("member:") || s.selectedId.startsWith("ticker:"))
+  ) {
     return { section: s.section, node: s.selectedId, theory: null };
   }
   if (s.section === "congress" && s.mode === "members" && s.selectedId && MEMBER.test(s.selectedId)) {
     return { section: s.section, node: `member:${s.selectedId}`, theory: null };
   }
-  if (s.section === "markets" && s.marketView === "chart" && s.chartSymbol) return { section: s.section, node: `ticker:${s.chartSymbol}`, theory: null };
-  if (s.section === "markets" && s.marketView === "supply" && s.supplySymbol) return { section: s.section, node: `ticker:${s.supplySymbol}`, theory: null };
-  if (s.section === "markets" && s.rowSymbol) return { section: s.section, node: `ticker:${s.rowSymbol}`, theory: null };
+  if (s.section === "markets" && s.marketView === "chart" && s.chartSymbol)
+    return { section: s.section, node: `ticker:${s.chartSymbol}`, theory: null };
+  if (s.section === "markets" && s.marketView === "supply" && s.supplySymbol)
+    return { section: s.section, node: `ticker:${s.supplySymbol}`, theory: null };
+  if (s.section === "markets" && s.rowSymbol)
+    return { section: s.section, node: `ticker:${s.rowSymbol}`, theory: null };
   return { section: s.section, node: null, theory: null };
 }
 
-const KIND_WORD: Record<string, string> = { bill: "bill", vote: "roll call", committee: "committee", district: "district", edge: "link", rel: "map node", item: "card" };
+const KIND_WORD: Record<string, string> = {
+  bill: "bill",
+  vote: "roll call",
+  committee: "committee",
+  district: "district",
+  edge: "link",
+  rel: "map node",
+  item: "card",
+};
 
 /** One line for the sheet header and the ASK button. */
 export function contextLine(ctx: AgentContext): string {

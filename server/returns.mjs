@@ -12,7 +12,8 @@ export const MAX_SYMBOLS = 300;
 export const MIN_BUYS = 10;
 const SPACING_MS = 450;
 const ENTRY_SLACK_DAYS = 5;
-export const BASIS = "Disclosed buys, equal-weighted, not their actual portfolio. Entry is the adjusted close on the trade date (or the next trading day); exit is the latest close. The S&P 500 is SPY over the same days. Disclosed amounts are ranges, so the equal-weighted figure ignores size; the mid-weighted figure weights each buy by its range midpoint. Sells are not scored.";
+export const BASIS =
+  "Disclosed buys, equal-weighted, not their actual portfolio. Entry is the adjusted close on the trade date (or the next trading day); exit is the latest close. The S&P 500 is SPY over the same days. Disclosed amounts are ranges, so the equal-weighted figure ignores size; the mid-weighted figure weights each buy by its range midpoint. Sells are not scored.";
 
 export const dayNum = (iso) => Math.floor(Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`) / DAY);
 const isoOf = (d) => new Date(d * DAY).toISOString().slice(0, 10);
@@ -83,7 +84,15 @@ export function buyReturns(trades, closes, spy) {
     if (t.side !== "buy" || !t.symbol || !t.inJoin) continue;
     const r = tradeReturn(t.traded, closes.get(t.symbol), spy);
     if (!r) continue;
-    out.push({ id: t.id, bioguide: t.bioguide, person: t.person, symbol: t.symbol, traded: t.traded, mid: amountMid(t.amount, t.amountLow), ...r });
+    out.push({
+      id: t.id,
+      bioguide: t.bioguide,
+      person: t.person,
+      symbol: t.symbol,
+      traded: t.traded,
+      mid: amountMid(t.amount, t.amountLow),
+      ...r,
+    });
   }
   return out;
 }
@@ -126,7 +135,7 @@ export function memberStats(trades, rows) {
       hitRate: r4(since.filter((v) => v > 0).length / since.length),
       excessMid: weight > 0 ? r4(list.reduce((a, r) => a + r.since.excess * r.mid, 0) / weight) : null,
       best: { symbol: ranked[0].symbol, traded: ranked[0].traded, excess: ranked[0].since.excess },
-      worst: { symbol: ranked.at(-1).symbol, traded: ranked.at(-1).traded, excess: ranked.at(-1).since.excess }
+      worst: { symbol: ranked.at(-1).symbol, traded: ranked.at(-1).traded, excess: ranked.at(-1).since.excess },
     });
   }
   return out;
@@ -136,18 +145,40 @@ export function memberStats(trades, rows) {
 export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_BUYS, limit = 25 }) {
   const seat = (id, t) => {
     const p = people.get(id) || {};
-    return { bioguide: id, person: p.name || t?.person || id, party: p.party || t?.party || "", state: p.state || t?.state || "", chamber: p.chamber || t?.chamber || "" };
+    return {
+      bioguide: id,
+      person: p.name || t?.person || id,
+      party: p.party || t?.party || "",
+      state: p.state || t?.state || "",
+      chamber: p.chamber || t?.chamber || "",
+    };
   };
   const firstTrade = new Map();
   for (const t of trades) if (t.bioguide && !firstTrade.has(t.bioguide)) firstTrade.set(t.bioguide, t);
-  const scored = [...stats.values()].filter((s) => s.priced >= minBuys && s.excessSince != null).map((s) => ({ ...s, ...seat(s.bioguide, firstTrade.get(s.bioguide)) }));
+  const scored = [...stats.values()]
+    .filter((s) => s.priced >= minBuys && s.excessSince != null)
+    .map((s) => ({ ...s, ...seat(s.bioguide, firstTrade.get(s.bioguide)) }));
   const excessTop = [...scored].sort((a, b) => b.excessSince - a.excessSince).slice(0, limit);
   const excessBottom = [...scored].sort((a, b) => a.excessSince - b.excessSince).slice(0, Math.min(10, limit));
 
   const per = new Map();
   for (const t of trades) {
     if (!t.bioguide) continue;
-    const m = per.get(t.bioguide) || { trades: 0, buys: 0, sells: 0, low: 0, symbols: new Set(), lastFiled: "", late: 0, lateReports: new Set(), reports: new Set(), maxLag: null, maxLagLink: "", maxLagSymbol: "", lags: [] };
+    const m = per.get(t.bioguide) || {
+      trades: 0,
+      buys: 0,
+      sells: 0,
+      low: 0,
+      symbols: new Set(),
+      lastFiled: "",
+      late: 0,
+      lateReports: new Set(),
+      reports: new Set(),
+      maxLag: null,
+      maxLagLink: "",
+      maxLagSymbol: "",
+      lags: [],
+    };
     m.trades += 1;
     if (t.side === "buy") m.buys += 1;
     if (t.side === "sell") m.sells += 1;
@@ -157,25 +188,57 @@ export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_
     if (t.link) m.reports.add(t.link);
     if (t.lag != null) {
       m.lags.push(t.lag);
-      if (t.lag > LATE_DAYS) { m.late += 1; m.lateReports.add(t.link || t.id); }
-      if (m.maxLag == null || t.lag > m.maxLag) { m.maxLag = t.lag; m.maxLagLink = t.link; m.maxLagSymbol = t.symbol || t.asset; }
+      if (t.lag > LATE_DAYS) {
+        m.late += 1;
+        m.lateReports.add(t.link || t.id);
+      }
+      if (m.maxLag == null || t.lag > m.maxLag) {
+        m.maxLag = t.lag;
+        m.maxLagLink = t.link;
+        m.maxLagSymbol = t.symbol || t.asset;
+      }
     }
     per.set(t.bioguide, m);
   }
   const rows = [...per.entries()].map(([id, m]) => ({
     ...seat(id, firstTrade.get(id)),
-    trades: m.trades, buys: m.buys, sells: m.sells, low: m.low, symbols: m.symbols.size, lastFiled: m.lastFiled,
-    reports: m.reports.size, late: m.late, lateReports: m.lateReports.size, maxLag: m.maxLag, maxLagLink: m.maxLagLink, maxLagSymbol: m.maxLagSymbol,
-    medianLag: median(m.lags)
+    trades: m.trades,
+    buys: m.buys,
+    sells: m.sells,
+    low: m.low,
+    symbols: m.symbols.size,
+    lastFiled: m.lastFiled,
+    reports: m.reports.size,
+    late: m.late,
+    lateReports: m.lateReports.size,
+    maxLag: m.maxLag,
+    maxLagLink: m.maxLagLink,
+    maxLagSymbol: m.maxLagSymbol,
+    medianLag: median(m.lags),
   }));
   const active = [...rows].sort((a, b) => b.trades - a.trades || b.low - a.low).slice(0, limit);
-  const late = rows.filter((r) => r.late > 0).sort((a, b) => b.lateReports - a.lateReports || b.late - a.late || (b.maxLag || 0) - (a.maxLag || 0)).slice(0, limit);
-  const longest = rows.filter((r) => r.maxLag != null && r.maxLag > LATE_DAYS).sort((a, b) => b.maxLag - a.maxLag).slice(0, Math.min(10, limit));
+  const late = rows
+    .filter((r) => r.late > 0)
+    .sort((a, b) => b.lateReports - a.lateReports || b.late - a.late || (b.maxLag || 0) - (a.maxLag || 0))
+    .slice(0, limit);
+  const longest = rows
+    .filter((r) => r.maxLag != null && r.maxLag > LATE_DAYS)
+    .sort((a, b) => b.maxLag - a.maxLag)
+    .slice(0, Math.min(10, limit));
 
   const sym = new Map();
   for (const t of trades) {
     if (!t.symbol) continue;
-    const s = sym.get(t.symbol) || { symbol: t.symbol, asset: t.asset, inJoin: Boolean(t.inJoin), trades: 0, buys: 0, sells: 0, members: new Set(), low: 0 };
+    const s = sym.get(t.symbol) || {
+      symbol: t.symbol,
+      asset: t.asset,
+      inJoin: Boolean(t.inJoin),
+      trades: 0,
+      buys: 0,
+      sells: 0,
+      members: new Set(),
+      low: 0,
+    };
     s.trades += 1;
     if (t.side === "buy") s.buys += 1;
     if (t.side === "sell") s.sells += 1;
@@ -183,7 +246,10 @@ export function buildLeaders({ trades, stats, people = new Map(), minBuys = MIN_
     s.low += t.amountLow || 0;
     sym.set(t.symbol, s);
   }
-  const tickers = [...sym.values()].map((s) => ({ ...s, members: s.members.size })).sort((a, b) => b.members - a.members || b.trades - a.trades).slice(0, limit);
+  const tickers = [...sym.values()]
+    .map((s) => ({ ...s, members: s.members.size }))
+    .sort((a, b) => b.members - a.members || b.trades - a.trades)
+    .slice(0, limit);
   return { minBuys, scoredMembers: scored.length, excessTop, excessBottom, active, late, longest, tickers };
 }
 
@@ -205,17 +271,36 @@ export function applyWindow(trades, { from = "", to = "", days = 0, basis = "fil
   const n = Math.round(Number(days) || 0);
   let lo = ISO.test(from) ? from : "";
   let hi = ISO.test(to) ? to : "";
-  if (n > 0) { hi = hi || today; lo = back(hi, n); }
+  if (n > 0) {
+    hi = hi || today;
+    lo = back(hi, n);
+  }
   const label = BASIS_LABEL[key];
   if (!lo && !hi) {
-    const dates = trades.map((t) => String(t[key] || "")).filter((d) => ISO.test(d.slice(0, 10))).map((d) => d.slice(0, 10)).sort();
-    return { trades, window: { all: true, from: dates[0] || "", to: dates.at(-1) || "", basis: label, note: `No window requested: every disclosure the app holds${dates.length ? `, ${label} ${dates[0]} to ${dates.at(-1)}` : ""}.` } };
+    const dates = trades
+      .map((t) => String(t[key] || ""))
+      .filter((d) => ISO.test(d.slice(0, 10)))
+      .map((d) => d.slice(0, 10))
+      .sort();
+    return {
+      trades,
+      window: {
+        all: true,
+        from: dates[0] || "",
+        to: dates.at(-1) || "",
+        basis: label,
+        note: `No window requested: every disclosure the app holds${dates.length ? `, ${label} ${dates[0]} to ${dates.at(-1)}` : ""}.`,
+      },
+    };
   }
   const kept = trades.filter((t) => {
     const d = String(t[key] || "").slice(0, 10);
     return ISO.test(d) && (!lo || d >= lo) && (!hi || d <= hi);
   });
-  return { trades: kept, window: { all: false, from: lo, to: hi, ...(n > 0 ? { days: n } : {}), basis: label, trades: kept.length } };
+  return {
+    trades: kept,
+    window: { all: false, from: lo, to: hi, ...(n > 0 ? { days: n } : {}), basis: label, trades: kept.length },
+  };
 }
 
 /**
@@ -226,13 +311,27 @@ export function benchmarkStatus({ lastClose, buys, pricedBuys, scoredMembers, mi
   const symbols = Math.max(0, (progress.total || 0) - 1);
   const none = (reason) => ({ benchmarkComparison: null, benchmarkComparisonReason: reason });
   if (!lastClose) {
-    if (progress.running) return none(`Prices are still loading after a server start (${progress.priced || 0} of ${symbols} symbols read so far), so no buy has an SPY comparison yet.`);
-    if (progress.total && progress.failed) return none("SPY closes could not be read from Yahoo Finance, so no buy can be compared with SPY.");
-    return none(warm ? "Prices have not been loaded yet, so no buy can be compared with SPY." : "Price loading is off (INTEL_NO_WARM), so no buy can be compared with SPY.");
+    if (progress.running)
+      return none(
+        `Prices are still loading after a server start (${progress.priced || 0} of ${symbols} symbols read so far), so no buy has an SPY comparison yet.`,
+      );
+    if (progress.total && progress.failed)
+      return none("SPY closes could not be read from Yahoo Finance, so no buy can be compared with SPY.");
+    return none(
+      warm
+        ? "Prices have not been loaded yet, so no buy can be compared with SPY."
+        : "Price loading is off (INTEL_NO_WARM), so no buy can be compared with SPY.",
+    );
   }
   if (!buys) return none("There are no disclosed buys in this window.");
-  if (!pricedBuys) return none(`None of the ${buys} disclosed buys in this window has a priced entry (a joined ticker with a close within ${ENTRY_SLACK_DAYS} days of the trade date; closes through ${lastClose}).`);
-  if (!scoredMembers) return none(`${pricedBuys} of ${buys} disclosed buys are priced, but no member has the ${minBuys} priced buys needed to be ranked against SPY.`);
+  if (!pricedBuys)
+    return none(
+      `None of the ${buys} disclosed buys in this window has a priced entry (a joined ticker with a close within ${ENTRY_SLACK_DAYS} days of the trade date; closes through ${lastClose}).`,
+    );
+  if (!scoredMembers)
+    return none(
+      `${pricedBuys} of ${buys} disclosed buys are priced, but no member has the ${minBuys} priced buys needed to be ranked against SPY.`,
+    );
   return {
     benchmarkComparison: {
       benchmark: BENCHMARK,
@@ -240,19 +339,26 @@ export function benchmarkStatus({ lastClose, buys, pricedBuys, scoredMembers, mi
       pricedBuys,
       membersRanked: scoredMembers,
       minPricedBuysToRank: minBuys,
-      measured: "Each buy from the close on its trade date to the latest close, against SPY over the same days (excessSince); excess30 / excess90 only where 30 / 90 days have passed.",
+      measured:
+        "Each buy from the close on its trade date to the latest close, against SPY over the same days (excessSince); excess30 / excess90 only where 30 / 90 days have passed.",
       through: lastClose,
-      ...(progress.running ? { partial: `Prices still loading: ${progress.priced || 0} of ${symbols} symbols so far.` } : {})
+      ...(progress.running
+        ? { partial: `Prices still loading: ${progress.priced || 0} of ${symbols} symbols so far.` }
+        : {}),
     },
-    benchmarkComparisonReason: ""
+    benchmarkComparisonReason: "",
   };
 }
 
 /* ---------- daily closes (Yahoo chart, adjusted), cached in sqlite ---------- */
 
-
 async function fetchCloses(symbol) {
-  const body = await yahooChart(symbol, { interval: "1d", range: "2y", includeAdjustedClose: "true", events: "div,splits" });
+  const body = await yahooChart(symbol, {
+    interval: "1d",
+    range: "2y",
+    includeAdjustedClose: "true",
+    events: "div,splits",
+  });
   const result = body?.chart?.result?.[0];
   if (!result) throw new Error(body?.chart?.error?.description || "no chart");
   const stamps = result.timestamp || [];
@@ -289,7 +395,7 @@ const state = {
   rows: [],
   stats: new Map(),
   progress: { done: 0, total: 0, fetched: 0, failed: 0, startedAt: null, finishedAt: null, running: false },
-  tradesAsOf: null
+  tradesAsOf: null,
 };
 
 function recompute(trades) {
@@ -302,14 +408,20 @@ function recompute(trades) {
 export function pickSymbols(trades, max = MAX_SYMBOLS) {
   const n = new Map();
   for (const t of trades) if (t.side === "buy" && t.symbol && t.inJoin) n.set(t.symbol, (n.get(t.symbol) || 0) + 1);
-  return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, max).map(([s]) => s);
+  return [...n.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, max)
+    .map(([s]) => s);
 }
 
 let job = null;
 
 /** One build at a time; callers that want to wait share its promise. */
 export function buildReturns(db) {
-  if (!job) job = build(db).finally(() => { job = null; });
+  if (!job)
+    job = build(db).finally(() => {
+      job = null;
+    });
   return job;
 }
 
@@ -322,7 +434,13 @@ export async function awaitReturns(db, ms) {
   if (!job && !warmEnabled()) return;
   const running = buildReturns(db).catch(() => {});
   let timer;
-  await Promise.race([running, new Promise((r) => { timer = setTimeout(r, ms); timer.unref?.(); })]);
+  await Promise.race([
+    running,
+    new Promise((r) => {
+      timer = setTimeout(r, ms);
+      timer.unref?.();
+    }),
+  ]);
   clearTimeout(timer);
 }
 
@@ -331,14 +449,25 @@ async function build(db) {
   const trades = board.items || [];
   if (!trades.length) return;
   const symbols = pickSymbols(trades);
-  state.progress = { done: 0, total: symbols.length + 1, fetched: 0, failed: 0, startedAt: new Date().toISOString(), finishedAt: null, running: true };
+  state.progress = {
+    done: 0,
+    total: symbols.length + 1,
+    fetched: 0,
+    failed: 0,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    running: true,
+  };
   state.tradesAsOf = board.asOf || null;
   try {
     const spy = await closesFor(db, BENCHMARK);
     state.spy = spy.series;
     state.progress.done += 1;
     if (spy.fetched) state.progress.fetched += 1;
-    if (!state.spy?.length) { state.progress.failed += 1; return; }
+    if (!state.spy?.length) {
+      state.progress.failed += 1;
+      return;
+    }
     for (const symbol of symbols) {
       const r = await closesFor(db, symbol);
       if (r.series?.length) state.closes.set(symbol, r.series);
@@ -357,7 +486,11 @@ async function build(db) {
 
 export function refreshReturns(db) {
   return buildReturns(db)
-    .then(() => console.log(`returns: ${state.closes.size} symbols priced, ${state.rows.length} buys scored, ${state.progress.fetched} fetched, ${state.progress.failed} failed`))
+    .then(() =>
+      console.log(
+        `returns: ${state.closes.size} symbols priced, ${state.rows.length} buys scored, ${state.progress.fetched} fetched, ${state.progress.failed} failed`,
+      ),
+    )
     .catch((err) => console.error("returns", err.message));
 }
 
@@ -369,7 +502,7 @@ function sourceBlock() {
     asOf: p.finishedAt || p.startedAt || new Date().toISOString(),
     latency: `Daily closes through ${lastClose || "—"}, refreshed every 12 h (cached 20 h). ${p.running ? `Pricing in progress: ${state.closes.size} of ${Math.max(0, p.total - 1)} symbols priced so far.` : `${state.closes.size} of ${Math.max(0, p.total - 1)} symbols priced.`} Only joined tickers from data/tickers.json with disclosed buys, up to ${MAX_SYMBOLS}.`,
     basis: BASIS,
-    progress: { ...p, priced: state.closes.size, scored: state.rows.length, lastClose }
+    progress: { ...p, priced: state.closes.size, scored: state.rows.length, lastClose },
   };
 }
 
@@ -377,7 +510,17 @@ function sourceBlock() {
 export function memberReturns(bioguide) {
   const stats = state.stats.get(bioguide) || null;
   const byTrade = new Map(state.rows.filter((r) => r.bioguide === bioguide).map((r) => [r.id, r]));
-  return { stats: stats ? { ...stats, basis: BASIS, lastClose: state.spy?.length ? isoOf(state.spy.at(-1)[0]) : null, building: state.progress.running } : null, byTrade };
+  return {
+    stats: stats
+      ? {
+          ...stats,
+          basis: BASIS,
+          lastClose: state.spy?.length ? isoOf(state.spy.at(-1)[0]) : null,
+          building: state.progress.running,
+        }
+      : null,
+    byTrade,
+  };
 }
 
 /**
@@ -385,7 +528,11 @@ export function memberReturns(bioguide) {
  * waits that long for prices after a server start instead of answering with none. `window` and
  * `benchmarkComparison` say what the board covers and whether it holds any SPY figures.
  */
-export async function leaders(db, people, { from = "", to = "", days = 0, basis = "filed", waitMs = 0, today = new Date().toISOString().slice(0, 10) } = {}) {
+export async function leaders(
+  db,
+  people,
+  { from = "", to = "", days = 0, basis = "filed", waitMs = 0, today = new Date().toISOString().slice(0, 10) } = {},
+) {
   if (waitMs > 0) await awaitReturns(db, waitMs);
   else if (!state.spy && !state.progress.running && warmEnabled()) void buildReturns(db);
   const board = await congressTrades(db).catch(() => ({ items: [] }));
@@ -409,9 +556,9 @@ export async function leaders(db, people, { from = "", to = "", days = 0, basis 
       scoredMembers: boards.scoredMembers,
       minBuys,
       progress: { ...state.progress, priced: state.closes.size },
-      warm: warmEnabled()
+      warm: warmEnabled(),
     }),
     tradesSource: { source: board.source, asOf: board.asOf, latency: board.latency },
-    ...boards
+    ...boards,
   };
 }

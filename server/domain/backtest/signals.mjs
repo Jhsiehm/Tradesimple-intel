@@ -13,7 +13,12 @@ const lc = (v) => String(v || "").toLowerCase();
 export function matchCommittees(committees, query) {
   const q = lc(query).trim();
   if (!q) return null;
-  const hits = committees.filter((c) => lc(c.id) === q || lc(c.name).includes(q) || lc(c.name.replace(/^(House|Senate|Joint) Committee on /i, "")).includes(q));
+  const hits = committees.filter(
+    (c) =>
+      lc(c.id) === q ||
+      lc(c.name).includes(q) ||
+      lc(c.name.replace(/^(House|Senate|Joint) Committee on /i, "")).includes(q),
+  );
   const members = new Set();
   const lanesBy = new Map();
   for (const c of hits) {
@@ -37,7 +42,10 @@ export function lanesByMember(committees) {
   return out;
 }
 
-const laneOf = (code) => String(code || "").slice(0, 4).toUpperCase();
+const laneOf = (code) =>
+  String(code || "")
+    .slice(0, 4)
+    .toUpperCase();
 
 /** lane → ascending hearing day numbers, cancelled and postponed meetings out. */
 export function hearingsByLane(meetings) {
@@ -81,22 +89,46 @@ function excluded(f, person, bioguide) {
  * the feed's posting lag) by the day the trade itself became public, so the rule could have been followed then.
  */
 export function awardFollowed(awards, symbol, tradeDay, publicDay, days) {
-  return (awards?.get(symbol) || []).some((a) => a.day > tradeDay && a.day <= tradeDay + days && a.publicDay <= publicDay);
+  return (awards?.get(symbol) || []).some(
+    (a) => a.day > tradeDay && a.day <= tradeDay + days && a.publicDay <= publicDay,
+  );
 }
 
-export function congressSignals({ trades, filters: f, sectorOf, committee = null, lanes = new Map(), hearings = null, awards = null }) {
+export function congressSignals({
+  trades,
+  filters: f,
+  sectorOf,
+  committee = null,
+  lanes = new Map(),
+  hearings = null,
+  awards = null,
+}) {
   const dropped = {};
-  const drop = (why) => { dropped[why] = (dropped[why] || 0) + 1; };
+  const drop = (why) => {
+    dropped[why] = (dropped[why] || 0) + 1;
+  };
   const member = lc(f.member).trim();
   const signals = [];
   for (const t of trades) {
-    if (t.side !== "buy" && t.side !== "sell") { drop("notBuyOrSell"); continue; }
-    if (!t.symbol || !t.inJoin) { drop("notJoined"); continue; }
-    if (!t.filed || !t.traded) { drop("noDates"); continue; }
+    if (t.side !== "buy" && t.side !== "sell") {
+      drop("notBuyOrSell");
+      continue;
+    }
+    if (!t.symbol || !t.inJoin) {
+      drop("notJoined");
+      continue;
+    }
+    if (!t.filed || !t.traded) {
+      drop("noDates");
+      continue;
+    }
     if (f.party && t.party !== f.party) continue;
     if (f.chamber && t.chamber !== f.chamber) continue;
     if (member && !(lc(t.bioguide) === member || lc(t.person).includes(member))) continue;
-    if (excluded(f, t.person, t.bioguide)) { drop("excludedMember"); continue; }
+    if (excluded(f, t.person, t.bioguide)) {
+      drop("excludedMember");
+      continue;
+    }
     if (committee && !committee.members.has(t.bioguide)) continue;
     if (f.tickers.length && !f.tickers.includes(t.symbol)) continue;
     const sector = sectorOf(t.symbol);
@@ -104,19 +136,29 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     // A trade also in the original report was public at the original filing; one only in an amendment, at the amendment.
     // Corrected values cannot influence a historical rule before the amendment was public.
     // The explorer may retain earliest disclosure time; calculations use the values' availability.
-    const publicDate = t.revised?.length ? [t.public, publicDateOf(t)].filter(Boolean).sort().at(-1) : t.public || publicDateOf(t);
+    const publicDate = t.revised?.length
+      ? [t.public, publicDateOf(t)].filter(Boolean).sort().at(-1)
+      : t.public || publicDateOf(t);
     if (!inRange(publicDate, f)) continue;
     if (f.minAmount && !(t.amountLow >= f.minAmount)) continue;
     if (f.maxAmount && !(t.amountLow < f.maxAmount)) continue;
-    if (f.awardWithinDays && !awardFollowed(awards, t.symbol, dayOf(t.traded), dayOf(publicDate), f.awardWithinDays)) { drop("noAwardAfter"); continue; }
+    if (f.awardWithinDays && !awardFollowed(awards, t.symbol, dayOf(t.traded), dayOf(publicDate), f.awardWithinDays)) {
+      drop("noAwardAfter");
+      continue;
+    }
     if (f.minLagDays && !(t.lag >= f.minLagDays)) continue;
     if (f.maxLagDays && !(t.lag <= f.maxLagDays)) continue;
     let near = null;
     if (f.nearHearingDays) {
       const tradeDay = dayOf(t.traded);
       const filedDay = dayOf(t.filed);
-      near = hearings ? nearestHearing(lanes.get(t.bioguide), hearings, tradeDay, f.nearHearingDays, f.hearingKnown ? filedDay : null) : null;
-      if (near == null) { drop("noNearbyHearing"); continue; }
+      near = hearings
+        ? nearestHearing(lanes.get(t.bioguide), hearings, tradeDay, f.nearHearingDays, f.hearingKnown ? filedDay : null)
+        : null;
+      if (near == null) {
+        drop("noNearbyHearing");
+        continue;
+      }
     }
     if (publicDate !== t.filed) dropped.amendedLater = (dropped.amendedLater || 0) + 1;
     if (t.revised?.length) dropped.revised = (dropped.revised || 0) + 1;
@@ -132,7 +174,7 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
       actor: t.bioguide || t.person,
       actorLabel: `${t.person}${t.party ? ` (${t.party}${t.state ? `-${t.state}` : ""})` : ""}`,
       sector,
-      meta: near == null ? undefined : { hearingGap: near }
+      meta: near == null ? undefined : { hearingGap: near },
     });
   }
   return { signals, dropped };
@@ -162,26 +204,43 @@ export function insidersBuying(index, symbol, day) {
 /** Open-market Form 4 purchases and sales. Rows flagged as a 10b5-1 plan are left out: they were scheduled, not decided. */
 export function form4Signals({ rows, filters: f, sectorOf }) {
   const dropped = {};
-  const drop = (why) => { dropped[why] = (dropped[why] || 0) + 1; };
+  const drop = (why) => {
+    dropped[why] = (dropped[why] || 0) + 1;
+  };
   const member = lc(f.member).trim();
   const seen = new Set();
   const signals = [];
   const buyers = f.clusterMin ? clusterIndex(rows) : null;
   for (const r of rows) {
     const side = FORM4_SIDE[r.side];
-    if (!side || (r.code !== "P" && r.code !== "S")) { drop("notOpenMarket"); continue; }
+    if (!side || (r.code !== "P" && r.code !== "S")) {
+      drop("notOpenMarket");
+      continue;
+    }
     if (f.planOnly && !r.plan) continue;
-    if (r.plan && !f.include10b51 && !f.planOnly) { drop("plan10b5"); continue; }
+    if (r.plan && !f.include10b51 && !f.planOnly) {
+      drop("plan10b5");
+      continue;
+    }
     if (f.role && !ROLES[f.role].test(r.title || "")) continue;
     if (f.maxAmount && !(r.value < f.maxAmount)) continue;
     if (buyers && !(side === "buy" && insidersBuying(buyers, r.symbol, dayOf(r.filed)) >= f.clusterMin)) continue;
-    if (!r.symbol) { drop("noTicker"); continue; }
-    if (!r.filed || !r.traded) { drop("noDates"); continue; }
+    if (!r.symbol) {
+      drop("noTicker");
+      continue;
+    }
+    if (!r.filed || !r.traded) {
+      drop("noDates");
+      continue;
+    }
     if (f.tickers.length && !f.tickers.includes(r.symbol)) continue;
     const sector = sectorOf(r.symbol);
     if (f.sector && sector !== f.sector) continue;
     if (member && !lc(r.person).includes(member)) continue;
-    if (excluded(f, r.person, "")) { drop("excludedMember"); continue; }
+    if (excluded(f, r.person, "")) {
+      drop("excludedMember");
+      continue;
+    }
     if (!inRange(r.filed, f)) continue;
     if (f.minAmount && !(r.value >= f.minAmount)) continue;
     if (seen.has(r.id)) continue;
@@ -196,7 +255,7 @@ export function form4Signals({ rows, filters: f, sectorOf }) {
       sizeIsRange: false,
       actor: r.person,
       actorLabel: `${r.person}${r.title ? ` · ${r.title}` : ""}`,
-      sector
+      sector,
     });
   }
   return { signals, dropped };
@@ -209,26 +268,38 @@ export const CONTRACT_COOLDOWN_DAYS = 30;
 
 export function contractSignals({ rows, filters: f, sectorOf }) {
   const dropped = {};
-  const drop = (why) => { dropped[why] = (dropped[why] || 0) + 1; };
+  const drop = (why) => {
+    dropped[why] = (dropped[why] || 0) + 1;
+  };
   const agency = lc(f.contractAgency).trim();
   const last = new Map();
   const signals = [];
   const sorted = [...rows].filter((r) => r.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   for (const r of sorted) {
-    if (!r.symbol) { drop("noJoin"); continue; }
+    if (!r.symbol) {
+      drop("noJoin");
+      continue;
+    }
     if (f.tickers.length && !f.tickers.includes(r.symbol)) continue;
     if (agency && !lc(`${r.agency} ${r.subAgency}`).includes(agency)) continue;
     const sector = sectorOf(r.symbol);
     if (f.sector && sector !== f.sector) continue;
-    if (!(r.amount > 0)) { drop("deobligation"); continue; }
+    if (!(r.amount > 0)) {
+      drop("deobligation");
+      continue;
+    }
     if (f.minAmount && r.amount < f.minAmount) continue;
-    const lag = f.contractLagDays > 0 ? f.contractLagDays : /defense/i.test(r.agency || "") ? DOD_LAG_DAYS : CIVILIAN_LAG_DAYS;
+    const lag =
+      f.contractLagDays > 0 ? f.contractLagDays : /defense/i.test(r.agency || "") ? DOD_LAG_DAYS : CIVILIAN_LAG_DAYS;
     const day = dayOf(r.date);
     if (day == null) continue;
     const signalDate = isoOf(day + lag);
     if (!inRange(signalDate, f)) continue;
     const prev = last.get(r.symbol);
-    if (prev != null && day + lag - prev < CONTRACT_COOLDOWN_DAYS) { drop("cooldown"); continue; }
+    if (prev != null && day + lag - prev < CONTRACT_COOLDOWN_DAYS) {
+      drop("cooldown");
+      continue;
+    }
     last.set(r.symbol, day + lag);
     signals.push({
       id: r.id || `${r.award}:${r.date}`,
@@ -240,7 +311,7 @@ export function contractSignals({ rows, filters: f, sectorOf }) {
       sizeIsRange: false,
       actor: r.agency || "agency",
       actorLabel: r.subAgency || r.agency || "agency",
-      sector
+      sector,
     });
   }
   return { signals, dropped };
@@ -268,11 +339,17 @@ export function lobbySignals({ filingsBySymbol, filters: f, sectorOf }) {
     for (let i = 1; i < keys.length; i += 1) {
       const cur = quarters.get(keys[i]);
       const prevKey = keys[i - 1];
-      const posted = cur.map((x) => x.posted).sort().at(-1);
+      const posted = cur
+        .map((x) => x.posted)
+        .sort()
+        .at(-1);
       const prev = quarters.get(prevKey).filter((x) => x.posted <= posted);
       const now = cur.reduce((a, x) => a + x.amount, 0);
       const before = prev.reduce((a, x) => a + x.amount, 0);
-      if (!(before > 0)) { dropped.noPriorQuarter = (dropped.noPriorQuarter || 0) + 1; continue; }
+      if (!(before > 0)) {
+        dropped.noPriorQuarter = (dropped.noPriorQuarter || 0) + 1;
+        continue;
+      }
       const jump = now / before - 1;
       if (jump * 100 < f.spikePct) continue;
       if (!inRange(posted, f)) continue;
@@ -288,7 +365,7 @@ export function lobbySignals({ filingsBySymbol, filters: f, sectorOf }) {
         sizeIsRange: false,
         actor: symbol,
         actorLabel: `${symbol} ${q.type} ${q.year} (+${Math.round(jump * 100)}%)`,
-        sector
+        sector,
       });
     }
   }

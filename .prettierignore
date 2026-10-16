@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-demo
+demo
+data
+artifacts
+deploy
+.cursor
+.impeccable
+package-lock.json
+*.md
+*.json
+*.html
+shared/replicate/*.txt

@@ -30,7 +30,7 @@ export function shortBoard(db) {
           filed: row.date,
           lag: null,
           latest: i === 0,
-          link: "https://www.finra.org/finra-data/browse-catalog/equity-short-interest/data"
+          link: "https://www.finra.org/finra-data/browse-catalog/equity-short-interest/data",
         });
       });
     });
@@ -41,7 +41,7 @@ export function shortBoard(db) {
       asOf: new Date().toISOString(),
       latency: "Settlement-date snapshots published twice a month, about a week after settlement.",
       scanned: scanned.sort(),
-      items: rows
+      items: rows,
     };
     if (rows.length) writeCache(db, key, result, 6 * HOUR);
     return result;

@@ -11,7 +11,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Called with true while a request waits for a restarting API, false once it answers or the wait gives up. */
 export function onApiDown(listener: (down: boolean) => void): () => void {
   downListeners.add(listener);
-  return () => { downListeners.delete(listener); };
+  return () => {
+    downListeners.delete(listener);
+  };
 }
 
 /**
@@ -25,7 +27,10 @@ export function waitForApi(signal?: AbortSignal): Promise<boolean> {
       try {
         for (const ms of retryDelays()) {
           await sleep(ms);
-          const up = await fetch("/api/health", { cache: "no-store" }).then((r) => r.ok, () => false);
+          const up = await fetch("/api/health", { cache: "no-store" }).then(
+            (r) => r.ok,
+            () => false,
+          );
           if (up) return true;
         }
         return false;
@@ -37,12 +42,17 @@ export function waitForApi(signal?: AbortSignal): Promise<boolean> {
   }
   if (!signal) return waiting;
   if (signal.aborted) return Promise.resolve(false);
-  return Promise.race([waiting, new Promise<boolean>((r) => signal.addEventListener("abort", () => r(false), { once: true }))]);
+  return Promise.race([
+    waiting,
+    new Promise<boolean>((r) => signal.addEventListener("abort", () => r(false), { once: true })),
+  ]);
 }
 
 /** A hosted copy answers 401 once the session cookie has expired: go to its sign-in page and come back here. */
 function signIn() {
-  window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`);
+  window.location.assign(
+    `/login?next=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
+  );
 }
 
 /** GET JSON. While the API restarts, waits for it (see `waitForApi`) and tries once more. */
@@ -50,7 +60,11 @@ export async function api<T>(path: string): Promise<T> {
   if (DEMO) {
     const res = await fetch(`${import.meta.env.BASE_URL}snapshot/${demoFile(path)}`);
     if (!res.ok || !res.headers.get("content-type")?.match(/json|geo/)) {
-      return { ok: false, error: "Not in the demo snapshot. Run locally with your own keys for live data.", items: [] } as T;
+      return {
+        ok: false,
+        error: "Not in the demo snapshot. Run locally with your own keys for live data.",
+        items: [],
+      } as T;
     }
     return (await res.json()) as T;
   }
@@ -66,7 +80,11 @@ export async function api<T>(path: string): Promise<T> {
     const text = await res.text();
     if (attempt === 0 && isRestart({ status: res.status, body: text }) && (await waitForApi())) continue;
     let body: { error?: string } | null = null;
-    try { body = text ? JSON.parse(text) : null; } catch { body = null; }
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = null;
+    }
     if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
     if (body == null) throw new Error("The API answered with something that is not JSON.");
     return body as T;
@@ -79,12 +97,16 @@ export async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   if (res.status === 401) signIn();
   const text = await res.text();
   let data: unknown = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
   if (data && typeof data === "object") return data as T;
   if (res.ok) throw new Error("Empty response.");
   const hint = text.replace(/\s+/g, " ").trim().slice(0, 180);

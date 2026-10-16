@@ -31,7 +31,13 @@ export type PublicNotifySettings = {
   clickUrl: boolean;
 };
 
-export type SavedNotifySettings = { enabled?: boolean; minSeverity?: string; kinds?: string[]; quiet?: string; quietHigh?: boolean };
+export type SavedNotifySettings = {
+  enabled?: boolean;
+  minSeverity?: string;
+  kinds?: string[];
+  quiet?: string;
+  quietHigh?: boolean;
+};
 
 export type NotifyRow = {
   id: string;
@@ -69,10 +75,20 @@ export function quietLabel(q: Quiet | null): string;
 export function nyMinutes(now: number): number;
 export function inQuiet(now: number, quiet: Quiet | null): boolean;
 export function envSettings(env?: Record<string, string | undefined>): NotifySettings;
-export function mergeSettings(base: NotifySettings, saved?: SavedNotifySettings | null): NotifySettings & { enabled: boolean };
+export function mergeSettings(
+  base: NotifySettings,
+  saved?: SavedNotifySettings | null,
+): NotifySettings & { enabled: boolean };
 export function publicSettings(s: NotifySettings): PublicNotifySettings;
 export function maskTopic(topic: string): string;
 export function topicFrom(bytes: ArrayLike<number>): string;
-export function shouldNotify(row: NotifyRow, settings: NotifySettings | null | undefined, now?: number): { send: boolean; why: string };
-export function buildMessage(row: NotifyRow, opts?: { clickUrl?: string; now?: number; suppressed?: number }): NtfyMessage;
+export function shouldNotify(
+  row: NotifyRow,
+  settings: NotifySettings | null | undefined,
+  now?: number,
+): { send: boolean; why: string };
+export function buildMessage(
+  row: NotifyRow,
+  opts?: { clickUrl?: string; now?: number; suppressed?: number },
+): NtfyMessage;
 export function underLimit(sentTimes: number[], maxPerHour: number, now?: number): { ok: boolean; recent: number[] };

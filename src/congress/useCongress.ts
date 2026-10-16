@@ -30,7 +30,13 @@ export type BillRoll = {
   final: boolean;
 };
 
-type BillInfo = { title: string; latest: string; stage: string; updated: string; ladder: { stages: { name: string; reached: boolean }[]; actions: { date: string; text: string }[] } };
+type BillInfo = {
+  title: string;
+  latest: string;
+  stage: string;
+  updated: string;
+  ladder: { stages: { name: string; reached: boolean }[]; actions: { date: string; text: string }[] };
+};
 
 type VoteRow = {
   id: string;
@@ -85,7 +91,16 @@ type CommitteeRow = {
   ranking: { bioguide: string; name: string; party: string } | null;
 };
 
-type CommitteeSeat = { bioguide: string; name: string; side: string; party: string; state: string; district: string; rank: number; title: string };
+type CommitteeSeat = {
+  bioguide: string;
+  name: string;
+  side: string;
+  party: string;
+  state: string;
+  district: string;
+  rank: number;
+  title: string;
+};
 
 type CommitteeDetail = {
   id: string;
@@ -125,7 +140,13 @@ type VoteDetail = {
   positions: Position[];
 };
 
-export function useCongress(chamber: Chamber, mode: CongressMode, query: string, selectedId: string | null, party: PartyFilter) {
+export function useCongress(
+  chamber: Chamber,
+  mode: CongressMode,
+  query: string,
+  selectedId: string | null,
+  party: PartyFilter,
+) {
   const [bills, setBills] = useState<Bill[]>([]);
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [roster, setRoster] = useState<RosterMember[]>([]);
@@ -142,7 +163,10 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
   const [billVote, setBillVote] = useState<VoteDetail | null>(null);
   const [drawer, setDrawer] = useState<DrawerModel | null>(null);
   const [status, setStatus] = useState<StatusLine>({ source: "Congress.gov", asOf: "" });
-  const [rosterStatus, setRosterStatus] = useState<StatusLine>({ source: "unitedstates/congress-legislators", asOf: "" });
+  const [rosterStatus, setRosterStatus] = useState<StatusLine>({
+    source: "unitedstates/congress-legislators",
+    asOf: "",
+  });
   const [empty, setEmpty] = useState("Loading Congress.gov…");
 
   useEffect(() => {
@@ -159,8 +183,12 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         setRosterStatus({ source: res.source, asOf: when(res.asOf), latency: res.latency });
       })
       .catch(() => null);
-    api<GeoJSON.FeatureCollection>("/geo/states.geojson").then(setStates).catch(() => null);
-    api<GeoJSON.FeatureCollection>("/geo/cd119.geojson").then(setDistricts).catch(() => null);
+    api<GeoJSON.FeatureCollection>("/geo/states.geojson")
+      .then(setStates)
+      .catch(() => null);
+    api<GeoJSON.FeatureCollection>("/geo/cd119.geojson")
+      .then(setDistricts)
+      .catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -172,7 +200,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
 
   useEffect(() => {
     api<{ ok: boolean; missing?: string; items: VoteRow[]; source: string; asOf: string }>(
-      `/api/congress/votes?chamber=${chamber}`
+      `/api/congress/votes?chamber=${chamber}`,
     )
       .then((res) => {
         if (res.missing) setEmpty(`Set ${res.missing} in .env.local to load votes.`);
@@ -180,12 +208,13 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         setVotes(res.items || []);
         const newest = Math.max(0, ...(res.items || []).map((vote) => recent(vote.date)));
         const quiet = newest > 0 && Date.now() - newest > 2 * 24 * 60 * 60 * 1000;
-        if (res.source) setStatus((s) => ({
-          ...s,
-          source: res.source,
-          asOf: when(res.asOf),
-          latency: quiet ? "No roll call in the last two days on this feed." : s.latency
-        }));
+        if (res.source)
+          setStatus((s) => ({
+            ...s,
+            source: res.source,
+            asOf: when(res.asOf),
+            latency: quiet ? "No roll call in the last two days on this feed." : s.latency,
+          }));
       })
       .catch((err: Error) => setEmpty(err.message));
   }, [chamber]);
@@ -204,15 +233,25 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
   useEffect(() => {
     if (pinnedVote || !latestVote) return;
     let cancel = false;
-    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${chamber}/${latestVote.congress}/${latestVote.session}/${latestVote.roll}`)
+    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(
+      `/api/congress/votes/${chamber}/${latestVote.congress}/${latestVote.session}/${latestVote.roll}`,
+    )
       .then((res) => {
         if (cancel || !res.vote) return;
         setPositions(res.vote.positions);
-        setVoteCaption(`Latest roll call · ${voteTitle(latestVote.roll, res.vote.bill || latestVote.bill, res.vote.question, latestVote.question)} · ${res.vote.result}`);
-        setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `Latest ${chamber} roll ${latestVote.roll}` });
+        setVoteCaption(
+          `Latest roll call · ${voteTitle(latestVote.roll, res.vote.bill || latestVote.bill, res.vote.question, latestVote.question)} · ${res.vote.result}`,
+        );
+        setVoteSource({
+          source: res.source || "",
+          asOf: res.vote.date,
+          label: `Latest ${chamber} roll ${latestVote.roll}`,
+        });
       })
       .catch(() => null);
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [pinnedVote, latestVote, chamber]);
 
   useEffect(() => {
@@ -223,12 +262,20 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     if (!selectedId || mode !== "bills") return;
     let cancel = false;
     api<{ ok: boolean; bill?: BillInfo }>(`/api/congress/bills/${selectedId}`)
-      .then((res) => { if (!cancel && res.bill) setBillInfo(res.bill); })
+      .then((res) => {
+        if (!cancel && res.bill) setBillInfo(res.bill);
+      })
       .catch(() => null);
     api<{ ok: boolean; items?: BillRoll[] }>(`/api/congress/bills/${selectedId}/votes`)
-      .then((res) => { if (!cancel) setRolls(res.items || []); })
-      .catch(() => { if (!cancel) setRolls([]); });
-    return () => { cancel = true; };
+      .then((res) => {
+        if (!cancel) setRolls(res.items || []);
+      })
+      .catch(() => {
+        if (!cancel) setRolls([]);
+      });
+    return () => {
+      cancel = true;
+    };
   }, [selectedId, mode]);
 
   /** The roll call on the map: the user's pick in this chamber, else this chamber's final passage, else its latest. */
@@ -247,27 +294,45 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
       setBillVote(null);
       setPositions([]);
       setVoteSource(null);
-      setVoteCaption(other ? `No ${chamber} roll call on this bill · ${other} in the ${chamber === "house" ? "Senate" : "House"}` : "No recorded roll call on this bill");
-      setStatus({ source: "Congress.gov bill actions · House Clerk · Senate.gov LIS", asOf: "", latency: other ? `Pick a ${chamber === "house" ? "Senate" : "House"} roll call above the map.` : "Voice votes and unanimous consent leave no roll call to map." });
+      setVoteCaption(
+        other
+          ? `No ${chamber} roll call on this bill · ${other} in the ${chamber === "house" ? "Senate" : "House"}`
+          : "No recorded roll call on this bill",
+      );
+      setStatus({
+        source: "Congress.gov bill actions · House Clerk · Senate.gov LIS",
+        asOf: "",
+        latency: other
+          ? `Pick a ${chamber === "house" ? "Senate" : "House"} roll call above the map.`
+          : "Voice votes and unanimous consent leave no roll call to map.",
+      });
       return;
     }
     let cancel = false;
-    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${roll.chamber}/${roll.congress}/${roll.session}/${roll.roll}`)
+    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(
+      `/api/congress/votes/${roll.chamber}/${roll.congress}/${roll.session}/${roll.roll}`,
+    )
       .then((res) => {
         if (cancel || !res.vote) return;
         res.vote.question = voteTitle(roll.roll, res.vote.bill || "", res.vote.question, roll.question);
         setBillVote(res.vote);
         setPositions(res.vote.positions);
         setVoteCaption(`${res.vote.question} · ${res.vote.result || roll.result}`);
-        setVoteSource({ source: res.source || "", asOf: res.vote.date || roll.date, label: `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll}${roll.final ? " · final passage" : ""}` });
+        setVoteSource({
+          source: res.source || "",
+          asOf: res.vote.date || roll.date,
+          label: `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll}${roll.final ? " · final passage" : ""}`,
+        });
         setStatus({
           source: res.source || "Congress.gov roll call",
           asOf: when(res.vote.date || roll.date),
-          latency: `${res.vote.totals.Yea || 0} yea · ${res.vote.totals.Nay || 0} nay · official roll call, posted within hours of the vote · click a ${roll.chamber === "house" ? "district" : "state"} for its members`
+          latency: `${res.vote.totals.Yea || 0} yea · ${res.vote.totals.Nay || 0} nay · official roll call, posted within hours of the vote · click a ${roll.chamber === "house" ? "district" : "state"} for its members`,
         });
       })
       .catch(() => null);
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [mode, selectedId, rolls, rollId, chamber]);
 
   useEffect(() => {
@@ -279,13 +344,19 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     if (!selectedId || mode !== "votes") return;
     const vote = votes.find((v) => v.id === selectedId);
     if (!vote) return;
-    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(`/api/congress/votes/${chamber}/${vote.congress}/${vote.session}/${vote.roll}`)
+    api<{ ok: boolean; source?: string; vote?: VoteDetail }>(
+      `/api/congress/votes/${chamber}/${vote.congress}/${vote.session}/${vote.roll}`,
+    )
       .then((res) => {
         if (!res.vote) return;
         const title = voteTitle(vote.roll, res.vote.bill || vote.bill, res.vote.question, vote.question);
         setPositions(res.vote.positions);
         setVoteCaption(`${title} · ${res.vote.result}`);
-        setVoteSource({ source: res.source || "", asOf: res.vote.date, label: `${chamber === "house" ? "House" : "Senate"} roll ${vote.roll}` });
+        setVoteSource({
+          source: res.source || "",
+          asOf: res.vote.date,
+          label: `${chamber === "house" ? "House" : "Senate"} roll ${vote.roll}`,
+        });
         setDrawer({
           title,
           meta: res.vote.result,
@@ -294,16 +365,16 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
             { label: "Yea", value: String(res.vote.totals.Yea || 0) },
             { label: "Nay", value: String(res.vote.totals.Nay || 0) },
             { label: "Present", value: String(res.vote.totals.Present || 0) },
-            { label: "Not voting", value: String(res.vote.totals["Not voting"] || 0) }
+            { label: "Not voting", value: String(res.vote.totals["Not voting"] || 0) },
           ],
           links: billLink(res.vote.bill, vote.congress),
           tables: [castTable(res.vote.positions, party)],
-          blocks: [{ title: "How they voted", lines: partySplit(res.vote.positions) }]
+          blocks: [{ title: "How they voted", lines: partySplit(res.vote.positions) }],
         });
         setStatus({
           source: res.source || (chamber === "senate" ? "Senate.gov LIS" : "Congress.gov roll call"),
           asOf: when(res.vote.date),
-          latency: "Official roll call · Map or Floor for the same vote."
+          latency: "Official roll call · Map or Floor for the same vote.",
         });
       })
       .catch((err: Error) => setEmpty(err.message));
@@ -315,7 +386,9 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
       return;
     }
     let cancel = false;
-    api<{ ok: boolean; error?: string; committee?: CommitteeDetail; source?: string; asOf?: string; latency?: string }>(`/api/congress/committees/${selectedId}`)
+    api<{ ok: boolean; error?: string; committee?: CommitteeDetail; source?: string; asOf?: string; latency?: string }>(
+      `/api/congress/committees/${selectedId}`,
+    )
       .then((res) => {
         if (cancel) return;
         if (!res.committee) {
@@ -327,7 +400,9 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         setStatus({ source: res.source || "Congress.gov", asOf: when(res.asOf), latency: res.latency });
       })
       .catch(() => null);
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [selectedId, mode, party]);
 
   const items: ListItem[] = useMemo(() => {
@@ -341,7 +416,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
           id: m.bioguide,
           title: m.name,
           meta: `${m.party || "—"} · ${m.state}${m.district && m.district !== "0" ? `-${m.district}` : m.chamber === "house" ? "-AL" : ""} · ${m.terms} terms · since ${m.since.slice(0, 4)}`,
-          tone: partyTone(m.party)
+          tone: partyTone(m.party),
         }));
     }
     if (mode === "committees") {
@@ -351,7 +426,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         .map((c) => ({
           id: c.id,
           title: c.name.replace(/^(House|Senate) Committee on /, "").replace(/^Joint Committee on /, "Joint · "),
-          meta: `${c.size} seats · ${c.majority}–${c.minority} · chair ${c.chair?.name || "—"} · ${c.subs} subcommittees`
+          meta: `${c.size} seats · ${c.majority}–${c.minority} · chair ${c.chair?.name || "—"} · ${c.subs} subcommittees`,
         }));
     }
     if (mode === "bills") {
@@ -361,7 +436,7 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         .map((b) => ({
           id: b.id,
           title: `${b.type} ${b.number}`,
-          meta: `${when(b.updated)} · ${b.votes ? `${b.votes} roll call${b.votes > 1 ? "s" : ""} · ` : ""}${b.stage} · ${b.title}`
+          meta: `${when(b.updated)} · ${b.votes ? `${b.votes} roll call${b.votes > 1 ? "s" : ""} · ` : ""}${b.stage} · ${b.title}`,
         }));
     }
     return [...votes]
@@ -377,7 +452,13 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
         id: v.id,
         title: voteTitle(v.roll, v.bill, v.question),
         meta: voteMeta(v),
-        tone: isClose(v) ? "close" as const : v.result.toLowerCase().includes("pass") || v.result.toLowerCase().includes("agreed") ? "yea" as const : v.result.toLowerCase().includes("fail") || v.result.toLowerCase().includes("reject") ? "nay" as const : "" as const
+        tone: isClose(v)
+          ? ("close" as const)
+          : v.result.toLowerCase().includes("pass") || v.result.toLowerCase().includes("agreed")
+            ? ("yea" as const)
+            : v.result.toLowerCase().includes("fail") || v.result.toLowerCase().includes("reject")
+              ? ("nay" as const)
+              : ("" as const),
       }));
   }, [bills, votes, roster, committees, mode, query, chamber, party]);
 
@@ -386,9 +467,16 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     return districts ? houseVoteMap(districts, positions, party) : null;
   }, [chamber, states, districts, positions, party]);
 
-  const view = mode === "members" || mode === "committees"
-    ? { ...rosterStatus, latency: mode === "committees" ? "Committee rosters are current assignments. Click a committee for members, bills, and meetings." : rosterStatus.latency }
-    : status;
+  const view =
+    mode === "members" || mode === "committees"
+      ? {
+          ...rosterStatus,
+          latency:
+            mode === "committees"
+              ? "Committee rosters are current assignments. Click a committee for members, bills, and meetings."
+              : rosterStatus.latency,
+        }
+      : status;
 
   return {
     items,
@@ -406,11 +494,17 @@ export function useCongress(chamber: Chamber, mode: CongressMode, query: string,
     rollId,
     pickRoll: setRollPick,
     roster,
-    committeeFocus
+    committeeFocus,
   };
 }
 
-function billModel(bill: BillInfo, rolls: BillRoll[] | null, rollId: string | null, vote: VoteDetail | null, party: PartyFilter): DrawerModel {
+function billModel(
+  bill: BillInfo,
+  rolls: BillRoll[] | null,
+  rollId: string | null,
+  vote: VoteDetail | null,
+  party: PartyFilter,
+): DrawerModel {
   const roll = rolls?.find((r) => r.id === rollId) || null;
   const live = vote && roll && vote.id === roll.id ? vote : null;
   return {
@@ -420,52 +514,80 @@ function billModel(bill: BillInfo, rolls: BillRoll[] | null, rollId: string | nu
     rows: [
       { label: "Updated", value: when(bill.updated) },
       { label: "Latest", value: bill.latest || "—" },
-      { label: "Roll call", value: roll ? `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll} · ${roll.date}${roll.final ? " · final passage" : ""}` : rolls ? "None recorded in this chamber" : "Loading…" },
-      ...(live ? [
-        { label: "Question", value: live.question || roll?.question || "—" },
-        { label: "Result", value: live.result || "—" },
-        { label: "Tally", value: `${live.totals.Yea || 0} yea · ${live.totals.Nay || 0} nay · ${live.totals.Present || 0} present · ${live.totals["Not voting"] || 0} not voting` }
-      ] : [])
+      {
+        label: "Roll call",
+        value: roll
+          ? `${roll.chamber === "house" ? "House" : "Senate"} roll ${roll.roll} · ${roll.date}${roll.final ? " · final passage" : ""}`
+          : rolls
+            ? "None recorded in this chamber"
+            : "Loading…",
+      },
+      ...(live
+        ? [
+            { label: "Question", value: live.question || roll?.question || "—" },
+            { label: "Result", value: live.result || "—" },
+            {
+              label: "Tally",
+              value: `${live.totals.Yea || 0} yea · ${live.totals.Nay || 0} nay · ${live.totals.Present || 0} present · ${live.totals["Not voting"] || 0} not voting`,
+            },
+          ]
+        : []),
     ],
     tables: [
-      ...(rolls?.length ? [{
-        title: "Roll calls on this bill",
-        note: "Click one to map it. Final passage is the default in each chamber.",
-        cols: ["", "Chamber", "Date", "Question", "Result", "Yea–Nay"],
-        rows: rolls.map((r) => ({
-          cells: [r.id === rollId ? "▸" : r.final ? "final" : "", r.chamber === "house" ? "House" : "Senate", r.date, r.question, r.result || "—", r.yea == null ? "—" : `${r.yea}–${r.nay}`],
-          action: `roll:${r.id}`,
-          tone: r.id === rollId ? "up" as const : "" as const
-        }))
-      }] : []),
-      ...(live?.positions.length ? [castTable(live.positions, party)] : [])
+      ...(rolls?.length
+        ? [
+            {
+              title: "Roll calls on this bill",
+              note: "Click one to map it. Final passage is the default in each chamber.",
+              cols: ["", "Chamber", "Date", "Question", "Result", "Yea–Nay"],
+              rows: rolls.map((r) => ({
+                cells: [
+                  r.id === rollId ? "▸" : r.final ? "final" : "",
+                  r.chamber === "house" ? "House" : "Senate",
+                  r.date,
+                  r.question,
+                  r.result || "—",
+                  r.yea == null ? "—" : `${r.yea}–${r.nay}`,
+                ],
+                action: `roll:${r.id}`,
+                tone: r.id === rollId ? ("up" as const) : ("" as const),
+              })),
+            },
+          ]
+        : []),
+      ...(live?.positions.length ? [castTable(live.positions, party)] : []),
     ],
     blocks: [
       ...(live?.positions.length ? [{ title: "How they voted", lines: partySplit(live.positions) }] : []),
       {
         title: "Actions",
-        lines: [...bill.ladder.actions].sort((a, b) => recent(b.date) - recent(a.date)).map((a) => `${a.date || ""} ${a.text}`.trim())
-      }
-    ]
+        lines: [...bill.ladder.actions]
+          .sort((a, b) => recent(b.date) - recent(a.date))
+          .map((a) => `${a.date || ""} ${a.text}`.trim()),
+      },
+    ],
   };
 }
 
 function partyTone(party: string) {
-  return party === "D" ? "dem" as const : party === "R" ? "rep" as const : party ? "ind" as const : "" as const;
+  return party === "D" ? ("dem" as const) : party === "R" ? ("rep" as const) : party ? ("ind" as const) : ("" as const);
 }
 
 function castTable(positions: Position[], party: PartyFilter) {
   const rows = positions
     .filter((p) => party === "all" || (p.party || "I") === party)
-    .sort((a, b) => a.vote.localeCompare(b.vote) || (a.party || "").localeCompare(b.party || "") || a.state.localeCompare(b.state));
+    .sort(
+      (a, b) =>
+        a.vote.localeCompare(b.vote) || (a.party || "").localeCompare(b.party || "") || a.state.localeCompare(b.state),
+    );
   return {
     title: party === "all" ? "Member votes" : `Member votes · ${party} only`,
     cols: ["Vote", "Member", "Party", "Seat"],
     rows: rows.map((p) => ({
       cells: [p.vote, p.name, p.party || "—", `${p.state}${p.district ? `-${p.district}` : ""}`],
       action: /^[A-Z]\d{6}$/.test(p.bioguide || "") ? `member:${p.bioguide}` : undefined,
-      tone: p.vote === "Yea" ? "up" as const : p.vote === "Nay" ? "down" as const : "" as const
-    }))
+      tone: p.vote === "Yea" ? ("up" as const) : p.vote === "Nay" ? ("down" as const) : ("" as const),
+    })),
   };
 }
 
@@ -476,51 +598,85 @@ function committeeModel(c: CommitteeDetail, party: PartyFilter): DrawerModel {
     meta: c.jurisdiction ? c.jurisdiction.slice(0, 280) : `${c.chamber} committee`,
     rows: [
       { label: "Chamber", value: c.chamber },
-      { label: "Seats", value: `${c.members.length} · majority ${c.members.filter((m) => m.side === "majority").length} · minority ${c.members.filter((m) => m.side === "minority").length}` },
+      {
+        label: "Seats",
+        value: `${c.members.length} · majority ${c.members.filter((m) => m.side === "majority").length} · minority ${c.members.filter((m) => m.side === "minority").length}`,
+      },
       { label: "Referred bills", value: c.billCount == null ? "—" : String(c.billCount) },
       { label: "Office", value: c.address || "—" },
-      { label: "Phone", value: c.phone || "—" }
+      { label: "Phone", value: c.phone || "—" },
     ],
     links: [
       ...(c.url ? [{ label: "Website", value: c.url.replace(/^https?:\/\//, ""), href: c.url }] : []),
-      ...(c.minorityUrl ? [{ label: "Minority", value: c.minorityUrl.replace(/^https?:\/\//, ""), href: c.minorityUrl }] : []),
+      ...(c.minorityUrl
+        ? [{ label: "Minority", value: c.minorityUrl.replace(/^https?:\/\//, ""), href: c.minorityUrl }]
+        : []),
       ...(c.parent ? [{ label: "Parent", value: c.parent.name, action: `committee:${c.parent.id}` }] : []),
-      ...c.members.filter((m) => m.title).map((m) => ({ label: m.title, value: `${m.name} · ${m.party}`, action: `member:${m.bioguide}` }))
+      ...c.members
+        .filter((m) => m.title)
+        .map((m) => ({ label: m.title, value: `${m.name} · ${m.party}`, action: `member:${m.bioguide}` })),
     ],
     tables: [
       {
         title: party === "all" ? "Members" : `Members · ${party} only`,
         cols: ["Rank", "Member", "Party", "Seat", "Side"],
         rows: members.map((m) => ({
-          cells: [String(m.rank || "—"), m.name, m.party || "—", `${m.state}${m.district ? `-${m.district}` : ""}`, m.title || m.side],
+          cells: [
+            String(m.rank || "—"),
+            m.name,
+            m.party || "—",
+            `${m.state}${m.district ? `-${m.district}` : ""}`,
+            m.title || m.side,
+          ],
           action: `member:${m.bioguide}`,
-          tone: m.party === "D" ? "dem" as const : m.party === "R" ? "rep" as const : "" as const
-        }))
+          tone: m.party === "D" ? ("dem" as const) : m.party === "R" ? ("rep" as const) : ("" as const),
+        })),
       },
-      ...(c.subcommittees.length ? [{
-        title: "Subcommittees",
-        cols: ["Subcommittee", "Seats"],
-        rows: c.subcommittees.map((s) => ({ cells: [s.name, String(s.size)], action: `committee:${s.id}` }))
-      }] : []),
-      ...(c.scheduled?.length ? [{
-        title: "Bills on the committee schedule",
-        note: "From meeting agendas on Congress.gov. Upcoming first.",
-        cols: ["Bill", "Meeting", "Date", ""],
-        rows: [...c.scheduled].sort((a, b) => Number(b.upcoming) - Number(a.upcoming) || String(b.date).localeCompare(String(a.date))).map((b) => ({
-          cells: [b.label, b.meeting, when(b.date), b.upcoming ? "UPCOMING" : "held"],
-          action: `bill:${b.id}`,
-          tone: b.upcoming ? "up" as const : "" as const
-        }))
-      }] : []),
-      ...(c.votes?.length ? [{
-        title: "How committee members voted, per bill",
-        note: "Recent floor roll calls on bills referred to this committee, plus the latest roll call on scheduled bills. Only this committee's members are counted.",
-        cols: ["Bill", "Title · question", "Result", "Yea D/R", "Nay D/R", "Date"],
-        rows: c.votes.map((v) => ({
-          cells: [v.label, [v.title, v.question].filter(Boolean).join(" · ").slice(0, 140), v.result, `${v.tally.Yea?.D || 0}/${v.tally.Yea?.R || 0}`, `${v.tally.Nay?.D || 0}/${v.tally.Nay?.R || 0}`, (v.date || "").slice(0, 10)],
-          action: `bill:${v.id}`
-        }))
-      }] : []),
+      ...(c.subcommittees.length
+        ? [
+            {
+              title: "Subcommittees",
+              cols: ["Subcommittee", "Seats"],
+              rows: c.subcommittees.map((s) => ({ cells: [s.name, String(s.size)], action: `committee:${s.id}` })),
+            },
+          ]
+        : []),
+      ...(c.scheduled?.length
+        ? [
+            {
+              title: "Bills on the committee schedule",
+              note: "From meeting agendas on Congress.gov. Upcoming first.",
+              cols: ["Bill", "Meeting", "Date", ""],
+              rows: [...c.scheduled]
+                .sort((a, b) => Number(b.upcoming) - Number(a.upcoming) || String(b.date).localeCompare(String(a.date)))
+                .map((b) => ({
+                  cells: [b.label, b.meeting, when(b.date), b.upcoming ? "UPCOMING" : "held"],
+                  action: `bill:${b.id}`,
+                  tone: b.upcoming ? ("up" as const) : ("" as const),
+                })),
+            },
+          ]
+        : []),
+      ...(c.votes?.length
+        ? [
+            {
+              title: "How committee members voted, per bill",
+              note: "Recent floor roll calls on bills referred to this committee, plus the latest roll call on scheduled bills. Only this committee's members are counted.",
+              cols: ["Bill", "Title · question", "Result", "Yea D/R", "Nay D/R", "Date"],
+              rows: c.votes.map((v) => ({
+                cells: [
+                  v.label,
+                  [v.title, v.question].filter(Boolean).join(" · ").slice(0, 140),
+                  v.result,
+                  `${v.tally.Yea?.D || 0}/${v.tally.Yea?.R || 0}`,
+                  `${v.tally.Nay?.D || 0}/${v.tally.Nay?.R || 0}`,
+                  (v.date || "").slice(0, 10),
+                ],
+                action: `bill:${v.id}`,
+              })),
+            },
+          ]
+        : []),
       ...(c.votes || []).slice(0, 5).map((v) => ({
         title: `${v.label} · committee members`,
         cols: ["Member", "Party", "Side", "Vote"],
@@ -530,20 +686,26 @@ function committeeModel(c: CommitteeDetail, party: PartyFilter): DrawerModel {
           .map((m) => ({
             cells: [m.name, m.party || "—", m.side || "—", m.vote],
             action: `member:${m.bioguide}`,
-            tone: m.vote === "Yea" ? "up" as const : m.vote === "Nay" ? "down" as const : "" as const
-          }))
+            tone: m.vote === "Yea" ? ("up" as const) : m.vote === "Nay" ? ("down" as const) : ("" as const),
+          })),
       })),
       {
         title: "Latest referrals",
         cols: ["Bill", "Title", "Date"],
-        rows: c.bills.map((b) => ({ cells: [b.label, b.title || b.relation, (b.date || "").slice(0, 10)], action: `bill:${b.id}` }))
+        rows: c.bills.map((b) => ({
+          cells: [b.label, b.title || b.relation, (b.date || "").slice(0, 10)],
+          action: `bill:${b.id}`,
+        })),
       },
       {
         title: "Meetings on the calendar feed",
         cols: ["Date", "Type", "Title"],
-        rows: c.meetings.map((m) => ({ cells: [when(m.date), m.type || m.status, m.title], action: `meeting:${m.id}` }))
-      }
-    ]
+        rows: c.meetings.map((m) => ({
+          cells: [when(m.date), m.type || m.status, m.title],
+          action: `meeting:${m.id}`,
+        })),
+      },
+    ],
   };
 }
 
@@ -570,13 +732,16 @@ function partySplit(positions: Position[]) {
     counts[position.vote] = (counts[position.vote] || 0) + 1;
     groups.set(party, counts);
   }
-  return [...groups.entries()].map(([party, counts]) =>
-    `${party}  Yea ${counts.Yea || 0} · Nay ${counts.Nay || 0} · Present ${counts.Present || 0} · Not voting ${counts["Not voting"] || 0}`
+  return [...groups.entries()].map(
+    ([party, counts]) =>
+      `${party}  Yea ${counts.Yea || 0} · Nay ${counts.Nay || 0} · Present ${counts.Present || 0} · Not voting ${counts["Not voting"] || 0}`,
   );
 }
 
 function billLink(bill: string, congress: number) {
-  const match = String(bill || "").trim().match(/^([A-Za-z.]+)\s*(\d+)$/);
+  const match = String(bill || "")
+    .trim()
+    .match(/^([A-Za-z.]+)\s*(\d+)$/);
   if (!match || !congress) return [];
   const type = match[1].toLowerCase().replace(/\./g, "");
   return [{ label: "Bill", value: bill, action: `bill:${type}-${congress}-${match[2]}` }];

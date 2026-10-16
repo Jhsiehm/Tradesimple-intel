@@ -21,12 +21,16 @@ export const ASK_LIMITS = {
   resultItems: 10,
   perIp: 12,
   perIpWindowMs: 10 * 60_000,
-  concurrent: 3
+  concurrent: 3,
 };
 
 export const NOT_CONFIGURED = "Ask is not configured — add a key to .env.local";
 
-const text = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const text = (v, max) =>
+  String(v ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 
 /** The question, up to six earlier turns of this chat, the model asked for, and what the user attached. */
 export function cleanAsk(raw, limits = ASK_LIMITS) {
@@ -41,16 +45,24 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
   }
   let memory = null;
   if (raw.memory != null) {
-    const m=raw.memory;
-    if (!m || typeof m!=='object' || Array.isArray(m) || !['isolated','context-aware'].includes(m.mode)) return {ok:false,error:'Choose isolated or context-aware memory.'};
-    if (m.mode==='context-aware' && !/^mem_[a-f0-9]{32}$/.test(m.snapshotId || '')) return {ok:false,error:'Choose a frozen memory snapshot.'};
-    if (m.mode==='isolated' && m.snapshotId) return {ok:false,error:'An isolated request cannot select saved context.'};
-    if (history.length || raw.attached || raw.context || raw.prior || raw.priors?.length) return {ok:false,error:'Controlled memory requests start a fresh analysis. Remove chat history, attached chats, page context and previous backtests.'};
-    memory={mode:m.mode,...(m.mode==='context-aware' ? {snapshotId:m.snapshotId} : {})};
+    const m = raw.memory;
+    if (!m || typeof m !== "object" || Array.isArray(m) || !["isolated", "context-aware"].includes(m.mode))
+      return { ok: false, error: "Choose isolated or context-aware memory." };
+    if (m.mode === "context-aware" && !/^mem_[a-f0-9]{32}$/.test(m.snapshotId || ""))
+      return { ok: false, error: "Choose a frozen memory snapshot." };
+    if (m.mode === "isolated" && m.snapshotId)
+      return { ok: false, error: "An isolated request cannot select saved context." };
+    if (history.length || raw.attached || raw.context || raw.prior || raw.priors?.length)
+      return {
+        ok: false,
+        error:
+          "Controlled memory requests start a fresh analysis. Remove chat history, attached chats, page context and previous backtests.",
+      };
+    memory = { mode: m.mode, ...(m.mode === "context-aware" ? { snapshotId: m.snapshotId } : {}) };
   }
   return {
     ok: true,
-    ...(memory ? {memory} : {}),
+    ...(memory ? { memory } : {}),
     question,
     history: history.slice(-limits.history),
     model: text(raw.model, 120),
@@ -61,7 +73,7 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     prior: cleanPrior(raw.prior),
     priors: (Array.isArray(raw.priors) ? raw.priors : []).map(cleanPrior).filter(Boolean).slice(-4),
     answers: cleanAnswers(raw.answers),
-    acceptDefaults: raw.acceptDefaults === true
+    acceptDefaults: raw.acceptDefaults === true,
   };
 }
 
@@ -78,7 +90,8 @@ function cleanAnswers(raw) {
   for (const [path, v] of Object.entries(raw)) {
     if (path === "sourcing" && SOURCING.includes(v)) out.sourcing = v;
     else if (path === "style" && STYLES.includes(v)) out.style = v;
-    else if (path in PREF_FIELDS && ["string", "number", "boolean"].includes(typeof v)) out[path] = typeof v === "string" ? v.slice(0, 20) : v;
+    else if (path in PREF_FIELDS && ["string", "number", "boolean"].includes(typeof v))
+      out[path] = typeof v === "string" ? v.slice(0, 20) : v;
   }
   return out;
 }
@@ -95,8 +108,8 @@ export function systemPrompt(today, modes = null) {
     "Quote numbers as the tool returned them (a fraction such as 0.0834 may be written 8.34%). Do not do arithmetic that no tool did; if a difference matters, give the two figures with their refs.",
     "Every count you quote must name what it counts, in the words of the field or sentence it came from: unparsedPaperFilings are paper filings the app cannot read, not tickers or trades; matchedSignals are records, not trades; distinctTickersMatched are symbols. Never put a count from one field next to another field's unit.",
     `Backtests: call run_backtest. For "the last N days", set filters.from to N days before today (30 days → ${daysBefore(today, 30)}), filters.to to ${today}, rules.openTrades to "mark" and rules.holdDays to N, because most of those positions have not reached a normal 90-day exit. "All data sources" means one run_backtest call per source in the same turn: congress, form4, and contracts (lobbying needs tickers; say so). State the spec you used in one line.`,
-    "Use congress_leaders for members' disclosed buys ranked against SPY. For \"last N days\", \"this week\", \"this month\", or \"recent\", pass days (or from/to) to congress_leaders, congress_feed, insiders, and contracts; without it congress_leaders covers every disclosure the app holds.",
-    "Never state a time window or a comparison (vs SPY, the S&P 500, the market, a benchmark) that the tool output does not contain. Say what the data covers in the words of its `window` (for example \"all disclosures from 2025-06-02 to 2026-10-08, by disclosure date\"), not the window the user asked for. If `benchmarkComparison` is null, say there is no SPY comparison and give `benchmarkComparisonReason`.",
+    'Use congress_leaders for members\' disclosed buys ranked against SPY. For "last N days", "this week", "this month", or "recent", pass days (or from/to) to congress_leaders, congress_feed, insiders, and contracts; without it congress_leaders covers every disclosure the app holds.',
+    'Never state a time window or a comparison (vs SPY, the S&P 500, the market, a benchmark) that the tool output does not contain. Say what the data covers in the words of its `window` (for example "all disclosures from 2025-06-02 to 2026-10-08, by disclosure date"), not the window the user asked for. If `benchmarkComparison` is null, say there is no SPY comparison and give `benchmarkComparisonReason`.',
     "For headlines and world updates use news / news_desk / x_pulse / x_posts / world_calendar / strait_news. For satellite status use satellite. For open-web context (when those tools are listed) use web_search and web_fetch.",
     "If the tools cannot answer, say so plainly and say what is missing. Do not guess, do not fill gaps from memory.",
     "Never guess a ticker join. A symbol that the ticker tool says is not joined is not joined; say that and stop.",
@@ -105,7 +118,7 @@ export function systemPrompt(today, modes = null) {
     "Closeness in time between a trade and a hearing does not show what the hearing discussed or that anyone acted on it.",
     "If the user wants to save a link between two things as their own theory, call propose_theory; it writes nothing until the user accepts it.",
     "This is research, not advice. Do not recommend buying or selling anything, do not suggest an order, and do not predict prices.",
-    "Be short. No headings. Use at most six tool calls."
+    "Be short. No headings. Use at most six tool calls.",
   ];
   if (modes?.sourcing || modes?.style) base.push(modeSystemNote(modes));
   return base.join("\n");
@@ -130,14 +143,26 @@ const trimNode = (v, depth, items, chars = 320, maxDepth = 6) => {
 
 /** What the model sees. Long lists are cut with their true total; source, asOf, and latency always survive. */
 export function trimForModel(value, limits = ASK_LIMITS) {
-  const size = (x) => { try { return JSON.stringify(x).length; } catch { return Infinity; } };
+  const size = (x) => {
+    try {
+      return JSON.stringify(x).length;
+    } catch {
+      return Infinity;
+    }
+  };
   const out = trimNode(value, 0, limits.resultItems);
   if (size(out) <= limits.resultChars) return out;
   // Several lists in one result: keep fewer rows each and shorter strings before giving up on rows altogether.
-  for (const [items, chars, depth] of [[6, 120, 4], [4, 80, 3], [3, 60, 3]]) {
+  for (const [items, chars, depth] of [
+    [6, 120, 4],
+    [4, 80, 3],
+    [3, 60, 3],
+  ]) {
     const lean = trimNode(value, 0, items, chars, depth);
     if (size(lean) <= limits.resultChars) {
-      return lean && typeof lean === "object" && !Array.isArray(lean) ? { ...lean, note: `Lists cut to ${items} rows each to fit the model context.` } : lean;
+      return lean && typeof lean === "object" && !Array.isArray(lean)
+        ? { ...lean, note: `Lists cut to ${items} rows each to fit the model context.` }
+        : lean;
     }
   }
   const src = out && typeof out === "object" && !Array.isArray(out) ? out : {};
@@ -156,7 +181,11 @@ export function evidenceOf(id, tool, args, body, { ms = 0, label = "", raw = bod
   const src = body && typeof body === "object" ? body : {};
   const failed = src.ok === false || Boolean(src.error);
   let json = "";
-  try { json = JSON.stringify(body ?? null); } catch { json = ""; }
+  try {
+    json = JSON.stringify(body ?? null);
+  } catch {
+    json = "";
+  }
   return {
     id,
     tool,
@@ -173,13 +202,16 @@ export function evidenceOf(id, tool, args, body, { ms = 0, label = "", raw = bod
     open: openAction(tool, args, body),
     requests: requests.slice(0, 6).map((r) => text(r, 300)),
     preview: json.length > 1600 ? `${json.slice(0, 1600)}…` : json,
-    json
+    json,
   };
 }
 
 /** What the model receives for a tool call: the ref first, then the trimmed result. */
 export function toolMessage(evidence, body) {
-  return JSON.stringify({ ref: evidence.id, ...(body && typeof body === "object" && !Array.isArray(body) ? body : { result: body }) });
+  return JSON.stringify({
+    ref: evidence.id,
+    ...(body && typeof body === "object" && !Array.isArray(body) ? body : { result: body }),
+  });
 }
 
 /** The follow action a citation chip opens. Empty when no board shows that tool's data. */
@@ -199,14 +231,26 @@ export function openAction(tool, args = {}, body = {}) {
     case "corporate":
       return sym ? `ticker:${sym}` : "";
     case "case_file":
-      return a.kind === "district" && a.id ? `district:${String(a.id).toUpperCase()}` : a.kind === "member" && a.id ? `member:${String(a.id).toUpperCase()}` : a.kind === "ticker" && a.id ? `ticker:${String(a.id).toUpperCase()}` : "";
+      return a.kind === "district" && a.id
+        ? `district:${String(a.id).toUpperCase()}`
+        : a.kind === "member" && a.id
+          ? `member:${String(a.id).toUpperCase()}`
+          : a.kind === "ticker" && a.id
+            ? `ticker:${String(a.id).toUpperCase()}`
+            : "";
     case "committee":
       return a.id ? `committee:${a.id}` : "";
     case "bill":
     case "bill_votes":
       return a.id ? `bill:${a.id}` : "";
     case "contracts":
-      return sym ? `contracts:symbol:${sym}` : a.place ? `contracts:place:${String(a.place).toUpperCase()}` : /^[A-Za-z]\d{6}$/.test(String(a.member || "")) ? `contracts:member:${String(a.member).toUpperCase()}` : "";
+      return sym
+        ? `contracts:symbol:${sym}`
+        : a.place
+          ? `contracts:place:${String(a.place).toUpperCase()}`
+          : /^[A-Za-z]\d{6}$/.test(String(a.member || ""))
+            ? `contracts:member:${String(a.member).toUpperCase()}`
+            : "";
     case "congress_leaders":
       return "today:leaders";
     case "intel_scope":
@@ -243,7 +287,9 @@ export function citationRefs(answer, evidence) {
   const unknown = [];
   for (const m of String(answer || "").matchAll(/\[(t\d+(?:\s*,\s*t\d+)*)\]/g)) {
     for (const id of m[1].split(/\s*,\s*/)) {
-      if (known.has(id)) { if (!cited.includes(id)) cited.push(id); } else if (!unknown.includes(id)) unknown.push(id);
+      if (known.has(id)) {
+        if (!cited.includes(id)) cited.push(id);
+      } else if (!unknown.includes(id)) unknown.push(id);
     }
   }
   return { cited, unknown };
@@ -304,7 +350,13 @@ export function grounded(n, pool) {
   return bases.some((b, i) => pool.some((e) => Math.abs(e - b) <= tols[i] + slack));
 }
 
-const parsed = (json) => { try { return JSON.parse(json); } catch { return null; } };
+const parsed = (json) => {
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Numbers in the answer that no tool result contains, and counts whose number the tools state only as something
@@ -326,15 +378,35 @@ export function groundingCheck(answer, evidence) {
 export function caveatsFor(evidence) {
   const used = new Set(evidence.filter((e) => e.ok).map((e) => e.tool));
   const out = [];
-  const trades = ["member_profile", "member_trades", "member_timeline", "congress_feed", "congress_leaders", "run_backtest", "case_file", "positions"];
-  if (trades.some((t) => used.has(t))) out.push("Congress trades are dated by filing, which can trail the trade by up to 45 days or more. Amounts are ranges, not exact dollars.");
-  if (used.has("member_timeline") || used.has("committee") || used.has("run_backtest")) out.push("A hearing near a trade shows timing only. It does not show what was discussed or that anyone acted on it.");
+  const trades = [
+    "member_profile",
+    "member_trades",
+    "member_timeline",
+    "congress_feed",
+    "congress_leaders",
+    "run_backtest",
+    "case_file",
+    "positions",
+  ];
+  if (trades.some((t) => used.has(t)))
+    out.push(
+      "Congress trades are dated by filing, which can trail the trade by up to 45 days or more. Amounts are ranges, not exact dollars.",
+    );
+  if (used.has("member_timeline") || used.has("committee") || used.has("run_backtest"))
+    out.push(
+      "A hearing near a trade shows timing only. It does not show what was discussed or that anyone acted on it.",
+    );
   if (used.has("run_backtest")) {
     for (const e of evidence) if (e.tool === "run_backtest" && e.ok) out.push(...e.caveats);
   }
-  if (["news", "news_desk", "x_pulse", "x_posts", "strait_news"].some((t) => used.has(t))) out.push("Headlines and social posts use the publisher's stamp; trending lists can lag X by up to an hour.");
-  if (used.has("satellite") || used.has("shipping") || used.has("air_theater") || used.has("strait_ships")) out.push("Satellite frames and volunteer AIS/ADS-B feeds are delayed or incomplete; empty coverage is honest, not a claim that nothing is there.");
-  if (used.has("web_search") || used.has("web_fetch")) out.push("Open-web results are outside TradeSimple's own feeds. URLs can be wrong or stale; they are not filings.");
+  if (["news", "news_desk", "x_pulse", "x_posts", "strait_news"].some((t) => used.has(t)))
+    out.push("Headlines and social posts use the publisher's stamp; trending lists can lag X by up to an hour.");
+  if (used.has("satellite") || used.has("shipping") || used.has("air_theater") || used.has("strait_ships"))
+    out.push(
+      "Satellite frames and volunteer AIS/ADS-B feeds are delayed or incomplete; empty coverage is honest, not a claim that nothing is there.",
+    );
+  if (used.has("web_search") || used.has("web_fetch"))
+    out.push("Open-web results are outside TradeSimple's own feeds. URLs can be wrong or stale; they are not filings.");
   out.push("Research only. Not investment advice, and nothing here places an order.");
   return [...new Set(out)].slice(0, 12);
 }
@@ -359,7 +431,7 @@ export function makeLimiter({ max, windowMs }) {
     refund(key) {
       const recent = hits.get(key);
       if (recent?.length) recent.pop();
-    }
+    },
   };
 }
 
@@ -369,11 +441,14 @@ export function toolProblems(tool) {
   if (!/^[a-z][a-z0-9_]{1,40}$/.test(tool?.name || "")) out.push(`${tool?.name}: bad name`);
   if (!tool?.description || tool.description.length < 12) out.push(`${tool.name}: description too short`);
   const p = tool?.parameters;
-  if (!p || p.type !== "object" || typeof p.properties !== "object") out.push(`${tool.name}: parameters must be an object schema`);
+  if (!p || p.type !== "object" || typeof p.properties !== "object")
+    out.push(`${tool.name}: parameters must be an object schema`);
   else {
     if (p.additionalProperties !== false) out.push(`${tool.name}: additionalProperties must be false`);
-    for (const r of p.required || []) if (!(r in p.properties)) out.push(`${tool.name}: required ${r} is not a property`);
-    for (const [k, v] of Object.entries(p.properties)) if (!v || (!v.type && !v.enum)) out.push(`${tool.name}.${k}: no type`);
+    for (const r of p.required || [])
+      if (!(r in p.properties)) out.push(`${tool.name}: required ${r} is not a property`);
+    for (const [k, v] of Object.entries(p.properties))
+      if (!v || (!v.type && !v.enum)) out.push(`${tool.name}.${k}: no type`);
   }
   return out;
 }

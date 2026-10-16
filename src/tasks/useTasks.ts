@@ -7,7 +7,15 @@ const BUSY_MS = 3_000;
 /** The task list, refreshed on change, every 30 s, and every 3 s while a run is going. */
 export function useTasks(active: boolean) {
   const [res, setRes] = useState<TasksRes | null>(null);
-  const load = useCallback(() => listTasks().then(setRes).catch((err) => setRes({ ok: false, items: [], error: err instanceof Error ? err.message : "Tasks unavailable." })), []);
+  const load = useCallback(
+    () =>
+      listTasks()
+        .then(setRes)
+        .catch((err) =>
+          setRes({ ok: false, items: [], error: err instanceof Error ? err.message : "Tasks unavailable." }),
+        ),
+    [],
+  );
   const busy = Boolean(res?.items.some((t) => t.running));
 
   useEffect(() => {

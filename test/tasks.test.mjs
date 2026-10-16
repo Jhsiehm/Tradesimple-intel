@@ -1,15 +1,27 @@
-import {requestStop,stopRequest,activeAttempt} from '../server/domain/tasks/stops.mjs';
-import {taskControl,setTaskControl,taskControlHistory} from '../server/domain/tasks/control.mjs';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import {createResearchBackup,verifyResearchBackup} from '../server/domain/research-backup.mjs';
+import { requestStop, stopRequest, activeAttempt } from "../server/domain/tasks/stops.mjs";
+import { taskControl, setTaskControl, taskControlHistory } from "../server/domain/tasks/control.mjs";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createResearchBackup, verifyResearchBackup } from "../server/domain/research-backup.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import {
-  bootPlan, cleanTaskInput, cleanTaskPatch, describeSchedule, draftFromQuestion, etParts, etToUtc, isScheduleRequest, newSignalCount,
-  nextRunAfter, parseSchedule, researchSeverity, runsToday, specForRun
+  bootPlan,
+  cleanTaskInput,
+  cleanTaskPatch,
+  describeSchedule,
+  draftFromQuestion,
+  etParts,
+  etToUtc,
+  isScheduleRequest,
+  newSignalCount,
+  nextRunAfter,
+  parseSchedule,
+  researchSeverity,
+  runsToday,
+  specForRun,
 } from "../shared/taskSchedule.mjs";
 import { DEFAULT_FILTERS, DEFAULT_RULES } from "../shared/backtestSpec.mjs";
 import * as store from "../server/domain/tasks/store.mjs";
@@ -76,9 +88,18 @@ test("describeSchedule and runsToday use New York days", () => {
 test("boot catch-up: one missed run (or one cut off) runs now, once; a future run stands", () => {
   const now = at("2026-10-09T14:00:00Z");
   const s = daily("08:00");
-  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now - 3 * 86_400_000 }, now), { catchUp: true, nextRun: now });
-  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now + 1000 }, now), { catchUp: false, nextRun: now + 1000 });
-  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now + 1000, interrupted: true }, now), { catchUp: true, nextRun: now });
+  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now - 3 * 86_400_000 }, now), {
+    catchUp: true,
+    nextRun: now,
+  });
+  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now + 1000 }, now), {
+    catchUp: false,
+    nextRun: now + 1000,
+  });
+  assert.deepEqual(bootPlan({ enabled: true, schedule: s, nextRun: now + 1000, interrupted: true }, now), {
+    catchUp: true,
+    nextRun: now,
+  });
   assert.equal(bootPlan({ enabled: true, schedule: s, nextRun: null }, now).nextRun, at("2026-10-10T12:00:00Z"));
   assert.deepEqual(bootPlan({ enabled: false, schedule: s, nextRun: now - 1 }, now), { catchUp: false, nextRun: null });
 });
@@ -86,10 +107,16 @@ test("boot catch-up: one missed run (or one cut off) runs now, once; a future ru
 /* ---------- parsing and cleaning ---------- */
 
 test("parse: every morning at 8, weekday 4:30pm, every 4 hours, hourly", () => {
-  assert.deepEqual(parseSchedule("every morning at 8, check new insider buys on my watchlist and backtest them"), { schedule: daily("08:00"), rest: "check new insider buys on my watchlist and backtest them" });
+  assert.deepEqual(parseSchedule("every morning at 8, check new insider buys on my watchlist and backtest them"), {
+    schedule: daily("08:00"),
+    rest: "check new insider buys on my watchlist and backtest them",
+  });
   assert.deepEqual(parseSchedule("Run this every weekday at 4:30pm").schedule, daily("16:30", true));
   assert.deepEqual(parseSchedule("every evening at 7 summarize the news").schedule, daily("19:00"));
-  assert.deepEqual(parseSchedule("every 4 hours what moved in Taiwan"), { schedule: { kind: "hours", hours: 4, weekdays: false }, rest: "what moved in Taiwan" });
+  assert.deepEqual(parseSchedule("every 4 hours what moved in Taiwan"), {
+    schedule: { kind: "hours", hours: 4, weekdays: false },
+    rest: "what moved in Taiwan",
+  });
   assert.equal(parseSchedule("every 5 hours x").schedule, null);
   assert.equal(parseSchedule("what did Pelosi buy?"), null);
 });
@@ -102,7 +129,10 @@ test("only real scheduling asks become drafts", () => {
 });
 
 test("draft: a backtest ask becomes fixed specs with a since-last-run window and the watchlist", () => {
-  const out = draftFromQuestion({ question: "every morning at 8, check new insider buys on my watchlist and backtest them", today: "2026-10-09" });
+  const out = draftFromQuestion({
+    question: "every morning at 8, check new insider buys on my watchlist and backtest them",
+    today: "2026-10-09",
+  });
   assert.equal(out.ok, true);
   assert.equal(out.draft.kind, "backtest");
   assert.equal(out.draft.specs[0].source, "form4");
@@ -116,7 +146,11 @@ test("draft: 'run this every morning' reuses the previous backtests, else the la
   assert.equal(bt.draft.kind, "backtest");
   assert.deepEqual(bt.draft.specs, [SPEC]);
   assert.equal(bt.draft.schedule.weekdays, true);
-  const q = draftFromQuestion({ question: "do this every day at 5pm", today: "2026-10-09", lastQuestion: "How are markets today?" });
+  const q = draftFromQuestion({
+    question: "do this every day at 5pm",
+    today: "2026-10-09",
+    lastQuestion: "How are markets today?",
+  });
   assert.equal(q.draft.kind, "prompt");
   assert.equal(q.draft.prompt, "How are markets today?");
   assert.equal(q.draft.schedule.time, "17:00");
@@ -124,10 +158,25 @@ test("draft: 'run this every morning' reuses the previous backtests, else the la
 });
 
 test("cleanTaskInput: watchlist tickers go onto every spec; bad bodies are refused", () => {
-  const ok = cleanTaskInput({ kind: "backtest", specs: [{ ...SPEC, source: "form4" }], schedule: daily("08:00"), useWatchlist: true, watch: { symbols: ["nvda", "AAPL", "bad ticker"] } });
+  const ok = cleanTaskInput({
+    kind: "backtest",
+    specs: [{ ...SPEC, source: "form4" }],
+    schedule: daily("08:00"),
+    useWatchlist: true,
+    watch: { symbols: ["nvda", "AAPL", "bad ticker"] },
+  });
   assert.equal(ok.ok, true);
   assert.deepEqual(ok.task.specs[0].filters.tickers, ["NVDA", "AAPL"]);
-  assert.equal(cleanTaskInput({ kind: "backtest", specs: [SPEC], schedule: daily("08:00"), useWatchlist: true, watch: { symbols: [] } }).ok, false);
+  assert.equal(
+    cleanTaskInput({
+      kind: "backtest",
+      specs: [SPEC],
+      schedule: daily("08:00"),
+      useWatchlist: true,
+      watch: { symbols: [] },
+    }).ok,
+    false,
+  );
   assert.equal(cleanTaskInput({ kind: "prompt", prompt: "", schedule: daily("08:00") }).ok, false);
   assert.equal(cleanTaskInput({ kind: "prompt", prompt: "x", schedule: { kind: "daily", time: "25:00" } }).ok, false);
   assert.equal(cleanTaskPatch({}).ok, false);
@@ -135,8 +184,14 @@ test("cleanTaskInput: watchlist tickers go onto every spec; bad bodies are refus
 });
 
 test("specForRun: rolling and since-last-run windows set the public-date filter", () => {
-  assert.deepEqual(specForRun(SPEC, { sinceLast: false, days: 30 }, { today: "2026-10-09" }).filters.from, "2026-09-09");
-  assert.equal(specForRun(SPEC, { sinceLast: true, days: 30 }, { today: "2026-10-09", lastRunDay: "2026-10-08" }).filters.from, "2026-10-08");
+  assert.deepEqual(
+    specForRun(SPEC, { sinceLast: false, days: 30 }, { today: "2026-10-09" }).filters.from,
+    "2026-09-09",
+  );
+  assert.equal(
+    specForRun(SPEC, { sinceLast: true, days: 30 }, { today: "2026-10-09", lastRunDay: "2026-10-08" }).filters.from,
+    "2026-10-08",
+  );
   assert.equal(specForRun(SPEC, null, { today: "2026-10-09" }), SPEC);
 });
 
@@ -152,23 +207,64 @@ test("severity: routine unless a threshold the user set is crossed", () => {
 /* ---------- scheduler ---------- */
 
 const fakeRun = (excess = 0.04, ids = ["s1", "s2"]) => ({
-  ok: true, spec: SPEC, description: "x", source: "House Clerk PTR · Yahoo", asOf: "2026-10-09T11:00:00.000Z", latency: "Daily bars",
+  ok: true,
+  spec: SPEC,
+  description: "x",
+  source: "House Clerk PTR · Yahoo",
+  asOf: "2026-10-09T11:00:00.000Z",
+  latency: "Daily bars",
   feeds: [{ label: "Prices", source: "Yahoo", asOf: "2026-10-09T11:00:00.000Z", latency: "daily" }],
-  stats: { total: 0.06, benchmarkTotal: 0.02, excessTotal: excess, trades: ids.length, hitRate: 0.5 }, trades: ids.map((id) => ({ id, ret: 0.01 })), counts: { matched: ids.length }, caveats: { items: [] }
+  stats: { total: 0.06, benchmarkTotal: 0.02, excessTotal: excess, trades: ids.length, hitRate: 0.5 },
+  trades: ids.map((id) => ({ id, ret: 0.01 })),
+  counts: { matched: ids.length },
+  caveats: { items: [] },
 });
 
-function harness({ env = {}, clock = { t: at("2026-10-09T14:00:00Z") }, db = new DatabaseSync(":memory:"), backtest, prompt, pid = 4242, alive = () => false } = {}) {
+function harness({
+  env = {},
+  clock = { t: at("2026-10-09T14:00:00Z") },
+  db = new DatabaseSync(":memory:"),
+  backtest,
+  prompt,
+  pid = 4242,
+  alive = () => false,
+} = {}) {
   const calls = [];
   const s = createTaskScheduler({
-    db, env, pid, alive, now: () => clock.t, log: () => {},
-    backtest: backtest || (async (_db, spec) => { calls.push(spec); return fakeRun(); }),
-    prompt
+    db,
+    env,
+    pid,
+    alive,
+    now: () => clock.t,
+    log: () => {},
+    backtest:
+      backtest ||
+      (async (_db, spec) => {
+        calls.push(spec);
+        return fakeRun();
+      }),
+    prompt,
   });
   return { s, db, clock, calls };
 }
 
 const addTask = (db, extra = {}, clock = { t: at("2026-10-09T14:00:00Z") }) =>
-  store.createTask(db, { kind: "backtest", title: "Congress buys", prompt: "", specs: [SPEC], window: null, schedule: daily("08:00"), enabled: true, thresholds: { excessPct: null, newSignals: null }, watch: null, ...extra }, { now: clock.t, nextRun: clock.t - 1000 });
+  store.createTask(
+    db,
+    {
+      kind: "backtest",
+      title: "Congress buys",
+      prompt: "",
+      specs: [SPEC],
+      window: null,
+      schedule: daily("08:00"),
+      enabled: true,
+      thresholds: { excessPct: null, newSignals: null },
+      watch: null,
+      ...extra,
+    },
+    { now: clock.t, nextRun: clock.t - 1000 },
+  );
 
 test("a due task runs once per tick and its next run moves to the next slot", async () => {
   const h = harness();
@@ -184,8 +280,15 @@ test("a due task runs once per tick and its next run moves to the next slot", as
 
 test("no double run: a second run-now is refused while queued, and a second process cannot take the lease", async () => {
   let release;
-  const gate = new Promise((r) => { release = r; });
-  const h = harness({ backtest: async () => { await gate; return fakeRun(); } });
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  const h = harness({
+    backtest: async () => {
+      await gate;
+      return fakeRun();
+    },
+  });
   const task = addTask(h.db);
   const first = h.s.enqueue(task.id, "manual");
   assert.equal(first.ok, true);
@@ -208,7 +311,7 @@ test("budget cap: runs past TASKS_MAX_RUNS_PER_DAY are skipped once with an aler
   assert.equal(dailyCap({ TASKS_MAX_RUNS_PER_DAY: "3" }), 3);
   const h = harness({ env: { TASKS_MAX_RUNS_PER_DAY: "2" } });
   const task = addTask(h.db);
-  for (let i = 0; i < 4; i++) await (h.s.enqueue(task.id, "manual")).done;
+  for (let i = 0; i < 4; i++) await h.s.enqueue(task.id, "manual").done;
   const runs = store.runsSince(h.db, 0);
   assert.equal(h.calls.length, 2);
   assert.deepEqual(runs.map((r) => r.status).sort(), ["ok", "ok", "skipped"]);
@@ -216,7 +319,7 @@ test("budget cap: runs past TASKS_MAX_RUNS_PER_DAY are skipped once with an aler
   assert.match(skipped.summary, /Daily cap of 2/);
   assert.equal(skipped.counted, false);
   h.clock.t += 86_400_000;
-  await (h.s.enqueue(task.id, "manual")).done;
+  await h.s.enqueue(task.id, "manual").done;
   assert.equal(h.calls.length, 3);
 });
 
@@ -247,7 +350,7 @@ test("persistence across restart: a run due while down is caught up once; a dead
 test("alerts: a run posts a research row with summary, severity, source, as-of, and a link to the stored result", async () => {
   const h = harness({ backtest: async () => fakeRun(0.05, ["a", "b", "c"]) });
   const task = addTask(h.db, { thresholds: { excessPct: 3, newSignals: null } });
-  await (h.s.enqueue(task.id, "manual")).done;
+  await h.s.enqueue(task.id, "manual").done;
   const [row] = researchAlerts(h.db, "2026-10-01");
   assert.equal(row.kind, "research");
   assert.match(row.id, /^research:rn_/);
@@ -263,14 +366,14 @@ test("alerts: a run posts a research row with summary, severity, source, as-of, 
   assert.equal(run.result.done.backtests[0].run.stats.excessTotal, 0.05);
   assert.match(run.result.text, /\[t1\]/);
   assert.deepEqual(run.meta.signalIds, [["a", "b", "c"]]);
-  await (h.s.enqueue(task.id, "manual")).done;
+  await h.s.enqueue(task.id, "manual").done;
   assert.match(researchAlerts(h.db, "2026-10-01")[0].detail, /0 new signals since the last run/);
 });
 
 test("a prompt task without a provider key is skipped with an alert that says so; with one it stores the answer", async () => {
   const h = harness({ prompt: async () => ({ skipped: true }) });
   const task = addTask(h.db, { kind: "prompt", prompt: "How are markets today?", specs: [] });
-  await (h.s.enqueue(task.id, "manual")).done;
+  await h.s.enqueue(task.id, "manual").done;
   const [row] = researchAlerts(h.db);
   assert.equal(row.status, "skipped");
   assert.match(row.detail, /Ask is not configured — add a key to \.env\.local/);
@@ -278,9 +381,23 @@ test("a prompt task without a provider key is skipped with an alert that says so
 
   let seen = null;
   const env = { ASK_PROVIDER: "openai", OPENAI_API_KEY: "test-not-a-key" };
-  const h2 = harness({ env, prompt: async (args) => { seen = args; return { ok: true, turn: { phase: "done", text: "Up 1% [t1]" }, summary: "Up 1%", source: "Yahoo · answered by m", asOf: "2026-10-09T13:00:00Z", latency: "Ask answer in 2 s", model: "m" }; } });
+  const h2 = harness({
+    env,
+    prompt: async (args) => {
+      seen = args;
+      return {
+        ok: true,
+        turn: { phase: "done", text: "Up 1% [t1]" },
+        summary: "Up 1%",
+        source: "Yahoo · answered by m",
+        asOf: "2026-10-09T13:00:00Z",
+        latency: "Ask answer in 2 s",
+        model: "m",
+      };
+    },
+  });
   const t2 = addTask(h2.db, { kind: "prompt", prompt: "How are markets today?", specs: [] });
-  await (h2.s.enqueue(t2.id, "manual")).done;
+  await h2.s.enqueue(t2.id, "manual").done;
   assert.equal(seen.task.prompt, "How are markets today?");
   const [r2] = researchAlerts(h2.db);
   assert.equal(r2.status, "ok");
@@ -292,248 +409,508 @@ test("deleting a task removes its runs; a manual run keeps the scheduled slot", 
   const h = harness();
   const task = addTask(h.db);
   store.setNextRun(h.db, task.id, h.clock.t + 3_600_000);
-  await (h.s.enqueue(task.id, "manual")).done;
+  await h.s.enqueue(task.id, "manual").done;
   assert.equal(store.getTask(h.db, task.id).nextRun, h.clock.t + 3_600_000);
   assert.equal(store.deleteTask(h.db, task.id), true);
   assert.equal(store.runsSince(h.db, 0).length, 0);
 });
 
-test('daily reservations count in-flight runs across schedulers and survive task deletion',async()=>{
- let release;const gate=new Promise(r=>{release=r;});
- const h=harness({env:{TASKS_MAX_RUNS_PER_DAY:'1'},backtest:async()=>{await gate;return fakeRun();}}),a=addTask(h.db),b=addTask(h.db,{title:'Other task'});
- const first=h.s.enqueue(a.id,'manual');await new Promise(r=>setImmediate(r));
- const other=harness({db:h.db,pid:5151,env:{TASKS_MAX_RUNS_PER_DAY:'1'},alive:()=>true});
- await other.s.enqueue(b.id,'manual').done;assert.equal(other.calls.length,0);assert.equal(store.lastRunOf(h.db,b.id).status,'skipped');
- assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
- const pending=store.listAttempts(h.db)[0];assert.equal(pending.completion,null);assert.equal(pending.task.title,a.title);
- release();await first.done;const finished=store.getAttempt(h.db,pending.id);assert.equal(finished.completion.status,'finished');assert.equal(finished.completion.run.status,'ok');assert.ok(finished.completion.run.result);
- store.deleteTask(h.db,a.id);store.deleteTask(h.db,b.id);
- const c=addTask(h.db);await other.s.enqueue(c.id,'manual').done;assert.equal(other.calls.length,0);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);assert.equal(store.getAttempt(h.db,pending.id).completion.run.status,'ok');
- assert.throws(()=>h.db.exec('DELETE FROM research.task_attempts'),/immutable/);
+test("daily reservations count in-flight runs across schedulers and survive task deletion", async () => {
+  let release;
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  const h = harness({
+      env: { TASKS_MAX_RUNS_PER_DAY: "1" },
+      backtest: async () => {
+        await gate;
+        return fakeRun();
+      },
+    }),
+    a = addTask(h.db),
+    b = addTask(h.db, { title: "Other task" });
+  const first = h.s.enqueue(a.id, "manual");
+  await new Promise((r) => setImmediate(r));
+  const other = harness({ db: h.db, pid: 5151, env: { TASKS_MAX_RUNS_PER_DAY: "1" }, alive: () => true });
+  await other.s.enqueue(b.id, "manual").done;
+  assert.equal(other.calls.length, 0);
+  assert.equal(store.lastRunOf(h.db, b.id).status, "skipped");
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+  const pending = store.listAttempts(h.db)[0];
+  assert.equal(pending.completion, null);
+  assert.equal(pending.task.title, a.title);
+  release();
+  await first.done;
+  const finished = store.getAttempt(h.db, pending.id);
+  assert.equal(finished.completion.status, "finished");
+  assert.equal(finished.completion.run.status, "ok");
+  assert.ok(finished.completion.run.result);
+  store.deleteTask(h.db, a.id);
+  store.deleteTask(h.db, b.id);
+  const c = addTask(h.db);
+  await other.s.enqueue(c.id, "manual").done;
+  assert.equal(other.calls.length, 0);
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+  assert.equal(store.getAttempt(h.db, pending.id).completion.run.status, "ok");
+  assert.throws(() => h.db.exec("DELETE FROM research.task_attempts"), /immutable/);
 });
-test('scheduled work paused while queued never starts; manual invocation remains explicit',async()=>{
- let release;const gate=new Promise(r=>{release=r;});let calls=0;
- const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),a=addTask(h.db),b=addTask(h.db,{title:'Queued task'});
- const first=h.s.enqueue(a.id,'manual'),second=h.s.enqueue(b.id,'schedule');
- store.updateTask(h.db,b.id,{enabled:false},{now:h.clock.t,nextRun:null});release();await first.done;
- assert.equal((await second.done).paused,true);assert.equal(calls,1);assert.equal(store.lastRunOf(h.db,b.id),null);
- await h.s.enqueue(b.id,'manual').done;assert.equal(calls,2);
+test("scheduled work paused while queued never starts; manual invocation remains explicit", async () => {
+  let release;
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  let calls = 0;
+  const h = harness({
+      backtest: async () => {
+        calls++;
+        await gate;
+        return fakeRun();
+      },
+    }),
+    a = addTask(h.db),
+    b = addTask(h.db, { title: "Queued task" });
+  const first = h.s.enqueue(a.id, "manual"),
+    second = h.s.enqueue(b.id, "schedule");
+  store.updateTask(h.db, b.id, { enabled: false }, { now: h.clock.t, nextRun: null });
+  release();
+  await first.done;
+  assert.equal((await second.done).paused, true);
+  assert.equal(calls, 1);
+  assert.equal(store.lastRunOf(h.db, b.id), null);
+  await h.s.enqueue(b.id, "manual").done;
+  assert.equal(calls, 2);
 });
-test('dead execution attempts are preserved as interrupted and still consume their original daily slot',()=>{
- const h=harness({env:{TASKS_MAX_RUNS_PER_DAY:'1'}}),task=addTask(h.db);
- const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:1});assert.ok(attempt);
- store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});h.s.boot();
- const recovered=store.getAttempt(h.db,attempt.id);assert.equal(recovered.completion.status,'interrupted');assert.equal(recovered.completion.run,null);
- assert.equal(store.getTask(h.db,task.id).running,false);assert.equal(store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:1}),null);
- assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t),0);
-});
-
-
-test('independent cache connections share durable reservations and backup preserves the journal',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-attempts-'));let a=new DatabaseSync(path.join(dir,'first-cache.sqlite')),b=new DatabaseSync(path.join(dir,'second-cache.sqlite'));
- try{
-  const clock={t:at('2026-10-09T14:00:00Z')},one=addTask(a,{},clock),two=addTask(b,{title:'Second process task'},clock);
-  const attempt=store.reserveAttempt(a,one,{startedAt:clock.t,pid:4242,trigger:'manual',cap:1});assert.ok(attempt);
-  assert.equal(store.reserveAttempt(b,two,{startedAt:clock.t,pid:5151,trigger:'manual',cap:1}),null);
-  store.deleteTask(a,one.id);a.close();a=null;b.close();b=null;
-  a=new DatabaseSync(path.join(dir,'replacement-cache.sqlite'));assert.equal(store.countedStarts(a,clock.t).length,1);
-  assert.equal(store.getAttempt(a,attempt.id).task.title,one.title);store.recoverAttempts(a,()=>false,clock.t+1000);
-  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));assert.equal(backup.counts.task_attempts,1);assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_completions,1);
-  assert.equal(store.getAttempt(a,attempt.id).completion.status,'interrupted');
- }finally{a?.close();b?.close();fs.rmSync(dir,{recursive:true,force:true});}
-});
-
-test('recovery leaves live work alone and retains the exact saved result after a crash',()=>{
- const h=harness(),task=addTask(h.db);
- const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
- assert.equal(store.recoverAttempts(h.db,()=>true,h.clock.t+100),0);
- assert.equal(store.getAttempt(h.db,attempt.id).completion,null);
- const run=store.addRun(h.db,{taskId:task.id,startedAt:h.clock.t,finishedAt:h.clock.t+50,status:'ok',counted:true,meta:{attemptId:attempt.id},result:{synthetic:'retained result'}});
- assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t+100),1);
- const completion=store.getAttempt(h.db,attempt.id).completion;
- assert.equal(completion.status,'finished');assert.equal(completion.run.id,run.id);
- assert.deepEqual(completion.run.result,{synthetic:'retained result'});
- assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
- assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t+200),0);
-});
-
-test('completion refuses a result from another task or another admission',()=>{
- const h=harness(),task=addTask(h.db),other=addTask(h.db,{title:'Other'});
- const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
- const result={taskId:task.id,startedAt:h.clock.t,status:'ok',meta:{attemptId:attempt.id}};
- for(const run of [{...result,taskId:other.id},{...result,startedAt:h.clock.t-1},{...result,meta:{attemptId:'ta_wrong'}}]){
-  assert.throws(()=>store.completeAttempt(h.db,attempt.id,{status:'finished',finishedAt:h.clock.t+1,run}),/result reference mismatch/);
-  assert.equal(store.getAttempt(h.db,attempt.id).completion,null);
- }
- assert.throws(()=>store.completeAttempt(h.db,attempt.id,{status:'interrupted',finishedAt:h.clock.t+1,run:result}),/result reference mismatch/);
-});
-
-test('backup and live inspection reject budget columns inconsistent with the preserved attempt',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-attempt-integrity-')),db=new DatabaseSync(path.join(dir,'cache.sqlite'));
- try{
-  const task=addTask(db),attempt=store.reserveAttempt(db,task,{startedAt:at('2026-10-09T14:00:00Z'),pid:9999,trigger:'manual',cap:10});
-  db.exec('DROP TRIGGER research.task_attempts_update');
-  db.prepare('UPDATE research.task_attempts SET day=? WHERE id=?').run('2026-10-08',attempt.id);
-  assert.throws(()=>store.getAttempt(db,attempt.id),/budget day mismatch/);
-  assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup')),/budget day mismatch/);
-  assert.equal(fs.existsSync(path.join(dir,'backup')),false);
- }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
-});
-
-test('global admission pause blocks queued, scheduled and manual starts without cancelling admitted work',async()=>{
- let release;const gate=new Promise(r=>{release=r;});let calls=0;
- const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),one=addTask(h.db),two=addTask(h.db,{title:'Waiting'});
- const first=h.s.enqueue(one.id,'manual');await new Promise(r=>setImmediate(r));
- const second=h.s.enqueue(two.id,'manual');const next=store.getTask(h.db,two.id).nextRun;
- const stopped=setTaskControl(h.db,{paused:true,baseRevision:0,reason:'Inspect upstream data'});
- assert.equal(stopped.actor,'local-owner');assert.equal(h.s.enqueue(two.id,'manual').status,409);assert.equal(await h.s.tick(),0);
- assert.equal(store.reserveAttempt(h.db,two,{startedAt:h.clock.t,pid:5151,trigger:'manual',cap:100}),null);
- release();await first.done;assert.equal((await second.done).paused,true);assert.equal(calls,1);
- assert.equal(store.getTask(h.db,two.id).nextRun,next);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
- assert.equal(store.listAttempts(h.db)[0].completion.status,'finished');
- assert.throws(()=>setTaskControl(h.db,{paused:false,baseRevision:0,reason:'Stale screen'}),/changed elsewhere/);
- setTaskControl(h.db,{paused:false,baseRevision:1,reason:'Inspection complete'});await h.s.enqueue(two.id,'manual').done;assert.equal(calls,2);
- assert.deepEqual(taskControlHistory(h.db).map(c=>c.paused),[false,true]);
- assert.throws(()=>h.db.exec('DELETE FROM research.task_controls'),/immutable/);
+test("dead execution attempts are preserved as interrupted and still consume their original daily slot", () => {
+  const h = harness({ env: { TASKS_MAX_RUNS_PER_DAY: "1" } }),
+    task = addTask(h.db);
+  const attempt = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "schedule", cap: 1 });
+  assert.ok(attempt);
+  store.claimTask(h.db, task.id, { now: h.clock.t, pid: 9999 });
+  h.s.boot();
+  const recovered = store.getAttempt(h.db, attempt.id);
+  assert.equal(recovered.completion.status, "interrupted");
+  assert.equal(recovered.completion.run, null);
+  assert.equal(store.getTask(h.db, task.id).running, false);
+  assert.equal(store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 4242, trigger: "manual", cap: 1 }), null);
+  assert.equal(
+    store.recoverAttempts(h.db, () => false, h.clock.t),
+    0,
+  );
 });
 
-test('admission control is shared by independent connections and survives backup',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-control-'));const a=new DatabaseSync(path.join(dir,'a.sqlite')),b=new DatabaseSync(path.join(dir,'b.sqlite'));
- try{
-  const task=addTask(b);setTaskControl(a,{paused:true,baseRevision:0,reason:'Synthetic maintenance',actor:'forged'});
-  assert.equal(taskControl(b).paused,true);assert.equal(taskControl(b).actor,'local-owner');
-  assert.equal(store.reserveAttempt(b,task,{startedAt:Date.now(),pid:5151,trigger:'schedule',cap:20}),null);
-  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));assert.equal(backup.counts.task_controls,1);
-  assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_controls,1);
-  b.exec('DROP TRIGGER research.task_controls_update');b.exec('UPDATE research.task_controls SET paused=0');
-  assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'invalid')),/checksum or identity/);
- }finally{a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
+test("independent cache connections share durable reservations and backup preserves the journal", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsi-task-attempts-"));
+  let a = new DatabaseSync(path.join(dir, "first-cache.sqlite")),
+    b = new DatabaseSync(path.join(dir, "second-cache.sqlite"));
+  try {
+    const clock = { t: at("2026-10-09T14:00:00Z") },
+      one = addTask(a, {}, clock),
+      two = addTask(b, { title: "Second process task" }, clock);
+    const attempt = store.reserveAttempt(a, one, { startedAt: clock.t, pid: 4242, trigger: "manual", cap: 1 });
+    assert.ok(attempt);
+    assert.equal(store.reserveAttempt(b, two, { startedAt: clock.t, pid: 5151, trigger: "manual", cap: 1 }), null);
+    store.deleteTask(a, one.id);
+    a.close();
+    a = null;
+    b.close();
+    b = null;
+    a = new DatabaseSync(path.join(dir, "replacement-cache.sqlite"));
+    assert.equal(store.countedStarts(a, clock.t).length, 1);
+    assert.equal(store.getAttempt(a, attempt.id).task.title, one.title);
+    store.recoverAttempts(a, () => false, clock.t + 1000);
+    const backup = createResearchBackup(path.join(dir, "research.sqlite"), path.join(dir, "backup"));
+    assert.equal(backup.counts.task_attempts, 1);
+    assert.equal(verifyResearchBackup(path.join(dir, "backup")).counts.task_completions, 1);
+    assert.equal(store.getAttempt(a, attempt.id).completion.status, "interrupted");
+  } finally {
+    a?.close();
+    b?.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-
-test('stop waits for the current backtest, retains partial evidence and charges the attempt once', async () => {
- let release; const gate=new Promise(r=>{release=r});let calls=0;
- const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),task=addTask(h.db,{specs:[SPEC,SPEC]});
- const q=h.s.enqueue(task.id,'manual');await new Promise(r=>setImmediate(r));
- const a=activeAttempt(h.db,store.getTask(h.db,task.id));assert.ok(a);assert.equal(a.stopRequested,false);
- const request=requestStop(h.db,a.id,{reason:'Review source timing'},h.clock.t);
- assert.deepEqual(requestStop(h.db,a.id,{reason:'Repeated click'},h.clock.t),request);
- assert.equal(activeAttempt(h.db,store.getTask(h.db,task.id)).stopRequested,true);
- assert.equal(store.getAttempt(h.db,a.id).completion,null);assert.equal(store.getTask(h.db,task.id).running,true);
- release();await q.done;
- const saved=store.getAttempt(h.db,a.id).completion.run;
- assert.equal(calls,1);assert.equal(saved.status,'error');assert.equal(saved.meta.outcome,'stopped');assert.equal(saved.meta.completedSpecs,1);assert.equal(saved.meta.plannedSpecs,2);
- assert.deepEqual(saved.meta.stopRequest,request);assert.equal(saved.result.phase,'error');assert.equal(saved.result.done.backtests.length,1);
- assert.equal(store.countedStarts(h.db,h.clock.t).length,1);assert.equal(store.getTask(h.db,task.id).running,false);
- h.clock.t+=1000;await h.s.enqueue(task.id,'manual').done;
- assert.equal(calls,3);assert.equal(store.listAttempts(h.db)[0].completion.run.status,'ok');
- assert.equal(store.countedStarts(h.db,h.clock.t).length,2);
- h.db.close();
+test("recovery leaves live work alone and retains the exact saved result after a crash", () => {
+  const h = harness(),
+    task = addTask(h.db);
+  const attempt = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "manual", cap: 10 });
+  assert.equal(
+    store.recoverAttempts(h.db, () => true, h.clock.t + 100),
+    0,
+  );
+  assert.equal(store.getAttempt(h.db, attempt.id).completion, null);
+  const run = store.addRun(h.db, {
+    taskId: task.id,
+    startedAt: h.clock.t,
+    finishedAt: h.clock.t + 50,
+    status: "ok",
+    counted: true,
+    meta: { attemptId: attempt.id },
+    result: { synthetic: "retained result" },
+  });
+  assert.equal(
+    store.recoverAttempts(h.db, () => false, h.clock.t + 100),
+    1,
+  );
+  const completion = store.getAttempt(h.db, attempt.id).completion;
+  assert.equal(completion.status, "finished");
+  assert.equal(completion.run.id, run.id);
+  assert.deepEqual(completion.run.result, { synthetic: "retained result" });
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+  assert.equal(
+    store.recoverAttempts(h.db, () => false, h.clock.t + 200),
+    0,
+  );
 });
 
-test('a durable stop from another connection aborts a running prompt and survives backup', async () => {
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-stop-'));
- const a=new DatabaseSync(path.join(dir,'cache.sqlite')),b=new DatabaseSync(path.join(dir,'other-cache.sqlite'));
- let failTimer;
- try {
-  let began;const started=new Promise(r=>{began=r});
-  const h=harness({db:a,env:{ASK_PROVIDER:'openai',OPENAI_API_KEY:'test-not-a-key'},prompt:async({signal})=>{began();await new Promise((resolve,reject)=>{signal.addEventListener('abort',()=>reject(Error('aborted')),{once:true});});}});
-  const task=addTask(a,{kind:'prompt',prompt:'Synthetic stop test',specs:[]});const q=h.s.enqueue(task.id,'manual');await started;
-  const attempt=store.listAttempts(a)[0];requestStop(b,attempt.id,{reason:'Stop synthetic prompt'},h.clock.t);
-  await Promise.race([q.done,new Promise((_,reject)=>{failTimer=setTimeout(()=>reject(Error('Stop was not observed')),3000)})]);clearTimeout(failTimer);
-  const completed=store.getAttempt(a,attempt.id);assert.equal(completed.completion.run.meta.outcome,'stopped');assert.equal(completed.completion.run.status,'error');assert.match(completed.completion.run.summary,/Stopped/);
-  assert.equal(store.countedStarts(b,h.clock.t).length,1);
-  assert.throws(()=>b.prepare('DELETE FROM research.task_stop_requests').run(),/immutable/);
-  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));
-  assert.equal(backup.counts.task_stop_requests,1);assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_completions,1);
- } finally {clearTimeout(failTimer);a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
+test("completion refuses a result from another task or another admission", () => {
+  const h = harness(),
+    task = addTask(h.db),
+    other = addTask(h.db, { title: "Other" });
+  const attempt = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "manual", cap: 10 });
+  const result = { taskId: task.id, startedAt: h.clock.t, status: "ok", meta: { attemptId: attempt.id } };
+  for (const run of [
+    { ...result, taskId: other.id },
+    { ...result, startedAt: h.clock.t - 1 },
+    { ...result, meta: { attemptId: "ta_wrong" } },
+  ]) {
+    assert.throws(
+      () => store.completeAttempt(h.db, attempt.id, { status: "finished", finishedAt: h.clock.t + 1, run }),
+      /result reference mismatch/,
+    );
+    assert.equal(store.getAttempt(h.db, attempt.id).completion, null);
+  }
+  assert.throws(
+    () => store.completeAttempt(h.db, attempt.id, { status: "interrupted", finishedAt: h.clock.t + 1, run: result }),
+    /result reference mismatch/,
+  );
 });
 
-test('stop requests reject missing, completed and invalid executions and verify checksums',()=>{
- const h=harness(),task=addTask(h.db);const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:10});
- assert.throws(()=>requestStop(h.db,'ta_missing',{reason:'x'},h.clock.t),/not found/);
- assert.throws(()=>requestStop(h.db,attempt.id,{reason:' '},h.clock.t),/reason/);
- requestStop(h.db,attempt.id,{reason:'Validate journal'},h.clock.t);
- h.db.exec('DROP TRIGGER research.task_stop_requests_update');
- h.db.prepare("UPDATE research.task_stop_requests SET body_hash='bad'").run();
- assert.throws(()=>stopRequest(h.db,attempt.id),/checksum/);
- const other=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:10});
- store.completeAttempt(h.db,other.id,{status:'finished',finishedAt:h.clock.t});
- assert.throws(()=>requestStop(h.db,other.id,{reason:'Too late'},h.clock.t),/already finished/);
- h.db.close();
+test("backup and live inspection reject budget columns inconsistent with the preserved attempt", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsi-attempt-integrity-")),
+    db = new DatabaseSync(path.join(dir, "cache.sqlite"));
+  try {
+    const task = addTask(db),
+      attempt = store.reserveAttempt(db, task, {
+        startedAt: at("2026-10-09T14:00:00Z"),
+        pid: 9999,
+        trigger: "manual",
+        cap: 10,
+      });
+    db.exec("DROP TRIGGER research.task_attempts_update");
+    db.prepare("UPDATE research.task_attempts SET day=? WHERE id=?").run("2026-10-08", attempt.id);
+    assert.throws(() => store.getAttempt(db, attempt.id), /budget day mismatch/);
+    assert.throws(
+      () => createResearchBackup(path.join(dir, "research.sqlite"), path.join(dir, "backup")),
+      /budget day mismatch/,
+    );
+    assert.equal(fs.existsSync(path.join(dir, "backup")), false);
+  } finally {
+    db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
+test("global admission pause blocks queued, scheduled and manual starts without cancelling admitted work", async () => {
+  let release;
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  let calls = 0;
+  const h = harness({
+      backtest: async () => {
+        calls++;
+        await gate;
+        return fakeRun();
+      },
+    }),
+    one = addTask(h.db),
+    two = addTask(h.db, { title: "Waiting" });
+  const first = h.s.enqueue(one.id, "manual");
+  await new Promise((r) => setImmediate(r));
+  const second = h.s.enqueue(two.id, "manual");
+  const next = store.getTask(h.db, two.id).nextRun;
+  const stopped = setTaskControl(h.db, { paused: true, baseRevision: 0, reason: "Inspect upstream data" });
+  assert.equal(stopped.actor, "local-owner");
+  assert.equal(h.s.enqueue(two.id, "manual").status, 409);
+  assert.equal(await h.s.tick(), 0);
+  assert.equal(store.reserveAttempt(h.db, two, { startedAt: h.clock.t, pid: 5151, trigger: "manual", cap: 100 }), null);
+  release();
+  await first.done;
+  assert.equal((await second.done).paused, true);
+  assert.equal(calls, 1);
+  assert.equal(store.getTask(h.db, two.id).nextRun, next);
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+  assert.equal(store.listAttempts(h.db)[0].completion.status, "finished");
+  assert.throws(
+    () => setTaskControl(h.db, { paused: false, baseRevision: 0, reason: "Stale screen" }),
+    /changed elsewhere/,
+  );
+  setTaskControl(h.db, { paused: false, baseRevision: 1, reason: "Inspection complete" });
+  await h.s.enqueue(two.id, "manual").done;
+  assert.equal(calls, 2);
+  assert.deepEqual(
+    taskControlHistory(h.db).map((c) => c.paused),
+    [false, true],
+  );
+  assert.throws(() => h.db.exec("DELETE FROM research.task_controls"), /immutable/);
+});
 
-test('recovery honors the stopped lease without re-admission and preserves future scheduling', async()=>{
- for (const mode of ['due','future','disabled']) {
-  const h=harness(),task=addTask(h.db,{enabled:mode!=='disabled'});
-  const future=h.clock.t+86_400_000;
-  if(mode==='future')store.setNextRun(h.db,task.id,future);
-  const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:10});
-  store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
-  requestStop(h.db,attempt.id,{reason:'Do not retry this interrupted execution'},h.clock.t);
-  h.clock.t+=1000;
-  assert.deepEqual(h.s.boot(),[]);
-  assert.equal(store.getAttempt(h.db,attempt.id).completion.status,'interrupted');
-  assert.equal(store.getTask(h.db,task.id).running,false);
-  const next=store.getTask(h.db,task.id).nextRun;
-  assert.equal(next,mode==='disabled'?null:mode==='future'?future:nextRunAfter(task.schedule,h.clock.t));
-  assert.equal(await h.s.tick(),0);assert.equal(h.calls.length,0);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
-  assert.deepEqual(h.s.boot(),[]);assert.equal(store.getTask(h.db,task.id).nextRun,next);
-  if(mode!=='disabled'){h.clock.t=next;assert.equal(await h.s.tick(),1);assert.equal(h.calls.length,1);}
+test("admission control is shared by independent connections and survives backup", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsi-task-control-"));
+  const a = new DatabaseSync(path.join(dir, "a.sqlite")),
+    b = new DatabaseSync(path.join(dir, "b.sqlite"));
+  try {
+    const task = addTask(b);
+    setTaskControl(a, { paused: true, baseRevision: 0, reason: "Synthetic maintenance", actor: "forged" });
+    assert.equal(taskControl(b).paused, true);
+    assert.equal(taskControl(b).actor, "local-owner");
+    assert.equal(
+      store.reserveAttempt(b, task, { startedAt: Date.now(), pid: 5151, trigger: "schedule", cap: 20 }),
+      null,
+    );
+    const backup = createResearchBackup(path.join(dir, "research.sqlite"), path.join(dir, "backup"));
+    assert.equal(backup.counts.task_controls, 1);
+    assert.equal(verifyResearchBackup(path.join(dir, "backup")).counts.task_controls, 1);
+    b.exec("DROP TRIGGER research.task_controls_update");
+    b.exec("UPDATE research.task_controls SET paused=0");
+    assert.throws(
+      () => createResearchBackup(path.join(dir, "research.sqlite"), path.join(dir, "invalid")),
+      /checksum or identity/,
+    );
+  } finally {
+    a.close();
+    b.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("stop waits for the current backtest, retains partial evidence and charges the attempt once", async () => {
+  let release;
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  let calls = 0;
+  const h = harness({
+      backtest: async () => {
+        calls++;
+        await gate;
+        return fakeRun();
+      },
+    }),
+    task = addTask(h.db, { specs: [SPEC, SPEC] });
+  const q = h.s.enqueue(task.id, "manual");
+  await new Promise((r) => setImmediate(r));
+  const a = activeAttempt(h.db, store.getTask(h.db, task.id));
+  assert.ok(a);
+  assert.equal(a.stopRequested, false);
+  const request = requestStop(h.db, a.id, { reason: "Review source timing" }, h.clock.t);
+  assert.deepEqual(requestStop(h.db, a.id, { reason: "Repeated click" }, h.clock.t), request);
+  assert.equal(activeAttempt(h.db, store.getTask(h.db, task.id)).stopRequested, true);
+  assert.equal(store.getAttempt(h.db, a.id).completion, null);
+  assert.equal(store.getTask(h.db, task.id).running, true);
+  release();
+  await q.done;
+  const saved = store.getAttempt(h.db, a.id).completion.run;
+  assert.equal(calls, 1);
+  assert.equal(saved.status, "error");
+  assert.equal(saved.meta.outcome, "stopped");
+  assert.equal(saved.meta.completedSpecs, 1);
+  assert.equal(saved.meta.plannedSpecs, 2);
+  assert.deepEqual(saved.meta.stopRequest, request);
+  assert.equal(saved.result.phase, "error");
+  assert.equal(saved.result.done.backtests.length, 1);
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+  assert.equal(store.getTask(h.db, task.id).running, false);
+  h.clock.t += 1000;
+  await h.s.enqueue(task.id, "manual").done;
+  assert.equal(calls, 3);
+  assert.equal(store.listAttempts(h.db)[0].completion.run.status, "ok");
+  assert.equal(store.countedStarts(h.db, h.clock.t).length, 2);
   h.db.close();
- }
 });
 
-test('a prior stop never suppresses recovery of a later unstopped lease',()=>{
- const h=harness(),task=addTask(h.db);
- const old=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
- requestStop(h.db,old.id,{reason:'Stop only the first execution'},h.clock.t);
- store.completeAttempt(h.db,old.id,{status:'interrupted',finishedAt:h.clock.t});
- h.clock.t+=1000;
- const later=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:10});
- store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
- assert.deepEqual(h.s.boot(),[task.id]);assert.equal(store.getAttempt(h.db,later.id).completion.status,'interrupted');
- assert.equal(store.getTask(h.db,task.id).nextRun,h.clock.t);h.db.close();
+test("a durable stop from another connection aborts a running prompt and survives backup", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsi-task-stop-"));
+  const a = new DatabaseSync(path.join(dir, "cache.sqlite")),
+    b = new DatabaseSync(path.join(dir, "other-cache.sqlite"));
+  let failTimer;
+  try {
+    let began;
+    const started = new Promise((r) => {
+      began = r;
+    });
+    const h = harness({
+      db: a,
+      env: { ASK_PROVIDER: "openai", OPENAI_API_KEY: "test-not-a-key" },
+      prompt: async ({ signal }) => {
+        began();
+        await new Promise((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(Error("aborted")), { once: true });
+        });
+      },
+    });
+    const task = addTask(a, { kind: "prompt", prompt: "Synthetic stop test", specs: [] });
+    const q = h.s.enqueue(task.id, "manual");
+    await started;
+    const attempt = store.listAttempts(a)[0];
+    requestStop(b, attempt.id, { reason: "Stop synthetic prompt" }, h.clock.t);
+    await Promise.race([
+      q.done,
+      new Promise((_, reject) => {
+        failTimer = setTimeout(() => reject(Error("Stop was not observed")), 3000);
+      }),
+    ]);
+    clearTimeout(failTimer);
+    const completed = store.getAttempt(a, attempt.id);
+    assert.equal(completed.completion.run.meta.outcome, "stopped");
+    assert.equal(completed.completion.run.status, "error");
+    assert.match(completed.completion.run.summary, /Stopped/);
+    assert.equal(store.countedStarts(b, h.clock.t).length, 1);
+    assert.throws(() => b.prepare("DELETE FROM research.task_stop_requests").run(), /immutable/);
+    const backup = createResearchBackup(path.join(dir, "research.sqlite"), path.join(dir, "backup"));
+    assert.equal(backup.counts.task_stop_requests, 1);
+    assert.equal(verifyResearchBackup(path.join(dir, "backup")).counts.task_completions, 1);
+  } finally {
+    clearTimeout(failTimer);
+    a.close();
+    b.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-test('recovery respects a stop after completion was saved but before the lease was released',()=>{
- const h=harness(),task=addTask(h.db);
- const a=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
- store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
- requestStop(h.db,a.id,{reason:'Stop already journaled'},h.clock.t);
- store.completeAttempt(h.db,a.id,{status:'finished',finishedAt:h.clock.t,reason:'Synthetic terminal boundary'});
- h.clock.t+=1000;assert.deepEqual(h.s.boot(),[]);
- assert.equal(store.getAttempt(h.db,a.id).completion.reason,'Synthetic terminal boundary');
- assert.ok(store.getTask(h.db,task.id).nextRun>h.clock.t);h.db.close();
+test("stop requests reject missing, completed and invalid executions and verify checksums", () => {
+  const h = harness(),
+    task = addTask(h.db);
+  const attempt = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 4242, trigger: "manual", cap: 10 });
+  assert.throws(() => requestStop(h.db, "ta_missing", { reason: "x" }, h.clock.t), /not found/);
+  assert.throws(() => requestStop(h.db, attempt.id, { reason: " " }, h.clock.t), /reason/);
+  requestStop(h.db, attempt.id, { reason: "Validate journal" }, h.clock.t);
+  h.db.exec("DROP TRIGGER research.task_stop_requests_update");
+  h.db.prepare("UPDATE research.task_stop_requests SET body_hash='bad'").run();
+  assert.throws(() => stopRequest(h.db, attempt.id), /checksum/);
+  const other = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 4242, trigger: "manual", cap: 10 });
+  store.completeAttempt(h.db, other.id, { status: "finished", finishedAt: h.clock.t });
+  assert.throws(() => requestStop(h.db, other.id, { reason: "Too late" }, h.clock.t), /already finished/);
+  h.db.close();
 });
 
-
-test('stopped recovery leaves live leases intact and refuses a replaced lease',()=>{
- const h=harness({alive:()=>true}),task=addTask(h.db);
- const a=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
- store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});const original=store.getTask(h.db,task.id);
- requestStop(h.db,a.id,{reason:'Wait for owner checkpoint'},h.clock.t);
- assert.deepEqual(h.s.boot(),[]);assert.equal(store.getTask(h.db,task.id).running,true);assert.equal(store.getAttempt(h.db,a.id).completion,null);
- assert.equal(store.getTask(h.db,task.id).nextRun,original.nextRun);
- store.releaseTask(h.db,task.id,{lastRun:h.clock.t,nextRun:original.nextRun});
- store.claimTask(h.db,task.id,{now:h.clock.t+1,pid:7777});
- assert.equal(store.clearDeadLease(h.db,task.id,()=>false,{expectedLease:original,nextRun:null}),false);
- assert.equal(store.getTask(h.db,task.id).runningPid,7777);assert.equal(store.getTask(h.db,task.id).nextRun,original.nextRun);
- h.db.close();
+test("recovery honors the stopped lease without re-admission and preserves future scheduling", async () => {
+  for (const mode of ["due", "future", "disabled"]) {
+    const h = harness(),
+      task = addTask(h.db, { enabled: mode !== "disabled" });
+    const future = h.clock.t + 86_400_000;
+    if (mode === "future") store.setNextRun(h.db, task.id, future);
+    const attempt = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "schedule", cap: 10 });
+    store.claimTask(h.db, task.id, { now: h.clock.t, pid: 9999 });
+    requestStop(h.db, attempt.id, { reason: "Do not retry this interrupted execution" }, h.clock.t);
+    h.clock.t += 1000;
+    assert.deepEqual(h.s.boot(), []);
+    assert.equal(store.getAttempt(h.db, attempt.id).completion.status, "interrupted");
+    assert.equal(store.getTask(h.db, task.id).running, false);
+    const next = store.getTask(h.db, task.id).nextRun;
+    assert.equal(
+      next,
+      mode === "disabled" ? null : mode === "future" ? future : nextRunAfter(task.schedule, h.clock.t),
+    );
+    assert.equal(await h.s.tick(), 0);
+    assert.equal(h.calls.length, 0);
+    assert.equal(store.countedStarts(h.db, h.clock.t).length, 1);
+    assert.deepEqual(h.s.boot(), []);
+    assert.equal(store.getTask(h.db, task.id).nextRun, next);
+    if (mode !== "disabled") {
+      h.clock.t = next;
+      assert.equal(await h.s.tick(), 1);
+      assert.equal(h.calls.length, 1);
+    }
+    h.db.close();
+  }
 });
 
-test('a stopped execution stays stopped across disk-backed recovery and another restart',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-stop-restart-')),file=path.join(dir,'cache.sqlite');let db;
- try{
-  const clock={t:at('2026-10-09T14:00:00Z')};db=new DatabaseSync(file);
-  const task=addTask(db,{},clock),attempt=store.reserveAttempt(db,task,{startedAt:clock.t,pid:9999,trigger:'schedule',cap:10});
-  store.claimTask(db,task.id,{now:clock.t,pid:9999});requestStop(db,attempt.id,{reason:'Persist stop through restart'},clock.t);
-  db.close();db=new DatabaseSync(file);clock.t+=1000;
-  let h=harness({db,clock});assert.deepEqual(h.s.boot(),[]);const next=store.getTask(db,task.id).nextRun;
-  assert.ok(next>clock.t);db.close();db=new DatabaseSync(file);clock.t+=1000;
-  h=harness({db,clock});assert.deepEqual(h.s.boot(),[]);assert.equal(await h.s.tick(),0);
-  assert.equal(store.getTask(db,task.id).nextRun,next);assert.equal(store.countedStarts(db,clock.t).length,1);
-  assert.equal(store.getAttempt(db,attempt.id).completion.status,'interrupted');assert.equal(stopRequest(db,attempt.id).reason,'Persist stop through restart');
- }finally{db?.close();fs.rmSync(dir,{recursive:true,force:true});}
+test("a prior stop never suppresses recovery of a later unstopped lease", () => {
+  const h = harness(),
+    task = addTask(h.db);
+  const old = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "manual", cap: 10 });
+  requestStop(h.db, old.id, { reason: "Stop only the first execution" }, h.clock.t);
+  store.completeAttempt(h.db, old.id, { status: "interrupted", finishedAt: h.clock.t });
+  h.clock.t += 1000;
+  const later = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "schedule", cap: 10 });
+  store.claimTask(h.db, task.id, { now: h.clock.t, pid: 9999 });
+  assert.deepEqual(h.s.boot(), [task.id]);
+  assert.equal(store.getAttempt(h.db, later.id).completion.status, "interrupted");
+  assert.equal(store.getTask(h.db, task.id).nextRun, h.clock.t);
+  h.db.close();
+});
+
+test("recovery respects a stop after completion was saved but before the lease was released", () => {
+  const h = harness(),
+    task = addTask(h.db);
+  const a = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "manual", cap: 10 });
+  store.claimTask(h.db, task.id, { now: h.clock.t, pid: 9999 });
+  requestStop(h.db, a.id, { reason: "Stop already journaled" }, h.clock.t);
+  store.completeAttempt(h.db, a.id, {
+    status: "finished",
+    finishedAt: h.clock.t,
+    reason: "Synthetic terminal boundary",
+  });
+  h.clock.t += 1000;
+  assert.deepEqual(h.s.boot(), []);
+  assert.equal(store.getAttempt(h.db, a.id).completion.reason, "Synthetic terminal boundary");
+  assert.ok(store.getTask(h.db, task.id).nextRun > h.clock.t);
+  h.db.close();
+});
+
+test("stopped recovery leaves live leases intact and refuses a replaced lease", () => {
+  const h = harness({ alive: () => true }),
+    task = addTask(h.db);
+  const a = store.reserveAttempt(h.db, task, { startedAt: h.clock.t, pid: 9999, trigger: "manual", cap: 10 });
+  store.claimTask(h.db, task.id, { now: h.clock.t, pid: 9999 });
+  const original = store.getTask(h.db, task.id);
+  requestStop(h.db, a.id, { reason: "Wait for owner checkpoint" }, h.clock.t);
+  assert.deepEqual(h.s.boot(), []);
+  assert.equal(store.getTask(h.db, task.id).running, true);
+  assert.equal(store.getAttempt(h.db, a.id).completion, null);
+  assert.equal(store.getTask(h.db, task.id).nextRun, original.nextRun);
+  store.releaseTask(h.db, task.id, { lastRun: h.clock.t, nextRun: original.nextRun });
+  store.claimTask(h.db, task.id, { now: h.clock.t + 1, pid: 7777 });
+  assert.equal(
+    store.clearDeadLease(h.db, task.id, () => false, { expectedLease: original, nextRun: null }),
+    false,
+  );
+  assert.equal(store.getTask(h.db, task.id).runningPid, 7777);
+  assert.equal(store.getTask(h.db, task.id).nextRun, original.nextRun);
+  h.db.close();
+});
+
+test("a stopped execution stays stopped across disk-backed recovery and another restart", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsi-stop-restart-")),
+    file = path.join(dir, "cache.sqlite");
+  let db;
+  try {
+    const clock = { t: at("2026-10-09T14:00:00Z") };
+    db = new DatabaseSync(file);
+    const task = addTask(db, {}, clock),
+      attempt = store.reserveAttempt(db, task, { startedAt: clock.t, pid: 9999, trigger: "schedule", cap: 10 });
+    store.claimTask(db, task.id, { now: clock.t, pid: 9999 });
+    requestStop(db, attempt.id, { reason: "Persist stop through restart" }, clock.t);
+    db.close();
+    db = new DatabaseSync(file);
+    clock.t += 1000;
+    let h = harness({ db, clock });
+    assert.deepEqual(h.s.boot(), []);
+    const next = store.getTask(db, task.id).nextRun;
+    assert.ok(next > clock.t);
+    db.close();
+    db = new DatabaseSync(file);
+    clock.t += 1000;
+    h = harness({ db, clock });
+    assert.deepEqual(h.s.boot(), []);
+    assert.equal(await h.s.tick(), 0);
+    assert.equal(store.getTask(db, task.id).nextRun, next);
+    assert.equal(store.countedStarts(db, clock.t).length, 1);
+    assert.equal(store.getAttempt(db, attempt.id).completion.status, "interrupted");
+    assert.equal(stopRequest(db, attempt.id).reason, "Persist stop through restart");
+  } finally {
+    db?.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

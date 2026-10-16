@@ -1,4 +1,4 @@
-import { preserveSourceDocument } from '../source-documents.mjs';
+import { preserveSourceDocument } from "../source-documents.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -37,7 +37,9 @@ export function congressTrades(db) {
     return ready ? Promise.resolve(ready) : trades.head;
   }
   let release;
-  trades.head = new Promise((resolve) => { release = resolve; });
+  trades.head = new Promise((resolve) => {
+    release = resolve;
+  });
   trades.job = buildTrades(db, (res, head) => {
     trades.partial = res;
     if (head) release(res);
@@ -48,11 +50,19 @@ export function congressTrades(db) {
         writeCache(db, KEY.posCongress, res, 3 * HOUR);
         trades.last = res;
       }
-      console.log(`congress trades: ${res.items.length} rows from ${res.progress.house.parsed} House + ${res.progress.senate.parsed} Senate reports`);
+      console.log(
+        `congress trades: ${res.items.length} rows from ${res.progress.house.parsed} House + ${res.progress.senate.parsed} Senate reports`,
+      );
       return res;
     })
     .catch((err) => {
-      const res = { ok: false, source: "House Clerk PTR PDFs · Senate eFD PTRs", asOf: new Date().toISOString(), errors: [err.message], items: [] };
+      const res = {
+        ok: false,
+        source: "House Clerk PTR PDFs · Senate eFD PTRs",
+        asOf: new Date().toISOString(),
+        errors: [err.message],
+        items: [],
+      };
       release(res);
       return res;
     })
@@ -69,7 +79,10 @@ export function congressTrades(db) {
  */
 export function refreshCongress(db) {
   if (trades.job) return trades.job;
-  db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key IN (?, ?)").run(KEY.clerkIndex(new Date().getUTCFullYear()), KEY.posCongress);
+  db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key IN (?, ?)").run(
+    KEY.clerkIndex(new Date().getUTCFullYear()),
+    KEY.posCongress,
+  );
   void congressTrades(db);
   return trades.job || congressTrades(db);
 }
@@ -80,7 +93,7 @@ async function buildTrades(db, publish) {
   const errors = [];
   const progress = {
     house: { parsed: 0, total: 0, paper: 0, failed: 0, done: false },
-    senate: { parsed: 0, total: 0, paper: 0, failed: 0, done: false }
+    senate: { parsed: 0, total: 0, paper: 0, failed: 0, done: false },
   };
   const house = [];
   const senate = [];
@@ -90,12 +103,18 @@ async function buildTrades(db, publish) {
     const deduped = dedupeDisclosures([...house, ...senate]);
     const items = deduped.items
       .map((row) => ({ ...row, inJoin: tickers.has(row.symbol) }))
-      .sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
+      .sort(
+        (a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)),
+      );
     const h = progress.house;
     const s = progress.senate;
     const notes = [...errors];
-    if (h.paper || s.paper) notes.push(`${h.paper} House and ${s.paper || 0} Senate reports since ${TRADES_FROM} are scanned paper filings and are not parsed.`);
-    if (h.failed || s.failed) notes.push(`${h.failed} House and ${s.failed} Senate reports could not be read this run.`);
+    if (h.paper || s.paper)
+      notes.push(
+        `${h.paper} House and ${s.paper || 0} Senate reports since ${TRADES_FROM} are scanned paper filings and are not parsed.`,
+      );
+    if (h.failed || s.failed)
+      notes.push(`${h.failed} House and ${s.failed} Senate reports could not be read this run.`);
     const { merged, revised, byChamber } = deduped.stats;
     return {
       ok: items.length > 0,
@@ -107,13 +126,15 @@ async function buildTrades(db, publish) {
       latency: `STOCK Act allows up to 45 days from trade to filing. ${building ? "Backfilling: " : ""}Parsed ${h.parsed} of ${h.total} electronic House and ${s.parsed} of ${s.total} Senate reports filed since ${TRADES_FROM}. Lag is filed date minus trade date. Senate amendments keep the original report date and list the amendment date separately. A trade listed in more than one report counts once (${merged} repeat rows folded: ${byChamber.senate || 0} Senate amendment, ${byChamber.house || 0} House; ${revised} take amended values); \`public\` is the earliest date it was disclosed, or the amendment date for a trade only in an amendment.`,
       dedupe: deduped.stats,
       errors: notes,
-      items
+      items,
     };
   };
   const tick = () => {
     const h = progress.house;
     const s = progress.senate;
-    const headReady = (h.done || h.parsed + h.failed >= Math.min(HEAD_REPORTS, h.total)) && (s.done || s.parsed + s.failed >= Math.min(HEAD_REPORTS / 2, s.total));
+    const headReady =
+      (h.done || h.parsed + h.failed >= Math.min(HEAD_REPORTS, h.total)) &&
+      (s.done || s.parsed + s.failed >= Math.min(HEAD_REPORTS / 2, s.total));
     if (!headSent && headReady && (h.total || h.done) && (s.total || s.done)) {
       headSent = true;
       publish(compose(true), true);
@@ -124,8 +145,22 @@ async function buildTrades(db, publish) {
     }
   };
   await Promise.all([
-    houseTrades(db, people.items, progress.house, house, tick).catch((err) => { errors.push(`House Clerk: ${err.message}`); }).finally(() => { progress.house.done = true; tick(); }),
-    senateTrades(db, people.items, progress.senate, senate, tick).catch((err) => { errors.push(`Senate eFD: ${err.message}`); }).finally(() => { progress.senate.done = true; tick(); })
+    houseTrades(db, people.items, progress.house, house, tick)
+      .catch((err) => {
+        errors.push(`House Clerk: ${err.message}`);
+      })
+      .finally(() => {
+        progress.house.done = true;
+        tick();
+      }),
+    senateTrades(db, people.items, progress.senate, senate, tick)
+      .catch((err) => {
+        errors.push(`Senate eFD: ${err.message}`);
+      })
+      .finally(() => {
+        progress.senate.done = true;
+        tick();
+      }),
   ]);
   return compose(false);
 }
@@ -159,8 +194,9 @@ async function houseTrades(db, people, progress, rows, tick) {
     progress.parsed += 1;
     const state = filing.district.slice(0, 2);
     const num = String(Number(filing.district.slice(2)) || 0);
-    const member = house.find((p) => p.state === state && String(Number(p.district) || 0) === num)
-      || house.find((p) => p.last.toLowerCase() === filing.last.toLowerCase() && p.state === state);
+    const member =
+      house.find((p) => p.state === state && String(Number(p.district) || 0) === num) ||
+      house.find((p) => p.last.toLowerCase() === filing.last.toLowerCase() && p.state === state);
     const filed = isoDate(filing.filed);
     const link = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
     lines.forEach((line, i) => {
@@ -184,7 +220,7 @@ async function houseTrades(db, people, progress, rows, tick) {
         traded: line.traded,
         filed,
         lag: lagDays(line.traded, filed),
-        link
+        link,
       });
     });
     tick();
@@ -195,7 +231,11 @@ async function clerkIndex(db, year) {
   const key = KEY.clerkIndex(year);
   const hit = readCache(db, key);
   if (hit) return hit.text;
-  const bytes = await fetchBytes(`https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`, { headers: { "User-Agent": BROWSER_UA } }, 120000);
+  const bytes = await fetchBytes(
+    `https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.ZIP`,
+    { headers: { "User-Agent": BROWSER_UA } },
+    120000,
+  );
   const zip = path.join(os.tmpdir(), `${year}FD.ZIP`);
   fs.writeFileSync(zip, bytes);
   const { stdout } = await execFileAsync("unzip", ["-p", zip, `${year}FD.txt`], { maxBuffer: 64 * 1024 * 1024 });
@@ -208,9 +248,9 @@ export async function ptrLines(db, filing, { read = fetchBytes } = {}) {
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const url = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
-  const bytes = await read(url, { headers: { 'User-Agent': BROWSER_UA } }, 60000);
-  const sourceDocument = preserveSourceDocument(db, { url, content: bytes, mediaType: 'application/pdf' });
-  const lines = (await parsePtrPdf(new Uint8Array(bytes))).map(line => ({ ...line, sourceDocument }));
+  const bytes = await read(url, { headers: { "User-Agent": BROWSER_UA } }, 60000);
+  const sourceDocument = preserveSourceDocument(db, { url, content: bytes, mediaType: "application/pdf" });
+  const lines = (await parsePtrPdf(new Uint8Array(bytes))).map((line) => ({ ...line, sourceDocument }));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
 }
@@ -231,19 +271,23 @@ async function efdReportList(session) {
       office_id: "",
       first_name: "",
       last_name: "",
-      csrfmiddlewaretoken: session.csrf
+      csrfmiddlewaretoken: session.csrf,
     });
-    const res = await fetchResponse("https://efdsearch.senate.gov/search/report/data/", {
-      method: "POST",
-      headers: {
-        "User-Agent": BROWSER_UA,
-        Referer: "https://efdsearch.senate.gov/search/",
-        "X-CSRFToken": session.csrf,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Cookie: session.cookie
+    const res = await fetchResponse(
+      "https://efdsearch.senate.gov/search/report/data/",
+      {
+        method: "POST",
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Referer: "https://efdsearch.senate.gov/search/",
+          "X-CSRFToken": session.csrf,
+          "Content-Type": "application/x-www-form-urlencoded",
+          Cookie: session.cookie,
+        },
+        body,
       },
-      body
-    }, 30000);
+      30000,
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const page = await res.json();
     out.push(...(page.data || []));
@@ -256,16 +300,41 @@ async function senateTrades(db, people, progress, rows, tick) {
   const senators = people.filter((p) => p.chamber === "senate");
   const session = await efdSession();
   const list = await efdReportList(session);
-  const reports = list.map((row) => {
-    const href = /href="([^"]+)"/.exec(row[3])?.[1] || "";
-    const title = String(row[3] || "").replace(/<[^>]+>/g, "").trim();
-    const amendment = /\(Amendment\s*(\d+)\)/i.exec(title)?.[1] || null;
-    const original = amendment ? /for\s+(\d{2}\/\d{2}\/\d{4})/i.exec(title)?.[1] : null;
-    return { first: row[0], last: row[1], label: row[2], href, filed: original || row[4], amended: amendment ? row[4] : null, amendment };
-  }).filter((row) => row.href.includes("/view/ptr/") && /\(Senator\)/.test(row.label))
-    .filter((row, _, all) => !row.amendment || !all.some((other) => other !== row && other.amendment && other.last === row.last && other.filed === row.filed && Number(other.amendment) > Number(row.amendment)));
+  const reports = list
+    .map((row) => {
+      const href = /href="([^"]+)"/.exec(row[3])?.[1] || "";
+      const title = String(row[3] || "")
+        .replace(/<[^>]+>/g, "")
+        .trim();
+      const amendment = /\(Amendment\s*(\d+)\)/i.exec(title)?.[1] || null;
+      const original = amendment ? /for\s+(\d{2}\/\d{2}\/\d{4})/i.exec(title)?.[1] : null;
+      return {
+        first: row[0],
+        last: row[1],
+        label: row[2],
+        href,
+        filed: original || row[4],
+        amended: amendment ? row[4] : null,
+        amendment,
+      };
+    })
+    .filter((row) => row.href.includes("/view/ptr/") && /\(Senator\)/.test(row.label))
+    .filter(
+      (row, _, all) =>
+        !row.amendment ||
+        !all.some(
+          (other) =>
+            other !== row &&
+            other.amendment &&
+            other.last === row.last &&
+            other.filed === row.filed &&
+            Number(other.amendment) > Number(row.amendment),
+        ),
+    );
   progress.total = reports.length;
-  progress.paper = list.filter((row) => /\/view\/paper\//.test(row[3] || "") && /\(Senator\)/.test(row[2] || "")).length;
+  progress.paper = list.filter(
+    (row) => /\/view\/paper\//.test(row[3] || "") && /\(Senator\)/.test(row[2] || ""),
+  ).length;
   tick();
   await pool(reports, 3, async (report) => {
     const lines = await efdLines(db, report.href, session).catch(() => null);
@@ -276,8 +345,10 @@ async function senateTrades(db, people, progress, rows, tick) {
     }
     progress.parsed += 1;
     const last = report.last.split(",")[0].trim().toLowerCase();
-    const member = senators.find((p) => p.last.toLowerCase() === last && p.first[0]?.toLowerCase() === report.first.trim()[0]?.toLowerCase())
-      || senators.find((p) => p.last.toLowerCase() === last);
+    const member =
+      senators.find(
+        (p) => p.last.toLowerCase() === last && p.first[0]?.toLowerCase() === report.first.trim()[0]?.toLowerCase(),
+      ) || senators.find((p) => p.last.toLowerCase() === last);
     const filed = isoDate(report.filed);
     lines.forEach((line, i) => {
       if (!line.symbol) return;
@@ -303,7 +374,7 @@ async function senateTrades(db, people, progress, rows, tick) {
         amended: report.amended ? isoDate(report.amended) : null,
         amendment: report.amendment ? Number(report.amendment) : null,
         lag: lagDays(line.traded, filed),
-        link: `https://efdsearch.senate.gov${report.href}`
+        link: `https://efdsearch.senate.gov${report.href}`,
       });
     });
     tick();
@@ -311,7 +382,11 @@ async function senateTrades(db, people, progress, rows, tick) {
 }
 
 async function efdSession() {
-  const home = await fetchResponse("https://efdsearch.senate.gov/search/home/", { headers: { "User-Agent": BROWSER_UA } }, 30000);
+  const home = await fetchResponse(
+    "https://efdsearch.senate.gov/search/home/",
+    { headers: { "User-Agent": BROWSER_UA } },
+    30000,
+  );
   const jar = new Map();
   const take = (res) => {
     for (const raw of res.headers.getSetCookie?.() || []) {
@@ -325,17 +400,21 @@ async function efdSession() {
   const token = /name="csrfmiddlewaretoken" value="([^"]+)"/.exec(html)?.[1];
   if (!token) throw new Error("No eFD form token");
   const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
-  const agree = await fetchResponse("https://efdsearch.senate.gov/search/home/", {
-    method: "POST",
-    redirect: "manual",
-    headers: {
-      "User-Agent": BROWSER_UA,
-      Referer: "https://efdsearch.senate.gov/search/home/",
-      "Content-Type": "application/x-www-form-urlencoded",
-      Cookie: cookie()
+  const agree = await fetchResponse(
+    "https://efdsearch.senate.gov/search/home/",
+    {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Referer: "https://efdsearch.senate.gov/search/home/",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Cookie: cookie(),
+      },
+      body: new URLSearchParams({ prohibition_agreement: "1", csrfmiddlewaretoken: token }),
     },
-    body: new URLSearchParams({ prohibition_agreement: "1", csrfmiddlewaretoken: token })
-  }, 30000);
+    30000,
+  );
   take(agree);
   return { cookie: cookie(), csrf: jar.get("csrftoken") || token };
 }
@@ -345,10 +424,14 @@ export async function efdLines(db, href, session, { read = fetchText } = {}) {
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const html = await read(`https://efdsearch.senate.gov${href}`, {
-    headers: { "User-Agent": BROWSER_UA, Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" }
+    headers: { "User-Agent": BROWSER_UA, Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" },
   });
-  const sourceDocument = preserveSourceDocument(db, { url: `https://efdsearch.senate.gov${href}`, content: html, mediaType: 'text/html' });
-  const lines = parseEfd(html).map(line => ({ ...line, sourceDocument }));
+  const sourceDocument = preserveSourceDocument(db, {
+    url: `https://efdsearch.senate.gov${href}`,
+    content: html,
+    mediaType: "text/html",
+  });
+  const lines = parseEfd(html).map((line) => ({ ...line, sourceDocument }));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
 }

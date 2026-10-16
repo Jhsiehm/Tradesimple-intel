@@ -52,7 +52,13 @@ export function ensureInsiderStore(db) {
     );
     CREATE TABLE IF NOT EXISTS insider_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `);
-  if (!db.prepare('PRAGMA table_info(insider_tx)').all().some(c => c.name === 'source_document')) db.exec('ALTER TABLE insider_tx ADD COLUMN source_document TEXT');
+  if (
+    !db
+      .prepare("PRAGMA table_info(insider_tx)")
+      .all()
+      .some((c) => c.name === "source_document")
+  )
+    db.exec("ALTER TABLE insider_tx ADD COLUMN source_document TEXT");
   ready.add(db);
   return db;
 }
@@ -68,7 +74,8 @@ export function joinsByCik(db) {
     byCik.get(cik).push(t);
   }
   let h = 0;
-  for (const s of [...byCik].flatMap(([cik, ts]) => ts.map((t) => `${t.symbol}:${cik}`)).sort()) for (const ch of `${s}|`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  for (const s of [...byCik].flatMap(([cik, ts]) => ts.map((t) => `${t.symbol}:${cik}`)).sort())
+    for (const ch of `${s}|`) h = (h * 31 + ch.charCodeAt(0)) | 0;
   return { byCik, joins: (h >>> 0).toString(36) };
 }
 
@@ -90,10 +97,33 @@ export function writeForms(db, forms, source) {
   try {
     for (const f of forms) {
       if (source === "dataset") del.run(f.accession);
-      else if (has.get(f.accession)) { skipped += 1; continue; }
+      else if (has.get(f.accession)) {
+        skipped += 1;
+        continue;
+      }
       for (const r of f.rows) {
         const line = Number(String(r.id).split("-").pop());
-        ins.run(r.symbol, f.accession, line, Number(f.issuerCik), f.form, r.person, r.title, r.code, r.side, r.shares, r.price, r.value, r.owned, r.plan ? 1 : 0, r.traded || null, r.filed, r.lag ?? null, source, r.sourceDocument ? JSON.stringify(r.sourceDocument) : null);
+        ins.run(
+          r.symbol,
+          f.accession,
+          line,
+          Number(f.issuerCik),
+          f.form,
+          r.person,
+          r.title,
+          r.code,
+          r.side,
+          r.shares,
+          r.price,
+          r.value,
+          r.owned,
+          r.plan ? 1 : 0,
+          r.traded || null,
+          r.filed,
+          r.lag ?? null,
+          source,
+          r.sourceDocument ? JSON.stringify(r.sourceDocument) : null,
+        );
         rows += 1;
       }
     }
@@ -115,14 +145,21 @@ export function storedAccessions(db, accessions) {
 
 export function markDone(db, kind, key, { joins, forms = 0, rows = 0, url = "" }) {
   ensureInsiderStore(db);
-  db.prepare("INSERT OR REPLACE INTO insider_ingest (kind, key, joins, forms, rows, url, done_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(kind, key, joins, forms, rows, url, Date.now());
+  db.prepare(
+    "INSERT OR REPLACE INTO insider_ingest (kind, key, joins, forms, rows, url, done_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  ).run(kind, key, joins, forms, rows, url, Date.now());
   status.at = 0;
 }
 
 /** kind → Map key → { joins, forms, rows, doneAt }. */
 export function doneOf(db, kind) {
   ensureInsiderStore(db);
-  return new Map(db.prepare("SELECT key, joins, forms, rows, done_at FROM insider_ingest WHERE kind = ?").all(kind).map((r) => [r.key, { joins: r.joins, forms: r.forms, rows: r.rows, doneAt: r.done_at }]));
+  return new Map(
+    db
+      .prepare("SELECT key, joins, forms, rows, done_at FROM insider_ingest WHERE kind = ?")
+      .all(kind)
+      .map((r) => [r.key, { joins: r.joins, forms: r.forms, rows: r.rows, doneAt: r.done_at }]),
+  );
 }
 
 export function getMeta(db, key) {
@@ -141,7 +178,12 @@ export function setMeta(db, key, value) {
 function ownerGone(owner) {
   const m = /^pid:(\d+)$/.exec(String(owner || ""));
   if (!m) return false;
-  try { process.kill(Number(m[1]), 0); return false; } catch (err) { return err.code === "ESRCH"; }
+  try {
+    process.kill(Number(m[1]), 0);
+    return false;
+  } catch (err) {
+    return err.code === "ESRCH";
+  }
 }
 
 /** One writer at a time across processes (the CLI backfill and the server's incremental job). */
@@ -150,8 +192,13 @@ export function takeLease(db, owner, ms, now = Date.now()) {
   db.exec("BEGIN IMMEDIATE");
   try {
     const cur = getMeta(db, "lease");
-    if (cur && cur.owner !== owner && cur.until > now && !ownerGone(cur.owner)) { db.exec("ROLLBACK"); return false; }
-    db.prepare("INSERT OR REPLACE INTO insider_meta (key, value) VALUES ('lease', ?)").run(JSON.stringify({ owner, until: now + ms }));
+    if (cur && cur.owner !== owner && cur.until > now && !ownerGone(cur.owner)) {
+      db.exec("ROLLBACK");
+      return false;
+    }
+    db.prepare("INSERT OR REPLACE INTO insider_meta (key, value) VALUES ('lease', ?)").run(
+      JSON.stringify({ owner, until: now + ms }),
+    );
     db.exec("COMMIT");
     return true;
   } catch (err) {
@@ -176,8 +223,17 @@ export function storeStatus(db, now = Date.now()) {
   if (!db) return null;
   if (status.body && status.db === db && now - status.at < 60_000) return status.body;
   ensureInsiderStore(db);
-  const agg = db.prepare("SELECT COUNT(*) AS rows, COUNT(DISTINCT accession) AS forms, COUNT(DISTINCT ticker) AS tickers, MIN(filed) AS minFiled, MAX(filed) AS maxFiled, MIN(CASE WHEN traded >= '1990-01-01' THEN traded END) AS minTraded, MAX(CASE WHEN traded <= filed THEN traded END) AS maxTraded FROM insider_tx").get();
-  const bySource = Object.fromEntries(db.prepare("SELECT source, COUNT(*) AS n FROM insider_tx GROUP BY source").all().map((r) => [r.source, r.n]));
+  const agg = db
+    .prepare(
+      "SELECT COUNT(*) AS rows, COUNT(DISTINCT accession) AS forms, COUNT(DISTINCT ticker) AS tickers, MIN(filed) AS minFiled, MAX(filed) AS maxFiled, MIN(CASE WHEN traded >= '1990-01-01' THEN traded END) AS minTraded, MAX(CASE WHEN traded <= filed THEN traded END) AS maxTraded FROM insider_tx",
+    )
+    .get();
+  const bySource = Object.fromEntries(
+    db
+      .prepare("SELECT source, COUNT(*) AS n FROM insider_tx GROUP BY source")
+      .all()
+      .map((r) => [r.source, r.n]),
+  );
   const quarters = [...doneOf(db, "quarter").keys()].sort();
   const days = [...doneOf(db, "day").keys()].sort();
   const cover = getMeta(db, "coverage");
@@ -196,7 +252,7 @@ export function storeStatus(db, now = Date.now()) {
     datasetThrough: cover?.datasetThrough || null,
     lastUpdate: getMeta(db, "lastUpdate") || null,
     lastError: getMeta(db, "lastError") || null,
-    running: (getMeta(db, "lease")?.until || 0) > now
+    running: (getMeta(db, "lease")?.until || 0) > now,
   };
   Object.assign(status, { at: now, db, body });
   return body;
@@ -208,7 +264,8 @@ export function storeReady(db) {
   return s && s.rows > 0 && s.coveredFrom && s.coveredThrough ? s : null;
 }
 
-const linkOf = (cik, accession) => `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, "")}/${accession}-index.htm`;
+const linkOf = (cik, accession) =>
+  `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, "")}/${accession}-index.htm`;
 
 /**
  * Form 4 lines filed in [from, to] for `symbols`, newest filed first, in form4Rows' shape (plus `form`, `source`).
@@ -218,12 +275,25 @@ export function storeRows(db, { from = "", to = "", symbols = [], amendments = f
   ensureInsiderStore(db);
   const where = ["1 = 1"];
   const args = [];
-  if (from) { where.push("filed >= ?"); args.push(from); }
-  if (to) { where.push("filed <= ?"); args.push(to); }
-  if (symbols.length) { where.push(`ticker IN (${symbols.map(() => "?").join(",")})`); args.push(...symbols); }
-  const amended = db.prepare(`SELECT COUNT(*) AS n FROM insider_tx WHERE ${where.join(" AND ")} AND form <> '4'`).get(...args).n;
+  if (from) {
+    where.push("filed >= ?");
+    args.push(from);
+  }
+  if (to) {
+    where.push("filed <= ?");
+    args.push(to);
+  }
+  if (symbols.length) {
+    where.push(`ticker IN (${symbols.map(() => "?").join(",")})`);
+    args.push(...symbols);
+  }
+  const amended = db
+    .prepare(`SELECT COUNT(*) AS n FROM insider_tx WHERE ${where.join(" AND ")} AND form <> '4'`)
+    .get(...args).n;
   if (!amendments) where.push("form = '4'");
-  const rows = db.prepare(`SELECT * FROM insider_tx WHERE ${where.join(" AND ")} ORDER BY filed DESC, traded DESC, accession, line`).all(...args);
+  const rows = db
+    .prepare(`SELECT * FROM insider_tx WHERE ${where.join(" AND ")} ORDER BY filed DESC, traded DESC, accession, line`)
+    .all(...args);
   return {
     amended,
     items: rows.map((r) => ({
@@ -245,7 +315,7 @@ export function storeRows(db, { from = "", to = "", symbols = [], amendments = f
       lag: r.lag,
       link: linkOf(r.issuer_cik, r.accession),
       form: r.form,
-      source: r.source
-    }))
+      source: r.source,
+    })),
   };
 }

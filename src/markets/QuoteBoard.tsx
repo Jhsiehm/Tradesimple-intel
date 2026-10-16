@@ -51,7 +51,10 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
         const res = await api<Board>("/api/markets/board");
         if (cancel) return;
         if (!res.ok) setError(res.error || "No quotes");
-        else { setError(""); setBoard(res); }
+        else {
+          setError("");
+          setBoard(res);
+        }
         // Pick up the background result before its 60-second cache expires again.
         if (res.refreshing) delay = 2_000;
       } catch (err) {
@@ -61,11 +64,17 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
       }
     };
     void load();
-    return () => { cancel = true; window.clearTimeout(timer); };
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
   }, []);
 
   const universe = useMemo(() => board?.items || [], [board]);
-  const all = useMemo(() => scope === "universe" ? universe : universe.filter((q) => q.index?.includes("SP500")), [universe, scope]);
+  const all = useMemo(
+    () => (scope === "universe" ? universe : universe.filter((q) => q.index?.includes("SP500"))),
+    [universe, scope],
+  );
   useEffect(() => setPage(0), [scope, sector, filter, sort]);
   const totalCap = useMemo(() => all.reduce((s, q) => s + (q.marketCap || 0), 0) || 1, [all]);
 
@@ -81,7 +90,9 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
       if ((q.changePct || 0) < 0) cur.down += 1;
       map.set(key, cur);
     }
-    return [...map.entries()].map(([name, v]) => ({ name, ...v, pct: v.cap ? v.weighted / v.cap : 0 })).sort((a, b) => b.cap - a.cap);
+    return [...map.entries()]
+      .map(([name, v]) => ({ name, ...v, pct: v.cap ? v.weighted / v.cap : 0 }))
+      .sort((a, b) => b.cap - a.cap);
   }, [all]);
 
   const breadth = useMemo(() => {
@@ -93,10 +104,11 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    const list = (scope === "all" ? all : universe).filter((r) =>
-      (["all", "universe"].includes(scope) || (scope === "core" ? r.core : hasSymbol(r.symbol)))
-      && (sector === "All" || (r.sector || "Other") === sector)
-      && (!q || `${r.symbol} ${r.name} ${r.industry}`.toLowerCase().includes(q))
+    const list = (scope === "all" ? all : universe).filter(
+      (r) =>
+        (["all", "universe"].includes(scope) || (scope === "core" ? r.core : hasSymbol(r.symbol))) &&
+        (sector === "All" || (r.sector || "Other") === sector) &&
+        (!q || `${r.symbol} ${r.name} ${r.industry}`.toLowerCase().includes(q)),
     );
     const get = (r: Quote) => (sort.key === "weight" ? r.marketCap : r[sort.key]);
     return [...list].sort((a, b) => {
@@ -108,12 +120,21 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
     });
   }, [all, universe, scope, sector, filter, sort, hasSymbol]);
 
-  useEffect(() => setPage(p => Math.min(p, Math.max(0, Math.ceil(rows.length / 100) - 1))), [rows.length]);
+  useEffect(() => setPage((p) => Math.min(p, Math.max(0, Math.ceil(rows.length / 100) - 1))), [rows.length]);
 
   const head = (key: SortKey, label: string) => (
     <th className={sort.key === key ? "sorted" : undefined}>
-      <button onClick={() => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : key === "symbol" || key === "name" || key === "sector" ? 1 : -1 }))}>
-        {label}{sort.key === key ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
+      <button
+        onClick={() =>
+          setSort((s) => ({
+            key,
+            dir:
+              s.key === key ? (s.dir === 1 ? -1 : 1) : key === "symbol" || key === "name" || key === "sector" ? 1 : -1,
+          }))
+        }
+      >
+        {label}
+        {sort.key === key ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
       </button>
     </th>
   );
@@ -125,26 +146,80 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
           <strong>{scope === "universe" ? "LISTED UNIVERSE" : "S&P 500"}</strong>
           <span>{all.length ? `${rows.length} of ${all.length} names` : "Loading one screener call"}</span>
           <span className="scope toggle">
-            <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>S&amp;P 500</button>
-            <button aria-pressed={scope === "universe"} onClick={() => setScope("universe")}>All listed ({universe.length})</button>
-            <button aria-pressed={scope === "core"} onClick={() => setScope("core")}>Curated joins</button>
-            <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}><IconLabel icon="star-on">Watchlist</IconLabel></button>
+            <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>
+              S&amp;P 500
+            </button>
+            <button aria-pressed={scope === "universe"} onClick={() => setScope("universe")}>
+              All listed ({universe.length})
+            </button>
+            <button aria-pressed={scope === "core"} onClick={() => setScope("core")}>
+              Curated joins
+            </button>
+            <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}>
+              <IconLabel icon="star-on">Watchlist</IconLabel>
+            </button>
           </span>
-          {onMap ? <button className="go-btn" onClick={onMap} title="Every constituent's SEC business address on the district map, with counts per district"><IconLabel icon="hq">HQ map</IconLabel></button> : null}
-          <input className="board-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter symbol, name, industry" aria-label="Filter" />
+          {onMap ? (
+            <button
+              className="go-btn"
+              onClick={onMap}
+              title="Every constituent's SEC business address on the district map, with counts per district"
+            >
+              <IconLabel icon="hq">HQ map</IconLabel>
+            </button>
+          ) : null}
+          <input
+            className="board-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter symbol, name, industry"
+            aria-label="Filter"
+          />
         </div>
         <p className="breadth">
-          <span><em>ADV</em><b className="up">{breadth.up}</b></span>
-          <span><em>DEC</em><b className="down">{breadth.down}</b></span>
-          <span><em>FLAT</em>{breadth.flat}</span>
-          <span title="Market-cap weighted average of the listed members. Not the official S&P 500 index level."><em>CAP-WTD</em><b className={tone(breadth.weighted)}>{breadth.weighted >= 0 ? "+" : ""}{breadth.weighted.toFixed(2)}%</b></span>
-          <span className="breadth-bar" aria-hidden="true"><i className="up-bg" style={{ flex: breadth.up }} /><i style={{ flex: breadth.flat }} /><i className="down-bg" style={{ flex: breadth.down }} /></span>
+          <span>
+            <em>ADV</em>
+            <b className="up">{breadth.up}</b>
+          </span>
+          <span>
+            <em>DEC</em>
+            <b className="down">{breadth.down}</b>
+          </span>
+          <span>
+            <em>FLAT</em>
+            {breadth.flat}
+          </span>
+          <span title="Market-cap weighted average of the listed members. Not the official S&P 500 index level.">
+            <em>CAP-WTD</em>
+            <b className={tone(breadth.weighted)}>
+              {breadth.weighted >= 0 ? "+" : ""}
+              {breadth.weighted.toFixed(2)}%
+            </b>
+          </span>
+          <span className="breadth-bar" aria-hidden="true">
+            <i className="up-bg" style={{ flex: breadth.up }} />
+            <i style={{ flex: breadth.flat }} />
+            <i className="down-bg" style={{ flex: breadth.down }} />
+          </span>
         </p>
         <div className="sector-strip">
-          <button aria-pressed={sector === "All"} onClick={() => setSector("All")}><span>All sectors</span><b className={tone(breadth.weighted)}>{breadth.weighted.toFixed(2)}%</b></button>
+          <button aria-pressed={sector === "All"} onClick={() => setSector("All")}>
+            <span>All sectors</span>
+            <b className={tone(breadth.weighted)}>{breadth.weighted.toFixed(2)}%</b>
+          </button>
           {sectors.map((s) => (
-            <button key={s.name} aria-pressed={sector === s.name} onClick={() => setSector(sector === s.name ? "All" : s.name)} style={{ ["--heat" as string]: heat(s.pct) }} title={`${s.n} names · ${s.up} up / ${s.down} down · ${(s.cap / totalCap * 100).toFixed(1)}% of cap`}>
-              <span>{s.name}</span><b className={tone(s.pct)}>{s.pct >= 0 ? "+" : ""}{s.pct.toFixed(2)}%</b>
+            <button
+              key={s.name}
+              aria-pressed={sector === s.name}
+              onClick={() => setSector(sector === s.name ? "All" : s.name)}
+              style={{ ["--heat" as string]: heat(s.pct) }}
+              title={`${s.n} names · ${s.up} up / ${s.down} down · ${((s.cap / totalCap) * 100).toFixed(1)}% of cap`}
+            >
+              <span>{s.name}</span>
+              <b className={tone(s.pct)}>
+                {s.pct >= 0 ? "+" : ""}
+                {s.pct.toFixed(2)}%
+              </b>
             </button>
           ))}
         </div>
@@ -153,8 +228,20 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
           <em>AS OF</em> {when(board?.asOf)}
           <em>NOTE</em> {board?.latency || "Delayed quotes."}
         </p>
-      <div className="board-title" aria-label="Quote pages"><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button><span>{rows.length ? `${page * 100 + 1}–${Math.min(rows.length, (page + 1) * 100)} of ${rows.length}` : "No matching quotes"}</span><button disabled={(page + 1) * 100 >= rows.length} onClick={() => setPage(p => p + 1)}>Next</button></div>
-      {error ? <p className="tape-empty">{error}</p> : null}
+        <div className="board-title" aria-label="Quote pages">
+          <button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            Previous
+          </button>
+          <span>
+            {rows.length
+              ? `${page * 100 + 1}–${Math.min(rows.length, (page + 1) * 100)} of ${rows.length}`
+              : "No matching quotes"}
+          </span>
+          <button disabled={(page + 1) * 100 >= rows.length} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </button>
+        </div>
+        {error ? <p className="tape-empty">{error}</p> : null}
       </header>
       <div className="board-scroll">
         <table>
@@ -174,16 +261,33 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
             {rows.slice(page * 100, (page + 1) * 100).map((q) => (
               <tr key={q.symbol} onClick={() => onOpen(q.symbol)}>
                 <td>
-                  <button className={hasSymbol(q.symbol) ? "star on" : "star"} title={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"} onClick={(e) => { e.stopPropagation(); toggleSymbol(q.symbol); }} aria-label={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"}><Icon name={hasSymbol(q.symbol) ? "star-on" : "star"} size={12} /></button>
-                  {q.symbol}{q.core ? <small className="tag"> JOIN</small> : null}
+                  <button
+                    className={hasSymbol(q.symbol) ? "star on" : "star"}
+                    title={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSymbol(q.symbol);
+                    }}
+                    aria-label={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"}
+                  >
+                    <Icon name={hasSymbol(q.symbol) ? "star-on" : "star"} size={12} />
+                  </button>
+                  {q.symbol}
+                  {q.core ? <small className="tag"> JOIN</small> : null}
                 </td>
                 <td className="board-name">{q.name}</td>
                 <td className="board-name dim">{q.sector}</td>
                 <td>{q.last == null ? "—" : q.last.toFixed(2)}</td>
-                <td className={tone(q.changePct)}>{q.changePct == null ? "—" : `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%`}</td>
+                <td className={tone(q.changePct)}>
+                  {q.changePct == null ? "—" : `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%`}
+                </td>
                 <td>{q.volume ? big(q.volume) : "—"}</td>
                 <td>{q.marketCap ? big(q.marketCap) : "—"}</td>
-                <td className="dim">{(scope === "universe" || q.index?.includes("SP500")) && q.marketCap ? `${(q.marketCap / totalCap * 100).toFixed(2)}%` : "—"}</td>
+                <td className="dim">
+                  {(scope === "universe" || q.index?.includes("SP500")) && q.marketCap
+                    ? `${((q.marketCap / totalCap) * 100).toFixed(2)}%`
+                    : "—"}
+                </td>
               </tr>
             ))}
           </tbody>

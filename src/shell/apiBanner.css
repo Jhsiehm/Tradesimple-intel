@@ -18,7 +18,9 @@
   font-size: 12px;
   pointer-events: none;
 }
-.api-banner[hidden] { display: none; }
+.api-banner[hidden] {
+  display: none;
+}
 .api-banner-dot {
   width: 7px;
   height: 7px;
@@ -26,5 +28,13 @@
   background: var(--amber);
   animation: api-banner-pulse 1.2s ease-in-out infinite;
 }
-@keyframes api-banner-pulse { 50% { opacity: 0.25; } }
-@media (prefers-reduced-motion: reduce) { .api-banner-dot { animation: none; } }
+@keyframes api-banner-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .api-banner-dot {
+    animation: none;
+  }
+}

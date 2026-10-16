@@ -30,7 +30,8 @@ export function stageFromText(text) {
   if (/became public law|became law|signed by president/.test(t)) return "became law";
   if (/enrolled/.test(t)) return "enrolled";
   if (/passed senate|passed house|agreed to in senate|agreed to in house/.test(t)) return "passed chamber";
-  if (/placed on senate legislative calendar|placed on house calendar|rule provides|consideration/.test(t)) return "floor";
+  if (/placed on senate legislative calendar|placed on house calendar|rule provides|consideration/.test(t))
+    return "floor";
   if (/reported|ordered to be reported/.test(t)) return "reported";
   if (/markup/.test(t)) return "markup";
   if (/referred to|committee/.test(t)) return "committee";
@@ -57,9 +58,9 @@ export function ladderFromActions(actions) {
   return {
     stages: STAGES.map((name, index) => ({
       name,
-      reached: index <= highest && hits.length > 0
+      reached: index <= highest && hits.length > 0,
     })),
     current: hits.length ? STAGES[highest] : "introduced",
-    actions: hits.slice(-8).reverse()
+    actions: hits.slice(-8).reverse(),
   };
 }

@@ -1,4 +1,4 @@
-import { handlers as research } from './research.mjs';
+import { handlers as research } from "./research.mjs";
 import { createRouter } from "../router.mjs";
 import { MANIFEST } from "./manifest.mjs";
 import { handlers as system } from "./system.mjs";
@@ -16,6 +16,20 @@ import { handlers as live } from "./live.mjs";
 
 export { MANIFEST };
 
-export const handlers = { ...research, ...system, ...congress, ...markets, ...corporate, ...world, ...relations, ...backtest, ...ask, ...tasks, ...watchlist, ...notify, ...live };
+export const handlers = {
+  ...research,
+  ...system,
+  ...congress,
+  ...markets,
+  ...corporate,
+  ...world,
+  ...relations,
+  ...backtest,
+  ...ask,
+  ...tasks,
+  ...watchlist,
+  ...notify,
+  ...live,
+};
 
 export const router = () => createRouter(MANIFEST, handlers);

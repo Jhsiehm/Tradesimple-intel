@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { amountMid, buildLeaders, buyReturns, dayNum, indexOnOrAfter, memberStats, pickSymbols, tradeReturn } from "../server/returns.mjs";
+import {
+  amountMid,
+  buildLeaders,
+  buyReturns,
+  dayNum,
+  indexOnOrAfter,
+  memberStats,
+  pickSymbols,
+  tradeReturn,
+} from "../server/returns.mjs";
 
 /** Weekday closes from `from` for `n` days, price = f(i). */
 function series(from, n, f) {
@@ -18,7 +27,11 @@ const spy = series("2025-01-02", 300, (i) => 100 * (1 + i * 0.001));
 const nvda = series("2025-01-02", 300, (i) => 50 * (1 + i * 0.004));
 
 test("indexOnOrAfter finds the first close on or after a day", () => {
-  const s = [[10, 1], [12, 2], [15, 3]];
+  const s = [
+    [10, 1],
+    [12, 2],
+    [15, 3],
+  ];
   assert.equal(indexOnOrAfter(s, 9), 0);
   assert.equal(indexOnOrAfter(s, 12), 1);
   assert.equal(indexOnOrAfter(s, 13), 2);
@@ -55,16 +68,74 @@ test("tradeReturn is null without a close near the trade date, and skips horizon
 });
 
 const trades = [
-  { id: "1", bioguide: "A000001", person: "Ann", side: "buy", symbol: "NVDA", inJoin: true, traded: "2025-01-06", amount: "$1,001 - $15,000", amountLow: 1001, lag: 10, filed: "2025-01-16", link: "r1" },
-  { id: "2", bioguide: "A000001", person: "Ann", side: "buy", symbol: "SPYX", inJoin: true, traded: "2025-01-06", amount: "$15,001 - $50,000", amountLow: 15001, lag: 60, filed: "2025-03-07", link: "r2" },
-  { id: "3", bioguide: "A000001", person: "Ann", side: "sell", symbol: "NVDA", inJoin: true, traded: "2025-02-03", amount: "$1,001 - $15,000", amountLow: 1001, lag: 400, filed: "2026-03-10", link: "r3" },
-  { id: "4", bioguide: "B000001", person: "Bo", side: "buy", symbol: "NOPE", inJoin: false, traded: "2025-01-06", amount: "$1,001 - $15,000", amountLow: 1001, lag: 5, filed: "2025-01-11", link: "r4" }
+  {
+    id: "1",
+    bioguide: "A000001",
+    person: "Ann",
+    side: "buy",
+    symbol: "NVDA",
+    inJoin: true,
+    traded: "2025-01-06",
+    amount: "$1,001 - $15,000",
+    amountLow: 1001,
+    lag: 10,
+    filed: "2025-01-16",
+    link: "r1",
+  },
+  {
+    id: "2",
+    bioguide: "A000001",
+    person: "Ann",
+    side: "buy",
+    symbol: "SPYX",
+    inJoin: true,
+    traded: "2025-01-06",
+    amount: "$15,001 - $50,000",
+    amountLow: 15001,
+    lag: 60,
+    filed: "2025-03-07",
+    link: "r2",
+  },
+  {
+    id: "3",
+    bioguide: "A000001",
+    person: "Ann",
+    side: "sell",
+    symbol: "NVDA",
+    inJoin: true,
+    traded: "2025-02-03",
+    amount: "$1,001 - $15,000",
+    amountLow: 1001,
+    lag: 400,
+    filed: "2026-03-10",
+    link: "r3",
+  },
+  {
+    id: "4",
+    bioguide: "B000001",
+    person: "Bo",
+    side: "buy",
+    symbol: "NOPE",
+    inJoin: false,
+    traded: "2025-01-06",
+    amount: "$1,001 - $15,000",
+    amountLow: 1001,
+    lag: 5,
+    filed: "2025-01-11",
+    link: "r4",
+  },
 ];
-const closes = new Map([["NVDA", nvda], ["SPYX", spy]]);
+const closes = new Map([
+  ["NVDA", nvda],
+  ["SPYX", spy],
+]);
 
 test("buyReturns scores joined buys only, and memberStats summarizes them equal- and mid-weighted", () => {
   const rows = buyReturns(trades, closes, spy);
-  assert.deepEqual(rows.map((r) => r.id), ["1", "2"]);
+  assert.deepEqual(
+    rows.map((r) => r.id),
+    ["1", "2"],
+  );
   const s = memberStats(trades, rows).get("A000001");
   assert.equal(s.buys, 2);
   assert.equal(s.priced, 2);

@@ -14,7 +14,7 @@ const SOURCES = [
   /\b(contracts?|usaspending|awards?)\b/i,
   /\blobby(ing|ists?)?\b/i,
   /\b(prices?|returns?|spy|benchmark)\b/i,
-  /\b(bills?|votes?|committees?|hearings?)\b/i
+  /\b(bills?|votes?|committees?|hearings?)\b/i,
 ];
 const ALL_SOURCES = /\b(all|every|each|multiple|several) (of the )?(data )?(sources|feeds)\b|\bcross-?reference\b/i;
 
@@ -56,7 +56,10 @@ export function nudgeToAuto(choice) {
 
 /** "anthropic/claude-sonnet-4.6" → "Sonnet 4.6", "openai/gpt-4.1-mini" → "GPT-4.1 mini", "google/gemini-2.5-pro" → "Gemini 2.5 Pro". */
 export function modelShort(id) {
-  const base = String(id || "").split("/").pop().replace(/:.*$/, "");
+  const base = String(id || "")
+    .split("/")
+    .pop()
+    .replace(/:.*$/, "");
   if (!base) return "";
   const claude = base.match(/^claude-(?:(\d+(?:[.-]\d+)?)-)?(opus|sonnet|haiku)(?:-(\d+(?:[.-]\d+)?))?/i);
   if (claude) {
@@ -65,5 +68,8 @@ export function modelShort(id) {
   }
   const gpt = base.match(/^gpt-([\w.]+?)(?:-(mini|nano|turbo))?$/i);
   if (gpt) return `GPT-${gpt[1]}${gpt[2] ? ` ${gpt[2].toLowerCase()}` : ""}`;
-  return base.split("-").map((w) => (/^\d/.test(w) ? w : w[0].toUpperCase() + w.slice(1))).join(" ");
+  return base
+    .split("-")
+    .map((w) => (/^\d/.test(w) ? w : w[0].toUpperCase() + w.slice(1)))
+    .join(" ");
 }

@@ -50,17 +50,35 @@ export function TimeBar({ domain, value, onChange, notes, title }: Props) {
     <div className="timebar" role="group" aria-label={title}>
       <div className="timebar-controls">
         <em>{title}</em>
-        <button onClick={() => nudge(-1)} title="Back one frame" aria-label="Back one frame">◂</button>
-        <button className="timebar-play" onClick={play} aria-pressed={playing} title={playing ? "Pause" : value == null ? "Replay the window up to now" : "Play forward to now"}>
+        <button onClick={() => nudge(-1)} title="Back one frame" aria-label="Back one frame">
+          ◂
+        </button>
+        <button
+          className="timebar-play"
+          onClick={play}
+          aria-pressed={playing}
+          title={playing ? "Pause" : value == null ? "Replay the window up to now" : "Play forward to now"}
+        >
           {playing ? "❚❚" : "▶"}
         </button>
-        <button onClick={() => nudge(1)} title="Forward one frame" aria-label="Forward one frame">▸</button>
+        <button onClick={() => nudge(1)} title="Forward one frame" aria-label="Forward one frame">
+          ▸
+        </button>
         <span className="seg timebar-speed" title="Frames per tick">
           {SPEEDS.map((s) => (
-            <button key={s} aria-pressed={speed === s} onClick={() => setSpeed(s)}>{s}×</button>
+            <button key={s} aria-pressed={speed === s} onClick={() => setSpeed(s)}>
+              {s}×
+            </button>
           ))}
         </span>
-        <button className={value == null ? "timebar-now on" : "timebar-now"} onClick={() => { setPlaying(false); onChange(null); }} title="Jump to the latest frame and follow it">
+        <button
+          className={value == null ? "timebar-now on" : "timebar-now"}
+          onClick={() => {
+            setPlaying(false);
+            onChange(null);
+          }}
+          title="Jump to the latest frame and follow it"
+        >
           {value == null ? "● LIVE" : "NOW"}
         </button>
         <strong className="timebar-at">{stamp(cursor, daily)}</strong>
@@ -72,14 +90,19 @@ export function TimeBar({ domain, value, onChange, notes, title }: Props) {
         max={domain.end}
         step={domain.step}
         value={cursor}
-        onChange={(e) => { const t = Number(e.target.value); onChange(t >= domain.end ? null : t); }}
+        onChange={(e) => {
+          const t = Number(e.target.value);
+          onChange(t >= domain.end ? null : t);
+        }}
         aria-label="Time"
       />
       <div className="timebar-scale">
         <span>{stamp(domain.start, daily)}</span>
         <span className="timebar-notes">
           {notes.map((n) => (
-            <span key={n.label} className={n.tone === "stale" ? "stale" : undefined}><b>{n.label}</b> {n.text}</span>
+            <span key={n.label} className={n.tone === "stale" ? "stale" : undefined}>
+              <b>{n.label}</b> {n.text}
+            </span>
           ))}
         </span>
         <span>{stamp(domain.end, daily)}</span>

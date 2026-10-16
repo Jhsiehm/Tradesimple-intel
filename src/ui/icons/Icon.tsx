@@ -11,7 +11,17 @@ export type { IconName } from "./names";
  * Inline SVG icon from the hand-drawn set. Decorative (`aria-hidden`) unless `title` is given; the button
  * around it carries the accessible name.
  */
-export function Icon({ name, size = 14, title, className }: { name: IconName; size?: number; title?: string; className?: string }) {
+export function Icon({
+  name,
+  size = 14,
+  title,
+  className,
+}: {
+  name: IconName;
+  size?: number;
+  title?: string;
+  className?: string;
+}) {
   return (
     <svg
       className={className ? `ic ${className}` : "ic"}
@@ -30,7 +40,9 @@ export function Icon({ name, size = 14, title, className }: { name: IconName; si
     >
       {title ? <title>{title}</title> : null}
       <g className="ic-glyph">
-        {PATHS[name].map((p, i) => (typeof p === "string" ? <path key={i} d={p} /> : <path key={i} d={p.d} fill="currentColor" />))}
+        {PATHS[name].map((p, i) =>
+          typeof p === "string" ? <path key={i} d={p} /> : <path key={i} d={p.d} fill="currentColor" />,
+        )}
       </g>
     </svg>
   );

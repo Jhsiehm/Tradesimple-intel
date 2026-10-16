@@ -6,7 +6,14 @@ const off = { intelOn: false };
 const on = { intelOn: true };
 
 test("section picks close the stage, clear selection and dossier, reset the scrubber, drop unpinned cards", () => {
-  assert.deepEqual(viewFor("section:districts", off), { stage: true, section: "districts", dossier: null, selectedId: null, scope: "all", dropCards: true });
+  assert.deepEqual(viewFor("section:districts", off), {
+    stage: true,
+    section: "districts",
+    dossier: null,
+    selectedId: null,
+    scope: "all",
+    dropCards: true,
+  });
 });
 
 test("Congress, Markets sub-tabs land in their section with the mode or view set", () => {
@@ -19,7 +26,15 @@ test("Congress, Markets sub-tabs land in their section with the mode or view set
 });
 
 test("bill links open the vote map like a bill row click; roll-call links keep the chamber", () => {
-  assert.deepEqual(viewFor("bill:hr1-119", off), { stage: true, section: "congress", dossier: null, mode: "bills", voteView: "map", mapLayer: "votes", selectedId: "hr1-119" });
+  assert.deepEqual(viewFor("bill:hr1-119", off), {
+    stage: true,
+    section: "congress",
+    dossier: null,
+    mode: "bills",
+    voteView: "map",
+    mapLayer: "votes",
+    selectedId: "hr1-119",
+  });
   const vote = viewFor("vote:senate-119-1-42", off);
   assert.equal(vote.chamber, "senate");
   assert.equal(vote.mode, "votes");
@@ -34,7 +49,14 @@ test("committee links pick the chamber from the code prefix", () => {
 });
 
 test("HQ switches Districts to the S&P 500 HQ layer and selects the company; bare HQ shows the layer", () => {
-  assert.deepEqual(viewFor("hq:lmt", off), { stage: true, section: "districts", dossier: null, districtLayer: "hq", selectedId: "hq:LMT", rail: true });
+  assert.deepEqual(viewFor("hq:lmt", off), {
+    stage: true,
+    section: "districts",
+    dossier: null,
+    districtLayer: "hq",
+    selectedId: "hq:LMT",
+    rail: true,
+  });
   assert.equal(viewFor("hq:", off).selectedId, null);
 });
 
@@ -61,11 +83,33 @@ test("contracts scope parses ticker, district, member, and falls back to all age
 
 test("scope stays put when the scrubber is on screen, else opens the Congress map", () => {
   assert.deepEqual(viewFor("scope:member:P000197", on), { scope: "member:P000197" });
-  assert.deepEqual(viewFor("scope:member:P000197", off), { stage: true, section: "congress", dossier: null, voteView: "map", mapLayer: "votes", selectedId: null, scope: "member:P000197" });
+  assert.deepEqual(viewFor("scope:member:P000197", off), {
+    stage: true,
+    section: "congress",
+    dossier: null,
+    voteView: "map",
+    mapLayer: "votes",
+    selectedId: null,
+    scope: "member:P000197",
+  });
 });
 
 test("side-effect actions are left to App", () => {
-  for (const a of ["member:P000197", "ticker:LMT", "chart:LMT", "pos:LMT", "supply:TSM", "timeline:P000197", "roll:house-1", "news:x", "meeting:1", "today:week", "calendar:", "alerts:", "map:city"]) {
+  for (const a of [
+    "member:P000197",
+    "ticker:LMT",
+    "chart:LMT",
+    "pos:LMT",
+    "supply:TSM",
+    "timeline:P000197",
+    "roll:house-1",
+    "news:x",
+    "meeting:1",
+    "today:week",
+    "calendar:",
+    "alerts:",
+    "map:city",
+  ]) {
     assert.equal(viewFor(a, off), null, a);
   }
 });
@@ -82,7 +126,8 @@ test("applyView only sets view fields; viewOnly strips everything else", () => {
 });
 
 const SAT_3D = { base: "live", view: "3d", labels: true, lanes: true };
-const look = (patch, at = {}) => mapLook(applyView(START_VIEW, patch), { onMap: true, scoped: false, settings: SAT_3D, ...at });
+const look = (patch, at = {}) =>
+  mapLook(applyView(START_VIEW, patch), { onMap: true, scoped: false, settings: SAT_3D, ...at });
 
 test("a bill's vote map runs flat and dark at full fill with no arcs", () => {
   const l = look(viewFor("bill:hr-119-5334", off));

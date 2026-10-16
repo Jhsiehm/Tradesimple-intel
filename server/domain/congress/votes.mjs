@@ -31,7 +31,7 @@ export async function listVotes(db, chamber) {
     date: v.startDate || v.date || "",
     result: v.result || "",
     question: v.voteQuestion || [v.legislationType, v.legislationNumber].filter(Boolean).join(" ") || "Roll call",
-    bill: [v.legislationType, v.legislationNumber].filter(Boolean).join(" ")
+    bill: [v.legislationType, v.legislationNumber].filter(Boolean).join(" "),
   }));
   await pool(items, 4, async (item) => {
     const totals = await houseMargin(db, item.congress, item.session, item.roll);
@@ -66,9 +66,7 @@ export async function voteDetail(db, chamber, congress, session, roll) {
   if (!res.ok) return res;
   const root = res.body.houseRollCallVote || res.body.vote || res.body;
   const memberRes = await congressGet(db, `/house-vote/${congress}/${session}/${roll}/members?limit=500`);
-  const pack = memberRes.ok
-    ? memberRes.body.houseRollCallVoteMemberVotes || memberRes.body
-    : {};
+  const pack = memberRes.ok ? memberRes.body.houseRollCallVoteMemberVotes || memberRes.body : {};
   const members = pack.results || extractMembers(root);
   const directory = await memberIndex(db);
   const positions = members.map((m) => {
@@ -86,7 +84,7 @@ export async function voteDetail(db, chamber, congress, session, roll) {
       vote,
       party,
       geoid: houseGeoid(state, district),
-      bioguide
+      bioguide,
     };
   });
   const totals = countVotes(positions);
@@ -102,8 +100,8 @@ export async function voteDetail(db, chamber, congress, session, roll) {
       bill: [root.legislationType, root.legislationNumber].filter(Boolean).join(" "),
       date: root.startDate || "",
       totals,
-      positions
-    }
+      positions,
+    },
   };
 }
 
@@ -122,7 +120,7 @@ async function houseFromClerk(db, row, congress, session, roll) {
       vote: UNCAST[cast] || "Not voting",
       party: normalizeParty(known.party || ""),
       geoid: houseGeoid(known.state, known.district),
-      bioguide
+      bioguide,
     };
   });
   return {
@@ -137,8 +135,8 @@ async function houseFromClerk(db, row, congress, session, roll) {
       bill: row.bill || "",
       date: row.date || "",
       totals: countVotes(positions),
-      positions
-    }
+      positions,
+    },
   };
 }
 
@@ -168,7 +166,7 @@ async function listSenateVotes(db) {
       question,
       bill: issue || "",
       yea: Number(xmlTag(block, "yeas")) || 0,
-      nay: Number(xmlTag(block, "nays")) || 0
+      nay: Number(xmlTag(block, "nays")) || 0,
     };
   });
   items.sort((a, b) => Number(b.roll) - Number(a.roll));
@@ -201,7 +199,7 @@ async function senateVoteDetail(db, congress, session, roll) {
       vote,
       party,
       geoid: null,
-      bioguide: byLis.get(lis)?.bioguide || lis || ""
+      bioguide: byLis.get(lis)?.bioguide || lis || "",
     };
   });
   const totals = countVotes(positions);
@@ -217,8 +215,8 @@ async function senateVoteDetail(db, congress, session, roll) {
       bill: cleanText(xmlTag(xml, "vote_document_text")).slice(0, 120),
       date: cleanText(xmlTag(xml, "vote_date")),
       totals,
-      positions
-    }
+      positions,
+    },
   };
 }
 

@@ -11,7 +11,7 @@ try {
       if (now - last < 200 && done < total) return;
       last = now;
       parentPort.postMessage({ type: "progress", done, total });
-    }
+    },
   });
   parentPort.postMessage({ type: "done", outcome });
 } catch (err) {

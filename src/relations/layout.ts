@@ -19,7 +19,10 @@ export function fan(parent: Pt, ids: string[], neighbors: Pt[], taken: Pt[] = []
   if (!ids.length) return out;
   let away = -Math.PI / 2;
   let room = Math.PI * 2;
-  const angles = neighbors.filter((p) => Math.hypot(p.x - parent.x, p.y - parent.y) > 1).map((p) => Math.atan2(p.y - parent.y, p.x - parent.x)).sort((a, b) => a - b);
+  const angles = neighbors
+    .filter((p) => Math.hypot(p.x - parent.x, p.y - parent.y) > 1)
+    .map((p) => Math.atan2(p.y - parent.y, p.x - parent.x))
+    .sort((a, b) => a - b);
   if (angles.length) {
     room = 0;
     for (let i = 0; i < angles.length; i += 1) {
@@ -37,9 +40,11 @@ export function fan(parent: Pt, ids: string[], neighbors: Pt[], taken: Pt[] = []
   const free = (p: Pt) => {
     const cx = Math.floor(p.x / GAP);
     const cy = Math.floor(p.y / GAP);
-    for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
-      for (const q of grid.get(`${cx + dx},${cy + dy}`) || []) if (Math.hypot(p.x - q.x, p.y - q.y) < GAP) return false;
-    }
+    for (let dx = -1; dx <= 1; dx += 1)
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (const q of grid.get(`${cx + dx},${cy + dy}`) || [])
+          if (Math.hypot(p.x - q.x, p.y - q.y) < GAP) return false;
+      }
     return true;
   };
   for (const p of taken) hold(p);
@@ -84,19 +89,20 @@ export function relax(all: Placed[], moving: Map<string, Pt>, anchors: Map<strin
       let fy = 0;
       const cx = Math.floor(p.x / cell);
       const cy = Math.floor(p.y / cell);
-      for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
-        for (const q of grid.get(`${cx + dx},${cy + dy}`) || []) {
-          if (q === p) continue;
-          const ddx = p.x - q.x;
-          const ddy = p.y - q.y;
-          const d2 = ddx * ddx + ddy * ddy;
-          if (d2 > cell * cell) continue;
-          const d = Math.sqrt(d2) || 0.01;
-          const push = (cell - d) / d;
-          fx += ddx * push * 0.5;
-          fy += ddy * push * 0.5;
+      for (let dx = -1; dx <= 1; dx += 1)
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (const q of grid.get(`${cx + dx},${cy + dy}`) || []) {
+            if (q === p) continue;
+            const ddx = p.x - q.x;
+            const ddy = p.y - q.y;
+            const d2 = ddx * ddx + ddy * ddy;
+            if (d2 > cell * cell) continue;
+            const d = Math.sqrt(d2) || 0.01;
+            const push = (cell - d) / d;
+            fx += ddx * push * 0.5;
+            fy += ddy * push * 0.5;
+          }
         }
-      }
       const a = anchors.get(id);
       if (a) {
         fx += (a.x - p.x) * 0.04;
@@ -130,18 +136,19 @@ export function settle(nodes: Placed[], links: [string, string][], rounds = 120)
       const f = force.get(id)!;
       const cx = Math.floor(p.x / cell);
       const cy = Math.floor(p.y / cell);
-      for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
-        for (const other of grid.get(`${cx + dx},${cy + dy}`) || []) {
-          if (other === id) continue;
-          const q = pos.get(other)!;
-          const ddx = p.x - q.x;
-          const ddy = p.y - q.y;
-          const d2 = Math.max(25, ddx * ddx + ddy * ddy);
-          if (d2 > cell * cell) continue;
-          f.x += (ddx / d2) * 900;
-          f.y += (ddy / d2) * 900;
+      for (let dx = -1; dx <= 1; dx += 1)
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (const other of grid.get(`${cx + dx},${cy + dy}`) || []) {
+            if (other === id) continue;
+            const q = pos.get(other)!;
+            const ddx = p.x - q.x;
+            const ddy = p.y - q.y;
+            const d2 = Math.max(25, ddx * ddx + ddy * ddy);
+            if (d2 > cell * cell) continue;
+            f.x += (ddx / d2) * 900;
+            f.y += (ddy / d2) * 900;
+          }
         }
-      }
     }
     for (const [a, b] of links) {
       const p = pos.get(a);

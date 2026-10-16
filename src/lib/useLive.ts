@@ -10,10 +10,18 @@ export function useLive(active: boolean) {
   useEffect(() => {
     if (!active) return;
     let cancel = false;
-    const load = () => api<LiveImagery>("/api/earth/live").then((res) => { if (!cancel) setLive(res); }).catch(() => null);
+    const load = () =>
+      api<LiveImagery>("/api/earth/live")
+        .then((res) => {
+          if (!cancel) setLive(res);
+        })
+        .catch(() => null);
     void load();
     const timer = window.setInterval(load, POLL);
-    return () => { cancel = true; window.clearInterval(timer); };
+    return () => {
+      cancel = true;
+      window.clearInterval(timer);
+    };
   }, [active]);
   return live;
 }
@@ -42,7 +50,13 @@ export function liveTiles(live: LiveImagery, t: number) {
   return live.layers.map((layer) => {
     const frame = frameAt(layer, t);
     const stamp = new Date(frame).toISOString().replace(/\.\d{3}Z$/, "Z");
-    return { key: layer.key, name: layer.name, frame, maxzoom: layer.maxzoom, tiles: [layer.template.replace("{time}", stamp)] };
+    return {
+      key: layer.key,
+      name: layer.name,
+      frame,
+      maxzoom: layer.maxzoom,
+      tiles: [layer.template.replace("{time}", stamp)],
+    };
   });
 }
 

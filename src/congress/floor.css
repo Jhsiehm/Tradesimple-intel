@@ -1,34 +1,140 @@
 /* Research-focused chamber: geometry carries the data, framing stays quiet. */
-.app[data-color-section="congress"] { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.app[data-color-section="congress"] .nav { letter-spacing: 0; }
-.app[data-color-section="congress"] .clock { display: none; }
-.app[data-color-section="congress"] .scope button { border-color: transparent; letter-spacing: 0; }
-.app[data-color-section="congress"] .scope button.on { background: #18201d; color: var(--ink); }
-.floor.floor { padding: 20px 24px 16px; background: var(--bg); }
-.floor .floor-bar { padding: 0 0 12px; gap: 16px; letter-spacing: 0; font-size: 13px; }
-.floor .floor-bar strong { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -0.02em; }
-.floor .floor-bar em { letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.floor .floor-color { margin-left: auto; }
-.floor .floor-color button { min-height: 32px; padding: 6px 12px; font-size: 13px; border-color: transparent; }
-.floor .floor-color button[aria-pressed="true"] { background: #18201d; border-color: #34403a; color: var(--ink); }
-.floor .floor-caption { padding: 0; white-space: normal; overflow: visible; font-size: 15px; line-height: 1.5; color: var(--ink); }
-.floor-source, .floor-note { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--dim); overflow-wrap: anywhere; }
-.floor .floor-arc { stroke: #151d19; stroke-width: 1; }
-.floor .floor-aisle { stroke: #25302a; stroke-width: 1; }
-.floor .floor-seat { cursor: pointer; }
-.floor .floor-seat:focus-visible { outline: none; stroke: #f0f1ee; stroke-width: 2.4; }
-.floor .floor-legend { position: static; max-width: none; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); font-size: 12px; letter-spacing: 0; gap: 16px; }
-.floor .floor-hud { position: static; max-width: none; min-height: 66px; margin: 12px 0 0; padding: 10px 0 0; border: 0; border-top: 1px solid var(--line); background: transparent; }
-.floor .floor-hud p { font-size: 13px; line-height: 1.45; }
-.floor .floor-hud strong { letter-spacing: 0; font-size: 14px; }
-.floor .floor-hover { grid-template-columns: 1fr; }
-.floor .floor-hover img { display: none; }
-@media (max-width: 640px) {
-  .floor.floor { padding: 14px 12px 10px; overflow-y: auto; }
-  .floor .floor-bar { gap: 8px; }
-  .floor .floor-bar strong { font-size: 18px; }
-  .floor .floor-bar em { flex-basis: 100%; text-align: left; }
-  .floor .floor-svg { min-height: 220px; }
-  .floor .floor-caption { font-size: 14px; }
+.app[data-color-section="congress"] {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-
+.app[data-color-section="congress"] .nav {
+  letter-spacing: 0;
+}
+.app[data-color-section="congress"] .clock {
+  display: none;
+}
+.app[data-color-section="congress"] .scope button {
+  border-color: transparent;
+  letter-spacing: 0;
+}
+.app[data-color-section="congress"] .scope button.on {
+  background: #18201d;
+  color: var(--ink);
+}
+.floor.floor {
+  padding: 20px 24px 16px;
+  background: var(--bg);
+}
+.floor .floor-bar {
+  padding: 0 0 12px;
+  gap: 16px;
+  letter-spacing: 0;
+  font-size: 13px;
+}
+.floor .floor-bar strong {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.floor .floor-bar em {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.floor .floor-color {
+  margin-left: auto;
+}
+.floor .floor-color button {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-color: transparent;
+}
+.floor .floor-color button[aria-pressed="true"] {
+  background: #18201d;
+  border-color: #34403a;
+  color: var(--ink);
+}
+.floor .floor-caption {
+  padding: 0;
+  white-space: normal;
+  overflow: visible;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.floor-source,
+.floor-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dim);
+  overflow-wrap: anywhere;
+}
+.floor .floor-arc {
+  stroke: #151d19;
+  stroke-width: 1;
+}
+.floor .floor-aisle {
+  stroke: #25302a;
+  stroke-width: 1;
+}
+.floor .floor-seat {
+  cursor: pointer;
+}
+.floor .floor-seat:focus-visible {
+  outline: none;
+  stroke: #f0f1ee;
+  stroke-width: 2.4;
+}
+.floor .floor-legend {
+  position: static;
+  max-width: none;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  letter-spacing: 0;
+  gap: 16px;
+}
+.floor .floor-hud {
+  position: static;
+  max-width: none;
+  min-height: 66px;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+.floor .floor-hud p {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.floor .floor-hud strong {
+  letter-spacing: 0;
+  font-size: 14px;
+}
+.floor .floor-hover {
+  grid-template-columns: 1fr;
+}
+.floor .floor-hover img {
+  display: none;
+}
+@media (max-width: 640px) {
+  .floor.floor {
+    padding: 14px 12px 10px;
+    overflow-y: auto;
+  }
+  .floor .floor-bar {
+    gap: 8px;
+  }
+  .floor .floor-bar strong {
+    font-size: 18px;
+  }
+  .floor .floor-bar em {
+    flex-basis: 100%;
+    text-align: left;
+  }
+  .floor .floor-svg {
+    min-height: 220px;
+  }
+  .floor .floor-caption {
+    font-size: 14px;
+  }
+}

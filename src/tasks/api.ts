@@ -28,11 +28,36 @@ export type TaskView = {
   nextRun: string | null;
   running: boolean;
   activeAttempt?: { id: string; stopRequested: boolean } | null;
-  last: { id: string; status: "ok" | "error" | "skipped"; severity: string; title: string; summary: string; at: string; source: string; asOf: string } | null;
+  last: {
+    id: string;
+    status: "ok" | "error" | "skipped";
+    severity: string;
+    title: string;
+    summary: string;
+    at: string;
+    source: string;
+    asOf: string;
+  } | null;
 };
 
-export type TaskControl = { revision: number; paused: boolean; reason: string; createdAt: string | null; actor: string | null };
-export type TasksRes = { ok: boolean; asOf?: string; control?: TaskControl; scheduler?: "on" | "off"; budget?: { perDay: number; usedToday: number }; items: TaskView[]; source?: string; latency?: string; error?: string };
+export type TaskControl = {
+  revision: number;
+  paused: boolean;
+  reason: string;
+  createdAt: string | null;
+  actor: string | null;
+};
+export type TasksRes = {
+  ok: boolean;
+  asOf?: string;
+  control?: TaskControl;
+  scheduler?: "on" | "off";
+  budget?: { perDay: number; usedToday: number };
+  items: TaskView[];
+  source?: string;
+  latency?: string;
+  error?: string;
+};
 type Out = { ok: boolean; error?: string; task?: TaskView };
 
 /** Fired after any change so every Scheduled list refreshes. */
@@ -41,11 +66,18 @@ const changed = () => window.dispatchEvent(new Event(TASKS_EVENT));
 
 async function send(method: "PATCH" | "DELETE", path: string, body?: unknown): Promise<Out> {
   if (DEMO) return { ok: false, error: "This needs the local server." };
-  const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const res = await fetch(path, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   return res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
 }
 
-export const listTasks = () => (DEMO ? Promise.resolve<TasksRes>({ ok: false, items: [], error: "Scheduled tasks need the local server." }) : api<TasksRes>("/api/tasks"));
+export const listTasks = () =>
+  DEMO
+    ? Promise.resolve<TasksRes>({ ok: false, items: [], error: "Scheduled tasks need the local server." })
+    : api<TasksRes>("/api/tasks");
 
 export async function createTask(draft: TaskDraft, watchSymbols: string[]): Promise<Out> {
   const out = await post<Out>("/api/tasks", { ...draft, watch: { symbols: watchSymbols } });
@@ -73,11 +105,27 @@ export async function runNow(id: string) {
 
 /** The stored result of one run, as an Ask turn (opens without running again). */
 export async function loadResult(runId: string): Promise<Turn | null> {
-  const res = await api<{ ok: boolean; run?: { result: Turn | null; title: string; summary: string; startedAt: string; status: string } }>(`/api/tasks/runs/${encodeURIComponent(runId)}`);
+  const res = await api<{
+    ok: boolean;
+    run?: { result: Turn | null; title: string; summary: string; startedAt: string; status: string };
+  }>(`/api/tasks/runs/${encodeURIComponent(runId)}`);
   const run = res.run;
   if (!run) return null;
   if (run.result) return { ...run.result, notes: [...(run.result.notes || [])] };
-  return { id: runId, question: run.title, at: run.startedAt, text: run.summary, steps: [], phase: "error", notes: [], done: null, clarify: null, error: run.summary, model: "", context: "" };
+  return {
+    id: runId,
+    question: run.title,
+    at: run.startedAt,
+    text: run.summary,
+    steps: [],
+    phase: "error",
+    notes: [],
+    done: null,
+    clarify: null,
+    error: run.summary,
+    model: "",
+    context: "",
+  };
 }
 
 export async function setAdmission(paused: boolean, baseRevision: number, reason: string) {

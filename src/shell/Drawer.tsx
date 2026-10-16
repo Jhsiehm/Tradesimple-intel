@@ -12,7 +12,7 @@ export function Drawer({
   onPin,
   onFollow,
   embedded,
-  source
+  source,
 }: {
   model: DrawerModel;
   onClose: () => void;
@@ -24,7 +24,13 @@ export function Drawer({
   const { hasSymbol } = useWatch();
   const watched = model.watch ? hasSymbol(model.watch) : false;
   const star = model.watch ? (
-    <button className={watched ? "star on" : "star"} title={watched ? "Remove from watchlist" : "Add to watchlist"} onClick={() => toggleSymbol(model.watch!)}><IconLabel icon={watched ? "star-on" : "star"}>{watched ? "Watching" : "Watch"}</IconLabel></button>
+    <button
+      className={watched ? "star on" : "star"}
+      title={watched ? "Remove from watchlist" : "Add to watchlist"}
+      onClick={() => toggleSymbol(model.watch!)}
+    >
+      <IconLabel icon={watched ? "star-on" : "star"}>{watched ? "Watching" : "Watch"}</IconLabel>
+    </button>
   ) : null;
   const src = model.source || source;
   const kind = model.caseKey?.split(":")[0];
@@ -35,15 +41,48 @@ export function Drawer({
           <span>DOSSIER</span>
           <span className="drawer-actions">
             {star}
-            {onFollow ? <button className="ghost drawer-ask" onClick={() => onFollow(askAction(model))} title="Ask about this: opens Ask with this dossier attached"><IconLabel icon="ask" hide>Ask</IconLabel></button> : null}
-            {onPin ? <button className="ghost" onClick={onPin} title="Pin as a card that stays across views"><IconLabel icon="pin" hide>Pin</IconLabel></button> : null}
-            <button className="ghost" onClick={onClose} title="Close (Esc)"><IconLabel icon="close" hide>Close</IconLabel></button>
+            {onFollow ? (
+              <button
+                className="ghost drawer-ask"
+                onClick={() => onFollow(askAction(model))}
+                title="Ask about this: opens Ask with this dossier attached"
+              >
+                <IconLabel icon="ask" hide>
+                  Ask
+                </IconLabel>
+              </button>
+            ) : null}
+            {onPin ? (
+              <button className="ghost" onClick={onPin} title="Pin as a card that stays across views">
+                <IconLabel icon="pin" hide>
+                  Pin
+                </IconLabel>
+              </button>
+            ) : null}
+            <button className="ghost" onClick={onClose} title="Close (Esc)">
+              <IconLabel icon="close" hide>
+                Close
+              </IconLabel>
+            </button>
           </span>
         </div>
       )}
       <div className="drawer-body">
         {model.caseKey ? <CaseHeader caseKey={model.caseKey} /> : null}
-        {embedded ? (star ? <p className="drawer-star">{star}</p> : null) : <h2>{model.icon ? <span className="drawer-kind" style={{ color: model.tint }}><Icon name={model.icon} size={16} /></span> : null}{model.title}</h2>}
+        {embedded ? (
+          star ? (
+            <p className="drawer-star">{star}</p>
+          ) : null
+        ) : (
+          <h2>
+            {model.icon ? (
+              <span className="drawer-kind" style={{ color: model.tint }}>
+                <Icon name={model.icon} size={16} />
+              </span>
+            ) : null}
+            {model.title}
+          </h2>
+        )}
         {model.meta ? <p className="meta">{model.meta}</p> : null}
         {model.stages ? (
           <ol className="ladder">
@@ -64,17 +103,28 @@ export function Drawer({
             ))}
           </dl>
         ) : null}
-        {model.links?.map((link, index) => link.href ? (
-          <a key={`${index}:${link.href}`} className="drill" href={link.href} target="_blank" rel="noreferrer">
-            <span><IconLabel icon="external">{link.label}</IconLabel></span>
-            <strong>{link.value}</strong>
-          </a>
-        ) : (
-          <button key={`${index}:${link.action}`} className="drill" disabled={!link.action} onClick={() => link.action && onFollow?.(link.action)}>
-            <span><IconLabel icon={actionIcon(link.action)}>{link.label}</IconLabel></span>
-            <strong>{link.value}</strong>
-          </button>
-        ))}
+        {model.links?.map((link, index) =>
+          link.href ? (
+            <a key={`${index}:${link.href}`} className="drill" href={link.href} target="_blank" rel="noreferrer">
+              <span>
+                <IconLabel icon="external">{link.label}</IconLabel>
+              </span>
+              <strong>{link.value}</strong>
+            </a>
+          ) : (
+            <button
+              key={`${index}:${link.action}`}
+              className="drill"
+              disabled={!link.action}
+              onClick={() => link.action && onFollow?.(link.action)}
+            >
+              <span>
+                <IconLabel icon={actionIcon(link.action)}>{link.label}</IconLabel>
+              </span>
+              <strong>{link.value}</strong>
+            </button>
+          ),
+        )}
         {model.tables?.map((table) => (
           <CaseSection key={table.title} kind={kind} title={table.title} count={table.empty ? "—" : table.rows.length}>
             <DataTable table={table} onFollow={onFollow} />
@@ -82,12 +132,18 @@ export function Drawer({
         ))}
         {model.blocks?.map((block) => (
           <CaseSection key={block.title} kind={kind} title={block.title}>
-            {block.lines.length ? block.lines.map((line, index) => (
-              <p key={`${index}:${line}`}>{line}</p>
-            )) : <p>None on this feed.</p>}
+            {block.lines.length ? (
+              block.lines.map((line, index) => <p key={`${index}:${line}`}>{line}</p>)
+            ) : (
+              <p>None on this feed.</p>
+            )}
           </CaseSection>
         ))}
-        {src ? <p className="drawer-src"><em>SOURCE</em> {src}</p> : null}
+        {src ? (
+          <p className="drawer-src">
+            <em>SOURCE</em> {src}
+          </p>
+        ) : null}
       </div>
     </aside>
   );
@@ -102,7 +158,12 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
         <div className="dt-scroll">
           <table className="dt">
             <thead>
-              <tr>{table.cols.map((col) => <th key={col}>{col}</th>)}{filings ? <th>Filing</th> : null}</tr>
+              <tr>
+                {table.cols.map((col) => (
+                  <th key={col}>{col}</th>
+                ))}
+                {filings ? <th>Filing</th> : null}
+              </tr>
             </thead>
             <tbody>
               {table.rows.map((row, index) => {
@@ -116,10 +177,25 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
                       else if (row.href) window.open(row.href, "_blank", "noreferrer");
                     }}
                   >
-                    {row.cells.map((cell, i) => <td key={i}>{cell}</td>)}
+                    {row.cells.map((cell, i) => (
+                      <td key={i}>{cell}</td>
+                    ))}
                     {filings ? (
                       <td>
-                        {row.filing ? <a className="dt-filing" href={row.filing} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original disclosure"><IconLabel icon="external">View</IconLabel></a> : "—"}
+                        {row.filing ? (
+                          <a
+                            className="dt-filing"
+                            href={row.filing}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Open the original disclosure"
+                          >
+                            <IconLabel icon="external">View</IconLabel>
+                          </a>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     ) : null}
                   </tr>
@@ -128,7 +204,9 @@ function DataTable({ table, onFollow }: { table: DrawerTable; onFollow?: (action
             </tbody>
           </table>
         </div>
-      ) : <p>{table.empty || "None on this feed."}</p>}
+      ) : (
+        <p>{table.empty || "None on this feed."}</p>
+      )}
     </>
   );
 }

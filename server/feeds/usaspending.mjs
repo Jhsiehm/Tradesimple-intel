@@ -8,9 +8,13 @@ export const usaspendingGate = makeGate(2, gateSpacing(300));
 
 /** POST a search body to `/api/v2/search/<pathname>/` through the shared gate, with retries. */
 export function usaspendingSearch(pathname, body, { timeoutMs = 45000, retries = 2, priority = false } = {}) {
-  return fetchJsonRetry(`${USASPENDING}/search/${pathname}/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  }, { timeoutMs, retries, gate: usaspendingGate, priority });
+  return fetchJsonRetry(
+    `${USASPENDING}/search/${pathname}/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    { timeoutMs, retries, gate: usaspendingGate, priority },
+  );
 }

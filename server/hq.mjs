@@ -11,15 +11,34 @@ import { KEY } from "./lib/cacheKeys.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FILE = path.join(root, "data", "hq.json");
-export const HQ_SOURCE = "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
-export const HQ_LATENCY = "Address as last filed with the SEC; refreshed every 30 days. A registered office can differ from where most staff work.";
+export const HQ_SOURCE =
+  "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
+export const HQ_LATENCY =
+  "Address as last filed with the SEC; refreshed every 30 days. A registered office can differ from where most staff work.";
 
 /** SEC asks for at most 10 requests/s; Nominatim for 1/s. */
 const censusGate = makeGate(2, 200);
 const osmGate = makeGate(1, 1100);
 const US_POSTAL = new Set(Object.keys(STATES));
 
-const WORDS = { ONE: "1", TWO: "2", THREE: "3", FOUR: "4", FIVE: "5", SIX: "6", SEVEN: "7", EIGHT: "8", NINE: "9", TEN: "10", ELEVEN: "11", TWELVE: "12", FIFTEEN: "15", TWENTY: "20", FIFTY: "50", HUNDRED: "100" };
+const WORDS = {
+  ONE: "1",
+  TWO: "2",
+  THREE: "3",
+  FOUR: "4",
+  FIVE: "5",
+  SIX: "6",
+  SEVEN: "7",
+  EIGHT: "8",
+  NINE: "9",
+  TEN: "10",
+  ELEVEN: "11",
+  TWELVE: "12",
+  FIFTEEN: "15",
+  TWENTY: "20",
+  FIFTY: "50",
+  HUNDRED: "100",
+};
 
 const NUMBER_WORD = new RegExp(`^(${Object.keys(WORDS).join("|")})\\b`);
 
@@ -30,15 +49,21 @@ const NUMBER_WORD = new RegExp(`^(${Object.keys(WORDS).join("|")})\\b`);
  */
 export function geocodeStreets(street1, street2) {
   const parts = [street1, street2]
-    .flatMap((s) => String(s || "").toUpperCase().split(","))
-    .map((s) => s
-      .replace(/\./g, "")
-      .replace(/\b\d+(ST|ND|RD|TH) (FLOOR|FL)\b.*$/, "")
-      .replace(/\b(SUITE|STE|FLOOR|FL|UNIT|BLDG|ROOM|RM|MAIL STOP|MS|DROP CODE)\b.*$/, "")
-      .replace(/#\s*\w+$/, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(NUMBER_WORD, (w) => WORDS[w]))
+    .flatMap((s) =>
+      String(s || "")
+        .toUpperCase()
+        .split(","),
+    )
+    .map((s) =>
+      s
+        .replace(/\./g, "")
+        .replace(/\b\d+(ST|ND|RD|TH) (FLOOR|FL)\b.*$/, "")
+        .replace(/\b(SUITE|STE|FLOOR|FL|UNIT|BLDG|ROOM|RM|MAIL STOP|MS|DROP CODE)\b.*$/, "")
+        .replace(/#\s*\w+$/, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(NUMBER_WORD, (w) => WORDS[w]),
+    )
     .filter((s) => s && !/^(P ?O BOX|POST OFFICE BOX)\b/.test(s) && !/^(N ?W|N ?E|S ?W|S ?E)$/.test(s));
   const numbered = parts.filter((s) => /^\d+\s+\D/.test(s));
   return [...new Set([...numbered, ...parts.filter((s) => !numbered.includes(s))])];
@@ -48,14 +73,23 @@ let shapes = null;
 function districtShapes() {
   if (shapes) return shapes;
   const geo = JSON.parse(fs.readFileSync(path.join(root, "data", "geo", "cd119.geojson"), "utf8"));
-  shapes = geo.features.filter((f) => f.properties?.CD119 !== "ZZ").map((f) => {
-    const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
-    let minX = 180, minY = 90, maxX = -360, maxY = -90;
-    for (const ring of polys.map((p) => p[0])) for (const [x, y] of ring) {
-      minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-    }
-    return { geoid: String(f.properties.GEOID), polys, box: [minX, minY, maxX, maxY] };
-  });
+  shapes = geo.features
+    .filter((f) => f.properties?.CD119 !== "ZZ")
+    .map((f) => {
+      const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+      let minX = 180,
+        minY = 90,
+        maxX = -360,
+        maxY = -90;
+      for (const ring of polys.map((p) => p[0]))
+        for (const [x, y] of ring) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      return { geoid: String(f.properties.GEOID), polys, box: [minX, minY, maxX, maxY] };
+    });
   return shapes;
 }
 
@@ -64,7 +98,7 @@ function inRing(x, y, ring) {
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const [xi, yi] = ring[i];
     const [xj, yj] = ring[j];
-    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
 }
@@ -113,7 +147,15 @@ async function censusPoint(street, city, state, zip) {
   url.search = new URLSearchParams({ street, city, state, zip: zip.slice(0, 5), ...CENSUS }).toString();
   const body = await censusGate(() => fetchJson(url, {}, 20000));
   const hit = body?.result?.addressMatches?.[0];
-  return hit ? { lon: hit.coordinates.x, lat: hit.coordinates.y, matched: hit.matchedAddress, geocoder: "US Census Geocoder", geoid: cd119(hit.geographies) } : null;
+  return hit
+    ? {
+        lon: hit.coordinates.x,
+        lat: hit.coordinates.y,
+        matched: hit.matchedAddress,
+        geocoder: "US Census Geocoder",
+        geoid: cd119(hit.geographies),
+      }
+    : null;
 }
 
 async function censusDistrict(lon, lat) {
@@ -125,7 +167,9 @@ async function censusDistrict(lon, lat) {
 
 async function osmPoint(street, city, state, zip, freeform = false) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
-  const where = freeform ? { q: `${street}, ${city}, ${state} ${zip.slice(0, 5)}` } : { street, city, state, postalcode: zip.slice(0, 5) };
+  const where = freeform
+    ? { q: `${street}, ${city}, ${state} ${zip.slice(0, 5)}` }
+    : { street, city, state, postalcode: zip.slice(0, 5) };
   url.search = new URLSearchParams({ format: "jsonv2", countrycodes: "us", limit: "1", ...where }).toString();
   const body = await osmGate(() => fetchJson(url, { headers: { "User-Agent": APP_UA } }, 20000));
   const hit = body?.[0];
@@ -138,9 +182,31 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
   const key = KEY.hq(ticker.symbol);
   const hit = force ? null : readCache(db, key);
   if (hit) return hit;
-  const row = { symbol: ticker.symbol, name: ticker.name, cik: ticker.cik, filer: "", street: "", city: "", state: "", zip: "", foreign: false, lat: null, lon: null, geocoder: null, matched: "", geoid: null, district: null, districtBy: "", fetched: new Date().toISOString(), note: "" };
+  const row = {
+    symbol: ticker.symbol,
+    name: ticker.name,
+    cik: ticker.cik,
+    filer: "",
+    street: "",
+    city: "",
+    state: "",
+    zip: "",
+    foreign: false,
+    lat: null,
+    lon: null,
+    geocoder: null,
+    matched: "",
+    geoid: null,
+    district: null,
+    districtBy: "",
+    fetched: new Date().toISOString(),
+    note: "",
+  };
   try {
-    const subs = await secJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, { timeoutMs: 20000, priority });
+    const subs = await secJson(`https://data.sec.gov/submissions/CIK${ticker.cik}.json`, {
+      timeoutMs: 20000,
+      priority,
+    });
     const a = subs?.addresses?.business || {};
     Object.assign(row, {
       filer: subs?.name || "",
@@ -149,7 +215,7 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
       state: a.stateOrCountry || "",
       zip: a.zipCode || "",
       foreign: Boolean(a.isForeignLocation) || !US_POSTAL.has(a.stateOrCountry || ""),
-      country: a.stateOrCountryDescription || ""
+      country: a.stateOrCountryDescription || "",
     });
     if (row.foreign) row.note = `Business address outside the US (${row.country || row.state}).`;
     else {
@@ -157,7 +223,7 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
       const tries = [
         ...streets.filter((s) => /^\d/.test(s)).map((s) => () => censusPoint(s, row.city, row.state, row.zip)),
         ...streets.slice(0, 2).map((s) => () => osmPoint(s, row.city, row.state, row.zip)),
-        ...streets.slice(0, 2).map((s) => () => osmPoint(s, row.city, row.state, row.zip, true))
+        ...streets.slice(0, 2).map((s) => () => osmPoint(s, row.city, row.state, row.zip, true)),
       ];
       let point = null;
       for (const attempt of tries) {
@@ -165,15 +231,28 @@ export async function lookupHq(db, ticker, { priority = false, force = false } =
         if (point) break;
       }
       if (point) {
-        Object.assign(row, { lat: Math.round(point.lat * 1e5) / 1e5, lon: Math.round(point.lon * 1e5) / 1e5, geocoder: point.geocoder, matched: point.matched });
+        Object.assign(row, {
+          lat: Math.round(point.lat * 1e5) / 1e5,
+          lon: Math.round(point.lon * 1e5) / 1e5,
+          geocoder: point.geocoder,
+          matched: point.matched,
+        });
         const census = point.geoid || (await censusDistrict(point.lon, point.lat).catch(() => null));
         const near = census ? null : districtNear(point.lon, point.lat);
         row.geoid = census || near.geoid;
-        row.districtBy = census ? "Census 119th Congressional Districts (ACS2025 vintage)" : row.geoid ? "Point-in-polygon on generalized 119th lines" : "";
+        row.districtBy = census
+          ? "Census 119th Congressional Districts (ACS2025 vintage)"
+          : row.geoid
+            ? "Point-in-polygon on generalized 119th lines"
+            : "";
         row.district = row.geoid ? districtCode(row.geoid) : null;
-        if (near?.nudged) row.note = "Point sits just off the generalized district line; snapped to the only district within ~1 km.";
+        if (near?.nudged)
+          row.note = "Point sits just off the generalized district line; snapped to the only district within ~1 km.";
         if (!row.district) row.note = "Geocoded point is not inside a 119th district.";
-      } else row.note = streets.length ? "Neither geocoder matched the street address." : "No street address on file (PO box or blank).";
+      } else
+        row.note = streets.length
+          ? "Neither geocoder matched the street address."
+          : "No street address on file (PO box or blank).";
     }
     writeCache(db, key, row, row.district || row.foreign ? 30 * DAY : 3 * DAY);
   } catch (err) {
@@ -200,7 +279,9 @@ function precomputed() {
 export function hqAll(db) {
   const file = precomputed();
   const bySymbol = new Map(file.items.map((r) => [r.symbol, r]));
-  const items = listTickers(db).map((t) => readCache(db, KEY.hq(t.symbol)) || bySymbol.get(t.symbol)).filter(Boolean);
+  const items = listTickers(db)
+    .map((t) => readCache(db, KEY.hq(t.symbol)) || bySymbol.get(t.symbol))
+    .filter(Boolean);
   return { ok: true, source: HQ_SOURCE, asOf: file.asOf, latency: HQ_LATENCY, items };
 }
 

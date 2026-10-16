@@ -8,13 +8,40 @@ const timeline = {
   range: { from: "2025-01-03", to: "2026-09-30" },
   nearDays: 14,
   trades: [
-    { id: "a", symbol: "NVDA", side: "buy", amountLow: 15001, traded: "2025-03-03", filed: "2025-03-20", lag: 17, near: { id: "h" } },
-    { id: "b", symbol: "AAPL", side: "sell", amountLow: 1001, traded: "2025-06-10", filed: "2025-09-01", lag: 83, near: null },
-    { id: "c", symbol: "MSFT", side: "buy", amountLow: 50001, traded: "2026-02-02", filed: "2026-02-20", lag: 18, near: null }
+    {
+      id: "a",
+      symbol: "NVDA",
+      side: "buy",
+      amountLow: 15001,
+      traded: "2025-03-03",
+      filed: "2025-03-20",
+      lag: 17,
+      near: { id: "h" },
+    },
+    {
+      id: "b",
+      symbol: "AAPL",
+      side: "sell",
+      amountLow: 1001,
+      traded: "2025-06-10",
+      filed: "2025-09-01",
+      lag: 83,
+      near: null,
+    },
+    {
+      id: "c",
+      symbol: "MSFT",
+      side: "buy",
+      amountLow: 50001,
+      traded: "2026-02-02",
+      filed: "2026-02-20",
+      lag: 18,
+      near: null,
+    },
   ],
   committees: [{ id: "SSFI", hearings: [] }],
   proximity: { dayShare: 0.5, baseline: 0.31 },
-  asOf: "2026-09-30T12:00:00Z"
+  asOf: "2026-09-30T12:00:00Z",
 };
 
 test("memberSlug folds accents and punctuation", () => {
@@ -44,12 +71,16 @@ test("describe states facts with the proximity caveat and no returns when absent
   assert.match(text, /median filing lag 18d · 1 filed more than 45 days late/);
   assert.match(text, /Calendar proximity only\.$/);
   assert.doesNotMatch(text, /S&P/);
-  const withReturns = describe(summarize({ ...timeline, returns: { buys: 2, priced: 2, excessSince: 0.034, hitRate: 0.5 } }));
+  const withReturns = describe(
+    summarize({ ...timeline, returns: { buys: 2, priced: 2, excessSince: 0.034, hitRate: 0.5 } }),
+  );
   assert.match(withReturns, /disclosed buys \+3\.4 pts vs S&P 500 since trade \(equal-weighted\)/);
 });
 
 test("cardSvg is a 1200×630 SVG with the required labels, escaped", () => {
-  const svg = cardSvg(summarize({ ...timeline, member: { ...timeline.member, name: "A & B <C>" } }), { host: "example.org/x" });
+  const svg = cardSvg(summarize({ ...timeline, member: { ...timeline.member, name: "A & B <C>" } }), {
+    host: "example.org/x",
+  });
   assert.match(svg, /^<svg [^>]*width="1200" height="630"/);
   assert.match(svg, /A &amp; B &lt;C&gt;/);
   assert.match(svg, /Calendar proximity only/);
@@ -60,7 +91,11 @@ test("cardSvg is a 1200×630 SVG with the required labels, escaped", () => {
 
 test("memberPageHtml carries absolute OG/Twitter meta and redirects into the timeline", () => {
   const s = summarize(timeline);
-  const html = memberPageHtml(s, { pageUrl: "https://x.io/app/m/cory-a-booker/", imageUrl: "https://x.io/app/m/cory-a-booker/card.png", appPath: "../../" });
+  const html = memberPageHtml(s, {
+    pageUrl: "https://x.io/app/m/cory-a-booker/",
+    imageUrl: "https://x.io/app/m/cory-a-booker/card.png",
+    appPath: "../../",
+  });
   assert.match(html, /<meta property="og:image" content="https:\/\/x\.io\/app\/m\/cory-a-booker\/card\.png" \/>/);
   assert.match(html, /<meta name="twitter:card" content="summary_large_image" \/>/);
   assert.match(html, /<meta property="og:url" content="https:\/\/x\.io\/app\/m\/cory-a-booker\/" \/>/);

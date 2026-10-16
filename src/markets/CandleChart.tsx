@@ -41,7 +41,7 @@ const SPANS: { id: ChartSpan; label: string }[] = [
   { id: "1d", label: "1D" },
   { id: "6mo", label: "6M" },
   { id: "1y", label: "1Y" },
-  { id: "5y", label: "5Y" }
+  { id: "5y", label: "5Y" },
 ];
 
 const MARK_COLOR: Record<MarkTone, string> = {
@@ -54,18 +54,42 @@ const MARK_COLOR: Record<MarkTone, string> = {
   gov: "#c7cf6e",
   fomc: "#e7e2d6",
   cpi: "#e86f9c",
-  macro: "#8e9488"
+  macro: "#8e9488",
 };
 
 const LAYERS: { id: Layer; label: string; color: string; equityOnly?: boolean; source: string }[] = [
-  { id: "trades", label: "Trades", color: MARK_COLOR.buy, equityOnly: true, source: "Disclosed trades and filing dates" },
-  { id: "earn", label: "Earnings", color: MARK_COLOR.earn, equityOnly: true, source: "SEC 8-K item 2.02 · Nasdaq schedule" },
+  {
+    id: "trades",
+    label: "Trades",
+    color: MARK_COLOR.buy,
+    equityOnly: true,
+    source: "Disclosed trades and filing dates",
+  },
+  {
+    id: "earn",
+    label: "Earnings",
+    color: MARK_COLOR.earn,
+    equityOnly: true,
+    source: "SEC 8-K item 2.02 · Nasdaq schedule",
+  },
   { id: "lobby", label: "Lobbying", color: MARK_COLOR.lobby, equityOnly: true, source: "LDA.gov filings by post date" },
-  { id: "pac", label: "PAC", color: MARK_COLOR.pac, equityOnly: true, source: "FEC committee-to-candidate gifts, monthly" },
-  { id: "gov", label: "Contracts", color: MARK_COLOR.gov, equityOnly: true, source: "USAspending largest prime awards" },
+  {
+    id: "pac",
+    label: "PAC",
+    color: MARK_COLOR.pac,
+    equityOnly: true,
+    source: "FEC committee-to-candidate gifts, monthly",
+  },
+  {
+    id: "gov",
+    label: "Contracts",
+    color: MARK_COLOR.gov,
+    equityOnly: true,
+    source: "USAspending largest prime awards",
+  },
   { id: "fomc", label: "Fed / CB", color: MARK_COLOR.fomc, source: "FOMC decisions and central-bank rate prints" },
   { id: "cpi", label: "CPI / PCE", color: MARK_COLOR.cpi, source: "Inflation prints (Nasdaq calendar)" },
-  { id: "macro", label: "Macro", color: MARK_COLOR.macro, source: "Jobs, GDP, activity prints" }
+  { id: "macro", label: "Macro", color: MARK_COLOR.macro, source: "Jobs, GDP, activity prints" },
 ];
 
 const COMPARE: { symbol: string; label: string }[] = [
@@ -79,7 +103,7 @@ const COMPARE: { symbol: string; label: string }[] = [
   { symbol: "AAPL", label: "AAPL" },
   { symbol: "MSFT", label: "MSFT" },
   { symbol: "NVDA", label: "NVDA" },
-  { symbol: "LMT", label: "LMT" }
+  { symbol: "LMT", label: "LMT" },
 ];
 
 const DEFAULT_LAYERS: Layer[] = ["trades", "earn", "lobby", "pac", "gov", "fomc", "cpi"];
@@ -106,7 +130,7 @@ export function CandleChart({
   span,
   onSpan,
   onBack,
-  marks = []
+  marks = [],
 }: {
   symbol: string;
   span: ChartSpan;
@@ -152,11 +176,15 @@ export function CandleChart({
   useEffect(() => {
     let cancel = false;
     setEvents([]);
-    api<{ ok: boolean; source?: string; asOf?: string; pending?: string[]; marks: ChartMark[] }>(`/api/markets/events?symbol=${encodeURIComponent(symbol)}`)
+    api<{ ok: boolean; source?: string; asOf?: string; pending?: string[]; marks: ChartMark[] }>(
+      `/api/markets/events?symbol=${encodeURIComponent(symbol)}`,
+    )
       .then((res) => {
         if (cancel || !res.ok) return;
         setEvents(res.marks || []);
-        setEventSource(`${res.source || ""}${res.asOf ? ` as of ${when(res.asOf)}` : ""}${res.pending?.length ? ` · ${res.pending.join(", ")} still loading` : ""}`);
+        setEventSource(
+          `${res.source || ""}${res.asOf ? ` as of ${when(res.asOf)}` : ""}${res.pending?.length ? ` · ${res.pending.join(", ")} still loading` : ""}`,
+        );
       })
       .catch(() => null);
     return () => {
@@ -171,8 +199,12 @@ export function CandleChart({
     }
     let cancel = false;
     api<ChartPayload>(`/api/markets/chart?symbol=${encodeURIComponent(compare)}&span=${span}`)
-      .then((res) => { if (!cancel) setCompareChart(res.ok ? res : null); })
-      .catch(() => { if (!cancel) setCompareChart(null); });
+      .then((res) => {
+        if (!cancel) setCompareChart(res.ok ? res : null);
+      })
+      .catch(() => {
+        if (!cancel) setCompareChart(null);
+      });
     return () => {
       cancel = true;
     };
@@ -187,13 +219,14 @@ export function CandleChart({
   const daily = interval === "1d";
   const digits = chart?.digits ?? 2;
   const kind = chart?.kind || (/=X$|^DX-Y/.test(symbol) ? "fx" : /-USD$/.test(symbol) ? "crypto" : "equity");
-  const p = (value: number | null | undefined) => (value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits));
+  const p = (value: number | null | undefined) =>
+    value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
   const stats = useMemo(() => summarize(bars, daily), [bars, daily]);
 
   const available = LAYERS.filter((l) => kind === "equity" || !l.equityOnly || (l.id === "trades" && marks.length));
   const allMarks = useMemo(
     () => [...marks, ...events].filter((m) => layers.has(layerOf(m.tone))).sort((a, b) => a.t - b.t),
-    [marks, events, layers]
+    [marks, events, layers],
   );
   const placed = useMemo(() => place(bars, allMarks, daily), [bars, allMarks, daily]);
   const compareLine = useMemo(() => rebase(bars, compareChart?.bars || [], daily), [bars, compareChart, daily]);
@@ -275,33 +308,59 @@ export function CandleChart({
     ["High", p(chart?.dayHigh ?? stats.dayHigh)],
     ["Low", p(chart?.dayLow ?? stats.dayLow)],
     ["Prev", p(prev)],
-    ...(kind === "fx" ? [] : ([["Volume", compact(chart?.dayVolume ?? stats.dayVolume)], ["Avg vol", compact(stats.avgVolume)]] as [string, string][])),
+    ...(kind === "fx"
+      ? []
+      : ([
+          ["Volume", compact(chart?.dayVolume ?? stats.dayVolume)],
+          ["Avg vol", compact(stats.avgVolume)],
+        ] as [string, string][])),
     [`${span.toUpperCase()} hi`, p(stats.spanHigh)],
     [`${span.toUpperCase()} lo`, p(stats.spanLow)],
     ["52w", chart?.yearLow != null && chart?.yearHigh != null ? `${p(chart.yearLow)}–${p(chart.yearHigh)}` : "—"],
     ...(daily
-      ? ([["MA20", p(stats.ma20)], ["MA50", p(stats.ma50)]] as [string, string][])
+      ? ([
+          ["MA20", p(stats.ma20)],
+          ["MA50", p(stats.ma50)],
+        ] as [string, string][])
       : kind === "fx"
         ? ([["Bars", String(bars.length || "—")]] as [string, string][])
-        : ([["VWAP", p(stats.vwap)], ["Bars", String(bars.length || "—")]] as [string, string][]))
+        : ([
+            ["VWAP", p(stats.vwap)],
+            ["Bars", String(bars.length || "—")],
+          ] as [string, string][])),
   ];
 
   return (
     <div className="tape">
       <header className="tape-head">
         <div>
-          <button className="ghost" onClick={onBack}>Board</button>
+          <button className="ghost" onClick={onBack}>
+            Board
+          </button>
           <strong>{chart?.code || chart?.symbol || symbol}</strong>
-          <span>{chart?.name || "Loading tape"}{chart?.exchange ? ` · ${chart.exchange}` : ""}{kind !== "equity" ? ` · ${kind === "fx" ? "FX" : "Crypto"}` : ""}</span>
+          <span>
+            {chart?.name || "Loading tape"}
+            {chart?.exchange ? ` · ${chart.exchange}` : ""}
+            {kind !== "equity" ? ` · ${kind === "fx" ? "FX" : "Crypto"}` : ""}
+          </span>
         </div>
         <div className="tape-px">
           <b>{last != null ? p(last) : "—"}</b>
-          <em className={up ? "up" : "down"}>{last != null ? `${up ? "+" : ""}${change.toFixed(digits)}  ${up ? "+" : ""}${pct.toFixed(2)}% day` : ""}</em>
-          {spanChange != null ? <small>{span.toUpperCase()} {spanChange >= 0 ? "+" : ""}{spanChange.toFixed(1)}%</small> : null}
+          <em className={up ? "up" : "down"}>
+            {last != null ? `${up ? "+" : ""}${change.toFixed(digits)}  ${up ? "+" : ""}${pct.toFixed(2)}% day` : ""}
+          </em>
+          {spanChange != null ? (
+            <small>
+              {span.toUpperCase()} {spanChange >= 0 ? "+" : ""}
+              {spanChange.toFixed(1)}%
+            </small>
+          ) : null}
         </div>
         <div className="tape-ranges">
           {SPANS.map((item) => (
-            <button key={item.id} aria-pressed={span === item.id} onClick={() => onSpan(item.id)}>{item.label}</button>
+            <button key={item.id} aria-pressed={span === item.id} onClick={() => onSpan(item.id)}>
+              {item.label}
+            </button>
           ))}
         </div>
       </header>
@@ -326,16 +385,15 @@ export function CandleChart({
           <em>VS</em>
           <select value={compare} onChange={(e) => setCompare(e.target.value)} aria-label="Compare with">
             <option value="">None</option>
-            {COMPARE.filter((c) => c.symbol !== symbol).map((c) => <option key={c.symbol} value={c.symbol}>{c.label}</option>)}
+            {COMPARE.filter((c) => c.symbol !== symbol).map((c) => (
+              <option key={c.symbol} value={c.symbol}>
+                {c.label}
+              </option>
+            ))}
           </select>
         </label>
       </div>
-      <div
-        className="tape-plot"
-        ref={plotRef}
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-      >
+      <div className="tape-plot" ref={plotRef} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <canvas ref={canvasRef} />
         {hovered ? (
           <div className="tape-readout">
@@ -346,11 +404,16 @@ export function CandleChart({
               <span>L {p(hovered.l)}</span>
               <span>C {p(hovered.c)}</span>
               {kind === "fx" ? null : <span>V {compact(hovered.v)}</span>}
-              {compareLine[hover!] != null && compareChart ? <span style={{ color: COMPARE_COLOR }}>{compareLabel} {compareRaw(compareChart.bars, hovered.t, daily)}</span> : null}
+              {compareLine[hover!] != null && compareChart ? (
+                <span style={{ color: COMPARE_COLOR }}>
+                  {compareLabel} {compareRaw(compareChart.bars, hovered.t, daily)}
+                </span>
+              ) : null}
             </p>
             {hoverMarks.slice(0, 5).map((m, i) => (
               <p key={i} className="readout-mark" style={{ color: MARK_COLOR[m.tone || "file"] }}>
-                {m.label}{m.detail ? <small> · {m.detail}</small> : null}
+                {m.label}
+                {m.detail ? <small> · {m.detail}</small> : null}
               </p>
             ))}
           </div>
@@ -358,13 +421,28 @@ export function CandleChart({
           <p className="tape-readout legend-line">
             {daily ? (
               <>
-                <span><i style={{ background: "#d6a84a" }} />MA20</span>
-                <span><i style={{ background: "#7fa3c4" }} />MA50</span>
+                <span>
+                  <i style={{ background: "#d6a84a" }} />
+                  MA20
+                </span>
+                <span>
+                  <i style={{ background: "#7fa3c4" }} />
+                  MA50
+                </span>
               </>
             ) : kind === "fx" ? null : (
-              <span><i style={{ background: "#7fa3c4" }} />VWAP by session</span>
+              <span>
+                <i style={{ background: "#7fa3c4" }} />
+                VWAP by session
+              </span>
             )}
-            {compareChart ? <span><i style={{ background: COMPARE_COLOR }} />{compareLabel} rebased {compareChange != null ? `${compareChange >= 0 ? "+" : ""}${compareChange.toFixed(1)}%` : ""}</span> : null}
+            {compareChart ? (
+              <span>
+                <i style={{ background: COMPARE_COLOR }} />
+                {compareLabel} rebased{" "}
+                {compareChange != null ? `${compareChange >= 0 ? "+" : ""}${compareChange.toFixed(1)}%` : ""}
+              </span>
+            ) : null}
             <span className="dim">hover a bar for events</span>
           </p>
         )}
@@ -376,16 +454,39 @@ export function CandleChart({
           {recent.map((m, i) => {
             const text = `${new Date(m.t).toISOString().slice(0, 10)} ${m.label}`;
             return m.href ? (
-              <a key={`${m.t}-${i}`} href={m.href} target="_blank" rel="noreferrer" title={m.detail} style={{ color: MARK_COLOR[m.tone || "file"] }}>{text}</a>
+              <a
+                key={`${m.t}-${i}`}
+                href={m.href}
+                target="_blank"
+                rel="noreferrer"
+                title={m.detail}
+                style={{ color: MARK_COLOR[m.tone || "file"] }}
+              >
+                {text}
+              </a>
             ) : (
-              <span key={`${m.t}-${i}`} title={m.detail} style={{ color: MARK_COLOR[m.tone || "file"] }}>{text}</span>
+              <span key={`${m.t}-${i}`} title={m.detail} style={{ color: MARK_COLOR[m.tone || "file"] }}>
+                {text}
+              </span>
             );
           })}
-          {outside > 0 ? <span className="dim">{outside} outside this span{span === "5y" ? " (older or scheduled)" : span === "1y" ? " · try 5Y" : daily ? " · try 1Y or 5Y" : " · try 6M+"}</span> : null}
+          {outside > 0 ? (
+            <span className="dim">
+              {outside} outside this span
+              {span === "5y"
+                ? " (older or scheduled)"
+                : span === "1y"
+                  ? " · try 5Y"
+                  : daily
+                    ? " · try 1Y or 5Y"
+                    : " · try 6M+"}
+            </span>
+          ) : null}
         </p>
       ) : null}
       <p className="tape-src">
-        <em>SOURCE</em> {chart?.source || "Yahoo Finance chart"}{eventSource ? ` · events: ${eventSource}` : ""}
+        <em>SOURCE</em> {chart?.source || "Yahoo Finance chart"}
+        {eventSource ? ` · events: ${eventSource}` : ""}
         <em>AS OF</em> {when(chart?.asOf)}
         <em>NOTE</em> {chart?.latency || "Daily bars, delayed."}
       </p>
@@ -419,7 +520,9 @@ function rebase(bars: Bar[], other: Bar[], daily: boolean): (number | null)[] {
   let j = 0;
   for (const bar of bars) {
     while (j < other.length - 1 && other[j + 1].t <= bar.t) j += 1;
-    aligned.push(Math.abs(other[j].t - bar.t) <= slack || (other[j].t <= bar.t && bar.t - other[j].t <= slack) ? other[j].c : null);
+    aligned.push(
+      Math.abs(other[j].t - bar.t) <= slack || (other[j].t <= bar.t && bar.t - other[j].t <= slack) ? other[j].c : null,
+    );
   }
   const startIdx = aligned.findIndex((v) => v != null);
   if (startIdx < 0) return [];
@@ -440,10 +543,24 @@ function compareRaw(other: Bar[], t: number, daily: boolean) {
 }
 
 function summarize(bars: Bar[], daily: boolean) {
-  const empty = { open: null, dayHigh: null, dayLow: null, dayVolume: null, avgVolume: null, spanHigh: null, spanLow: null, ma20: null, ma50: null, vwap: null, prevClose: null, overlays: [] as Overlay[] };
+  const empty = {
+    open: null,
+    dayHigh: null,
+    dayLow: null,
+    dayVolume: null,
+    avgVolume: null,
+    spanHigh: null,
+    spanLow: null,
+    ma20: null,
+    ma50: null,
+    vwap: null,
+    prevClose: null,
+    overlays: [] as Overlay[],
+  };
   if (!bars.length) return empty;
   const closes = bars.map((b) => b.c);
-  const sma = (n: number) => closes.map((_, i) => (i + 1 < n ? null : closes.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n));
+  const sma = (n: number) =>
+    closes.map((_, i) => (i + 1 < n ? null : closes.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n));
   const dayKey = (t: number) => new Date(t).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const lastDay = dayKey(bars[bars.length - 1].t);
   const session = daily ? [bars[bars.length - 1]] : bars.filter((b) => dayKey(b.t) === lastDay);
@@ -480,8 +597,13 @@ function summarize(bars: Bar[], daily: boolean) {
     vwap: hasVolume ? vwap[vwap.length - 1] : null,
     prevClose: before?.c ?? null,
     overlays: daily
-      ? [{ color: "#d6a84a", values: ma20 }, { color: "#7fa3c4", values: ma50 }]
-      : hasVolume ? [{ color: "#7fa3c4", values: vwap }] : []
+      ? [
+          { color: "#d6a84a", values: ma20 },
+          { color: "#7fa3c4", values: ma50 },
+        ]
+      : hasVolume
+        ? [{ color: "#7fa3c4", values: vwap }]
+        : [],
   };
 }
 
@@ -501,7 +623,7 @@ function paint(
   placed: Placed[],
   overlays: Overlay[],
   compare: (number | null)[],
-  digits: number
+  digits: number,
 ) {
   const { left, right, top, bottom } = pad(width);
   const plotW = Math.max(1, right - left);
@@ -726,7 +848,13 @@ function paint(
 function axisStamp(time: number, interval: string) {
   const date = new Date(time);
   if (interval === "1d") return date.toLocaleDateString("en-CA");
-  return date.toLocaleString("en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function compact(value: number | null | undefined) {

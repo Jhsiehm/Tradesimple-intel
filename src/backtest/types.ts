@@ -23,7 +23,14 @@ export type BtRun = BacktestResult & {
   reality?: Reality | null;
 };
 
-export type BtFailure = { ok: false; runId?: string; error: string; missing?: string; building?: boolean; description?: string };
+export type BtFailure = {
+  ok: false;
+  runId?: string;
+  error: string;
+  missing?: string;
+  building?: boolean;
+  description?: string;
+};
 
 export type BtOptions = {
   ok: true;

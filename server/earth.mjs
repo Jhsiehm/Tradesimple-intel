@@ -22,50 +22,52 @@ export async function imagery(db) {
         maxzoom: 16,
         source: "Esri World Dark Gray",
         asOf: "Vector basemap, updated by Esri",
-        attribution: "© Esri, HERE, Garmin, OpenStreetMap contributors"
+        attribution: "© Esri, HERE, Garmin, OpenStreetMap contributors",
       },
       sat: {
         tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`],
         maxzoom: 19,
         source: "Esri World Imagery",
         asOf: "Mosaic of mixed capture dates (Maxar, Airbus, USGS, NASA)",
-        attribution: "© Esri, Maxar, Earthstar Geographics"
+        attribution: "© Esri, Maxar, Earthstar Geographics",
       },
       daily: {
-        tiles: [`${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${daily}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`],
+        tiles: [
+          `${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${daily}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+        ],
         maxzoom: 9,
         source: "NASA GIBS · VIIRS NOAA-20 true color",
         asOf: daily,
-        attribution: "NASA EOSDIS GIBS"
+        attribution: "NASA EOSDIS GIBS",
       },
       night: {
         tiles: [`${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`],
         maxzoom: 8,
         source: "NASA Black Marble · VIIRS night lights",
         asOf: "2016 annual composite",
-        attribution: "NASA Earth Observatory"
+        attribution: "NASA Earth Observatory",
       },
       labels: {
         tiles: [`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`],
         maxzoom: 19,
-        attribution: "© Esri"
+        attribution: "© Esri",
       },
       darkLabels: {
         tiles: [`${ESRI}/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`],
         maxzoom: 16,
-        attribution: "© Esri"
+        attribution: "© Esri",
       },
       roads: {
         tiles: [`${ESRI}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`],
         maxzoom: 19,
-        attribution: "© Esri"
+        attribution: "© Esri",
       },
       terrain: {
         tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
         maxzoom: 15,
         encoding: "terrarium",
         source: "AWS Terrain Tiles (SRTM, GMTED, ETOPO1)",
-        attribution: "Mapzen, AWS Open Data"
+        attribution: "Mapzen, AWS Open Data",
       },
       buildings: {
         tiles: [],
@@ -73,18 +75,36 @@ export async function imagery(db) {
         maxzoom: 14,
         source: "OpenFreeMap · OpenStreetMap buildings",
         asOf: "OpenStreetMap, continuously updated",
-        attribution: "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors"
-      }
-    }
+        attribution: "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      },
+    },
   };
   writeCache(db, KEY.earthImagery, result, 3 * HOUR);
   return result;
 }
 
 const LIVE = [
-  { id: "GOES-East_ABI_GeoColor", key: "goesEast", name: "GOES-East GeoColor", covers: "Americas, Atlantic", lon: -75.2 },
-  { id: "GOES-West_ABI_GeoColor", key: "goesWest", name: "GOES-West GeoColor", covers: "Eastern Pacific, western Americas", lon: -137.2 },
-  { id: "Himawari_AHI_Band13_Clean_Infrared", key: "himawari", name: "Himawari-9 clean IR", covers: "East Asia, Southeast Asia, Oceania", lon: 140.7 }
+  {
+    id: "GOES-East_ABI_GeoColor",
+    key: "goesEast",
+    name: "GOES-East GeoColor",
+    covers: "Americas, Atlantic",
+    lon: -75.2,
+  },
+  {
+    id: "GOES-West_ABI_GeoColor",
+    key: "goesWest",
+    name: "GOES-West GeoColor",
+    covers: "Eastern Pacific, western Americas",
+    lon: -137.2,
+  },
+  {
+    id: "Himawari_AHI_Band13_Clean_Infrared",
+    key: "himawari",
+    name: "Himawari-9 clean IR",
+    covers: "East Asia, Southeast Asia, Oceania",
+    lon: 140.7,
+  },
 ];
 const DAILY_ID = "VIIRS_NOAA20_CorrectedReflectance_TrueColor";
 
@@ -110,7 +130,7 @@ export async function liveImagery(db) {
       ...layer,
       maxzoom: Number(set.match(/Level(\d+)/)?.[1] || 6),
       template: `${GIBS}/${layer.id}/default/{time}/${set}/{z}/{y}/{x}.png`,
-      ranges
+      ranges,
     };
   }).filter((layer) => layer.ranges.length);
   const dailyRanges = [...block(DAILY_ID).matchAll(/<Value>([^/<]+)\/([^/<]+)\/P1D<\/Value>/g)];
@@ -129,8 +149,8 @@ export async function liveImagery(db) {
       template: `${GIBS}/${DAILY_ID}/default/{time}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
       maxzoom: 9,
       end: dailyEnd,
-      complete
-    }
+      complete,
+    },
   };
   writeCache(db, KEY.earthLive, result, 5 * 60 * 1000);
   return result;
@@ -145,8 +165,8 @@ export async function shippingLanes(db) {
     features: raw.features.map((f) => ({
       type: "Feature",
       properties: { type: f.properties.Type },
-      geometry: { type: f.geometry.type, coordinates: round(f.geometry.coordinates) }
-    }))
+      geometry: { type: f.geometry.type, coordinates: round(f.geometry.coordinates) },
+    })),
   };
   const result = {
     ok: true,
@@ -159,9 +179,9 @@ export async function shippingLanes(db) {
       features: CHOKEPOINTS.map((c) => ({
         type: "Feature",
         properties: { id: `choke:${c.id}`, name: c.name },
-        geometry: { type: "Point", coordinates: [c.lon, c.lat] }
-      }))
-    }
+        geometry: { type: "Point", coordinates: [c.lon, c.lat] },
+      })),
+    },
   };
   writeCache(db, KEY.earthLanes, result, 7 * 24 * HOUR);
   return result;
@@ -171,7 +191,11 @@ async function latestGibsDay() {
   for (const back of [1, 2, 3]) {
     const day = new Date(Date.now() - back * 24 * HOUR).toISOString().slice(0, 10);
     try {
-      const res = await fetchResponse(`${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${day}/GoogleMapsCompatible_Level9/3/3/2.jpg`, {}, 8000);
+      const res = await fetchResponse(
+        `${GIBS}/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${day}/GoogleMapsCompatible_Level9/3/3/2.jpg`,
+        {},
+        8000,
+      );
       const size = Number(res.headers.get("content-length") || (await res.arrayBuffer()).byteLength);
       if (res.ok && size > 8000) return day;
     } catch {

@@ -1,4 +1,9 @@
-const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+const NY = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 /** Calendar date (YYYY-MM-DD) in Washington at `at` (ms or Date). Filings, hearings, and roll calls are dated there. */
 export function nyDate(at = Date.now()) {

@@ -13,7 +13,17 @@ import { whaleHoldings } from "../positions/whales.mjs";
 import { congressTrades, refreshCongress } from "../positions/congress.mjs";
 import { contractFeed } from "../../contracts.mjs";
 import { lobbyingFor } from "../corporate/lobbying.mjs";
-import { congressEvent, contractEvent, filingEvent, insiderEvents, lobbyingEvent, namesTicker, newsEvent, stakeEvent, whaleEvent } from "../../../shared/watchlist.mjs";
+import {
+  congressEvent,
+  contractEvent,
+  filingEvent,
+  insiderEvents,
+  lobbyingEvent,
+  namesTicker,
+  newsEvent,
+  stakeEvent,
+  whaleEvent,
+} from "../../../shared/watchlist.mjs";
 import { dedupeHeadlines, textHash } from "../../../shared/live.mjs";
 import { nyDaysAgo } from "../../../shared/dates.mjs";
 import { hasSeen, expireCache } from "./store.mjs";
@@ -41,11 +51,17 @@ const defaults = {
   lobbyingFor: (db, ticker, years, opts) => lobbyingFor(db, ticker, years, opts),
   headlines: async (symbol) => parseRss(await yahooHeadlines(symbol)),
   seen: (db, id, symbol) => hasSeen(db, id, symbol),
-  env: process.env
+  env: process.env,
 };
 
-const failure = (symbol, err) => ({ symbol, message: String(err?.message || err || "failed").slice(0, 200), status: err?.status || 0, retryAfterMs: err?.retryAfterMs || 0 });
-const secLink = (cik, acc) => `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`;
+const failure = (symbol, err) => ({
+  symbol,
+  message: String(err?.message || err || "failed").slice(0, 200),
+  status: err?.status || 0,
+  retryAfterMs: err?.retryAfterMs || 0,
+});
+const secLink = (cik, acc) =>
+  `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`;
 
 /**
  * Check runners by id (shared/live.mjs LIVE_CHECKS). Each takes `{ db, symbols, fresh, state }` and resolves with
@@ -64,7 +80,11 @@ export function makeChecks(overrides = {}) {
     const noCik = [];
     for (const symbol of symbols) {
       const t = d.tickerOf(db, symbol);
-      if (!t?.cik) { noCik.push(symbol); ok.push(symbol); continue; }
+      if (!t?.cik) {
+        noCik.push(symbol);
+        ok.push(symbol);
+        continue;
+      }
       try {
         const body = await d.submissions(t.cik);
         d.storeSubs(db, t.cik, body);
@@ -88,7 +108,18 @@ export function makeChecks(overrides = {}) {
             if (out.other || !out.rows.length) continue;
             for (const ev of insiderEvents(out.rows)) events.push({ ...ev, publishedAt: accepted || ev.publishedAt });
           } else if (/^8-K/.test(form)) {
-            events.push(filingEvent({ symbol, accession, form, items: r.items?.[i] || "", reportDate: r.reportDate?.[i] || "", accepted, filed, link }));
+            events.push(
+              filingEvent({
+                symbol,
+                accession,
+                form,
+                items: r.items?.[i] || "",
+                reportDate: r.reportDate?.[i] || "",
+                accepted,
+                filed,
+                link,
+              }),
+            );
           } else if (STAKE_FORM.test(form)) {
             events.push(stakeEvent({ symbol, accession, form, accepted, filed, link }));
           }
@@ -116,7 +147,10 @@ export function makeChecks(overrides = {}) {
           if (i < 0) continue;
           const acc = r.accessionNumber[i];
           if (r.acceptanceDateTime?.[i]) accepted[acc] = r.acceptanceDateTime[i];
-          if (known[fund.cik] !== acc) { changed = true; known[fund.cik] = acc; }
+          if (known[fund.cik] !== acc) {
+            changed = true;
+            known[fund.cik] = acc;
+          }
         } catch (err) {
           errors.push(failure(fund.name, err));
         }
@@ -136,9 +170,12 @@ export function makeChecks(overrides = {}) {
     return {
       events,
       ok: res?.ok === false && !res?.items?.length ? [] : symbols,
-      errors: res?.ok === false && !res?.items?.length ? [failure("13F board", res?.errors?.[0] || "13F holdings not built yet"), ...errors] : errors,
+      errors:
+        res?.ok === false && !res?.items?.length
+          ? [failure("13F board", res?.errors?.[0] || "13F holdings not built yet"), ...errors]
+          : errors,
       note: `${funds} funds in data/whales.json; quarter-end holdings filed up to 45 days after quarter end${errors.length ? ` · ${errors.length} filers unreadable this pass` : ""}`,
-      state: { known, accepted: Object.fromEntries(Object.entries(accepted).slice(-200)) }
+      state: { known, accepted: Object.fromEntries(Object.entries(accepted).slice(-200)) },
     };
   }
 
@@ -158,7 +195,11 @@ export function makeChecks(overrides = {}) {
     const none = [];
     for (const symbol of symbols) {
       const t = d.tickerOf(db, symbol);
-      if (!(t?.contractParents || []).length) { none.push(symbol); ok.push(symbol); continue; }
+      if (!(t?.contractParents || []).length) {
+        none.push(symbol);
+        ok.push(symbol);
+        continue;
+      }
       try {
         const res = await d.contractFeed(db, { symbol, days: DAYS.contracts, sort: "recent", fresh });
         if (!res?.ok) throw new Error(res?.error || "USAspending did not answer");
@@ -168,7 +209,12 @@ export function makeChecks(overrides = {}) {
         errors.push(failure(symbol, err));
       }
     }
-    return { events, ok, errors, note: none.length ? `${none.join(", ")}: no USAspending parent in data/tickers.json` : "" };
+    return {
+      events,
+      ok,
+      errors,
+      note: none.length ? `${none.join(", ")}: no USAspending parent in data/tickers.json` : "",
+    };
   }
 
   async function lobbying({ db, symbols, fresh }) {
@@ -180,12 +226,18 @@ export function makeChecks(overrides = {}) {
     const none = [];
     for (const symbol of symbols) {
       const t = d.tickerOf(db, symbol);
-      if (!(t?.ldaClients || []).length) { none.push(symbol); ok.push(symbol); continue; }
+      if (!(t?.ldaClients || []).length) {
+        none.push(symbol);
+        ok.push(symbol);
+        continue;
+      }
       try {
         const res = await d.lobbyingFor(db, t, 2, { currentTtlMs: fresh ? 50 * MINUTE : 0 });
         if (!res?.ok) throw new Error(res?.missing ? `${res.missing} not set` : "LDA.gov did not answer");
         if (res.unavailable?.length && !res.filings?.length) throw new Error(res.unavailable[0]);
-        events.push(...(res.filings || []).filter((f) => String(f.posted) >= from).map((f) => lobbyingEvent(f, symbol)));
+        events.push(
+          ...(res.filings || []).filter((f) => String(f.posted) >= from).map((f) => lobbyingEvent(f, symbol)),
+        );
         ok.push(symbol);
       } catch (err) {
         errors.push(failure(symbol, err));
@@ -202,7 +254,9 @@ export function makeChecks(overrides = {}) {
     for (const symbol of symbols) {
       try {
         const ticker = d.tickerOf(db, symbol) || { symbol };
-        const items = dedupeHeadlines(await d.headlines(symbol)).filter((n) => (!n.published || Date.parse(n.published) >= from) && namesTicker(n, ticker));
+        const items = dedupeHeadlines(await d.headlines(symbol)).filter(
+          (n) => (!n.published || Date.parse(n.published) >= from) && namesTicker(n, ticker),
+        );
         events.push(...items.map((n) => newsEvent({ ...n, id: textHash(n.link || n.title) }, symbol)));
         ok.push(symbol);
       } catch (err) {

@@ -14,8 +14,12 @@ export function readBody(req, limit = 64 * 1024) {
       }
       chunks.push(chunk);
     });
-    req.on("end", () => { if (!failed) resolve(Buffer.concat(chunks).toString("utf8")); });
-    req.on("error", (err) => { if (!failed) reject(err); });
+    req.on("end", () => {
+      if (!failed) resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+    req.on("error", (err) => {
+      if (!failed) reject(err);
+    });
   });
 }
 

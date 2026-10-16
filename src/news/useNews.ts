@@ -20,7 +20,15 @@ export type Headline = {
   geo?: { place: string; lon: number; lat: number; region: string; basis: string } | null;
 };
 
-export type FeedHealth = { id: string; name: string; desk: string; region?: string; count: number; ms: number; ok: boolean };
+export type FeedHealth = {
+  id: string;
+  name: string;
+  desk: string;
+  region?: string;
+  count: number;
+  ms: number;
+  ok: boolean;
+};
 
 export type Wire = {
   ok: boolean;
@@ -66,7 +74,9 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
           retry = window.setTimeout(load, 15000);
         });
       api<Wire>("/api/news/x")
-        .then((res) => { if (!cancel) setX(res); })
+        .then((res) => {
+          if (!cancel) setX(res);
+        })
         .catch(() => null);
     };
     load();
@@ -92,20 +102,40 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
       .filter((h) => !q || `${h.title} ${h.source} ${h.symbols.join(" ")}`.toLowerCase().includes(q));
   }, [all, desk, query, region]);
 
-  const filtered = useMemo(() => scoped.filter((h) => !outletIds.length || outletIds.includes(h.feed)), [scoped, outletIds]);
+  const filtered = useMemo(
+    () => scoped.filter((h) => !outletIds.length || outletIds.includes(h.feed)),
+    [scoped, outletIds],
+  );
   const outlets = useMemo(() => {
-    const options = new Map((wire?.feeds || []).map((f) => [f.id, { id: f.id, name: f.name, desk: f.desk, ok: f.ok, count: 0 }]));
-    for (const h of all) if (!options.has(h.feed)) options.set(h.feed, { id: h.feed, name: h.via || (h.desk === "x" ? "X" : h.source), desk: h.desk, ok: true, count: 0 });
-    for (const h of scoped) { const option = options.get(h.feed); if (option) option.count++; }
+    const options = new Map(
+      (wire?.feeds || []).map((f) => [f.id, { id: f.id, name: f.name, desk: f.desk, ok: f.ok, count: 0 }]),
+    );
+    for (const h of all)
+      if (!options.has(h.feed))
+        options.set(h.feed, {
+          id: h.feed,
+          name: h.via || (h.desk === "x" ? "X" : h.source),
+          desk: h.desk,
+          ok: true,
+          count: 0,
+        });
+    for (const h of scoped) {
+      const option = options.get(h.feed);
+      if (option) option.count++;
+    }
     return [...options.values()];
   }, [wire, all, scoped]);
 
-  const items: ListItem[] = useMemo(() => filtered.slice(0, 250).map((h) => ({
-    id: h.id,
-    title: h.title,
-    meta: `${h.source}${h.via ? ` · ${h.via}` : ""} · ${h.stamped ? `${h.stamped.slice(5, 10)} edition` : age(h.published)}${h.geo ? ` · ${h.geo.place}` : ""}${h.symbols.length ? ` · ${h.symbols.join(" ")}` : ""}`,
-    tone: h.symbols.length ? "close" : ""
-  })), [filtered]);
+  const items: ListItem[] = useMemo(
+    () =>
+      filtered.slice(0, 250).map((h) => ({
+        id: h.id,
+        title: h.title,
+        meta: `${h.source}${h.via ? ` · ${h.via}` : ""} · ${h.stamped ? `${h.stamped.slice(5, 10)} edition` : age(h.published)}${h.geo ? ` · ${h.geo.place}` : ""}${h.symbols.length ? ` · ${h.symbols.join(" ")}` : ""}`,
+        tone: h.symbols.length ? "close" : "",
+      })),
+    [filtered],
+  );
 
   const selected = useMemo(() => all.find((h) => h.id === selectedId) || null, [all, selectedId]);
 
@@ -119,26 +149,57 @@ export function useNews(desk: NewsDesk, query: string, selectedId: string | null
         { label: "Desk", value: selected.desk },
         ...(selected.geo ? [{ label: "Place", value: `${selected.geo.place} · ${selected.geo.basis}` }] : []),
         { label: "Published", value: when(selected.published) },
-        { label: "Age", value: selected.stamped ? `Feed dates it ${when(selected.stamped)} (print edition); first seen ${age(selected.published)}` : age(selected.published) }
+        {
+          label: "Age",
+          value: selected.stamped
+            ? `Feed dates it ${when(selected.stamped)} (print edition); first seen ${age(selected.published)}`
+            : age(selected.published),
+        },
       ],
       links: [
         ...(selected.link ? [{ label: "Article", value: hostOf(selected.link), href: selected.link }] : []),
-        ...(selected.post && selected.post !== selected.link ? [{ label: "Post", value: hostOf(selected.post), href: selected.post }] : []),
+        ...(selected.post && selected.post !== selected.link
+          ? [{ label: "Post", value: hostOf(selected.post), href: selected.post }]
+          : []),
         ...(selected.profile ? [{ label: "X profile", value: selected.source, href: selected.profile }] : []),
         ...selected.symbols.flatMap((symbol) => [
           { label: "Chart", value: symbol, action: `ticker:${symbol}` },
-          { label: "Positions", value: `${symbol} · every filer`, action: `pos:${symbol}` }
-        ])
+          { label: "Positions", value: `${symbol} · every filer`, action: `pos:${symbol}` },
+        ]),
       ],
-      source: selected.via ? `${selected.via} · ${selected.feed === "truth" ? "trumpstruth.org archive" : "public.api.bsky.app"}` : undefined
+      source: selected.via
+        ? `${selected.via} · ${selected.feed === "truth" ? "trumpstruth.org archive" : "public.api.bsky.app"}`
+        : undefined,
     };
   }, [selected]);
 
-  const status: StatusLine = desk === "x"
-    ? { source: x?.source || "X API v2", asOf: when(x?.asOf), latency: x?.missing ? `Set ${x.missing} in .env.local` : x?.latency }
-    : { source: wire?.source || "RSS wires", asOf: when(wire?.asOf), latency: wire?.latency };
+  const status: StatusLine =
+    desk === "x"
+      ? {
+          source: x?.source || "X API v2",
+          asOf: when(x?.asOf),
+          latency: x?.missing ? `Set ${x.missing} in .env.local` : x?.latency,
+        }
+      : { source: wire?.source || "RSS wires", asOf: when(wire?.asOf), latency: wire?.latency };
 
-  return { outletIds, setOutletIds, outlets, scopedCount: scoped.length, items, empty: outletIds.length && !filtered.length ? "No stories match these outlets and filters. Try All outlets or broaden your filters." : desk === "x" && x?.missing ? "Social feed is not configured. Open source details for setup information." : empty, drawer, status, wire, x, all: filtered };
+  return {
+    outletIds,
+    setOutletIds,
+    outlets,
+    scopedCount: scoped.length,
+    items,
+    empty:
+      outletIds.length && !filtered.length
+        ? "No stories match these outlets and filters. Try All outlets or broaden your filters."
+        : desk === "x" && x?.missing
+          ? "Social feed is not configured. Open source details for setup information."
+          : empty,
+    drawer,
+    status,
+    wire,
+    x,
+    all: filtered,
+  };
 }
 
 export function age(iso: string) {

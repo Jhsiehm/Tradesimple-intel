@@ -49,34 +49,55 @@ export function makeGate(concurrency, spacingMs) {
     while (active < concurrency && queue.length && !launchPending) {
       const wait = last + spacingMs - Date.now();
       if (wait > 0) {
-        if (!timer) timer = setTimeout(() => { timer = null; pump(); }, wait);
+        if (!timer)
+          timer = setTimeout(() => {
+            timer = null;
+            pump();
+          }, wait);
         return;
       }
       const job = queue.shift();
       active += 1;
       launchPending = true;
-      Promise.resolve().then(() => {
-        // Space actual starts, even when synchronous work delayed this microtask.
-        last = Date.now();
-        launchPending = false;
-        try { return job.run(); } finally { pump(); }
-      }).then(job.resolve, job.reject).finally(() => { active -= 1; pump(); });
+      Promise.resolve()
+        .then(() => {
+          // Space actual starts, even when synchronous work delayed this microtask.
+          last = Date.now();
+          launchPending = false;
+          try {
+            return job.run();
+          } finally {
+            pump();
+          }
+        })
+        .then(job.resolve, job.reject)
+        .finally(() => {
+          active -= 1;
+          pump();
+        });
     }
   };
-  return (run, { priority = false } = {}) => new Promise((resolve, reject) => {
-    queue[priority ? "unshift" : "push"]({ run, resolve, reject });
-    pump();
-  });
+  return (run, { priority = false } = {}) =>
+    new Promise((resolve, reject) => {
+      queue[priority ? "unshift" : "push"]({ run, resolve, reject });
+      pump();
+    });
 }
 
 /** fetchJson with retries. Errors carry a readable message naming the host and attempts. */
-export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, retries = 2, gate = null, priority = false } = {}) {
+export async function fetchJsonRetry(
+  url,
+  options = {},
+  { timeoutMs = 30000, retries = 2, gate = null, priority = false } = {},
+) {
   let last;
   let tried = 0;
   for (let attempt = 0; attempt <= retries; attempt++) {
     tried += 1;
     try {
-      return await (gate ? gate(() => fetchJson(url, options, timeoutMs), { priority }) : fetchJson(url, options, timeoutMs));
+      return await (gate
+        ? gate(() => fetchJson(url, options, timeoutMs), { priority })
+        : fetchJson(url, options, timeoutMs));
     } catch (err) {
       last = err;
       if (attempt === retries || !retryable(err)) break;
@@ -85,7 +106,12 @@ export async function fetchJsonRetry(url, options = {}, { timeoutMs = 30000, ret
   }
   const host = new URL(url).host;
   const tries = `${tried} attempt${tried > 1 ? "s" : ""}`;
-  const why = last?.name === "AbortError" ? `did not answer within ${Math.round(timeoutMs / 1000)} s` : last?.status ? `returned HTTP ${last.status}` : `failed (${last?.message || "network error"})`;
+  const why =
+    last?.name === "AbortError"
+      ? `did not answer within ${Math.round(timeoutMs / 1000)} s`
+      : last?.status
+        ? `returned HTTP ${last.status}`
+        : `failed (${last?.message || "network error"})`;
   const err = new Error(`${host} ${why} after ${tries}`);
   err.status = last?.status;
   throw err;

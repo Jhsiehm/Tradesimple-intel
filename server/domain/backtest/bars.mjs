@@ -37,14 +37,21 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
   const one = async (symbol) => {
     try {
       const series = await fetchBars(symbol);
-      if (!series.length) { missing.add(symbol); return; }
+      if (!series.length) {
+        missing.add(symbol);
+        return;
+      }
       writeCache(db, KEY.bars(symbol), series, BARS_TTL);
       bars[symbol] = series;
       stored.push(Date.now());
       fetched += 1;
       pending.delete(symbol);
     } catch (err) {
-      if (err?.status === 404) { missing.add(symbol); pending.delete(symbol); return; }
+      if (err?.status === 404) {
+        missing.add(symbol);
+        pending.delete(symbol);
+        return;
+      }
       const old = readStale(db, KEY.bars(symbol));
       if (old?.value?.length) {
         bars[symbol] = old.value;
@@ -59,7 +66,13 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
   const wait = deadline ? Math.max(0, deadline - Date.now()) : 0;
   if (todo.length) {
     if (deadline) {
-      await Promise.race([work, new Promise((r) => { const t = setTimeout(r, wait); t.unref?.(); })]);
+      await Promise.race([
+        work,
+        new Promise((r) => {
+          const t = setTimeout(r, wait);
+          t.unref?.();
+        }),
+      ]);
     } else {
       await work;
     }
@@ -73,7 +86,7 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
     cached: cachedCount,
     fetched,
     staleStoredAt: storedAt.length ? Math.min(...storedAt) : null,
-    oldestStoredAt: stored.filter(Boolean).length ? Math.min(...stored.filter(Boolean)) : null
+    oldestStoredAt: stored.filter(Boolean).length ? Math.min(...stored.filter(Boolean)) : null,
   };
 }
 
@@ -84,7 +97,9 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
 export async function warmBars(db, { fetchBars = yahooBars, log = console.log } = {}) {
   const symbols = [...BENCHMARKS.filter((b) => b !== "SECTOR"), ...listTickers(db).map((t) => t.symbol)];
   const res = await loadBars(db, symbols, { concurrency: 2, fetchBars });
-  log(`backtest bars warm: ${res.cached} cached, ${res.fetched} fetched, ${res.missing.length} missing, ${res.stale.length} stale (from ${PRICE_HISTORY_FROM})`);
+  log(
+    `backtest bars warm: ${res.cached} cached, ${res.fetched} fetched, ${res.missing.length} missing, ${res.stale.length} stale (from ${PRICE_HISTORY_FROM})`,
+  );
   return res;
 }
 

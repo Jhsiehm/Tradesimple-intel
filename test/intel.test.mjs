@@ -1,18 +1,46 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySignal, alertSeverity, binCounts, bucketDays, bundleArcs, countAlertLevels, dayIso, dayNum, greatCircle, missedIn, severity, triageAlerts, windowSum } from "../shared/intel.mjs";
-import { buildLinks, centroidOf, contractAmount, contractTotal, form4Breakdown, memberAnchor, oldestAsOf, proximityPhrase, seatCode } from "../server/intel.mjs";
+import {
+  activitySignal,
+  alertSeverity,
+  binCounts,
+  bucketDays,
+  bundleArcs,
+  countAlertLevels,
+  dayIso,
+  dayNum,
+  greatCircle,
+  missedIn,
+  severity,
+  triageAlerts,
+  windowSum,
+} from "../shared/intel.mjs";
+import {
+  buildLinks,
+  centroidOf,
+  contractAmount,
+  contractTotal,
+  form4Breakdown,
+  memberAnchor,
+  oldestAsOf,
+  proximityPhrase,
+  seatCode,
+} from "../server/intel.mjs";
 import { buildAlerts, capAlerts } from "../server/alerts.mjs";
 
 test("bucketDays counts per kind per day and drops out-of-range or undated events", () => {
-  const out = bucketDays([
-    { kind: "trade", date: "2026-01-01" },
-    { kind: "trade", date: "2026-01-01" },
-    { kind: "trade", date: "2026-01-03" },
-    { kind: "hearing", date: "2026-01-02T15:00:00Z" },
-    { kind: "trade", date: "2025-12-31" },
-    { kind: "roll", date: "" }
-  ], "2026-01-01", "2026-01-03");
+  const out = bucketDays(
+    [
+      { kind: "trade", date: "2026-01-01" },
+      { kind: "trade", date: "2026-01-01" },
+      { kind: "trade", date: "2026-01-03" },
+      { kind: "hearing", date: "2026-01-02T15:00:00Z" },
+      { kind: "trade", date: "2025-12-31" },
+      { kind: "roll", date: "" },
+    ],
+    "2026-01-01",
+    "2026-01-03",
+  );
   assert.equal(out.len, 3);
   assert.deepEqual(out.days.trade, [2, 0, 1]);
   assert.deepEqual(out.days.hearing, [0, 1, 0]);
@@ -28,7 +56,10 @@ test("windowSum clamps, binCounts conserves the total", () => {
   assert.equal(windowSum(undefined, 0, 3), 0);
   const bins = binCounts(counts, 3);
   assert.equal(bins.length, 3);
-  assert.equal(bins.reduce((a, b) => a + b, 0), 28);
+  assert.equal(
+    bins.reduce((a, b) => a + b, 0),
+    28,
+  );
   assert.deepEqual(binCounts(counts, 7), counts);
 });
 
@@ -57,7 +88,7 @@ test("bundleArcs groups by kind and endpoints inside the window, caps, and count
     [40, 0, 1, 2, 1000, 0],
     [11, 1, 3, 2, 5e6, 1],
     [11, 0, 4, 4, 1000, 2],
-    [13, 2, 2, 1, 5000, 3]
+    [13, 2, 2, 1, 5000, 3],
   ];
   const all = bundleArcs(links, { from: 0, to: 20 });
   assert.equal(all.links, 5);
@@ -70,18 +101,28 @@ test("bundleArcs groups by kind and endpoints inside the window, caps, and count
   assert.equal(capped.arcs.length, 1);
   assert.equal(capped.hidden, 2);
   const onlyContracts = bundleArcs(links, { kinds: new Set(["contract"]) });
-  assert.deepEqual(onlyContracts.arcs.map((a) => a.kind), ["contract"]);
+  assert.deepEqual(
+    onlyContracts.arcs.map((a) => a.kind),
+    ["contract"],
+  );
 });
 
 test("severity compares the trade-day share with the calendar baseline", () => {
   assert.equal(severity(null).level, "thin");
-  assert.equal(severity({ tradeDays: 10, nearTradeDays: 0, dayShare: 0, baseline: 0 }).label, "NO HEARINGS", "no committee meetings is not a baseline reading");
+  assert.equal(
+    severity({ tradeDays: 10, nearTradeDays: 0, dayShare: 0, baseline: 0 }).label,
+    "NO HEARINGS",
+    "no committee meetings is not a baseline reading",
+  );
   assert.equal(severity({ tradeDays: 2, nearTradeDays: 2, dayShare: 1, baseline: 0.3 }).level, "thin");
   assert.equal(severity({ tradeDays: 10, nearTradeDays: 8, dayShare: 0.8, baseline: 0.5 }).level, "high");
   assert.equal(severity({ tradeDays: 10, nearTradeDays: 3, dayShare: 0.6, baseline: 0.45 }).level, "elevated");
   assert.equal(severity({ tradeDays: 10, nearTradeDays: 5, dayShare: 0.5, baseline: 0.45 }).level, "baseline");
   assert.equal(severity({ tradeDays: 10, nearTradeDays: 2, dayShare: 0.2, baseline: 0.45 }).level, "low");
-  assert.match(severity({ tradeDays: 10, nearTradeDays: 8, dayShare: 0.8, baseline: 0.5 }).why, /80% of 10 trade days .* 50% of all days/);
+  assert.match(
+    severity({ tradeDays: 10, nearTradeDays: 8, dayShare: 0.8, baseline: 0.5 }).why,
+    /80% of 10 trade days .* 50% of all days/,
+  );
 });
 
 test("activitySignal flags a 30-day spike against the trailing rate", () => {
@@ -94,8 +135,16 @@ test("activitySignal flags a 30-day spike against the trailing rate", () => {
   assert.equal(s.recent, 6);
   assert.equal(s.level, "high");
   assert.equal(activitySignal([back(2)], today).level, "thin");
-  assert.equal(activitySignal([back(400), back(2), back(3)], today).level, "thin", "the 400-day-old trade is outside 12 months");
-  assert.equal(activitySignal([back(1), back(2), back(3)], today).level, "elevated", "nothing in the prior 11 months, 3 recent");
+  assert.equal(
+    activitySignal([back(400), back(2), back(3)], today).level,
+    "thin",
+    "the 400-day-old trade is outside 12 months",
+  );
+  assert.equal(
+    activitySignal([back(1), back(2), back(3)], today).level,
+    "elevated",
+    "nothing in the prior 11 months, 3 recent",
+  );
 });
 
 test("alertSeverity triages lateness, size, and Form 4 value", () => {
@@ -118,14 +167,43 @@ test("alertSeverity triages lateness, size, and Form 4 value", () => {
 
 test("buildAlerts rows carry severity, source, and what a pin would watch", () => {
   const out = buildAlerts({
-    trades: [{ id: "t1", chamber: "senate", person: "Sen. B", bioguide: "B000002", symbol: "AMD", side: "buy", amount: "$250,001 - $500,000", amountLow: 250001, traded: "2026-08-01", filed: "2026-08-20", lag: 19 }],
-    insiders: [{ id: "f1", symbol: "AMD", person: "X", code: "S", side: "sell", shares: 1000, price: 200, traded: "2026-09-01", filed: "2026-09-03" }],
+    trades: [
+      {
+        id: "t1",
+        chamber: "senate",
+        person: "Sen. B",
+        bioguide: "B000002",
+        symbol: "AMD",
+        side: "buy",
+        amount: "$250,001 - $500,000",
+        amountLow: 250001,
+        traded: "2026-08-01",
+        filed: "2026-08-20",
+        lag: 19,
+      },
+    ],
+    insiders: [
+      {
+        id: "f1",
+        symbol: "AMD",
+        person: "X",
+        code: "S",
+        side: "sell",
+        shares: 1000,
+        price: 200,
+        traded: "2026-09-01",
+        filed: "2026-09-03",
+      },
+    ],
     symbols: ["AMD"],
-    members: []
+    members: [],
   });
   const trade = out.find((a) => a.id === "trade:t1");
   assert.deepEqual([trade.severity, trade.source], ["high", "Senate eFD PTR"]);
-  assert.deepEqual(trade.pins.map((p) => `${p.kind}:${p.id}`), ["member:B000002", "symbol:AMD"]);
+  assert.deepEqual(
+    trade.pins.map((p) => `${p.kind}:${p.id}`),
+    ["member:B000002", "symbol:AMD"],
+  );
   const f4 = out.find((a) => a.id === "f4:AMD:f1");
   assert.deepEqual([f4.severity, f4.source], ["elevated", "SEC EDGAR Form 4"]);
 });
@@ -136,13 +214,27 @@ test("triageAlerts orders by severity then newest, filters by level, and hides d
     { id: "b", date: "2026-08-01", severity: "high" },
     { id: "c", date: "2026-09-05", severity: "elevated" },
     { id: "d", date: "2026-09-10", severity: "high" },
-    { id: "e", date: "2026-09-20" }
+    { id: "e", date: "2026-09-20" },
   ];
-  assert.deepEqual(triageAlerts(rows).map((a) => a.id), ["d", "b", "c", "e", "a"]);
-  assert.deepEqual(triageAlerts(rows, { level: "routine" }).map((a) => a.id), ["e", "a"], "rows without severity count as routine");
-  assert.deepEqual(triageAlerts(rows, { hide: new Set(["d"]) }).map((a) => a.id), ["b", "c", "e", "a"]);
+  assert.deepEqual(
+    triageAlerts(rows).map((a) => a.id),
+    ["d", "b", "c", "e", "a"],
+  );
+  assert.deepEqual(
+    triageAlerts(rows, { level: "routine" }).map((a) => a.id),
+    ["e", "a"],
+    "rows without severity count as routine",
+  );
+  assert.deepEqual(
+    triageAlerts(rows, { hide: new Set(["d"]) }).map((a) => a.id),
+    ["b", "c", "e", "a"],
+  );
   assert.deepEqual(countAlertLevels(rows, new Set(["a"])), { high: 2, elevated: 1, routine: 1 });
-  assert.deepEqual(rows.map((a) => a.id), ["a", "b", "c", "d", "e"], "input is not reordered");
+  assert.deepEqual(
+    rows.map((a) => a.id),
+    ["a", "b", "c", "d", "e"],
+    "input is not reordered",
+  );
 });
 
 test("seatCode and memberAnchor place House seats on districts and senators on states", () => {
@@ -150,16 +242,41 @@ test("seatCode and memberAnchor place House seats on districts and senators on s
   assert.equal(seatCode("AK-0"), "AK-AL");
   assert.equal(seatCode("ak-al"), "AK-AL");
   assert.equal(seatCode("DC"), "");
-  const g = { districts: new Map([["NJ-05", [-74.1, 41.0]]]), states: new Map([["NJ", [-74.6, 40.1]], ["DC", [-77.0, 38.9]]]) };
-  assert.deepEqual(memberAnchor({ chamber: "house", state: "NJ", district: "NJ-5" }, g), { at: [-74.1, 41.0], where: "NJ-05" });
-  assert.deepEqual(memberAnchor({ chamber: "house", state: "NJ", district: "5" }, g), { at: [-74.1, 41.0], where: "NJ-05" }, "roster rows carry the bare number");
+  const g = {
+    districts: new Map([["NJ-05", [-74.1, 41.0]]]),
+    states: new Map([
+      ["NJ", [-74.6, 40.1]],
+      ["DC", [-77.0, 38.9]],
+    ]),
+  };
+  assert.deepEqual(memberAnchor({ chamber: "house", state: "NJ", district: "NJ-5" }, g), {
+    at: [-74.1, 41.0],
+    where: "NJ-05",
+  });
+  assert.deepEqual(
+    memberAnchor({ chamber: "house", state: "NJ", district: "5" }, g),
+    { at: [-74.1, 41.0], where: "NJ-05" },
+    "roster rows carry the bare number",
+  );
   assert.deepEqual(memberAnchor({ chamber: "senate", state: "NJ" }, g).where, "NJ");
-  assert.equal(memberAnchor({ chamber: "house", state: "", district: "DC" }, g).where, "DC", "delegates fall back to the state");
+  assert.equal(
+    memberAnchor({ chamber: "house", state: "", district: "DC" }, g).where,
+    "DC",
+    "delegates fall back to the state",
+  );
   assert.equal(memberAnchor({ chamber: "senate", state: "" }, g), null);
 });
 
 test("centroidOf takes the largest polygon of a multipolygon", () => {
-  const square = (x, y, s) => [[[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]]];
+  const square = (x, y, s) => [
+    [
+      [x, y],
+      [x + s, y],
+      [x + s, y + s],
+      [x, y + s],
+      [x, y],
+    ],
+  ];
   const c = centroidOf({ type: "MultiPolygon", coordinates: [square(0, 0, 1), square(10, 10, 4)] });
   assert.deepEqual(c, [12, 12]);
 });
@@ -168,33 +285,67 @@ test("buildLinks joins only through real places and reports what it could not pl
   const g = {
     districts: new Map([["NJ-05", [-74.1, 41.0]]]),
     states: new Map([["OK", [-97.5, 35.5]]]),
-    agencyBy: new Map([["Department of Defense", { short: "DoD", address: "Pentagon", lon: -77.05, lat: 38.87 }]])
+    agencyBy: new Map([["Department of Defense", { short: "DoD", address: "Pentagon", lon: -77.05, lat: 38.87 }]]),
   };
   const hq = [
     { symbol: "MCD", city: "CHICAGO", state: "IL", lat: 41.88, lon: -87.63 },
     { symbol: "LMT", city: "BETHESDA", state: "MD", lat: 38.98, lon: -77.1 },
-    { symbol: "SAP", foreign: true, city: "WALLDORF", state: "", lat: null, lon: null }
+    { symbol: "SAP", foreign: true, city: "WALLDORF", state: "", lat: null, lon: null },
   ];
   const out = buildLinks({
     g,
     hq,
-    people: [{ bioguide: "G000583", name: "Josh Gottheimer", party: "D", chamber: "house", state: "NJ", district: "5" }],
+    people: [
+      { bioguide: "G000583", name: "Josh Gottheimer", party: "D", chamber: "house", state: "NJ", district: "5" },
+    ],
     trades: [
-      { person: "Josh Gottheimer", bioguide: "G000583", party: "D", chamber: "house", state: "NJ", district: "NJ-5", symbol: "MCD", traded: "2026-09-25", amountLow: 1001 },
-      { person: "Josh Gottheimer", bioguide: "G000583", party: "D", chamber: "house", state: "NJ", district: "NJ-5", symbol: "SAP", traded: "2026-09-25", amountLow: 1001 },
-      { person: "Unknown", chamber: "senate", state: "", symbol: "MCD", traded: "2026-09-25", amountLow: 1001 }
+      {
+        person: "Josh Gottheimer",
+        bioguide: "G000583",
+        party: "D",
+        chamber: "house",
+        state: "NJ",
+        district: "NJ-5",
+        symbol: "MCD",
+        traded: "2026-09-25",
+        amountLow: 1001,
+      },
+      {
+        person: "Josh Gottheimer",
+        bioguide: "G000583",
+        party: "D",
+        chamber: "house",
+        state: "NJ",
+        district: "NJ-5",
+        symbol: "SAP",
+        traded: "2026-09-25",
+        amountLow: 1001,
+      },
+      { person: "Unknown", chamber: "senate", state: "", symbol: "MCD", traded: "2026-09-25", amountLow: 1001 },
     ],
     contracts: [
       { agency: "Department of Defense", symbol: "LMT", date: "2026-07-01", amount: 5e8 },
       { agency: "Smithsonian Institution", symbol: "LMT", date: "2026-07-01", amount: 1 },
-      { agency: "Department of Defense", symbol: null, date: "2026-07-01", amount: 1 }
+      { agency: "Department of Defense", symbol: null, date: "2026-07-01", amount: 1 },
     ],
-    pacs: [{ symbol: "LMT", bioguide: "G000583", date: "2026-03-01", amount: 5000 }]
+    pacs: [{ symbol: "LMT", bioguide: "G000583", date: "2026-03-01", amount: 5000 }],
   });
   assert.deepEqual(out.coverage.trade, { total: 3, placed: 1, noFrom: 1, noTo: 1 });
-  assert.deepEqual(out.coverage.contract, { total: 2, placed: 1, noFrom: 1, noTo: 0 }, "unjoined recipients are not counted as arcs");
+  assert.deepEqual(
+    out.coverage.contract,
+    { total: 2, placed: 1, noFrom: 1, noTo: 0 },
+    "unjoined recipients are not counted as arcs",
+  );
   assert.deepEqual(out.coverage.pac, { total: 1, placed: 1, noFrom: 0, noTo: 0 });
-  assert.deepEqual(out.misses, [[dayNum("2026-09-25"), 0], [dayNum("2026-09-25"), 0], [dayNum("2026-07-01"), 1]], "every unplaced link keeps its day and kind");
+  assert.deepEqual(
+    out.misses,
+    [
+      [dayNum("2026-09-25"), 0],
+      [dayNum("2026-09-25"), 0],
+      [dayNum("2026-07-01"), 1],
+    ],
+    "every unplaced link keeps its day and kind",
+  );
   assert.equal(out.links.length, 3);
   const [d, kind, f, t, amount, a] = out.links[0];
   assert.equal(d, dayNum("2026-09-25"));
@@ -210,8 +361,14 @@ test("buildLinks joins only through real places and reports what it could not pl
 
 test("proximityPhrase counts the same in-window trades as proximity() and names a missing hearing baseline", () => {
   const trades = Array.from({ length: 32 }, (_, i) => ({ traded: "2025-02-01", id: i }));
-  assert.equal(proximityPhrase(trades, { trades: 32, near: 0, baseline: 0 }), "32 trades, no committee hearings on file to compare");
-  assert.equal(proximityPhrase(trades, { trades: 32, near: 10, baseline: 0.5 }), "10 of 32 trades within 14 days of a hearing (50% of all days are)");
+  assert.equal(
+    proximityPhrase(trades, { trades: 32, near: 0, baseline: 0 }),
+    "32 trades, no committee hearings on file to compare",
+  );
+  assert.equal(
+    proximityPhrase(trades, { trades: 32, near: 10, baseline: 0.5 }),
+    "10 of 32 trades within 14 days of a hearing (50% of all days are)",
+  );
   assert.equal(proximityPhrase([], null), "no disclosed trades since 2025-01-03");
 });
 
@@ -219,17 +376,39 @@ test("capAlerts keeps watched rows when newer late filings would fill the cap, i
   const late = Array.from({ length: 5 }, (_, i) => ({ id: `late:${i}`, kind: "late-filing", date: "2026-08-05" }));
   const watched = { id: "trade:1", kind: "member-trade", date: "2026-07-01" };
   const out = capAlerts([...late, watched], 3);
-  assert.deepEqual(out.map((a) => a.id), ["late:0", "late:1", "trade:1"]);
+  assert.deepEqual(
+    out.map((a) => a.id),
+    ["late:0", "late:1", "trade:1"],
+  );
 });
 
 test("missedIn counts unplaced links inside the window for the kinds that are on", () => {
-  const misses = [[0, 0], [5, 0], [5, 1], [9, 2], [12, 0]];
+  const misses = [
+    [0, 0],
+    [5, 0],
+    [5, 1],
+    [9, 2],
+    [12, 0],
+  ];
   assert.equal(missedIn(misses, 0, 12, null), 5);
   assert.equal(missedIn(misses, 5, 9, null), 3);
   assert.equal(missedIn(misses, 5, 9, new Set(["trade", "pac"])), 2);
   assert.equal(missedIn(misses, 13, 20, null), 0);
   assert.equal(missedIn(undefined, 0, 9, null), 0);
-  assert.equal(missedIn([[5, 0, 40], [5, 1, 2], [9, 0]], 0, 9, new Set(["trade"])), 41, "third element is a count");
+  assert.equal(
+    missedIn(
+      [
+        [5, 0, 40],
+        [5, 1, 2],
+        [9, 0],
+      ],
+      0,
+      9,
+      new Set(["trade"]),
+    ),
+    41,
+    "third element is a count",
+  );
 });
 
 test("case-file contract totals say when only the top page was summed; Form 4 counts include other; as-of is the stalest feed", () => {
@@ -238,7 +417,10 @@ test("case-file contract totals say when only the top page was summed; Form 4 co
   assert.equal(contractAmount(capped), "≥ $213.8M");
   assert.equal(capped.capped, true);
   assert.equal(contractAmount(contractTotal({ ok: true, items: [{ amount: 5e6 }] })), "$5.0M");
-  assert.equal(form4Breakdown([{ side: "sell" }, { side: "sell" }, { side: "tax" }, { side: "award" }]), "0 buys · 2 sells · 2 other");
+  assert.equal(
+    form4Breakdown([{ side: "sell" }, { side: "sell" }, { side: "tax" }, { side: "award" }]),
+    "0 buys · 2 sells · 2 other",
+  );
   assert.equal(form4Breakdown([{ side: "buy" }]), "1 buy · 0 sells · 0 other");
   assert.equal(oldestAsOf("2026-10-09T05:00:00Z", "", undefined, "2026-10-01T01:00:00Z"), "2026-10-01T01:00:00Z");
   assert.equal(oldestAsOf("", null), "");

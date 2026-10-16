@@ -6,8 +6,18 @@ import { modelShort } from "./modelRoute.mjs";
 
 const WEB = new Set(["web_result", "web_fetch"]);
 const NOT_DATA = new Set(["web_result", "web_fetch", "web_search", "propose_theory", "search"]);
-const ET_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
-const ET_TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const ET_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const ET_TIME = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 const ET_DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
 const UTC_DATE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
 
@@ -44,7 +54,7 @@ export function confidenceLine({ steps = [], done, model = "", now = NaN }) {
   let signals = 0;
   for (const b of done.backtests || []) {
     const c = b?.ok && b.counts ? b.counts : null;
-    const total = c ? c.signalsOnChosenSides ?? c.matchedSignals : undefined;
+    const total = c ? (c.signalsOnChosenSides ?? c.matchedSignals) : undefined;
     if (!c || !Number.isFinite(c.tradesPriced) || !Number.isFinite(total)) continue;
     priced += c.tradesPriced;
     signals += total;
@@ -54,7 +64,8 @@ export function confidenceLine({ steps = [], done, model = "", now = NaN }) {
     if (priced < signals) warn = true;
   }
 
-  const unverified = (g.unmatched?.length || 0) + (g.miscited?.length || 0) + (g.mislabeled?.length || 0) + (done.unknown?.length || 0);
+  const unverified =
+    (g.unmatched?.length || 0) + (g.miscited?.length || 0) + (g.mislabeled?.length || 0) + (done.unknown?.length || 0);
   if (unverified) parts.push(`${plural(unverified, "figure")} unverified`);
   if (g.scope?.length) parts.push(`${plural(g.scope.length, "claim")} unsupported`);
   if (g.uncitedRows?.length) parts.push(`${plural(g.uncitedRows.length, "row")} without a ref`);
@@ -67,7 +78,9 @@ export function confidenceLine({ steps = [], done, model = "", now = NaN }) {
   const web = ok.filter((s) => WEB.has(s.tool)).length;
   if (web) parts.push(plural(web, "web source"));
 
-  const oldest = ok.filter((s) => !NOT_DATA.has(s.tool) && Number.isFinite(stamp(s.asOf))).sort((a, b) => stamp(a.asOf) - stamp(b.asOf))[0];
+  const oldest = ok
+    .filter((s) => !NOT_DATA.has(s.tool) && Number.isFinite(stamp(s.asOf)))
+    .sort((a, b) => stamp(a.asOf) - stamp(b.asOf))[0];
   const asOf = oldest ? asOfText(oldest.asOf, now) : "";
   if (asOf) parts.push(`data as of ${asOf}`);
 

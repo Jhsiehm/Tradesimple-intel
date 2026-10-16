@@ -3,14 +3,20 @@
  * caller (NTFY_TOPIC / NTFY_TOKEN in .env.local) and are never logged; errors name the status only.
  */
 export async function postNtfy({ server, topic, token = "", message, timeoutMs = 10_000 }) {
-  const body = { topic, title: message.title, message: message.message, priority: message.priority, tags: message.tags };
+  const body = {
+    topic,
+    title: message.title,
+    message: message.message,
+    priority: message.priority,
+    tags: message.tags,
+  };
   if (message.click) body.click = message.click;
   if (message.actions?.length) body.actions = message.actions;
   const res = await fetch(`${server}/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs)
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text().catch(() => "");
   if (!res.ok) {

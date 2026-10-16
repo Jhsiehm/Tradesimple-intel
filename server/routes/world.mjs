@@ -23,5 +23,5 @@ export const handlers = {
   "earth.lanes": ({ db }) => shippingLanes(db),
   alerts: ({ db, query }) => alertsFor(db, query.params),
   "intel.scope": ({ db, query }) => intelScope(db, query.params),
-  "intel.case": ({ db, params }) => caseFile(db, params.kind, decodeURIComponent(params.id))
+  "intel.case": ({ db, params }) => caseFile(db, params.kind, decodeURIComponent(params.id)),
 };

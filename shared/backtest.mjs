@@ -78,9 +78,16 @@ export function maxDrawdown(values, labels = []) {
   let from = 0;
   let to = 0;
   for (let i = 0; i < values.length; i += 1) {
-    if (values[i] > peak) { peak = values[i]; peakAt = i; }
+    if (values[i] > peak) {
+      peak = values[i];
+      peakAt = i;
+    }
     const dd = values[i] / peak - 1;
-    if (dd < worst) { worst = dd; from = peakAt; to = i; }
+    if (dd < worst) {
+      worst = dd;
+      from = peakAt;
+      to = i;
+    }
   }
   return { depth: worst, from: labels[from] ?? from, to: labels[to] ?? to, peak: values[from], trough: values[to] };
 }
@@ -107,7 +114,8 @@ function costOf(rules) {
 export function simulateTrade(signal, bars, bench, rules, signalDay, sign) {
   const entryAt = firstAfter(bars, signalDay);
   if (entryAt === -1) return { skip: "noBarAfterSignal" };
-  if (bars[entryAt][0] - signalDay > ENTRY_SLACK_DAYS) return { skip: entryAt === 0 ? "beforePriceHistory" : "entryGap" };
+  if (bars[entryAt][0] - signalDay > ENTRY_SLACK_DAYS)
+    return { skip: entryAt === 0 ? "beforePriceHistory" : "entryGap" };
   const atOpen = rules.entry === "nextOpen";
   const entryBar = bars[entryAt];
   const openMissing = atOpen && !(entryBar[1] > 0);
@@ -120,9 +128,21 @@ export function simulateTrade(signal, bars, bench, rules, signalDay, sign) {
   let why = "";
   for (let j = firstCheck; j < bars.length; j += 1) {
     const pnl = sign * (bars[j][2] / entryPrice - 1);
-    if (rules.stopLossPct && pnl <= -rules.stopLossPct / 100) { exitAt = j; why = "stop"; break; }
-    if (rules.takeProfitPct && pnl >= rules.takeProfitPct / 100) { exitAt = j; why = "take"; break; }
-    if (bars[j][0] >= horizon) { exitAt = j; why = "hold"; break; }
+    if (rules.stopLossPct && pnl <= -rules.stopLossPct / 100) {
+      exitAt = j;
+      why = "stop";
+      break;
+    }
+    if (rules.takeProfitPct && pnl >= rules.takeProfitPct / 100) {
+      exitAt = j;
+      why = "take";
+      break;
+    }
+    if (bars[j][0] >= horizon) {
+      exitAt = j;
+      why = "hold";
+      break;
+    }
   }
   let open = false;
   if (exitAt === -1) {
@@ -166,8 +186,8 @@ export function simulateTrade(signal, bars, bench, rules, signalDay, sign) {
       exit: why,
       open,
       openFallback: openMissing,
-      path
-    }
+      path,
+    },
   };
 }
 
@@ -196,16 +216,18 @@ function breakdown(trades, keyOf, labelOf, limit = 30) {
     row.ex.push(t.excess);
     by.set(k, row);
   }
-  const rows = [...by.values()].map((r) => ({
-    key: r.key,
-    label: r.label,
-    n: r.rets.length,
-    avg: r4(mean(r.rets)),
-    median: r4(median(r.rets)),
-    hitRate: r4(r.rets.filter((v) => v > 0).length / r.rets.length),
-    avgExcess: r4(mean(r.ex)),
-    beatRate: r4(r.ex.filter((v) => v > 0).length / r.ex.length)
-  })).sort((a, b) => b.n - a.n || (b.avgExcess ?? 0) - (a.avgExcess ?? 0));
+  const rows = [...by.values()]
+    .map((r) => ({
+      key: r.key,
+      label: r.label,
+      n: r.rets.length,
+      avg: r4(mean(r.rets)),
+      median: r4(median(r.rets)),
+      hitRate: r4(r.rets.filter((v) => v > 0).length / r.rets.length),
+      avgExcess: r4(mean(r.ex)),
+      beatRate: r4(r.ex.filter((v) => v > 0).length / r.ex.length),
+    }))
+    .sort((a, b) => b.n - a.n || (b.avgExcess ?? 0) - (a.avgExcess ?? 0));
   return { total: rows.length, rows: rows.slice(0, limit) };
 }
 
@@ -233,14 +255,17 @@ const SKIP_SHORT = {
   badPrice: "unusable entry price",
   stillOpen: "hold not complete",
   noBenchmark: "no benchmark price",
-  badDate: "no usable public date"
+  badDate: "no usable public date",
 };
 
 /** "3 of 67 signals became trades; 64 did not: 56 hold not complete, 8 public on or after the last price bar." */
 export function unpricedLine(signals, trades, skipped) {
   const missed = Object.values(skipped).reduce((a, b) => a + b, 0);
   if (!missed) return "";
-  const parts = Object.entries(skipped).map(([r, n]) => [n, SKIP_SHORT[r] || r]).sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1])).map(([n, label]) => `${n} ${label}`);
+  const parts = Object.entries(skipped)
+    .map(([r, n]) => [n, SKIP_SHORT[r] || r])
+    .sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1]))
+    .map(([n, label]) => `${n} ${label}`);
   return `${trades} of ${signals} signals became trades; ${missed} did not: ${parts.join(", ")}.${skipped.stillOpen ? " Open positions can be marked at the last close instead (rules.openTrades = mark)." : ""}`;
 }
 
@@ -248,7 +273,14 @@ export function unpricedLine(signals, trades, skipped) {
  * Run a backtest. `signals`: { id, symbol, signalDate, side, sizeHint?, sizeIsRange?, tradeDate?, actor?, actorLabel?, sector?, meta? }.
  * `bars` and `benchBars` map symbol → bars. `context` carries what the engine cannot see: notes, paper-filing counts.
  */
-export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {}, rules: rawRules, context = {}, calendar = null }) {
+export function runBacktest({
+  signals: allSignals = [],
+  bars = {},
+  benchBars = {},
+  rules: rawRules,
+  context = {},
+  calendar = null,
+}) {
   const rules = cleanRules(rawRules);
   let signals = allSignals;
   const skipped = {};
@@ -262,7 +294,10 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     const side = s.side === "sell" ? "sell" : s.side === "buy" ? "buy" : "";
     return side && (rules.sides === "both" || rules.sides === side);
   });
-  const sizes = signals.map((s) => Number(s.sizeHint)).filter((v) => v > 0).map((v) => Math.min(v, SIZE_CAP));
+  const sizes = signals
+    .map((s) => Number(s.sizeHint))
+    .filter((v) => v > 0)
+    .map((v) => Math.min(v, SIZE_CAP));
   const sizeFallback = median(sizes) || 1;
   const trades = [];
   let estimated = 0;
@@ -275,15 +310,27 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     const sym = String(signal.symbol || "").toUpperCase();
     const side = signal.side === "sell" ? "sell" : "buy";
     const signalDay = dayOf(signal.signalDate);
-    if (signalDay == null) { bump("badDate", sym); continue; }
+    if (signalDay == null) {
+      bump("badDate", sym);
+      continue;
+    }
     const series = bars[sym];
-    if (!series?.length) { bump(context.unpriced?.includes(sym) ? "notPriced" : "noPrice", sym); continue; }
+    if (!series?.length) {
+      bump(context.unpriced?.includes(sym) ? "notPriced" : "noPrice", sym);
+      continue;
+    }
     const id = benchmarkId(rules, signal);
     const bench = benchBars[id] || (rules.benchmark === "SECTOR" ? benchBars.SPY : null);
-    if (!bench?.length) { bump("noBenchmark", sym); continue; }
+    if (!bench?.length) {
+      bump("noBenchmark", sym);
+      continue;
+    }
     if (rules.benchmark === "SECTOR" && !benchBars[id]) benchFallback += 1;
     const out = simulateTrade(signal, series, bench, rules, signalDay, side === "sell" ? -1 : 1);
-    if (out.skip) { bump(out.skip, sym); continue; }
+    if (out.skip) {
+      bump(out.skip, sym);
+      continue;
+    }
     const wt = weightOf(rules.sizing, signal, sizeFallback);
     if (wt.estimated) estimated += 1;
     if (wt.missing) missingSize += 1;
@@ -298,26 +345,46 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
       tradeDay: dayOf(signal.tradeDate),
       weight: wt.w,
       benchmark: id,
-      ...out.trade
+      ...out.trade,
     });
   }
 
   const result = {
     ok: true,
     rules,
-    counts: { signals: signals.length, offeredSignals: offered, used: trades.length, skipped: Object.values(skipped).reduce((a, b) => a + b, 0) },
+    counts: {
+      signals: signals.length,
+      offeredSignals: offered,
+      used: trades.length,
+      skipped: Object.values(skipped).reduce((a, b) => a + b, 0),
+    },
     trades: [],
     byMember: { total: 0, rows: [] },
     byTicker: { total: 0, rows: [] },
     curve: [],
     stats: null,
-    caveats: { items: [] }
+    caveats: { items: [] },
   };
-  result.caveats = buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimated, missingSize, openFallback, benchFallback, context, c });
+  result.caveats = buildCaveats({
+    rules,
+    signals,
+    trades,
+    skipped,
+    skippedSymbols,
+    estimated,
+    missingSize,
+    openFallback,
+    benchFallback,
+    context,
+    c,
+  });
   if (!trades.length) return result;
 
   trades.sort((a, b) => a.entryDay - b.entryDay || String(a.id).localeCompare(String(b.id)));
-  const curve = buildCurve(trades, calendar || benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || null);
+  const curve = buildCurve(
+    trades,
+    calendar || benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || null,
+  );
   const rets = trades.map((t) => t.ret);
   const ex = trades.map((t) => t.excess);
   const days = curve.days;
@@ -369,8 +436,12 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     from: curve.labels[0],
     to: curve.labels.at(-1),
     spanDays,
-    sharpeNote: "Sharpe-ish: mean daily return ÷ daily standard deviation × √252, risk-free rate taken as 0, calendar-time portfolio. A rough score on a short, overlapping sample, not a risk-adjusted performance claim.",
-    weighting: rules.sizing === "amountMid" ? `Weighted by disclosed range midpoint (capped at $${SIZE_CAP.toLocaleString("en-US")}).` : "Equal weight across open positions."
+    sharpeNote:
+      "Sharpe-ish: mean daily return ÷ daily standard deviation × √252, risk-free rate taken as 0, calendar-time portfolio. A rough score on a short, overlapping sample, not a risk-adjusted performance claim.",
+    weighting:
+      rules.sizing === "amountMid"
+        ? `Weighted by disclosed range midpoint (capped at $${SIZE_CAP.toLocaleString("en-US")}).`
+        : "Equal weight across open positions.",
   };
   result.trades = trades.map((t) => ({
     id: t.id,
@@ -391,24 +462,33 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     why: t.exit,
     open: t.open,
     benchmark: t.benchmark,
-    weight: t.weight
+    weight: t.weight,
   }));
-  result.byMember = breakdown(trades, (t) => t.actor, (t) => t.actorLabel);
-  result.byTicker = breakdown(trades, (t) => t.symbol, (t) => t.symbol);
+  result.byMember = breakdown(
+    trades,
+    (t) => t.actor,
+    (t) => t.actorLabel,
+  );
+  result.byTicker = breakdown(
+    trades,
+    (t) => t.symbol,
+    (t) => t.symbol,
+  );
   return result;
 }
 
 /** Calendar-time curve from trade paths. Idle days (nothing open) earn 0; `calendar` adds benchmark trading days. */
 function buildCurve(trades, calendar) {
   const byDay = new Map();
-  for (const t of trades) for (const [d, rs, rb] of t.path) {
-    let row = byDay.get(d);
-    if (!row) byDay.set(d, (row = { w: 0, s: 0, b: 0, n: 0 }));
-    row.w += t.weight;
-    row.s += t.weight * rs;
-    row.b += t.weight * rb;
-    row.n += 1;
-  }
+  for (const t of trades)
+    for (const [d, rs, rb] of t.path) {
+      let row = byDay.get(d);
+      if (!row) byDay.set(d, (row = { w: 0, s: 0, b: 0, n: 0 }));
+      row.w += t.weight;
+      row.s += t.weight * rs;
+      row.b += t.weight * rb;
+      row.n += 1;
+    }
   const first = Math.min(...byDay.keys());
   const last = Math.max(...byDay.keys());
   const daySet = new Set(byDay.keys());
@@ -431,7 +511,11 @@ function buildCurve(trades, calendar) {
     s.push(s.at(-1) * (1 + rs));
     b.push(b.at(-1) * (1 + rb));
     labels.push(isoOf(d));
-    if (row) { activeDays += 1; sumOpen += row.n; maxOpen = Math.max(maxOpen, row.n); }
+    if (row) {
+      activeDays += 1;
+      sumOpen += row.n;
+      maxOpen = Math.max(maxOpen, row.n);
+    }
   }
   return { days, s, b, R, B, labels, maxOpen, avgOpen: activeDays ? sumOpen / activeDays : 0, activeDays };
 }
@@ -458,11 +542,23 @@ function lagStats(signals) {
     p90: pctile(lags, 0.9),
     max: Math.max(...lags),
     over45: lags.filter((v) => v > 45).length,
-    amended: waits.length ? { n: waits.length, median: median(waits), max: Math.max(...waits) } : null
+    amended: waits.length ? { n: waits.length, median: median(waits), max: Math.max(...waits) } : null,
   };
 }
 
-function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimated, missingSize, openFallback, benchFallback, context, c }) {
+function buildCaveats({
+  rules,
+  signals,
+  trades,
+  skipped,
+  skippedSymbols,
+  estimated,
+  missingSize,
+  openFallback,
+  benchFallback,
+  context,
+  c,
+}) {
   const items = [];
   const add = (level, id, textValue) => items.push({ level, id, text: textValue });
   const lag = lagStats(signals);
@@ -470,39 +566,100 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   if (missed) add("warn", "unpriced", missed);
   if (lag) {
     if (context.sourceFamily && context.sourceFamily !== "congress") {
-      add("info", "lag", `Availability gap on the ${lag.n} signals (signal date minus event date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}. Dates follow the source or dataset timing policy, including any assumed delays; see its coverage and timing caveats. Entry is on a later trading day.`);
+      add(
+        "info",
+        "lag",
+        `Availability gap on the ${lag.n} signals (signal date minus event date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}. Dates follow the source or dataset timing policy, including any assumed delays; see its coverage and timing caveats. Entry is on a later trading day.`,
+      );
     } else {
-    add("info", "lag", `Disclosure lag on the ${lag.n} signals (original filing date minus trade date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the public date, so the run only uses what was public.`);
+      add(
+        "info",
+        "lag",
+        `Disclosure lag on the ${lag.n} signals (original filing date minus trade date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the public date, so the run only uses what was public.`,
+      );
     }
-    if (lag.amended) add("info", "amendLag", `${lag.amended.n} signals first appear in a later amendment, a median ${lag.amended.median} days (up to ${lag.amended.max}) after the original report; they enter after the amendment date. That wait is not counted as filing lag.`);
+    if (lag.amended)
+      add(
+        "info",
+        "amendLag",
+        `${lag.amended.n} signals first appear in a later amendment, a median ${lag.amended.median} days (up to ${lag.amended.max}) after the original report; they enter after the amendment date. That wait is not counted as filing lag.`,
+      );
   }
   if (rules.sizing === "amountMid" || context.rangeAmounts) {
-    add("warn", "ranges", `Congress discloses dollar ranges, not amounts. ${estimated ? `${estimated} trades are sized by the range midpoint, an estimate.` : "Equal weight ignores size."}${missingSize ? ` ${missingSize} had no amount and use the median size.` : ""} Ranges are open-ended at the top; sizes are capped at $${SIZE_CAP.toLocaleString("en-US")}.`);
+    add(
+      "warn",
+      "ranges",
+      `Congress discloses dollar ranges, not amounts. ${estimated ? `${estimated} trades are sized by the range midpoint, an estimate.` : "Equal weight ignores size."}${missingSize ? ` ${missingSize} had no amount and use the median size.` : ""} Ranges are open-ended at the top; sizes are capped at $${SIZE_CAP.toLocaleString("en-US")}.`,
+    );
   }
   for (const [reason, n] of Object.entries(skipped)) {
     const syms = [...(skippedSymbols[reason] || [])].sort();
     const shown = syms.slice(0, 12).join(", ");
-    add(reason === "noPrice" || reason === "notPriced" ? "warn" : "info", `skip:${reason}`, `${n} signals ${SKIP_TEXT[reason] || reason}${syms.length ? ` (${syms.length} symbols: ${shown}${syms.length > 12 ? "…" : ""})` : ""}. They are left out, not counted as zero.`);
+    add(
+      reason === "noPrice" || reason === "notPriced" ? "warn" : "info",
+      `skip:${reason}`,
+      `${n} signals ${SKIP_TEXT[reason] || reason}${syms.length ? ` (${syms.length} symbols: ${shown}${syms.length > 12 ? "…" : ""})` : ""}. They are left out, not counted as zero.`,
+    );
   }
-  if (context.paperFilings) add("warn", "paper", `${context.paperFilings} scanned paper filings in the window (images the app cannot read; a count of filings, not of tickers or trades) are not parsed, so their trades are missing from the signal set.`);
+  if (context.paperFilings)
+    add(
+      "warn",
+      "paper",
+      `${context.paperFilings} scanned paper filings in the window (images the app cannot read; a count of filings, not of tickers or trades) are not parsed, so their trades are missing from the signal set.`,
+    );
   if (context.unparsed) add("warn", "unparsed", `${context.unparsed} electronic reports could not be read this run.`);
-  if (rules.sides !== "buy" && trades.some((t) => t.side === "sell")) add("warn", "short", "Sells are scored as shorts of the same stock with no borrow cost, no dividends owed, and no squeeze risk. A sale by a member is often liquidity, not a view.");
+  if (rules.sides !== "buy" && trades.some((t) => t.side === "sell"))
+    add(
+      "warn",
+      "short",
+      "Sells are scored as shorts of the same stock with no borrow cost, no dividends owed, and no squeeze risk. A sale by a member is often liquidity, not a view.",
+    );
   const byActor = new Map();
   for (const t of trades) byActor.set(t.actorLabel || t.actor, (byActor.get(t.actorLabel || t.actor) || 0) + 1);
   const top = [...byActor.entries()].sort((a, b) => b[1] - a[1])[0];
   if (top && byActor.size > 1 && top[1] / trades.length >= 0.4) {
-    add("warn", "concentration", `One name drives this sample: ${top[0]} accounts for ${top[1]} of ${trades.length} trades (${Math.round((top[1] / trades.length) * 100)}%). Read the result as that person's record, not the group's.`);
+    add(
+      "warn",
+      "concentration",
+      `One name drives this sample: ${top[0]} accounts for ${top[1]} of ${trades.length} trades (${Math.round((top[1] / trades.length) * 100)}%). Read the result as that person's record, not the group's.`,
+    );
   }
   if (rules.benchmark === "^GSPC") {
-    add("warn", "priceIndex", "^GSPC is a price index without dividends, while the stocks use dividend-adjusted prices. That tilts excess return upward by roughly the S&P yield (about 1.2%/yr). Pick SPY for a like-for-like comparison.");
+    add(
+      "warn",
+      "priceIndex",
+      "^GSPC is a price index without dividends, while the stocks use dividend-adjusted prices. That tilts excess return upward by roughly the S&P yield (about 1.2%/yr). Pick SPY for a like-for-like comparison.",
+    );
   }
   if (openFallback) add("info", "open", `${openFallback} entries had no open print and used the close.`);
   if (benchFallback) add("info", "sectorFallback", `${benchFallback} trades had no sector ETF mapped and used SPY.`);
-  add("info", "costs", `Costs: ${rules.costBps} bps commission + ${rules.slippageBps} bps slippage per side (${r2(c * 2e4)} bps round trip). No taxes, no market impact, fills assumed at the quoted open or close.`);
-  add("info", "overlap", "Trades overlap in time and cluster in a few names and members, so the sample is smaller than the trade count suggests. The t-statistic treats trades as independent and overstates confidence.");
-  add("info", "survivorship", "Survivorship: prices come from Yahoo Finance for symbols that still trade. Delisted, acquired, and renamed symbols have no history and are excluded and counted above, which tends to flatter results. Joined tickers only (data/tickers.json); no symbol is matched by guess.");
-  add("info", "weights", "The portfolio rebalances to equal weight (or size weight) each day across open positions. Per-trade returns are buy-and-hold and do not include this rebalancing.");
-  if (trades.length < MIN_TRADES) add("warn", "sample", `Only ${trades.length} trades. Treat the result as an anecdote, not evidence.`);
+  add(
+    "info",
+    "costs",
+    `Costs: ${rules.costBps} bps commission + ${rules.slippageBps} bps slippage per side (${r2(c * 2e4)} bps round trip). No taxes, no market impact, fills assumed at the quoted open or close.`,
+  );
+  add(
+    "info",
+    "overlap",
+    "Trades overlap in time and cluster in a few names and members, so the sample is smaller than the trade count suggests. The t-statistic treats trades as independent and overstates confidence.",
+  );
+  add(
+    "info",
+    "survivorship",
+    "Survivorship: prices come from Yahoo Finance for symbols that still trade. Delisted, acquired, and renamed symbols have no history and are excluded and counted above, which tends to flatter results. Joined tickers only (data/tickers.json); no symbol is matched by guess.",
+  );
+  add(
+    "info",
+    "weights",
+    "The portfolio rebalances to equal weight (or size weight) each day across open positions. Per-trade returns are buy-and-hold and do not include this rebalancing.",
+  );
+  if (trades.length < MIN_TRADES)
+    add("warn", "sample", `Only ${trades.length} trades. Treat the result as an anecdote, not evidence.`);
   for (const note of context.notes || []) add(note.level || "info", note.id || "note", note.text);
-  return { items, lag, exclusions: { ...skipped }, excludedSymbols: Object.fromEntries(Object.entries(skippedSymbols).map(([k, v]) => [k, [...v].sort()])) };
+  return {
+    items,
+    lag,
+    exclusions: { ...skipped },
+    excludedSymbols: Object.fromEntries(Object.entries(skippedSymbols).map(([k, v]) => [k, [...v].sort()])),
+  };
 }

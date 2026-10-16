@@ -12,7 +12,7 @@ export function summarizeSatellite(live, imagery) {
       name: l.name,
       covers: l.covers,
       latestFrame: last ? new Date(last).toISOString() : "",
-      ageNote: "GIBS posts geostationary frames about an hour after capture"
+      ageNote: "GIBS posts geostationary frames about an hour after capture",
     };
   });
   return {
@@ -23,23 +23,42 @@ export function summarizeSatellite(live, imagery) {
     gap: live?.gap || "",
     live: layers,
     daily: live?.daily ? { name: live.daily.name, complete: live.daily.complete, end: live.daily.end } : null,
-    basemaps: imagery?.layers ? Object.entries(imagery.layers).filter(([k]) => ["sat", "daily", "night"].includes(k)).map(([id, L]) => ({ id, source: L.source, asOf: L.asOf })) : []
+    basemaps: imagery?.layers
+      ? Object.entries(imagery.layers)
+          .filter(([k]) => ["sat", "daily", "night"].includes(k))
+          .map(([id, L]) => ({ id, source: L.source, asOf: L.asOf }))
+      : [],
   };
 }
 
 /** News items trimmed for the model. */
 export function summarizeNews(wire, { q = "", desk = "", limit = 12 } = {}) {
-  const needle = String(q || "").trim().toLowerCase();
-  const deskWant = String(desk || "").trim().toLowerCase();
+  const needle = String(q || "")
+    .trim()
+    .toLowerCase();
+  const deskWant = String(desk || "")
+    .trim()
+    .toLowerCase();
   let items = Array.isArray(wire?.items) ? wire.items : [];
-  if (deskWant) items = items.filter((r) => String(r.desk || "").toLowerCase() === deskWant || String(r.region || "").toLowerCase() === deskWant || String(r.feed || "").toLowerCase() === deskWant);
-  if (needle) items = items.filter((r) => `${r.title} ${r.summary} ${(r.symbols || []).join(" ")}`.toLowerCase().includes(needle));
+  if (deskWant)
+    items = items.filter(
+      (r) =>
+        String(r.desk || "").toLowerCase() === deskWant ||
+        String(r.region || "").toLowerCase() === deskWant ||
+        String(r.feed || "").toLowerCase() === deskWant,
+    );
+  if (needle)
+    items = items.filter((r) =>
+      `${r.title} ${r.summary} ${(r.symbols || []).join(" ")}`.toLowerCase().includes(needle),
+    );
   return {
     ok: items.length > 0 || Boolean(wire?.ok),
     source: wire?.source || "RSS wires",
     asOf: wire?.asOf || "",
     latency: wire?.latency || "",
-    feeds: (wire?.feeds || []).slice(0, 50).map((f) => ({ id: f.id, name: f.name, desk: f.desk, region: f.region, ok: f.ok, count: f.count })),
+    feeds: (wire?.feeds || [])
+      .slice(0, 50)
+      .map((f) => ({ id: f.id, name: f.name, desk: f.desk, region: f.region, ok: f.ok, count: f.count })),
     errors: (wire?.errors || []).slice(0, 8),
     totalMatched: items.length,
     items: items.slice(0, limit).map((r) => ({
@@ -50,7 +69,7 @@ export function summarizeNews(wire, { q = "", desk = "", limit = 12 } = {}) {
       published: r.published,
       link: r.link,
       symbols: r.symbols || [],
-      summary: String(r.summary || "").slice(0, 240)
-    }))
+      summary: String(r.summary || "").slice(0, 240),
+    })),
   };
 }

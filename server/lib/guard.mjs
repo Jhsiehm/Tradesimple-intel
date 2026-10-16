@@ -39,20 +39,27 @@ export function crossSiteRefusal(req, origins) {
   if (SAFE.has(method)) return null;
   const h = req.headers || {};
   const site = String(h["sec-fetch-site"] || "").toLowerCase();
-  if (site === "cross-site" || site === "same-site") return `Cross-site request refused (Sec-Fetch-Site: ${site}). Open the app at http://127.0.0.1:5173.`;
+  if (site === "cross-site" || site === "same-site")
+    return `Cross-site request refused (Sec-Fetch-Site: ${site}). Open the app at http://127.0.0.1:5173.`;
   const origin = h.origin;
   const referer = h.referer || h.referrer;
   if (origin != null) {
-    if (!origins.has(String(origin))) return `Cross-site request refused: origin ${String(origin).slice(0, 80)} is not allowed. Open the app at http://127.0.0.1:5173.`;
+    if (!origins.has(String(origin)))
+      return `Cross-site request refused: origin ${String(origin).slice(0, 80)} is not allowed. Open the app at http://127.0.0.1:5173.`;
   } else if (referer) {
     const from = originOf(referer);
-    if (!origins.has(from)) return `Cross-site request refused: referer ${from || "unknown"} is not allowed. Open the app at http://127.0.0.1:5173.`;
+    if (!origins.has(from))
+      return `Cross-site request refused: referer ${from || "unknown"} is not allowed. Open the app at http://127.0.0.1:5173.`;
   } else if (!LOOPBACK.test(String(req.socket?.remoteAddress || ""))) {
     return "Request refused: no Origin or Referer, and the caller is not on this machine.";
   }
   if (BODY.has(method)) {
-    const type = String(h["content-type"] || "").split(";")[0].trim().toLowerCase();
-    if (type !== "application/json") return `Request refused: Content-Type must be application/json${type ? `, not ${type.slice(0, 60)}` : ""}.`;
+    const type = String(h["content-type"] || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (type !== "application/json")
+      return `Request refused: Content-Type must be application/json${type ? `, not ${type.slice(0, 60)}` : ""}.`;
   }
   return null;
 }

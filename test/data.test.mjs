@@ -20,18 +20,24 @@ test("tickers.json: unique symbols with SEC CIKs", () => {
 test("tickers.json: district codes use ST-NN and coordinates are in range", () => {
   for (const t of tickers) {
     for (const d of t.districts) assert.match(d, /^[A-Z]{2}-\d{2}$/, `${t.symbol} district ${d}`);
-    if (t.lat != null) assert.ok(t.lat > 17 && t.lat < 72 && t.lon > -180 && t.lon < -60, `${t.symbol} lat/lon outside the US`);
+    if (t.lat != null)
+      assert.ok(t.lat > 17 && t.lat < 72 && t.lon > -180 && t.lon < -60, `${t.symbol} lat/lon outside the US`);
   }
 });
 
 test("tickers.json: quotes-only rows carry no joins; derived rows say how they were joined", () => {
   for (const t of tickers) {
     if (t.core === false) {
-      assert.deepEqual([t.ldaClients, t.pacs, t.districts, t.recipients], [[], [], [], []], `${t.symbol} is quotes-only but has joins`);
+      assert.deepEqual(
+        [t.ldaClients, t.pacs, t.districts, t.recipients],
+        [[], [], [], []],
+        `${t.symbol} is quotes-only but has joins`,
+      );
     }
     if (t.joinBasis?.auto) {
       assert.equal(t.core, true, `${t.symbol} derived but not full-join`);
-      for (const k of ["district", "lda", "pacs", "recipients", "derived"]) assert.ok(t.joinBasis[k], `${t.symbol} joinBasis.${k} missing`);
+      for (const k of ["district", "lda", "pacs", "recipients", "derived"])
+        assert.ok(t.joinBasis[k], `${t.symbol} joinBasis.${k} missing`);
     }
     for (const id of t.pacs) assert.match(id, /^C\d{8}$/, `${t.symbol} PAC id ${id}`);
   }
@@ -40,14 +46,19 @@ test("tickers.json: quotes-only rows carry no joins; derived rows say how they w
 test("tickers.json: contract parents are USAspending parent records with a stated basis", () => {
   for (const t of tickers) {
     const parents = t.contractParents || [];
-    if (parents.length) assert.ok(t.joinBasis?.contracts, `${t.symbol} has contract parents but no joinBasis.contracts`);
+    if (parents.length)
+      assert.ok(t.joinBasis?.contracts, `${t.symbol} has contract parents but no joinBasis.contracts`);
     for (const p of parents) {
       assert.match(p.uei, /^[A-Z0-9]{12}$/, `${t.symbol} parent ${p.name} UEI`);
       assert.ok(p.id && p.name, `${t.symbol} parent record incomplete`);
     }
   }
   const bySymbol = Object.fromEntries(tickers.map((t) => [t.symbol, t]));
-  assert.deepEqual(bySymbol.AAPL.contractParents || [], [], "Apple has no USAspending parent; a fuzzy hit here would be a false join");
+  assert.deepEqual(
+    bySymbol.AAPL.contractParents || [],
+    [],
+    "Apple has no USAspending parent; a fuzzy hit here would be a false join",
+  );
   assert.ok(bySymbol.LMT.contractParents.some((p) => p.name === "LOCKHEED MARTIN CORPORATION"));
 });
 
@@ -60,7 +71,8 @@ test("supplychain.json: every edge cites its basis and every segment input is a 
       assert.ok(edge.basis?.trim(), `${symbol} → ${edge.symbol}: missing basis`);
     }
     for (const seg of entry.segments) {
-      for (const input of seg.inputs) assert.ok(suppliers.has(input), `${symbol} segment "${seg.name}" uses ${input}, which is not in its suppliers`);
+      for (const input of seg.inputs)
+        assert.ok(suppliers.has(input), `${symbol} segment "${seg.name}" uses ${input}, which is not in its suppliers`);
     }
   }
 });

@@ -3,8 +3,28 @@ import { api, DEMO, waitForApi } from "../lib/api";
 import { isRestart, mayResend } from "../lib/retry";
 import type { AgentContext } from "../agent/context";
 import {
-  addPrefs, attachedBody, blankTurn, chatTitle, clearSession, dropPref, historyOf, lastBacktests, loadChats, loadModelChoice, loadPrefs,
-  loadSession, newChatId, pinChat, removeChat, renameChat, restoreChat, saveChats, saveModelChoice, savePrefs, setSessionModes, upsertChat
+  addPrefs,
+  attachedBody,
+  blankTurn,
+  chatTitle,
+  clearSession,
+  dropPref,
+  historyOf,
+  lastBacktests,
+  loadChats,
+  loadModelChoice,
+  loadPrefs,
+  loadSession,
+  newChatId,
+  pinChat,
+  removeChat,
+  renameChat,
+  restoreChat,
+  saveChats,
+  saveModelChoice,
+  savePrefs,
+  setSessionModes,
+  upsertChat,
 } from "./chats";
 import { readEvents } from "./stream";
 import { AUTO } from "../../shared/modelRoute.mjs";
@@ -12,14 +32,32 @@ import type { MemoryRequest, AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn 
 
 export type AskApi = ReturnType<typeof useAsk>;
 /** `fresh`: skip a reusable stored answer (the "Re-ask" button). */
-type RunOpts = { memory?: MemoryRequest; answers?: Record<string, unknown>; acceptDefaults?: boolean; turnId?: string; fresh?: boolean };
+type RunOpts = {
+  memory?: MemoryRequest;
+  answers?: Record<string, unknown>;
+  acceptDefaults?: boolean;
+  turnId?: string;
+  fresh?: boolean;
+};
 
-const OFF: AskStatus = { ok: false, configured: false, provider: "", model: "", missing: [], notice: "The API did not answer.", tools: [] };
+const OFF: AskStatus = {
+  ok: false,
+  configured: false,
+  provider: "",
+  model: "",
+  missing: [],
+  notice: "The API did not answer.",
+  tools: [],
+};
 
 /** `#ask=<question>` is a share link: it opens the sheet and asks. */
 const hashQuestion = () => {
   if (!location.hash.startsWith("#ask=")) return "";
-  try { return decodeURIComponent(location.hash.slice(5)); } catch { return ""; }
+  try {
+    return decodeURIComponent(location.hash.slice(5));
+  } catch {
+    return "";
+  }
 };
 
 /** Screen context goes along only when something is selected or a theory is open. */
@@ -53,11 +91,15 @@ export function useAsk() {
   state.current = { turns, chatId, kept, detached, prefs, session, attachId, chats, choice };
   const statusRef = useRef<AskStatus | null>(null);
   /** App hands over what is on screen each render; it is read only when a question is sent. */
-  const bindContext = useCallback((ctx: AgentContext) => { ctxRef.current = ctx; }, []);
+  const bindContext = useCallback((ctx: AgentContext) => {
+    ctxRef.current = ctx;
+  }, []);
 
   const loadStatus = useCallback(async () => {
     if (statusRef.current?.configured) return statusRef.current;
-    const res = DEMO ? { ...OFF, notice: "Ask needs the local server." } : await api<AskStatus>("/api/ask").catch(() => OFF);
+    const res = DEMO
+      ? { ...OFF, notice: "Ask needs the local server." }
+      : await api<AskStatus>("/api/ask").catch(() => OFF);
     statusRef.current = res;
     setStatus(res);
     return res;
@@ -67,7 +109,10 @@ export function useAsk() {
   /** "auto" unless the user pinned a model the server offers; a new user starts on Auto. */
   const model: string = choice !== AUTO && models.some((m) => m.id === choice) ? choice : AUTO;
   const small = model !== AUTO && Boolean(models.find((m) => m.id === model)?.small);
-  const chooseModel = useCallback((next: string) => { setChoice(next); saveModelChoice(next); }, []);
+  const chooseModel = useCallback((next: string) => {
+    setChoice(next);
+    saveModelChoice(next);
+  }, []);
 
   const persist = useCallback((next: Turn[]) => {
     const s = state.current;
@@ -77,189 +122,307 @@ export function useAsk() {
     if (saveChats(list)) setChats(list);
   }, []);
 
-  const run = useCallback(async (raw: string, opts: RunOpts = {}) => {
-    const question = raw.trim().slice(0, 800);
-    if (!question) return;
-    ctl.current?.abort();
-    const mine = new AbortController();
-    ctl.current = mine;
-    setOpen(!homeRef.current);
-    setDraft("");
-    const s = state.current;
-    const memory = opts.memory || (opts.turnId ? s.turns.find(t => t.id === opts.turnId)?.memory : undefined);
-    const ctx = !memory && hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
-    const ctxLabel = ctx ? (ctx.theory ? `theory ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}` : ctx.label || ctx.node || "") : "";
-    const prior = memory ? [] : opts.turnId ? s.turns.filter((t) => t.id !== opts.turnId) : s.turns;
-    const turn = blankTurn(question, opts.turnId ? { id: opts.turnId, context: ctxLabel } : { context: ctxLabel });
-    if (memory) turn.memory = memory;
-    const tid = turn.id;
-    setTurns(opts.turnId ? s.turns.map((t) => (t.id === tid ? turn : t)) : [...s.turns, turn]);
-    setBusy(true);
-    const patch = (f: (t: Turn) => Turn) => setTurns((all) => (ctl.current === mine ? all.map((t) => (t.id === tid ? f(t) : t)) : all));
-    const step = (sid: string, f: (x: Step) => Step) => patch((t) => ({ ...t, steps: t.steps.map((x) => (x.id === sid ? f(x) : x)) }));
-    const finish = () => {
-      setBusy(false);
-      setTurns((all) => { persist(all); return all; });
-    };
-    const cfg = await loadStatus();
-    if (mine.signal.aborted || ctl.current !== mine) return;
-    if (!cfg.configured) {
-      patch((t) => ({ ...t, phase: "error", error: cfg.notice || "Ask is not configured — add a key to .env.local" }));
-      finish();
-      return;
-    }
-    const used = s.choice && s.choice !== AUTO && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : AUTO;
-    patch((t) => ({ ...t, model: used === AUTO ? "" : used }));
-    const attached = !memory && s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
-    const bts = lastBacktests(prior);
-    const bt = bts.at(-1) || null;
-    const payload = JSON.stringify({
-      question,
-      history: historyOf(prior),
-      ...(memory ? {memory} : {}),
-      model: used,
-      context: ctx ? { node: ctx.node, theory: ctx.theory, label: ctx.label || "" } : null,
-      attached: attachedBody(attached),
-      prefs: memory ? null : s.prefs,
-      session: s.session,
-      prior: bt?.spec || null,
-      priors: bts.map((b) => b.spec),
-      answers: opts.answers || {},
-      acceptDefaults: Boolean(opts.acceptDefaults),
-      fresh: Boolean(opts.fresh)
-    });
-    /** Answer text seen so far: a restart before any token resends the question once; after that it would answer twice. */
-    const seen = { tokens: 0, done: false, resent: false };
-    const recover = async () => {
-      if (!mayResend(seen) || mine.signal.aborted) return false;
-      seen.resent = true;
-      const back = await waitForApi(mine.signal);
-      if (!back || mine.signal.aborted) return false;
-      patch((t) => ({ ...t, steps: [], text: "", phase: "planning", notes: [...t.notes, "The API restarted before an answer arrived, so the question was sent again."] }));
-      return true;
-    };
-    try {
-      for (;;) {
-        let res: Response;
-        try {
-          res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: payload, signal: mine.signal });
-        } catch (error) {
-          if (isRestart({ error }) && (await recover())) continue;
-          throw error;
-        }
-        if (!res.ok || !res.body) {
-          const text = await res.text().catch(() => "");
-          if (isRestart({ status: res.status, body: text }) && (await recover())) continue;
-          let body: Record<string, unknown> = {};
-          try { body = JSON.parse(text); } catch { /* not JSON */ }
-          patch((t) => ({ ...t, phase: "error", error: String(body.error || `HTTP ${res.status}`) }));
-          return;
-        }
-        let ended = false;
-        try {
-          ended = await stream(res.body);
-        } catch (error) {
-          if (!mine.signal.aborted && isRestart({ error }) && (await recover())) continue;
-          throw error;
-        }
-        if (!ended && (await recover())) continue;
-        break;
+  const run = useCallback(
+    async (raw: string, opts: RunOpts = {}) => {
+      const question = raw.trim().slice(0, 800);
+      if (!question) return;
+      ctl.current?.abort();
+      const mine = new AbortController();
+      ctl.current = mine;
+      setOpen(!homeRef.current);
+      setDraft("");
+      const s = state.current;
+      const memory = opts.memory || (opts.turnId ? s.turns.find((t) => t.id === opts.turnId)?.memory : undefined);
+      const ctx = !memory && hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
+      const ctxLabel = ctx
+        ? ctx.theory
+          ? `theory ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}`
+          : ctx.label || ctx.node || ""
+        : "";
+      const prior = memory ? [] : opts.turnId ? s.turns.filter((t) => t.id !== opts.turnId) : s.turns;
+      const turn = blankTurn(question, opts.turnId ? { id: opts.turnId, context: ctxLabel } : { context: ctxLabel });
+      if (memory) turn.memory = memory;
+      const tid = turn.id;
+      setTurns(opts.turnId ? s.turns.map((t) => (t.id === tid ? turn : t)) : [...s.turns, turn]);
+      setBusy(true);
+      const patch = (f: (t: Turn) => Turn) =>
+        setTurns((all) => (ctl.current === mine ? all.map((t) => (t.id === tid ? f(t) : t)) : all));
+      const step = (sid: string, f: (x: Step) => Step) =>
+        patch((t) => ({ ...t, steps: t.steps.map((x) => (x.id === sid ? f(x) : x)) }));
+      const finish = () => {
+        setBusy(false);
+        setTurns((all) => {
+          persist(all);
+          return all;
+        });
+      };
+      const cfg = await loadStatus();
+      if (mine.signal.aborted || ctl.current !== mine) return;
+      if (!cfg.configured) {
+        patch((t) => ({
+          ...t,
+          phase: "error",
+          error: cfg.notice || "Ask is not configured — add a key to .env.local",
+        }));
+        finish();
+        return;
       }
-      patch((t) => (t.phase === "done" || t.phase === "error" ? t : { ...t, phase: "error", error: "The answer stopped before it finished." }));
-    } catch (err) {
-      if (!mine.signal.aborted) patch((t) => ({ ...t, phase: "error", error: err instanceof Error ? err.message : "Ask failed." }));
-    } finally {
-      if (ctl.current === mine) finish();
-    }
-
-    /** Read one event stream; true when it ended with `done` or `error`. */
-    async function stream(body: ReadableStream<Uint8Array>) {
-      let ended = false;
-      await readEvents(body, (e) => {
-        if (e.type === "token") seen.tokens += 1;
-        if (e.type === "done") { seen.done = true; ended = true; }
-        if (e.type === "error") ended = true;
-        switch (e.type) {
-          case "step_progress":
-            if (typeof e.id === "string") {
-              const sid = e.id;
-              if (typeof e.ms === "number") step(sid, (x) => (x.state === "running" ? { ...x, ms: e.ms as number } : x));
-              if (typeof e.request === "string") step(sid, (x) => ({ ...x, requests: [...x.requests, e.request as string] }));
-              if (typeof e.note === "string") step(sid, (x) => ({ ...x, using: e.note as string }));
-            } else if (e.reset) patch((t) => ({ ...t, text: "", phase: "writing", notes: [...t.notes, String(e.note || "Rewriting the answer.")] }));
-            else if (typeof e.phase === "string") patch((t) => (t.phase === "done" || t.phase === "error" ? t : { ...t, phase: e.phase as Turn["phase"] }));
-            break;
-          case "step_start":
-            patch((t) => ({ ...t, steps: [...t.steps, { id: String(e.id), tool: String(e.tool), label: String(e.label || e.tool), args: e.args, phase: (e.phase as Step["phase"]) || "fetching", at: String(e.at || ""), state: "running", ms: 0, requests: [], diff: Array.isArray(e.diff) ? (e.diff as string[]) : undefined }] }));
-            break;
-          case "step_end":
-            step(String(e.id), (x) => ({ ...x, state: e.ok ? "ok" : "error", ms: Number(e.ms) || x.ms, rows: Number(e.rows) || 0, source: String(e.source || ""), asOf: String(e.asOf || ""), latency: String(e.latency || ""), note: String(e.note || ""), open: String(e.open || ""), requests: Array.isArray(e.requests) && e.requests.length ? (e.requests as string[]) : x.requests, preview: String(e.preview || "") }));
-            break;
-          case "token":
-            patch((t) => ({ ...t, text: t.text + String(e.delta || "") }));
-            break;
-          case "plan_note":
-            patch((t) => ({ ...t, notes: [...t.notes, String(e.note || "")] }));
-            break;
-          case "model":
-            patch((t) => ({ ...t, model: String(e.model || t.model), notes: e.reason ? [...t.notes, `Auto: ${String(e.reason)} → ${String(e.model)}`] : t.notes }));
-            break;
-          case "revise":
-            patch((t) => ({ ...t, revising: e.state === "start" ? String(e.note || "Checking figures…") : "" }));
-            break;
-          case "budget":
-            patch((t) => ({ ...t, model: typeof e.model === "string" ? e.model : t.model, notes: [...t.notes, String(e.note || "")] }));
-            break;
-          case "spend": {
-            const spend = e.spend as AskStatus["spend"];
-            if (statusRef.current) statusRef.current = { ...statusRef.current, spend };
-            setStatus((st) => (st ? { ...st, spend } : st));
-            break;
-          }
-          case "clarify":
-            patch((t) => ({ ...t, clarify: e as unknown as ClarifyAsk }));
-            break;
-          case "done": {
-            const done = e as unknown as Done;
-            patch((t) => ({ ...t, phase: "done", text: done.answer || t.text, done }));
-            if (done.prefs?.clear) setPrefs(savePrefs({ v: 1, values: {}, updated: "" }));
-            else if (done.prefs?.set) setPrefs((p) => addPrefs(p, done.prefs!.set!));
-            if (done.session?.clear) setSession(clearSession());
-            else if (done.session?.set) setSession(setSessionModes(loadSession(), done.session.set));
-            break;
-          }
-          case "error":
-            patch((t) => ({ ...t, phase: "error", error: String(e.error || "Ask failed.") }));
-            break;
-        }
+      const used = s.choice && s.choice !== AUTO && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : AUTO;
+      patch((t) => ({ ...t, model: used === AUTO ? "" : used }));
+      const attached =
+        !memory && s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
+      const bts = lastBacktests(prior);
+      const bt = bts.at(-1) || null;
+      const payload = JSON.stringify({
+        question,
+        history: historyOf(prior),
+        ...(memory ? { memory } : {}),
+        model: used,
+        context: ctx ? { node: ctx.node, theory: ctx.theory, label: ctx.label || "" } : null,
+        attached: attachedBody(attached),
+        prefs: memory ? null : s.prefs,
+        session: s.session,
+        prior: bt?.spec || null,
+        priors: bts.map((b) => b.spec),
+        answers: opts.answers || {},
+        acceptDefaults: Boolean(opts.acceptDefaults),
+        fresh: Boolean(opts.fresh),
       });
-      return ended;
-    }
-  }, [loadStatus, persist]);
+      /** Answer text seen so far: a restart before any token resends the question once; after that it would answer twice. */
+      const seen = { tokens: 0, done: false, resent: false };
+      const recover = async () => {
+        if (!mayResend(seen) || mine.signal.aborted) return false;
+        seen.resent = true;
+        const back = await waitForApi(mine.signal);
+        if (!back || mine.signal.aborted) return false;
+        patch((t) => ({
+          ...t,
+          steps: [],
+          text: "",
+          phase: "planning",
+          notes: [...t.notes, "The API restarted before an answer arrived, so the question was sent again."],
+        }));
+        return true;
+      };
+      try {
+        for (;;) {
+          let res: Response;
+          try {
+            res = await fetch("/api/ask", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: payload,
+              signal: mine.signal,
+            });
+          } catch (error) {
+            if (isRestart({ error }) && (await recover())) continue;
+            throw error;
+          }
+          if (!res.ok || !res.body) {
+            const text = await res.text().catch(() => "");
+            if (isRestart({ status: res.status, body: text }) && (await recover())) continue;
+            let body: Record<string, unknown> = {};
+            try {
+              body = JSON.parse(text);
+            } catch {
+              /* not JSON */
+            }
+            patch((t) => ({ ...t, phase: "error", error: String(body.error || `HTTP ${res.status}`) }));
+            return;
+          }
+          let ended = false;
+          try {
+            ended = await stream(res.body);
+          } catch (error) {
+            if (!mine.signal.aborted && isRestart({ error }) && (await recover())) continue;
+            throw error;
+          }
+          if (!ended && (await recover())) continue;
+          break;
+        }
+        patch((t) =>
+          t.phase === "done" || t.phase === "error"
+            ? t
+            : { ...t, phase: "error", error: "The answer stopped before it finished." },
+        );
+      } catch (err) {
+        if (!mine.signal.aborted)
+          patch((t) => ({ ...t, phase: "error", error: err instanceof Error ? err.message : "Ask failed." }));
+      } finally {
+        if (ctl.current === mine) finish();
+      }
 
-  const show = useCallback((prefill = "", size: "half" | null = null) => {
-    homeRef.current = false;
-    setOpen(true);
-    setSnapTo(size);
-    setShown((n) => n + 1);
-    if (prefill) setDraft(prefill);
-    void loadStatus();
-  }, [loadStatus]);
-  const close = useCallback(() => { homeRef.current = homeTargetRef.current; setOpen(false); }, []);
-  const stop = useCallback(() => {
-    ctl.current?.abort(); ctl.current = null; setBusy(false);
-    setTurns(all => all.map(t => t.phase === "done" || t.phase === "error" ? t : {
-      ...t, phase: "error", error: "Execution stopped. Retry to run this question again.",
-      steps: t.steps.map(s => s.state === "running" ? { ...s, state: "error", note: "Stopped by user." } : s)
-    }));
+      /** Read one event stream; true when it ended with `done` or `error`. */
+      async function stream(body: ReadableStream<Uint8Array>) {
+        let ended = false;
+        await readEvents(body, (e) => {
+          if (e.type === "token") seen.tokens += 1;
+          if (e.type === "done") {
+            seen.done = true;
+            ended = true;
+          }
+          if (e.type === "error") ended = true;
+          switch (e.type) {
+            case "step_progress":
+              if (typeof e.id === "string") {
+                const sid = e.id;
+                if (typeof e.ms === "number")
+                  step(sid, (x) => (x.state === "running" ? { ...x, ms: e.ms as number } : x));
+                if (typeof e.request === "string")
+                  step(sid, (x) => ({ ...x, requests: [...x.requests, e.request as string] }));
+                if (typeof e.note === "string") step(sid, (x) => ({ ...x, using: e.note as string }));
+              } else if (e.reset)
+                patch((t) => ({
+                  ...t,
+                  text: "",
+                  phase: "writing",
+                  notes: [...t.notes, String(e.note || "Rewriting the answer.")],
+                }));
+              else if (typeof e.phase === "string")
+                patch((t) =>
+                  t.phase === "done" || t.phase === "error" ? t : { ...t, phase: e.phase as Turn["phase"] },
+                );
+              break;
+            case "step_start":
+              patch((t) => ({
+                ...t,
+                steps: [
+                  ...t.steps,
+                  {
+                    id: String(e.id),
+                    tool: String(e.tool),
+                    label: String(e.label || e.tool),
+                    args: e.args,
+                    phase: (e.phase as Step["phase"]) || "fetching",
+                    at: String(e.at || ""),
+                    state: "running",
+                    ms: 0,
+                    requests: [],
+                    diff: Array.isArray(e.diff) ? (e.diff as string[]) : undefined,
+                  },
+                ],
+              }));
+              break;
+            case "step_end":
+              step(String(e.id), (x) => ({
+                ...x,
+                state: e.ok ? "ok" : "error",
+                ms: Number(e.ms) || x.ms,
+                rows: Number(e.rows) || 0,
+                source: String(e.source || ""),
+                asOf: String(e.asOf || ""),
+                latency: String(e.latency || ""),
+                note: String(e.note || ""),
+                open: String(e.open || ""),
+                requests: Array.isArray(e.requests) && e.requests.length ? (e.requests as string[]) : x.requests,
+                preview: String(e.preview || ""),
+              }));
+              break;
+            case "token":
+              patch((t) => ({ ...t, text: t.text + String(e.delta || "") }));
+              break;
+            case "plan_note":
+              patch((t) => ({ ...t, notes: [...t.notes, String(e.note || "")] }));
+              break;
+            case "model":
+              patch((t) => ({
+                ...t,
+                model: String(e.model || t.model),
+                notes: e.reason ? [...t.notes, `Auto: ${String(e.reason)} → ${String(e.model)}`] : t.notes,
+              }));
+              break;
+            case "revise":
+              patch((t) => ({ ...t, revising: e.state === "start" ? String(e.note || "Checking figures…") : "" }));
+              break;
+            case "budget":
+              patch((t) => ({
+                ...t,
+                model: typeof e.model === "string" ? e.model : t.model,
+                notes: [...t.notes, String(e.note || "")],
+              }));
+              break;
+            case "spend": {
+              const spend = e.spend as AskStatus["spend"];
+              if (statusRef.current) statusRef.current = { ...statusRef.current, spend };
+              setStatus((st) => (st ? { ...st, spend } : st));
+              break;
+            }
+            case "clarify":
+              patch((t) => ({ ...t, clarify: e as unknown as ClarifyAsk }));
+              break;
+            case "done": {
+              const done = e as unknown as Done;
+              patch((t) => ({ ...t, phase: "done", text: done.answer || t.text, done }));
+              if (done.prefs?.clear) setPrefs(savePrefs({ v: 1, values: {}, updated: "" }));
+              else if (done.prefs?.set) setPrefs((p) => addPrefs(p, done.prefs!.set!));
+              if (done.session?.clear) setSession(clearSession());
+              else if (done.session?.set) setSession(setSessionModes(loadSession(), done.session.set));
+              break;
+            }
+            case "error":
+              patch((t) => ({ ...t, phase: "error", error: String(e.error || "Ask failed.") }));
+              break;
+          }
+        });
+        return ended;
+      }
+    },
+    [loadStatus, persist],
+  );
+
+  const show = useCallback(
+    (prefill = "", size: "half" | null = null) => {
+      homeRef.current = false;
+      setOpen(true);
+      setSnapTo(size);
+      setShown((n) => n + 1);
+      if (prefill) setDraft(prefill);
+      void loadStatus();
+    },
+    [loadStatus],
+  );
+  const close = useCallback(() => {
+    homeRef.current = homeTargetRef.current;
+    setOpen(false);
   }, []);
-  const newChat = useCallback(() => { stop(); setTurns([]); setChatId(null); setKept(false); setAttachId(""); setDraft(""); }, [stop]);
+  const stop = useCallback(() => {
+    ctl.current?.abort();
+    ctl.current = null;
+    setBusy(false);
+    setTurns((all) =>
+      all.map((t) =>
+        t.phase === "done" || t.phase === "error"
+          ? t
+          : {
+              ...t,
+              phase: "error",
+              error: "Execution stopped. Retry to run this question again.",
+              steps: t.steps.map((s) =>
+                s.state === "running" ? { ...s, state: "error", note: "Stopped by user." } : s,
+              ),
+            },
+      ),
+    );
+  }, []);
+  const newChat = useCallback(() => {
+    stop();
+    setTurns([]);
+    setChatId(null);
+    setKept(false);
+    setAttachId("");
+    setDraft("");
+  }, [stop]);
 
   const keep = useCallback(() => {
     const s = state.current;
     if (!s.turns.length) return false;
     const cid = s.chatId || newChatId();
-    const list = upsertChat(loadChats(), { id: cid, title: chatTitle(s.turns), turns: s.turns, updated: new Date().toISOString() });
+    const list = upsertChat(loadChats(), {
+      id: cid,
+      title: chatTitle(s.turns),
+      turns: s.turns,
+      updated: new Date().toISOString(),
+    });
     if (!saveChats(list)) return false;
     setChats(list);
     setChatId(cid);
@@ -267,38 +430,49 @@ export function useAsk() {
     return true;
   }, []);
 
-  const openSaved = useCallback((cid: string) => {
-    const chat = state.current.chats.find((c) => c.id === cid);
-    if (!chat) return;
-    stop();
-    setTurns(chat.turns);
-    setChatId(chat.id);
-    setKept(true);
-    setAttachId("");
-  }, [stop]);
+  const openSaved = useCallback(
+    (cid: string) => {
+      const chat = state.current.chats.find((c) => c.id === cid);
+      if (!chat) return;
+      stop();
+      setTurns(chat.turns);
+      setChatId(chat.id);
+      setKept(true);
+      setAttachId("");
+    },
+    [stop],
+  );
 
   /** Shows turns that are not a kept chat, such as a scheduled task's stored result. */
-  const openTurns = useCallback((list: Turn[]) => {
-    stop();
-    setTurns(list);
-    setChatId(null);
-    setKept(false);
-    setAttachId("");
-    setOpen(!homeRef.current);
-    setShown((n) => n + 1);
-  }, [stop]);
+  const openTurns = useCallback(
+    (list: Turn[]) => {
+      stop();
+      setTurns(list);
+      setChatId(null);
+      setKept(false);
+      setAttachId("");
+      setOpen(!homeRef.current);
+      setShown((n) => n + 1);
+    },
+    [stop],
+  );
 
-  const store = useCallback((list: SavedChat[]) => { if (saveChats(list)) setChats(list); }, []);
+  const store = useCallback((list: SavedChat[]) => {
+    if (saveChats(list)) setChats(list);
+  }, []);
 
   /** Delete now; `undoForget` puts it back where it was. The open chat stays on screen, no longer kept. */
-  const forget = useCallback((cid: string) => {
-    const all = loadChats();
-    const index = all.findIndex((c) => c.id === cid);
-    if (index < 0) return;
-    setDeleted({ chat: all[index], index });
-    store(removeChat(all, cid));
-    if (state.current.chatId === cid) setKept(false);
-  }, [store]);
+  const forget = useCallback(
+    (cid: string) => {
+      const all = loadChats();
+      const index = all.findIndex((c) => c.id === cid);
+      if (index < 0) return;
+      setDeleted({ chat: all[index], index });
+      store(removeChat(all, cid));
+      if (state.current.chatId === cid) setKept(false);
+    },
+    [store],
+  );
   const undoForget = useCallback(() => {
     if (!deleted) return;
     store(restoreChat(loadChats(), deleted.chat, deleted.index));
@@ -327,16 +501,64 @@ export function useAsk() {
     return () => window.removeEventListener("hashchange", take);
   }, [run]);
 
-  useEffect(() => { if (open) void loadStatus(); }, [open, loadStatus]);
+  useEffect(() => {
+    if (open) void loadStatus();
+  }, [open, loadStatus]);
 
-  const setHome = useCallback((value: boolean) => { homeTargetRef.current = value; homeRef.current = value; if (value) { setOpen(false); void loadStatus(); } }, [loadStatus]);
+  const setHome = useCallback(
+    (value: boolean) => {
+      homeTargetRef.current = value;
+      homeRef.current = value;
+      if (value) {
+        setOpen(false);
+        void loadStatus();
+      }
+    },
+    [loadStatus],
+  );
   return {
-    setHome, open, shown, show, snapTo, close, draft, setDraft, turns, busy, run, stop, newChat,
-    chats, chatId, kept, keep, openSaved, forget, undoForget, dropUndo, deleted, rename, pin, attachId, setAttachId,
-    status, refreshStatus: loadStatus, model, models, small, chooseModel,
-    prefs, removePref, clearPrefs,
-    session, setSourcing, setStyle, resetSession,
-    detached, setDetached, bindContext,
-    openTurns
+    setHome,
+    open,
+    shown,
+    show,
+    snapTo,
+    close,
+    draft,
+    setDraft,
+    turns,
+    busy,
+    run,
+    stop,
+    newChat,
+    chats,
+    chatId,
+    kept,
+    keep,
+    openSaved,
+    forget,
+    undoForget,
+    dropUndo,
+    deleted,
+    rename,
+    pin,
+    attachId,
+    setAttachId,
+    status,
+    refreshStatus: loadStatus,
+    model,
+    models,
+    small,
+    chooseModel,
+    prefs,
+    removePref,
+    clearPrefs,
+    session,
+    setSourcing,
+    setStyle,
+    resetSession,
+    detached,
+    setDetached,
+    bindContext,
+    openTurns,
   };
 }

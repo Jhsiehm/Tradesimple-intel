@@ -7,7 +7,9 @@ const BROTLI = { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } };
 /** "br", "gzip", or "" from an Accept-Encoding header; q=0 excludes a coding. */
 export function pickEncoding(header) {
   const offered = new Map();
-  for (const part of String(header || "").toLowerCase().split(",")) {
+  for (const part of String(header || "")
+    .toLowerCase()
+    .split(",")) {
     const [name, ...params] = part.trim().split(";");
     const q = params.map((p) => /^\s*q=([\d.]+)/.exec(p)?.[1]).find(Boolean);
     if (name) offered.set(name.trim(), q == null ? 1 : Number(q));
@@ -38,9 +40,15 @@ export function sendEncoded(req, res, status, headers, text, owner = null) {
   let body = slot && slot.text === text ? slot[encoding] : null;
   if (!body) {
     body = encode(Buffer.from(text), encoding);
-    if (owner && typeof owner === "object") memo.set(owner, slot && slot.text === text ? { ...slot, [encoding]: body } : { text, [encoding]: body });
+    if (owner && typeof owner === "object")
+      memo.set(owner, slot && slot.text === text ? { ...slot, [encoding]: body } : { text, [encoding]: body });
   }
-  res.writeHead(status, { ...headers, "Content-Encoding": encoding, "Content-Length": body.length, Vary: "Accept-Encoding" });
+  res.writeHead(status, {
+    ...headers,
+    "Content-Encoding": encoding,
+    "Content-Length": body.length,
+    Vary: "Accept-Encoding",
+  });
   res.end(body);
 }
 
@@ -52,7 +60,12 @@ export function staticFile(read) {
     raw ||= read();
     const encoding = raw.length >= MIN_BYTES ? pickEncoding(req?.headers?.["accept-encoding"]) : "";
     const body = encoding ? (encoded[encoding] ||= encode(raw, encoding)) : raw;
-    res.writeHead(200, { ...headers, ...(encoding ? { "Content-Encoding": encoding } : {}), "Content-Length": body.length, Vary: "Accept-Encoding" });
+    res.writeHead(200, {
+      ...headers,
+      ...(encoding ? { "Content-Encoding": encoding } : {}),
+      "Content-Length": body.length,
+      Vary: "Accept-Encoding",
+    });
     res.end(body);
   };
 }

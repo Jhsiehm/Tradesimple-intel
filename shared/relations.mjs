@@ -5,7 +5,20 @@
 import { NEAR_DAYS, dayNum } from "./intel.mjs";
 
 /** Node types. `note` is a node you added yourself; it never comes from a feed. */
-export const NODE_TYPES = ["member", "ticker", "company", "committee", "hearing", "vote", "agency", "pac", "firm", "insider", "district", "note"];
+export const NODE_TYPES = [
+  "member",
+  "ticker",
+  "company",
+  "committee",
+  "hearing",
+  "vote",
+  "agency",
+  "pac",
+  "firm",
+  "insider",
+  "district",
+  "note",
+];
 
 /**
  * Data categories, in menu order. `from` lists the node types a category expands from. Sources are the feeds
@@ -13,21 +26,57 @@ export const NODE_TYPES = ["member", "ticker", "company", "committee", "hearing"
  */
 export const CATEGORIES = [
   { id: "trade", label: "Trades", from: ["member", "ticker"], source: "House Clerk PTR · Senate eFD" },
-  { id: "committee", label: "Committees", from: ["member", "committee"], source: "unitedstates/congress-legislators committee membership" },
-  { id: "hearing", label: "Hearings", from: ["member", "committee", "hearing"], source: "Congress.gov committee meetings" },
+  {
+    id: "committee",
+    label: "Committees",
+    from: ["member", "committee"],
+    source: "unitedstates/congress-legislators committee membership",
+  },
+  {
+    id: "hearing",
+    label: "Hearings",
+    from: ["member", "committee", "hearing"],
+    source: "Congress.gov committee meetings",
+  },
   { id: "vote", label: "Roll calls", from: ["member", "vote"], source: "House Clerk EVS · Senate LIS" },
-  { id: "contract", label: "Contracts", from: ["ticker", "agency", "district"], source: "USAspending.gov prime awards" },
+  {
+    id: "contract",
+    label: "Contracts",
+    from: ["ticker", "agency", "district"],
+    source: "USAspending.gov prime awards",
+  },
   { id: "lobbying", label: "Lobbying", from: ["ticker"], source: "LDA.gov LD-2 filings" },
   { id: "pac", label: "PAC money", from: ["member", "ticker", "pac"], source: "FEC bulk itemized PAC contributions" },
-  { id: "supply", label: "Supply chain", from: ["ticker", "company"], source: "data/supplychain.json (10-K, supplier lists)" },
-  { id: "hq", label: "HQ · district", from: ["member", "ticker", "district"], source: "SEC EDGAR business address · Census 119th districts" },
-  { id: "insider", label: "Form 4 insiders", from: ["ticker", "insider"], source: "SEC EDGAR Form 4" }
+  {
+    id: "supply",
+    label: "Supply chain",
+    from: ["ticker", "company"],
+    source: "data/supplychain.json (10-K, supplier lists)",
+  },
+  {
+    id: "hq",
+    label: "HQ · district",
+    from: ["member", "ticker", "district"],
+    source: "SEC EDGAR business address · Census 119th districts",
+  },
+  { id: "insider", label: "Form 4 insiders", from: ["ticker", "insider"], source: "SEC EDGAR Form 4" },
 ];
 
 export const CATEGORY_IDS = CATEGORIES.map((c) => c.id);
 
 /** Double-click expands these first. */
-export const DEFAULT_EXPAND = { member: ["trade", "committee"], ticker: ["trade", "supply"], committee: ["committee"], district: ["hq"], agency: ["contract"], pac: ["pac"], company: ["supply"], insider: ["insider"], hearing: ["hearing"], vote: ["vote"] };
+export const DEFAULT_EXPAND = {
+  member: ["trade", "committee"],
+  ticker: ["trade", "supply"],
+  committee: ["committee"],
+  district: ["hq"],
+  agency: ["contract"],
+  pac: ["pac"],
+  company: ["supply"],
+  insider: ["insider"],
+  hearing: ["hearing"],
+  vote: ["vote"],
+};
 
 /** Neighbors per expansion page, and the hard ceiling a client may ask for. */
 export const CAP = { page: 12, max: 60 };
@@ -89,7 +138,9 @@ export function groupBy(rows, keyOf, { amount = () => 0, date = () => "" } = {})
     g.rows.push(row);
     groups.set(key, g);
   }
-  return [...groups.values()].sort((a, b) => b.n - a.n || Math.abs(b.amount) - Math.abs(a.amount) || a.key.localeCompare(b.key));
+  return [...groups.values()].sort(
+    (a, b) => b.n - a.n || Math.abs(b.amount) - Math.abs(a.amount) || a.key.localeCompare(b.key),
+  );
 }
 
 const PATH_CAP = 4;
@@ -143,7 +194,11 @@ export function disclosurePath(trades, hearings = [], contracts = [], { nearDays
   const rows = picked.map((trade) => {
     const mine = hearings.filter((h) => !h.member || h.member === trade.member);
     const hearing = closestDated(mine, trade.traded, nearDays);
-    const contract = closestDated(contracts.filter((c) => c.symbol && c.symbol === trade.symbol), trade.traded, nearDays);
+    const contract = closestDated(
+      contracts.filter((c) => c.symbol && c.symbol === trade.symbol),
+      trade.traded,
+      nearDays,
+    );
     return { trade, hearing, contract };
   });
   return { rows, more: Math.max(0, latest.size - picked.length) };
@@ -184,7 +239,10 @@ export function mergeExpansion(graph, exp, place = () => ({ x: 0, y: 0 })) {
       if (!cur.sub && node.sub) nodes.set(node.id, { ...cur, sub: node.sub });
       continue;
     }
-    if (nodes.size >= MAX_NODES) { dropped += 1; continue; }
+    if (nodes.size >= MAX_NODES) {
+      dropped += 1;
+      continue;
+    }
     const p = place(node, origin?.id || null);
     nodes.set(node.id, { ...node, x: p.x, y: p.y });
     added.push(node.id);
@@ -195,11 +253,28 @@ export function mergeExpansion(graph, exp, place = () => ({ x: 0, y: 0 })) {
     const id = edgeKey(edge.cat, edge.from, edge.to);
     const cur = edges.get(id);
     if (cur) {
-      const marked = !cur.mark && edge.mark ? { ...cur, label: edge.label, mark: edge.mark, link: edge.link || cur.link, latency: edge.latency || cur.latency } : cur;
-      edges.set(id, { ...marked, n: Math.max(marked.n || 0, edge.n || 0), amount: Math.abs(edge.amount || 0) > Math.abs(marked.amount || 0) ? edge.amount : marked.amount, last: (edge.last || "") > (marked.last || "") ? edge.last : marked.last });
+      const marked =
+        !cur.mark && edge.mark
+          ? {
+              ...cur,
+              label: edge.label,
+              mark: edge.mark,
+              link: edge.link || cur.link,
+              latency: edge.latency || cur.latency,
+            }
+          : cur;
+      edges.set(id, {
+        ...marked,
+        n: Math.max(marked.n || 0, edge.n || 0),
+        amount: Math.abs(edge.amount || 0) > Math.abs(marked.amount || 0) ? edge.amount : marked.amount,
+        last: (edge.last || "") > (marked.last || "") ? edge.last : marked.last,
+      });
       continue;
     }
-    if (edges.size >= MAX_EDGES) { dropped += 1; continue; }
+    if (edges.size >= MAX_EDGES) {
+      dropped += 1;
+      continue;
+    }
     edges.set(id, { ...edge, id });
   }
   return { graph: { ...graph, nodes: [...nodes.values()], edges: [...edges.values()] }, added, dropped };
@@ -207,12 +282,19 @@ export function mergeExpansion(graph, exp, place = () => ({ x: 0, y: 0 })) {
 
 /** Take a node off the canvas with its data edges. Theories touching it stay saved but are not drawn. */
 export function removeNode(graph, id) {
-  return { ...graph, nodes: graph.nodes.filter((n) => n.id !== id), edges: graph.edges.filter((e) => e.from !== id && e.to !== id) };
+  return {
+    ...graph,
+    nodes: graph.nodes.filter((n) => n.id !== id),
+    edges: graph.edges.filter((e) => e.from !== id && e.to !== id),
+  };
 }
 
 export function moveNodes(graph, moves) {
   if (!moves.size) return graph;
-  return { ...graph, nodes: graph.nodes.map((n) => (moves.has(n.id) ? { ...n, ...moves.get(n.id), pinned: true } : n)) };
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) => (moves.has(n.id) ? { ...n, ...moves.get(n.id), pinned: true } : n)),
+  };
 }
 
 export function addNote(graph, note) {
@@ -234,7 +316,12 @@ export function dropTheory(graph, id) {
 export function counts(graph) {
   const byCat = Object.fromEntries(CATEGORY_IDS.map((c) => [c, 0]));
   for (const e of graph.edges) if (e.cat in byCat) byCat[e.cat] += 1;
-  return { byCat, data: graph.edges.length, theories: graph.theories.length, notes: graph.nodes.filter((n) => n.user).length };
+  return {
+    byCat,
+    data: graph.edges.length,
+    theories: graph.theories.length,
+    notes: graph.nodes.filter((n) => n.user).length,
+  };
 }
 
 /** Ids of a node and everything one data edge or theory away. */

@@ -21,45 +21,116 @@
   color-scheme: dark;
   scrollbar-color: #3b5c4d var(--tsi-terminal-bg);
 }
-.tsi-terminal .app { background: var(--bg); }
-.tsi-terminal .nav [data-destination="research"] { --tsi-nav-accent: var(--tsi-chroma-cyan-light); }
-.tsi-terminal .nav [data-destination="today"] { --tsi-nav-accent: var(--tsi-chroma-amber-light); }
-.tsi-terminal .nav [data-destination="congress"] { --tsi-nav-accent: var(--tsi-chroma-blue-light); }
-.tsi-terminal .nav [data-destination="markets"] { --tsi-nav-accent: var(--tsi-chroma-lime-light); }
-.tsi-terminal .nav [data-destination="contracts"] { --tsi-nav-accent: var(--tsi-chroma-orange-light); }
-.tsi-terminal .nav [data-destination="news"] { --tsi-nav-accent: var(--tsi-chroma-violet-light); }
-.tsi-terminal .nav [data-destination="districts"] { --tsi-nav-accent: var(--tsi-core-stone); }
-.tsi-terminal .nav [data-destination="strait"] { --tsi-nav-accent: var(--tsi-chroma-cyan-light); }
-.tsi-terminal .nav [data-destination="map"] { --tsi-nav-accent: var(--tsi-chroma-pink-light); }
-.tsi-terminal .nav [data-destination="calendar"] { --tsi-nav-accent: var(--tsi-chroma-crimson-light); }
-.tsi-terminal .nav [data-destination] .ic { color: var(--tsi-nav-accent); }
+.tsi-terminal .app {
+  background: var(--bg);
+}
+.tsi-terminal .nav [data-destination="research"] {
+  --tsi-nav-accent: var(--tsi-chroma-cyan-light);
+}
+.tsi-terminal .nav [data-destination="today"] {
+  --tsi-nav-accent: var(--tsi-chroma-amber-light);
+}
+.tsi-terminal .nav [data-destination="congress"] {
+  --tsi-nav-accent: var(--tsi-chroma-blue-light);
+}
+.tsi-terminal .nav [data-destination="markets"] {
+  --tsi-nav-accent: var(--tsi-chroma-lime-light);
+}
+.tsi-terminal .nav [data-destination="contracts"] {
+  --tsi-nav-accent: var(--tsi-chroma-orange-light);
+}
+.tsi-terminal .nav [data-destination="news"] {
+  --tsi-nav-accent: var(--tsi-chroma-violet-light);
+}
+.tsi-terminal .nav [data-destination="districts"] {
+  --tsi-nav-accent: var(--tsi-core-stone);
+}
+.tsi-terminal .nav [data-destination="strait"] {
+  --tsi-nav-accent: var(--tsi-chroma-cyan-light);
+}
+.tsi-terminal .nav [data-destination="map"] {
+  --tsi-nav-accent: var(--tsi-chroma-pink-light);
+}
+.tsi-terminal .nav [data-destination="calendar"] {
+  --tsi-nav-accent: var(--tsi-chroma-crimson-light);
+}
+.tsi-terminal .nav [data-destination] .ic {
+  color: var(--tsi-nav-accent);
+}
 .tsi-terminal .nav [data-destination][aria-current="page"] {
   color: var(--tsi-nav-accent);
   border-color: color-mix(in srgb, var(--tsi-nav-accent) 42%, var(--line));
   background: color-mix(in srgb, var(--tsi-nav-accent) 9%, var(--bg));
 }
-.tsi-terminal .nav [data-destination]:hover { color: var(--tsi-nav-accent); background: var(--tsi-terminal-raised); }
-.tsi-terminal :is(input, textarea, select) { caret-color: var(--tsi-core-ivory); }
-.tsi-terminal ::selection { background: var(--tsi-core-atlas); color: var(--tsi-core-ivory); }
+.tsi-terminal .nav [data-destination]:hover {
+  color: var(--tsi-nav-accent);
+  background: var(--tsi-terminal-raised);
+}
+.tsi-terminal :is(input, textarea, select) {
+  caret-color: var(--tsi-core-ivory);
+}
+.tsi-terminal ::selection {
+  background: var(--tsi-core-atlas);
+  color: var(--tsi-core-ivory);
+}
 /* Small annotations gain contrast; no geometry, layout, or semantic colors change. */
-.tsi-terminal :is(.rail-head, .board-head, .drawer-head) { border-color: var(--line); }
+.tsi-terminal :is(.rail-head, .board-head, .drawer-head) {
+  border-color: var(--line);
+}
 @media (forced-colors: active) {
-  :root.tsi-terminal { --bg: Canvas; --panel: Canvas; --ink: CanvasText; --dim: CanvasText; --faint: CanvasText; --line: CanvasText; --tsi-terminal-line: CanvasText; --tsi-terminal-control-border: CanvasText; --tsi-terminal-bg: Canvas; --tsi-terminal-panel: Canvas; --tsi-terminal-raised: Canvas; --tsi-terminal-frame: Canvas; }
-  .tsi-terminal .nav [data-destination] { --tsi-nav-accent: LinkText; }
+  :root.tsi-terminal {
+    --bg: Canvas;
+    --panel: Canvas;
+    --ink: CanvasText;
+    --dim: CanvasText;
+    --faint: CanvasText;
+    --line: CanvasText;
+    --tsi-terminal-line: CanvasText;
+    --tsi-terminal-control-border: CanvasText;
+    --tsi-terminal-bg: Canvas;
+    --tsi-terminal-panel: Canvas;
+    --tsi-terminal-raised: Canvas;
+    --tsi-terminal-frame: Canvas;
+  }
+  .tsi-terminal .nav [data-destination] {
+    --tsi-nav-accent: LinkText;
+  }
 }
 
 /* Carry each workspace's navigational hue through its framing, never through data marks. */
-.tsi-terminal .app { --tsi-section-accent: var(--tsi-chroma-amber-light); }
-.tsi-terminal [data-color-section="research"] { --tsi-section-accent: var(--tsi-chroma-cyan-light); }
-.tsi-terminal [data-color-section="congress"] { --tsi-section-accent: var(--tsi-chroma-blue-light); }
-.tsi-terminal [data-color-section="markets"] { --tsi-section-accent: var(--tsi-chroma-lime-light); }
-.tsi-terminal [data-color-section="contracts"] { --tsi-section-accent: var(--tsi-chroma-orange-light); }
-.tsi-terminal [data-color-section="news"] { --tsi-section-accent: var(--tsi-chroma-violet-light); }
-.tsi-terminal [data-color-section="districts"] { --tsi-section-accent: var(--tsi-core-stone); }
-.tsi-terminal [data-color-section="strait"] { --tsi-section-accent: var(--tsi-chroma-cyan-light); }
-.tsi-terminal [data-color-section="map"] { --tsi-section-accent: var(--tsi-chroma-pink-light); }
-.tsi-terminal [data-color-section="calendar"] { --tsi-section-accent: var(--tsi-chroma-crimson-light); }
-.tsi-terminal .app :is(.board-title > strong, .rail-head h1, .rail-head .count) { color: var(--tsi-section-accent); }
+.tsi-terminal .app {
+  --tsi-section-accent: var(--tsi-chroma-amber-light);
+}
+.tsi-terminal [data-color-section="research"] {
+  --tsi-section-accent: var(--tsi-chroma-cyan-light);
+}
+.tsi-terminal [data-color-section="congress"] {
+  --tsi-section-accent: var(--tsi-chroma-blue-light);
+}
+.tsi-terminal [data-color-section="markets"] {
+  --tsi-section-accent: var(--tsi-chroma-lime-light);
+}
+.tsi-terminal [data-color-section="contracts"] {
+  --tsi-section-accent: var(--tsi-chroma-orange-light);
+}
+.tsi-terminal [data-color-section="news"] {
+  --tsi-section-accent: var(--tsi-chroma-violet-light);
+}
+.tsi-terminal [data-color-section="districts"] {
+  --tsi-section-accent: var(--tsi-core-stone);
+}
+.tsi-terminal [data-color-section="strait"] {
+  --tsi-section-accent: var(--tsi-chroma-cyan-light);
+}
+.tsi-terminal [data-color-section="map"] {
+  --tsi-section-accent: var(--tsi-chroma-pink-light);
+}
+.tsi-terminal [data-color-section="calendar"] {
+  --tsi-section-accent: var(--tsi-chroma-crimson-light);
+}
+.tsi-terminal .app :is(.board-title > strong, .rail-head h1, .rail-head .count) {
+  color: var(--tsi-section-accent);
+}
 .tsi-terminal .app :is(.rail-head, .board-head) {
   background: color-mix(in srgb, var(--tsi-section-accent) 3%, var(--panel));
   border-bottom-color: color-mix(in srgb, var(--tsi-section-accent) 25%, var(--line));
@@ -69,22 +140,50 @@
   border-left-color: var(--tsi-section-accent);
 }
 .tsi-terminal input:not([type="checkbox"]):not([type="radio"]):focus-visible,
-.tsi-terminal :is(select, textarea):focus-visible { outline-color: var(--tsi-core-ivory); }
-.tsi-terminal .ask { border-top-color: var(--tsi-chroma-cyan-light); }
-.tsi-terminal .ask-mark { background: var(--tsi-chroma-cyan-light); color: var(--tsi-surface-deep); }
-.tsi-terminal .ask-head { background: var(--tsi-terminal-frame); }
-.tsi-terminal .watch-badge.src-insiders { color: var(--tsi-chroma-blue-light); }
-.tsi-terminal .watch-badge.src-stakes { color: var(--tsi-chroma-violet-light); }
-.tsi-terminal .watch-badge.src-contracts { color: var(--tsi-chroma-orange-light); }
-.tsi-terminal :is(.weather-popover, .outlet-panel, .news-health-panel, .panels-menu) {
-  background: var(--panel); border-color: var(--tsi-terminal-control-border);
+.tsi-terminal :is(select, textarea):focus-visible {
+  outline-color: var(--tsi-core-ivory);
 }
-.tsi-terminal .alerts-menu { --sev-routine: var(--dim); }
-.tsi-terminal .alerts-filter button[aria-pressed="true"] { border-color: var(--tsi-core-stone); }
+.tsi-terminal .ask {
+  border-top-color: var(--tsi-chroma-cyan-light);
+}
+.tsi-terminal .ask-mark {
+  background: var(--tsi-chroma-cyan-light);
+  color: var(--tsi-surface-deep);
+}
+.tsi-terminal .ask-head {
+  background: var(--tsi-terminal-frame);
+}
+.tsi-terminal .watch-badge.src-insiders {
+  color: var(--tsi-chroma-blue-light);
+}
+.tsi-terminal .watch-badge.src-stakes {
+  color: var(--tsi-chroma-violet-light);
+}
+.tsi-terminal .watch-badge.src-contracts {
+  color: var(--tsi-chroma-orange-light);
+}
+.tsi-terminal :is(.weather-popover, .outlet-panel, .news-health-panel, .panels-menu) {
+  background: var(--panel);
+  border-color: var(--tsi-terminal-control-border);
+}
+.tsi-terminal .alerts-menu {
+  --sev-routine: var(--dim);
+}
+.tsi-terminal .alerts-filter button[aria-pressed="true"] {
+  border-color: var(--tsi-core-stone);
+}
 @media (forced-colors: active) {
-  .tsi-terminal .app[data-color-section] { --tsi-section-accent: LinkText; }
-  .tsi-terminal .app :is(.rail-head, .board-head) { background: Canvas; border-color: CanvasText; }
-  .tsi-terminal .ask-mark { background: Highlight; color: HighlightText; }
+  .tsi-terminal .app[data-color-section] {
+    --tsi-section-accent: LinkText;
+  }
+  .tsi-terminal .app :is(.rail-head, .board-head) {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+  .tsi-terminal .ask-mark {
+    background: Highlight;
+    color: HighlightText;
+  }
 }
 
 /* User-requested near-black field; preserve functional table/chart boundaries. */
@@ -92,4 +191,7 @@
   background: var(--panel);
   border-color: var(--tsi-terminal-line);
 }
-.tsi-terminal dialog.research-command { --panel: #030805; --line: var(--tsi-terminal-line); }
+.tsi-terminal dialog.research-command {
+  --panel: #030805;
+  --line: var(--tsi-terminal-line);
+}

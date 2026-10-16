@@ -36,8 +36,17 @@ export class ErrorBoundary extends Component<Props, State> {
       <div className="boundary" role="alert">
         <p>
           <strong>{this.props.name} failed</strong>
-          <span title={error.message}>{reload ? "This view's files could not load. Reload the app to fetch a fresh copy." : error.message || String(error)}</span>
-          <button className="ghost" onClick={() => reload ? window.location.reload() : this.setState({ error: null })}>{reload ? "Reload app" : "Retry"}</button>
+          <span title={error.message}>
+            {reload
+              ? "This view's files could not load. Reload the app to fetch a fresh copy."
+              : error.message || String(error)}
+          </span>
+          <button
+            className="ghost"
+            onClick={() => (reload ? window.location.reload() : this.setState({ error: null }))}
+          >
+            {reload ? "Reload app" : "Retry"}
+          </button>
         </p>
       </div>
     );

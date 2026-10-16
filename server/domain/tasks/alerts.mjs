@@ -1,7 +1,11 @@
 import { nyDate } from "../../../shared/dates.mjs";
 import { runsSince } from "./store.mjs";
 
-export const RESEARCH_SOURCE = { label: "Research tasks", source: "Your scheduled research tasks", latency: "Posted when a task runs (checked every 30 s). Each row carries the feeds and as-of time of its own run." };
+export const RESEARCH_SOURCE = {
+  label: "Research tasks",
+  source: "Your scheduled research tasks",
+  latency: "Posted when a task runs (checked every 30 s). Each row carries the feeds and as-of time of its own run.",
+};
 
 /**
  * Alert rows (kind "research") for scheduled runs started since `since` (YYYY-MM-DD, New York date). The action opens the
@@ -22,7 +26,7 @@ export function researchRows(runs) {
     asOf: r.asOf,
     latency: r.latency,
     status: r.status,
-    pins: []
+    pins: [],
   }));
 }
 

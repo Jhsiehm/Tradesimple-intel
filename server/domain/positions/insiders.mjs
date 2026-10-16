@@ -1,4 +1,4 @@
-import { preserveSourceDocument } from '../source-documents.mjs';
+import { preserveSourceDocument } from "../source-documents.mjs";
 import { coreKey, listCore, listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { secText } from "../../feeds/sec.mjs";
 import { once } from "../../lib/once.mjs";
@@ -19,7 +19,7 @@ const FORM4_CODES = {
   G: "gift",
   D: "disposed",
   C: "conversion",
-  X: "exercise"
+  X: "exercise",
 };
 
 /** Form 4s read per issuer for a backtest window, newest first. The board keeps its latest eight. */
@@ -51,7 +51,7 @@ export function form4Rows(ticker, pick, parsed) {
     traded: line.date,
     filed: pick.filed,
     lag: lagDays(line.date, pick.filed),
-    link: `https://www.sec.gov/Archives/edgar/data/${Number(ticker.cik)}/${pick.accession.replace(/-/g, "")}/${pick.accession}-index.htm`
+    link: `https://www.sec.gov/Archives/edgar/data/${Number(ticker.cik)}/${pick.accession.replace(/-/g, "")}/${pick.accession}-index.htm`,
   }));
   return { rows, other: false };
 }
@@ -97,7 +97,9 @@ export function insiderTrades(db) {
         errors.push(`${ticker.symbol}: ${err.message}`);
       }
     });
-    rows.sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
+    rows.sort(
+      (a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)),
+    );
     const result = {
       ok: rows.length > 0,
       source: "SEC EDGAR Form 4 (issuer submissions)",
@@ -105,7 +107,7 @@ export function insiderTrades(db) {
       latency: `Form 4 is due two business days after the trade. Rows are the latest eight Form 4s per join-table issuer. Code P is an open-market buy, S a sale, A a grant, F tax withholding.${otherIssuer ? ` ${otherIssuer} forms a join-table company filed as the owner of another company's shares are left out of its rows.` : ""}${errors.length ? ` ${errors.length} of ${tickers.length} issuers could not be read this pass.` : ""}`,
       errors,
       scanned: scanned.sort(),
-      items: rows
+      items: rows,
     };
     // A pass with failed issuers is kept briefly so the next ask retries them instead of serving half a board for hours.
     if (rows.length) writeCache(db, key, result, errors.length ? 10 * MINUTE : 2 * HOUR);
@@ -126,7 +128,11 @@ export function form4(db, cik, pick, { read = secText } = {}) {
     const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${pick.accession.replace(/-/g, "")}/${raw}`;
     const content = await read(url);
     const parsed = parseForm4(content);
-    parsed.sourceDocument = preserveSourceDocument(db, { url, content, mediaType: /\.xml$/i.test(raw) ? 'application/xml' : 'text/plain' });
+    parsed.sourceDocument = preserveSourceDocument(db, {
+      url,
+      content,
+      mediaType: /\.xml$/i.test(raw) ? "application/xml" : "text/plain",
+    });
     writeCache(db, key, parsed, 6 * MONTH);
     return parsed;
   })().finally(() => reading.delete(key));
@@ -154,9 +160,14 @@ export async function insiderWindow(db, { from = "", to = "" } = {}) {
     ok: true,
     latency: `${res.latency} ${coverageNote}`,
     items: res.items.slice(0, WINDOW_ROWS),
-    totals: { transactionLines: res.items.length, forms: distinct("accession"), issuers: distinct("symbol"), insiders: distinct("person") },
+    totals: {
+      transactionLines: res.items.length,
+      forms: distinct("accession"),
+      issuers: distinct("symbol"),
+      insiders: distinct("person"),
+    },
     truncated: res.items.length > WINDOW_ROWS,
-    history: store
+    history: store,
   };
 }
 
@@ -169,19 +180,29 @@ const dayAfter = (day) => new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).
  */
 export async function insiderHistory(db, opts = {}) {
   const symbols = new Set(opts.symbols || []);
-  const list = (opts.tickers || (symbols.size ? listTickers(db) : listCore(db))).filter((t) => t.cik && (!symbols.size || symbols.has(t.symbol)));
-  const store = opts.store === false || !db || list.some(t => t.insiderHistory === false) ? null : storeReady(db);
+  const list = (opts.tickers || (symbols.size ? listTickers(db) : listCore(db))).filter(
+    (t) => t.cik && (!symbols.size || symbols.has(t.symbol)),
+  );
+  const store = opts.store === false || !db || list.some((t) => t.insiderHistory === false) ? null : storeReady(db);
   if (!store) return submissionsHistory(db, { ...opts, tickers: list });
   const { from = "", to = "" } = opts;
-  const stored = storeRows(db, { from, to: to && to < store.coveredThrough ? to : store.coveredThrough, symbols: list.map((t) => t.symbol) });
+  const stored = storeRows(db, {
+    from,
+    to: to && to < store.coveredThrough ? to : store.coveredThrough,
+    symbols: list.map((t) => t.symbol),
+  });
   const liveFrom = from > store.coveredThrough ? from : dayAfter(store.coveredThrough);
   const tail = to && to < liveFrom ? null : await submissionsHistory(db, { ...opts, from: liveFrom, tickers: list });
   const known = new Set(stored.items.map((r) => r.accession));
   const fresh = (tail?.items || []).filter((r) => !known.has(r.accession));
-  const items = [...stored.items, ...fresh].sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
+  const items = [...stored.items, ...fresh].sort(
+    (a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)),
+  );
   const forms = known.size;
   const early = from && from < store.coveredFrom;
-  const live = tail ? ` Form 4s filed after ${store.coveredThrough} are read live from issuer submissions (up to ${opts.perIssuer || HISTORY_PER_ISSUER} per issuer): ${tail.filings.read} read.` : "";
+  const live = tail
+    ? ` Form 4s filed after ${store.coveredThrough} are read live from issuer submissions (up to ${opts.perIssuer || HISTORY_PER_ISSUER} per issuer): ${tail.filings.read} read.`
+    : "";
   return {
     ok: items.length > 0,
     source: `${STORE_SOURCE}${tail ? " + SEC EDGAR Form 4 (issuer submissions)" : ""}`,
@@ -190,12 +211,18 @@ export async function insiderHistory(db, opts = {}) {
     items,
     errors: tail?.errors || [],
     issuers: list.length,
-    filings: { wanted: forms + (tail?.filings.wanted || 0), read: forms + (tail?.filings.read || 0), failed: tail?.filings.failed || 0, pending: tail?.filings.pending || 0, listingIncomplete: Boolean(tail?.filings.listingIncomplete) },
+    filings: {
+      wanted: forms + (tail?.filings.wanted || 0),
+      read: forms + (tail?.filings.read || 0),
+      failed: tail?.filings.failed || 0,
+      pending: tail?.filings.pending || 0,
+      listingIncomplete: Boolean(tail?.filings.listingIncomplete),
+    },
     coverage: { shortList: [], capped: tail?.coverage.capped || [] },
     otherIssuer: tail?.otherIssuer || 0,
     building: Boolean(tail?.building),
     store: { ...store, amended: stored.amended, windowForms: forms, liveForms: tail?.filings.read || 0 },
-    coverageNote: `Form 4 history: every Form 4 filed ${from || store.coveredFrom} to ${to || "today"} for ${list.length} join-table issuers — ${forms} forms from the ${STORE_SOURCE} (complete ${store.coveredFrom} to ${store.coveredThrough}, updated ${store.lastUpdate || "—"})${tail ? ` and ${tail.filings.read} filed since, read live` : ""}. No per-issuer cap; ${stored.amended} lines on 4/A amendments are left out (they restate a form already counted).${early ? ` The store starts ${store.coveredFrom}; Form 4s filed before that are not here.` : ""}`
+    coverageNote: `Form 4 history: every Form 4 filed ${from || store.coveredFrom} to ${to || "today"} for ${list.length} join-table issuers — ${forms} forms from the ${STORE_SOURCE} (complete ${store.coveredFrom} to ${store.coveredThrough}, updated ${store.lastUpdate || "—"})${tail ? ` and ${tail.filings.read} filed since, read live` : ""}. No per-issuer cap; ${stored.amended} lines on 4/A amendments are left out (they restate a form already counted).${early ? ` The store starts ${store.coveredFrom}; Form 4s filed before that are not here.` : ""}`,
   };
 }
 
@@ -205,7 +232,18 @@ export async function insiderHistory(db, opts = {}) {
  * `coverage` says what the SEC list could not reach: issuers whose recent-filings list starts after `from`, and
  * issuers with more filings in the window than `perIssuer`.
  */
-async function submissionsHistory(db, { from = "", to = "", deadline = 0, perIssuer = HISTORY_PER_ISSUER, read = form4, subsOf = secSubmissions, tickers = null } = {}) {
+async function submissionsHistory(
+  db,
+  {
+    from = "",
+    to = "",
+    deadline = 0,
+    perIssuer = HISTORY_PER_ISSUER,
+    read = form4,
+    subsOf = secSubmissions,
+    tickers = null,
+  } = {},
+) {
   const list = (tickers || listCore(db)).filter((t) => t.cik);
   const rows = [];
   const errors = [];
@@ -215,27 +253,53 @@ async function submissionsHistory(db, { from = "", to = "", deadline = 0, perIss
   let listedIssuers = 0;
   const work = pool(list, 4, async (ticker) => {
     let subs;
-    try { subs = await subsOf(db, ticker.cik); } catch (err) { errors.push(`${ticker.symbol}: ${err.message}`); return; }
+    try {
+      subs = await subsOf(db, ticker.cik);
+    } catch (err) {
+      errors.push(`${ticker.symbol}: ${err.message}`);
+      return;
+    }
     listedIssuers += 1;
     const { picks, listed, listStarts } = form4Picks(subs, { from, to, max: perIssuer });
     if (from && listStarts && listStarts > from) coverage.shortList.push(ticker.symbol);
     if (listed > picks.length) coverage.capped.push(ticker.symbol);
     filings.wanted += picks.length;
-    await Promise.all(picks.map(async (pick) => {
-      const parsed = await read(db, ticker.cik, pick).catch(() => null);
-      if (!parsed) { filings.failed += 1; return; }
-      filings.read += 1;
-      const out = form4Rows(ticker, pick, parsed);
-      if (out.other) otherIssuer += 1;
-      rows.push(...out.rows);
-    }));
+    await Promise.all(
+      picks.map(async (pick) => {
+        const parsed = await read(db, ticker.cik, pick).catch(() => null);
+        if (!parsed) {
+          filings.failed += 1;
+          return;
+        }
+        filings.read += 1;
+        const out = form4Rows(ticker, pick, parsed);
+        if (out.other) otherIssuer += 1;
+        rows.push(...out.rows);
+      }),
+    );
   });
   let finished = false;
-  work.then(() => { finished = true; }, () => { finished = true; });
+  work.then(
+    () => {
+      finished = true;
+    },
+    () => {
+      finished = true;
+    },
+  );
   const wait = deadline ? Math.max(0, deadline - Date.now()) : 0;
-  if (deadline) await Promise.race([work, new Promise((r) => { const t = setTimeout(r, wait); t.unref?.(); })]);
+  if (deadline)
+    await Promise.race([
+      work,
+      new Promise((r) => {
+        const t = setTimeout(r, wait);
+        t.unref?.();
+      }),
+    ]);
   else await work;
-  const items = [...rows].sort((a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)));
+  const items = [...rows].sort(
+    (a, b) => String(b.filed).localeCompare(String(a.filed)) || String(b.traded).localeCompare(String(a.traded)),
+  );
   const pending = finished ? 0 : Math.max(0, filings.wanted - filings.read - filings.failed);
   return {
     ok: items.length > 0,
@@ -248,6 +312,6 @@ async function submissionsHistory(db, { from = "", to = "", deadline = 0, perIss
     filings: { ...filings, pending, listingIncomplete: listedIssuers + errors.length < list.length },
     coverage: { shortList: [...coverage.shortList].sort(), capped: [...coverage.capped].sort() },
     otherIssuer,
-    building: !finished
+    building: !finished,
   };
 }

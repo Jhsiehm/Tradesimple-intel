@@ -7,12 +7,12 @@ const hot = process.argv.includes("--hot");
 const server = spawn(process.execPath, [...(hot ? ["--watch"] : []), "server/index.mjs"], {
   cwd: root,
   stdio: "inherit",
-  env: process.env
+  env: process.env,
 });
 const vite = spawn(process.execPath, ["node_modules/vite/bin/vite.js"], {
   cwd: root,
   stdio: "inherit",
-  env: process.env
+  env: process.env,
 });
 
 function stop() {

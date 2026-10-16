@@ -7,5 +7,7 @@ export function askLog(entry, file = LOG_FILE) {
   if (process.env.INTEL_TEST === "1") return;
   try {
     appendFileSync(file, `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`);
-  } catch { /* a full disk must not break an answer */ }
+  } catch {
+    /* a full disk must not break an answer */
+  }
 }

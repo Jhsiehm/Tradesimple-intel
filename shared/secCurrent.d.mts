@@ -1,4 +1,10 @@
-export type CurrentFeed = { id: "form4" | "8k" | "13d" | "13g"; type: string; forms: string[]; role: string; label: string };
+export type CurrentFeed = {
+  id: "form4" | "8k" | "13d" | "13g";
+  type: string;
+  forms: string[];
+  role: string;
+  label: string;
+};
 
 export type CurrentEntry = {
   form: string;
@@ -22,7 +28,13 @@ export type CurrentFiling = {
   parties: { cik: string; name: string; role: string }[];
 };
 
-export type CurrentMatch = { symbol: string; cik: string; issuer: string; filing: CurrentFiling; filer: { cik: string; name: string; role: string } | null };
+export type CurrentMatch = {
+  symbol: string;
+  cik: string;
+  issuer: string;
+  filing: CurrentFiling;
+  filer: { cik: string; name: string; role: string } | null;
+};
 
 export type LatencyStats = { n: number; medianMs: number | null; p90Ms: number | null; maxMs: number | null };
 

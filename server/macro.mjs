@@ -6,7 +6,20 @@ import { BROWSER_UA } from "./lib/ua.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 import { nasdaqJson } from "./feeds/nasdaq.mjs";
 
-const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
 
 export const CCY_COUNTRIES = {
   USD: ["United States"],
@@ -28,17 +41,24 @@ export const CCY_COUNTRIES = {
   TRY: ["Turkey"],
   SEK: ["Sweden"],
   NOK: ["Norway"],
-  PLN: ["Poland"]
+  PLN: ["Poland"],
 };
 
-const HIGH = /(Interest Rate Decision|Rate Decision|Deposit Facility Rate|Main Refinancing Rate|Cash Rate|^CPI|\bCPI\b|Nonfarm Payrolls|Unemployment Rate|^GDP|\bGDP\b|PCE Price Index|FOMC Statement|FOMC Meeting Minutes|Monetary Policy Statement)/i;
-const MEDIUM = /(Retail Sales|PPI|PMI|Employment Change|Trade Balance|Jobless Claims|Industrial Production|Consumer Confidence|Average Hourly Earnings|JOLTS|HICP|Durable Goods)/i;
-const NOISE = /(GDPNow|Projection|speculative|MBA|Auction|Mortgage|Baker Hughes|OPEC|Crude|Gasoline|Distillate|Heating Oil|Refinery|Cushing|Natural Gas|Rig Count|Bill|Bond|Note|Index Price|Deflator|Ex Gas|Saxony|North Rhine|Hesse|Brandenburg|Bavaria|Baden|Westphalia|GDP Sales|GDP Price|GDP External|GDP Capital|GDP Government|Private Consumption|Fixed Investment|CPI Index|n\.s\.a|Cleveland|Median CPI|Trimmed|Tokyo Ex|CPI Tokyo Ex|Tobacco)/i;
+const HIGH =
+  /(Interest Rate Decision|Rate Decision|Deposit Facility Rate|Main Refinancing Rate|Cash Rate|^CPI|\bCPI\b|Nonfarm Payrolls|Unemployment Rate|^GDP|\bGDP\b|PCE Price Index|FOMC Statement|FOMC Meeting Minutes|Monetary Policy Statement)/i;
+const MEDIUM =
+  /(Retail Sales|PPI|PMI|Employment Change|Trade Balance|Jobless Claims|Industrial Production|Consumer Confidence|Average Hourly Earnings|JOLTS|HICP|Durable Goods)/i;
+const NOISE =
+  /(GDPNow|Projection|speculative|MBA|Auction|Mortgage|Baker Hughes|OPEC|Crude|Gasoline|Distillate|Heating Oil|Refinery|Cushing|Natural Gas|Rig Count|Bill|Bond|Note|Index Price|Deflator|Ex Gas|Saxony|North Rhine|Hesse|Brandenburg|Bavaria|Baden|Westphalia|GDP Sales|GDP Price|GDP External|GDP Capital|GDP Government|Private Consumption|Fixed Investment|CPI Index|n\.s\.a|Cleveland|Median CPI|Trimmed|Tokyo Ex|CPI Tokyo Ex|Tobacco)/i;
 
 export async function fomcMeetings(db) {
   const hit = readCache(db, KEY.fomc);
   if (hit) return hit;
-  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", { headers: { "User-Agent": BROWSER_UA } }, 30000);
+  const html = await fetchText(
+    "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+    { headers: { "User-Agent": BROWSER_UA } },
+    30000,
+  );
   const meetings = [];
   const panels = html.split(/<h4><a id="\d+">/).slice(1);
   for (const panel of panels) {
@@ -50,8 +70,15 @@ export async function fomcMeetings(db) {
       const monthText = m[1].trim();
       const dateText = m[2].trim();
       if (/notation|unscheduled/i.test(dateText)) continue;
-      const months = monthText.toLowerCase().split("/").map((x) => MONTHS.findIndex((name) => name.startsWith(x.trim().slice(0, 3))));
-      const days = dateText.replace(/[^\d-]/g, "").split("-").map(Number).filter(Boolean);
+      const months = monthText
+        .toLowerCase()
+        .split("/")
+        .map((x) => MONTHS.findIndex((name) => name.startsWith(x.trim().slice(0, 3))));
+      const days = dateText
+        .replace(/[^\d-]/g, "")
+        .split("-")
+        .map(Number)
+        .filter(Boolean);
       if (!days.length || months[0] < 0) continue;
       const month = months[months.length - 1];
       const day = days[days.length - 1];
@@ -82,8 +109,9 @@ export async function fomcMeetings(db) {
     ok: true,
     source: "Federal Reserve FOMC calendar · FRED DFEDTARU",
     asOf: new Date().toISOString(),
-    latency: "Meeting schedule from federalreserve.gov. Rate move is the change in the target range upper bound across the decision day.",
-    meetings
+    latency:
+      "Meeting schedule from federalreserve.gov. Rate move is the change in the target range upper bound across the decision day.",
+    meetings,
   };
   writeCache(db, KEY.fomc, result, DAY);
   return result;
@@ -93,11 +121,20 @@ export async function fredSeries(db, id) {
   const key = KEY.fred(id);
   const hit = readCache(db, key);
   if (hit) return hit;
-  const csv = await fetchText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(id)}`, {}, 30000);
-  const rows = csv.trim().split(/\r?\n/).slice(1).map((line) => {
-    const [d, v] = line.split(",");
-    return [d, Number(v)];
-  }).filter(([d, v]) => d && Number.isFinite(v));
+  const csv = await fetchText(
+    `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(id)}`,
+    {},
+    30000,
+  );
+  const rows = csv
+    .trim()
+    .split(/\r?\n/)
+    .slice(1)
+    .map((line) => {
+      const [d, v] = line.split(",");
+      return [d, Number(v)];
+    })
+    .filter(([d, v]) => d && Number.isFinite(v));
   writeCache(db, key, rows, 6 * HOUR);
   return rows;
 }
@@ -106,7 +143,9 @@ export async function macroStrip(db) {
   const hit = readCache(db, KEY.macroStrip);
   if (hit) return hit;
   const series = ["DFEDTARU", "DFEDTARL", "CPIAUCSL", "CPILFESL", "UNRATE", "DGS2", "DGS10", "PCEPILFE"];
-  const data = Object.fromEntries(await Promise.all(series.map(async (id) => [id, await fredSeries(db, id).catch(() => [])])));
+  const data = Object.fromEntries(
+    await Promise.all(series.map(async (id) => [id, await fredSeries(db, id).catch(() => [])])),
+  );
   const last = (id) => data[id].at(-1) || null;
   const yoy = (id) => {
     const rows = data[id];
@@ -121,8 +160,11 @@ export async function macroStrip(db) {
   const next = fomc.meetings.find((m) => m.date >= today) || null;
   const lastMove = [...fomc.meetings].reverse().find((m) => m.date < today && m.moveBp) || null;
   const cal = await econCalendar(db, 0, 35).catch(() => ({ items: [] }));
-  const nextCpi = cal.items.find((e) => e.country === "United States" && /^CPI/i.test(e.event) && e.date >= today) || null;
-  const nextJobs = cal.items.find((e) => e.country === "United States" && /Nonfarm Payrolls/i.test(e.event) && e.date >= today) || null;
+  const nextCpi =
+    cal.items.find((e) => e.country === "United States" && /^CPI/i.test(e.event) && e.date >= today) || null;
+  const nextJobs =
+    cal.items.find((e) => e.country === "United States" && /Nonfarm Payrolls/i.test(e.event) && e.date >= today) ||
+    null;
   const two = last("DGS2");
   const ten = last("DGS10");
   const result = {
@@ -131,19 +173,72 @@ export async function macroStrip(db) {
     asOf: new Date().toISOString(),
     latency: "FRED series update on release; CPI is monthly, Treasury yields daily with a one-day lag.",
     items: [
-      { id: "fed", label: "Fed funds target", value: last("DFEDTARL") && last("DFEDTARU") ? `${last("DFEDTARL")[1].toFixed(2)}–${last("DFEDTARU")[1].toFixed(2)}%` : "—", asOf: last("DFEDTARU")?.[0] },
-      { id: "move", label: "Last move", value: lastMove ? `${lastMove.moveBp > 0 ? "+" : ""}${lastMove.moveBp}bp` : "hold", asOf: lastMove?.date },
-      { id: "next", label: "Next FOMC", value: next ? next.date : "—", asOf: next ? `${next.label}${next.sep ? " · SEP" : ""}` : "" },
-      { id: "cpi", label: "CPI YoY", value: yoy("CPIAUCSL") ? `${yoy("CPIAUCSL").value}%` : "—", asOf: yoy("CPIAUCSL")?.date },
-      { id: "core", label: "Core CPI YoY", value: yoy("CPILFESL") ? `${yoy("CPILFESL").value}%` : "—", asOf: yoy("CPILFESL")?.date },
-      { id: "pce", label: "Core PCE YoY", value: yoy("PCEPILFE") ? `${yoy("PCEPILFE").value}%` : "—", asOf: yoy("PCEPILFE")?.date },
-      { id: "unrate", label: "Unemployment", value: last("UNRATE") ? `${last("UNRATE")[1]}%` : "—", asOf: last("UNRATE")?.[0] },
+      {
+        id: "fed",
+        label: "Fed funds target",
+        value:
+          last("DFEDTARL") && last("DFEDTARU")
+            ? `${last("DFEDTARL")[1].toFixed(2)}–${last("DFEDTARU")[1].toFixed(2)}%`
+            : "—",
+        asOf: last("DFEDTARU")?.[0],
+      },
+      {
+        id: "move",
+        label: "Last move",
+        value: lastMove ? `${lastMove.moveBp > 0 ? "+" : ""}${lastMove.moveBp}bp` : "hold",
+        asOf: lastMove?.date,
+      },
+      {
+        id: "next",
+        label: "Next FOMC",
+        value: next ? next.date : "—",
+        asOf: next ? `${next.label}${next.sep ? " · SEP" : ""}` : "",
+      },
+      {
+        id: "cpi",
+        label: "CPI YoY",
+        value: yoy("CPIAUCSL") ? `${yoy("CPIAUCSL").value}%` : "—",
+        asOf: yoy("CPIAUCSL")?.date,
+      },
+      {
+        id: "core",
+        label: "Core CPI YoY",
+        value: yoy("CPILFESL") ? `${yoy("CPILFESL").value}%` : "—",
+        asOf: yoy("CPILFESL")?.date,
+      },
+      {
+        id: "pce",
+        label: "Core PCE YoY",
+        value: yoy("PCEPILFE") ? `${yoy("PCEPILFE").value}%` : "—",
+        asOf: yoy("PCEPILFE")?.date,
+      },
+      {
+        id: "unrate",
+        label: "Unemployment",
+        value: last("UNRATE") ? `${last("UNRATE")[1]}%` : "—",
+        asOf: last("UNRATE")?.[0],
+      },
       { id: "2y", label: "UST 2Y", value: two ? `${two[1].toFixed(2)}%` : "—", asOf: two?.[0] },
       { id: "10y", label: "UST 10Y", value: ten ? `${ten[1].toFixed(2)}%` : "—", asOf: ten?.[0] },
-      { id: "curve", label: "2s10s", value: two && ten ? `${Math.round((ten[1] - two[1]) * 100)}bp` : "—", asOf: ten?.[0] },
-      { id: "nextcpi", label: "Next CPI", value: nextCpi ? nextCpi.date : "—", asOf: nextCpi ? `${nextCpi.time} ET` : "" },
-      { id: "nextnfp", label: "Next payrolls", value: nextJobs ? nextJobs.date : "—", asOf: nextJobs ? `${nextJobs.time} ET` : "" }
-    ]
+      {
+        id: "curve",
+        label: "2s10s",
+        value: two && ten ? `${Math.round((ten[1] - two[1]) * 100)}bp` : "—",
+        asOf: ten?.[0],
+      },
+      {
+        id: "nextcpi",
+        label: "Next CPI",
+        value: nextCpi ? nextCpi.date : "—",
+        asOf: nextCpi ? `${nextCpi.time} ET` : "",
+      },
+      {
+        id: "nextnfp",
+        label: "Next payrolls",
+        value: nextJobs ? nextJobs.date : "—",
+        asOf: nextJobs ? `${nextJobs.time} ET` : "",
+      },
+    ],
   };
   writeCache(db, KEY.macroStrip, result, HOUR);
   return result;
@@ -178,9 +273,12 @@ export async function econDay(db, page) {
       actual: [],
       consensus: [],
       previous: [],
-      description: clean(row.description).replace(/<br\s*\/?>/gi, " ")
+      description: clean(row.description).replace(/<br\s*\/?>/gi, " "),
     };
-    const push = (list, v) => { const x = clean(v); if (x) list.push(x); };
+    const push = (list, v) => {
+      const x = clean(v);
+      if (x) list.push(x);
+    };
     push(cur.actual, row.actual);
     push(cur.consensus, row.consensus);
     push(cur.previous, row.previous);
@@ -191,7 +289,7 @@ export async function econDay(db, page) {
     actual: e.actual.join(" / "),
     consensus: e.consensus.join(" / "),
     previous: e.previous.join(" / "),
-    surprise: surprise(e.actual[0], e.consensus[0])
+    surprise: surprise(e.actual[0], e.consensus[0]),
   }));
   const today = easternParts(Date.now()).date;
   const settled = prior < today && items.every((e) => e.actual || !e.consensus);
@@ -200,9 +298,19 @@ export async function econDay(db, page) {
 }
 
 function easternParts(t) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
-  }).formatToParts(new Date(t)).map((p) => [p.type, p.value]));
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date(t))
+      .map((p) => [p.type, p.value]),
+  );
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
 
@@ -227,7 +335,7 @@ export async function econCalendar(db, back = 3, ahead = 21) {
     source: "Nasdaq economic calendar",
     asOf: new Date().toISOString(),
     latency: `Times are US Eastern (converted from Nasdaq's fixed UTC-4 clock). Filtered to rate decisions, inflation, jobs, growth, and activity prints.${failed.length ? ` ${failed.length} days did not load.` : ""}`,
-    items: uniqueEconIds(items)
+    items: uniqueEconIds(items),
   };
 }
 
@@ -257,7 +365,12 @@ export async function macroMarks(db, ccys, fromMs) {
       const t = Date.parse(`${m.date}T18:00:00Z`);
       if (t < fromMs || t > Date.now()) continue;
       const move = m.moveBp == null ? "" : m.moveBp === 0 ? " hold" : ` ${m.moveBp > 0 ? "+" : ""}${m.moveBp}bp`;
-      marks.push({ t, label: `FOMC${move}${m.upper != null ? ` ${m.upper.toFixed(2)}%` : ""}`, tone: "fomc", detail: `FOMC decision ${m.date}${m.sep ? " with projections" : ""}` });
+      marks.push({
+        t,
+        label: `FOMC${move}${m.upper != null ? ` ${m.upper.toFixed(2)}%` : ""}`,
+        tone: "fomc",
+        detail: `FOMC decision ${m.date}${m.sep ? " with projections" : ""}`,
+      });
     }
   }
   const cached = cachedEconDays(db, fromMs);
@@ -266,8 +379,17 @@ export async function macroMarks(db, ccys, fromMs) {
     if (ccys.includes("USD") && /Fed Interest Rate Decision|FOMC/i.test(e.event)) continue;
     const t = e.t;
     if (!Number.isFinite(t) || t < fromMs) continue;
-    const tone = /CPI|PCE|HICP/i.test(e.event) ? "cpi" : /Rate Decision|Deposit|Refinancing|Cash Rate|Monetary Policy/i.test(e.event) ? "fomc" : "macro";
-    marks.push({ t, label: `${countryCode(e.country)} ${shortEvent(e.event)} ${e.actual.split(" / ")[0]}`, tone, detail: `${e.country} ${e.event}: ${e.actual} vs ${e.consensus || "—"} (prev ${e.previous || "—"})` });
+    const tone = /CPI|PCE|HICP/i.test(e.event)
+      ? "cpi"
+      : /Rate Decision|Deposit|Refinancing|Cash Rate|Monetary Policy/i.test(e.event)
+        ? "fomc"
+        : "macro";
+    marks.push({
+      t,
+      label: `${countryCode(e.country)} ${shortEvent(e.event)} ${e.actual.split(" / ")[0]}`,
+      tone,
+      detail: `${e.country} ${e.event}: ${e.actual} vs ${e.consensus || "—"} (prev ${e.previous || "—"})`,
+    });
   }
   marks.sort((a, b) => a.t - b.t);
   return marks;
@@ -306,7 +428,35 @@ function surprise(actual, consensus) {
 }
 
 function countryCode(country) {
-  return { "United States": "US", "Euro Zone": "EZ", "United Kingdom": "UK", Germany: "DE", France: "FR", Italy: "IT", Spain: "ES", Japan: "JP", China: "CN", Canada: "CA", Australia: "AU", "New Zealand": "NZ", Switzerland: "CH", "South Korea": "KR", India: "IN", Brazil: "BR", Mexico: "MX", "South Africa": "ZA", Singapore: "SG", "Hong Kong": "HK", Turkey: "TR", Sweden: "SE", Norway: "NO", Poland: "PL", Russia: "RU" }[country] || country.slice(0, 2).toUpperCase();
+  return (
+    {
+      "United States": "US",
+      "Euro Zone": "EZ",
+      "United Kingdom": "UK",
+      Germany: "DE",
+      France: "FR",
+      Italy: "IT",
+      Spain: "ES",
+      Japan: "JP",
+      China: "CN",
+      Canada: "CA",
+      Australia: "AU",
+      "New Zealand": "NZ",
+      Switzerland: "CH",
+      "South Korea": "KR",
+      India: "IN",
+      Brazil: "BR",
+      Mexico: "MX",
+      "South Africa": "ZA",
+      Singapore: "SG",
+      "Hong Kong": "HK",
+      Turkey: "TR",
+      Sweden: "SE",
+      Norway: "NO",
+      Poland: "PL",
+      Russia: "RU",
+    }[country] || country.slice(0, 2).toUpperCase()
+  );
 }
 
 function shortEvent(event) {
@@ -335,7 +485,11 @@ function clean(value) {
 }
 
 function slug(value) {
-  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
 }
 
 function shift(date, days) {
@@ -346,4 +500,3 @@ function round(n, digits) {
   const f = 10 ** digits;
   return Math.round(n * f) / f;
 }
-

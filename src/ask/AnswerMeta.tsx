@@ -11,7 +11,12 @@ const STATUS_WORD = { corrected: "corrected", removed: "removed", "still flagged
  */
 export function AnswerMeta({ turn }: { turn: Turn }) {
   const done = turn.done;
-  if (turn.revising) return <p className="ask-checking" role="status"><span className="st-spin" aria-hidden="true" /> {turn.revising}</p>;
+  if (turn.revising)
+    return (
+      <p className="ask-checking" role="status">
+        <span className="st-spin" aria-hidden="true" /> {turn.revising}
+      </p>
+    );
   if (!done) return null;
   const rev = done.revision;
   const summary = revisionSummary(rev);
@@ -21,18 +26,41 @@ export function AnswerMeta({ turn }: { turn: Turn }) {
       {rev && summary ? (
         rev.status === "applied" ? (
           <details className="ask-revised">
-            <summary>{summary}{rev.model ? ` · ${rev.model}` : ""}</summary>
-            <ul>{rev.changes.map((c, i) => <li key={i} data-status={c.status}><b>{STATUS_WORD[c.status]}</b> {c.note}</li>)}</ul>
+            <summary>
+              {summary}
+              {rev.model ? ` · ${rev.model}` : ""}
+            </summary>
+            <ul>
+              {rev.changes.map((c, i) => (
+                <li key={i} data-status={c.status}>
+                  <b>{STATUS_WORD[c.status]}</b> {c.note}
+                </li>
+              ))}
+            </ul>
             {rev.removed.length || rev.added.length ? (
               <div className="ask-diff" aria-label="Lines changed">
-                {rev.removed.map((l, i) => <code key={`r${i}`} className="del">− {l}</code>)}
-                {rev.added.map((l, i) => <code key={`a${i}`} className="add">+ {l}</code>)}
+                {rev.removed.map((l, i) => (
+                  <code key={`r${i}`} className="del">
+                    − {l}
+                  </code>
+                ))}
+                {rev.added.map((l, i) => (
+                  <code key={`a${i}`} className="add">
+                    + {l}
+                  </code>
+                ))}
               </div>
             ) : null}
           </details>
-        ) : <p className="ask-revised-note">{summary}</p>
+        ) : (
+          <p className="ask-revised-note">{summary}</p>
+        )
       ) : null}
-      {line ? <p className="ask-confidence" data-tone={line.tone}>{line.text}</p> : null}
+      {line ? (
+        <p className="ask-confidence" data-tone={line.tone}>
+          {line.text}
+        </p>
+      ) : null}
     </>
   );
 }
