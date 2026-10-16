@@ -9,8 +9,11 @@
   --ink: var(--tsi-core-ivory);
   --dim: #a9b9b0;
   --faint: #84998d;
-  --line: #20362a;
-  --tsi-terminal-control-border: #587567;
+  /* Recessive green framing, one step above the near-black surfaces. */
+  --tsi-terminal-line: #101a14;
+  --line: var(--tsi-terminal-line);
+  --tsi-surface-line: var(--tsi-terminal-line);
+  --tsi-terminal-control-border: var(--tsi-terminal-line);
   --muted: var(--dim);
   --amber: var(--tsi-chroma-amber-light);
   --cyan: var(--tsi-chroma-cyan-light);
@@ -41,7 +44,7 @@
 /* Small annotations gain contrast; no geometry, layout, or semantic colors change. */
 .tsi-terminal :is(.rail-head, .board-head, .drawer-head) { border-color: var(--line); }
 @media (forced-colors: active) {
-  :root.tsi-terminal { --bg: Canvas; --panel: Canvas; --ink: CanvasText; --dim: CanvasText; --faint: CanvasText; --line: CanvasText; --tsi-terminal-bg: Canvas; --tsi-terminal-panel: Canvas; --tsi-terminal-raised: Canvas; --tsi-terminal-frame: Canvas; }
+  :root.tsi-terminal { --bg: Canvas; --panel: Canvas; --ink: CanvasText; --dim: CanvasText; --faint: CanvasText; --line: CanvasText; --tsi-terminal-line: CanvasText; --tsi-terminal-control-border: CanvasText; --tsi-terminal-bg: Canvas; --tsi-terminal-panel: Canvas; --tsi-terminal-raised: Canvas; --tsi-terminal-frame: Canvas; }
   .tsi-terminal .nav [data-destination] { --tsi-nav-accent: LinkText; }
 }
 
@@ -85,5 +88,8 @@
 }
 
 /* User-requested near-black field; preserve functional table/chart boundaries. */
-.tsi-terminal .today-overview.tsi-overview-pilot { background: var(--panel); }
-.tsi-terminal dialog.research-command { --panel: #030805; --line: #20362a; }
+.tsi-terminal .today-overview.tsi-overview-pilot {
+  background: var(--panel);
+  border-color: var(--tsi-terminal-line);
+}
+.tsi-terminal dialog.research-command { --panel: #030805; --line: var(--tsi-terminal-line); }

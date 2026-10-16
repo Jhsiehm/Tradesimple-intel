@@ -1,3 +1,4 @@
+import { ResearchEmblem } from '../research/ResearchEmblem';
 import { stepAnchor } from "../../shared/citations.mjs";
 import { when } from "../lib/api";
 import type { Step, Turn } from "./types";
@@ -31,7 +32,7 @@ function argLine(args: unknown) {
 }
 
 function StepRow({ s, turnId }: { s: Step; turnId: string }) {
-  const icon = s.state === "running" ? <span className="st-spin" aria-label="running" /> : s.state === "ok" ? <span className="st-ok" aria-label="done">✓</span> : <span className="st-bad" aria-label="failed">×</span>;
+  const icon = s.state === "running" ? <ResearchEmblem active compact /> : s.state === "ok" ? <span className="st-ok" aria-label="done">✓</span> : <span className="st-bad" aria-label="failed">×</span>;
   const args = argLine(s.args);
   return (
     <li id={stepAnchor(turnId, s.id)} className={`st-row ${s.state}`}>
@@ -67,6 +68,7 @@ export function Steps({ turn }: { turn: Turn }) {
       <summary>
         {live ? (
           <span className="st-phases" role="status">
+            <ResearchEmblem active compact />
             {PHASES.map((p, i) => <span key={p} className={i < at ? "past" : i === at ? "now" : ""}>{PHASE_WORD[p]}</span>)}
           </span>
         ) : (

@@ -741,6 +741,7 @@ export function App() {
                 members={congress.positions.length ? congress.positions : seatRoster}
                 party={party}
                 caption={congress.positions.length ? congress.voteCaption : "No roll call loaded · seats from the current roster"}
+                source={congress.voteSource}
                 highlight={mode === "committees" ? congress.committeeFocus : null}
                 onSelect={(seat) => (/^[A-Z]\d{6}$/.test(seat.bioguide) ? openMember(seat.bioguide, chamber) : setDossier(seatModel(seat, chamber, congress.voteCaption)))}
               />

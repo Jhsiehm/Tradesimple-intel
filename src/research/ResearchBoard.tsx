@@ -19,6 +19,7 @@ export function ResearchBoard({ ask, context, onClose, onFollow, onList }: { ask
   const [holdDays, setHoldDays] = useState(30), [costBps, setCostBps] = useState(5), [slippageBps, setSlippageBps] = useState(5), [sides, setSides] = useState('buy');
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const ticket = useRef(0);
+  useEffect(() => { ask.setHome(tab === 'home'); }, [tab, ask.setHome]);
   const [copied, setCopied] = useState(false);
   const load = async () => { const out = await read<{ items: ExperimentSummary[] }>('experiments'); setItems(out.items || []); };
   useEffect(() => { void load().catch(e => setError(message(e))).finally(() => setLoading(false)); }, []);
@@ -41,6 +42,7 @@ export function ResearchBoard({ ask, context, onClose, onFollow, onList }: { ask
   const result = selected?.run.result;
   return <div className="board bt research" data-home={tab === 'home'}><header className="board-head"><div className="board-title"><strong>Research</strong><span>Preserve what you tested and the evidence behind it.</span><button className="tl-close" onClick={onClose} aria-label="Close research">×</button></div><div className="bt-tabs"><button className={tab === 'home' ? 'on' : ''} onClick={() => setTab('home')}>Research home</button><button className={tab === 'experiments' ? 'on' : ''} onClick={() => setTab('experiments')}>Experiments</button><button className={tab === 'data' ? 'on' : ''} onClick={() => setTab('data')}>Data Hub</button><button className={tab === 'convergence' ? 'on' : ''} onClick={() => setTab('convergence')}>Convergence</button><button className={tab === 'notebooks' ? 'on' : ''} onClick={() => setTab('notebooks')}>Notebooks</button></div></header>
     <div className="board-scroll bt-body">
+      {tab !== 'experiments' && error && <p role="alert" className="bt-note warn">{error}</p>}
       {DEMO ? <p className="bt-note">The research registry requires the local server and is not available in the static demo.</p> : tab === 'home' ? (ask.open ? <div className="research-portable-placeholder"><p>Your investigation is open in the portable panel.</p><button className="bt-run" onClick={ask.close}>Return conversation here</button></div> : <ResearchHome ask={ask} context={context} onFollow={onFollow} onTool={setTab} />) : tab === 'notebooks' ? <Notebooks /> : tab === 'convergence' ? <ConvergenceLab /> : tab === 'data' ? <DataHub onRun={d => { ticket.current++; setDataset(d); setTitle(`${d.name} v${d.version}`); setHypothesis(''); setSelected(null); history.replaceState(null, '', '#research'); setTab('experiments'); setNotice(''); setError(''); }} /> : <>
         <p className="bt-note">Saved runs are immutable. Replay uses frozen inputs; rerun creates a new record. Imports and experiments belong to this server’s owner. Source timestamps are retained; institutional team permissions are not part of this release.</p>
         {loading && <p role="status">Loading experiments…</p>}

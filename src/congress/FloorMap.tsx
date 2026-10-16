@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import type { Chamber } from "../types";
-import { FLOOR_VIEW, floorGuide, layoutFloor, partyStroke, voteFill, type FloorSeat } from "./floorLayout";
+import { FLOOR_VIEW, floorGuide, layoutFloor, voteFill, type FloorSeat } from "./floorLayout";
+import "./floor.css";
 import { PARTY_COLOR, PARTY_LABEL, VOTE_FILL } from "./colors";
 
 export type FloorMember = {
@@ -18,13 +19,15 @@ type Props = {
   members: FloorMember[];
   party?: string;
   caption?: string;
+  source?: { source: string; asOf: string; label: string } | null;
   highlight?: { label: string; ids: Set<string> } | null;
   onSelect?: (seat: FloorSeat) => void;
 };
 
-export function FloorMap({ chamber, members, party = "all", caption, highlight, onSelect }: Props) {
+export function FloorMap({ chamber, members, party = "all", caption, source, highlight, onSelect }: Props) {
   const seats = useMemo(() => layoutFloor(members, chamber), [members, chamber]);
   const [hover, setHover] = useState<FloorSeat | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const hasVote = members.some((m) => m.vote && m.vote !== "Seat");
   const [color, setColor] = useState<"vote" | "party">("vote");
   const byParty = color === "party" || !hasVote;
@@ -42,10 +45,7 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
   return (
     <div className="floor">
       <header className="floor-bar">
-        <strong>{chamber === "senate" ? "SENATE FLOOR" : "HOUSE FLOOR"}</strong>
-        <span className="floor-party" style={{ color: PARTY_COLOR.D }}><i className="party-dot" aria-hidden="true" />Democrats <small>left</small></span>
-        <span className="floor-party" style={{ color: PARTY_COLOR.I }}><i className="party-dot" aria-hidden="true" />Independents <small>aisle</small></span>
-        <span className="floor-party" style={{ color: PARTY_COLOR.R }}><i className="party-dot" aria-hidden="true" />Republicans <small>right</small></span>
+        <strong>{chamber === "senate" ? "Senate votes" : "House votes"}</strong>
         <span className="seg floor-color" role="group" aria-label="Seat color mode">
           <button style={{ "--mode-color": VOTE_FILL.Yea } as CSSProperties} aria-pressed={!byParty} disabled={!hasVote} title={hasVote ? "Color seats by their vote" : "Vote colors become available when a roll call loads"} onClick={() => setColor("vote")}>
             <span className="color-key" aria-hidden="true">{["Yea", "Nay"].map((v) => <i key={v} style={{ background: VOTE_FILL[v] }} />)}</span>Vote
@@ -58,18 +58,15 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
       </header>
       {highlight ? <p className="floor-caption">Highlighting {highlight.label} · {highlight.ids.size} members</p> : null}
       {caption ? <p className="floor-caption">{caption}</p> : null}
+      {source ? <p className="floor-source">{source.label} · {source.asOf} · {source.source}</p> : null}
       <svg
         viewBox={`0 0 ${FLOOR_VIEW.width} ${FLOOR_VIEW.height}`}
         className="floor-svg"
         preserveAspectRatio="xMidYMid meet"
-        role="img"
+        role="group"
         aria-label={`${chamber} floor colored by ${byParty ? "party" : "vote"}${members.length ? "" : " · waiting for seats"}`}
         shapeRendering="geometricPrecision"
       >
-        <path
-          className="floor-well"
-          d={wellPath(guide.cx, guide.cy, guide.outer + 28)}
-        />
         {arcs.map((radius) => (
           <path key={radius} className="floor-arc" d={arcPath(guide.cx, guide.cy, radius)} />
         ))}
@@ -80,8 +77,7 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
           x2={guide.cx}
           y2={guide.cy - guide.outer - 8}
         />
-        <rect className="floor-rostrum" x={guide.cx - 54} y={guide.cy - 8} width="108" height="18" rx="2" />
-        {seats.map((seat) => (
+        {seats.map((seat, index) => (
           <circle
             key={seat.id}
             className="floor-seat"
@@ -89,9 +85,23 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
             cy={seat.y}
             r={hover?.id === seat.id ? seat.r + 1.4 : seat.r}
             fill={fill(seat)}
-            opacity={dim(seat) ? 0.16 : 1}
-            stroke={hover?.id === seat.id ? "#e2b657" : partyStroke(seat.party)}
-            strokeWidth={hover?.id === seat.id ? 2.4 : 1.1}
+            opacity={dim(seat) ? 0.35 : 1}
+            stroke={hover?.id === seat.id ? "#f0f1ee" : "none"}
+            strokeWidth={1.8}
+            role="button"
+            tabIndex={focusedId === seat.id || (!seats.some((s) => s.id === focusedId) && index === 0) ? 0 : -1}
+            aria-label={`${seat.name}, ${seat.state}${seat.district ? ` district ${seat.district}` : ""}, ${PARTY_LABEL[seat.party] || seat.party}${hasVote ? `, ${seat.vote}` : ""}. View member`}
+            onFocus={() => { setFocusedId(seat.id); setHover(seat); }}
+            onBlur={() => setHover(null)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(seat); }
+              const direction = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
+              if (direction) {
+                event.preventDefault();
+                const next = (index + direction + seats.length) % seats.length;
+                event.currentTarget.parentElement?.querySelectorAll<SVGCircleElement>(".floor-seat")[next]?.focus();
+              }
+            }}
             onMouseEnter={() => setHover(seat)}
             onMouseLeave={() => setHover(null)}
             onClick={() => onSelect?.(seat)}
@@ -103,21 +113,22 @@ export function FloorMap({ chamber, members, party = "all", caption, highlight, 
       <div className="legend floor-legend" aria-label={byParty ? "Party color key" : "Vote color key"}>
         {byParty ? ["D", "R", "I"].map((p) => <span key={p}><i className="swatch" style={{ background: PARTY_COLOR[p], borderRadius: "50%" }} aria-hidden="true" />{PARTY_LABEL[p]}</span>) : <>
           {["Yea", "Nay", "Present", "Not voting"].map((v) => <span key={v}><i className="swatch" style={{ background: VOTE_FILL[v] }} aria-hidden="true" />{v}</span>)}
-          <span className="floor-ring-key">Party rings {["D", "R", "I"].map((p) => <span key={p}><i className="ring" style={{ borderColor: PARTY_COLOR[p] }} aria-hidden="true" />{p}</span>)}</span>
+
         </>}
       </div>
+      <p className="floor-note">Schematic arrangement, not assigned seats. Democrats left · independents center · Republicans right.</p>
       <div className="floor-hud">
         {hover ? (
           <p className="floor-hover">
             {hover.bioguide ? <img src={`https://unitedstates.github.io/images/congress/225x275/${hover.bioguide}.jpg`} alt="" /> : null}
             <strong>{hover.name}</strong>
             <span>{hover.state}{hover.district ? `-${hover.district}` : ""} · {hover.party || "—"}{hasVote ? ` · ${hover.vote}` : ""}</span>
-            <span className="dim">Click for committees, roles, PAC money, trades</span>
+            <span className="dim">Select to view member details</span>
           </p>
         ) : members.length ? (
           <p>
             <strong>{members.length} seats</strong>
-            <span>{byParty ? "Hover a seat · colored by party" : "Hover a seat · vote color, party ring"}</span>
+            <span>{byParty ? "Explore a seat · colored by party" : "Explore a seat · colored by vote"}</span>
           </p>
         ) : (
           <p>
@@ -134,12 +145,6 @@ function arcPath(cx: number, cy: number, radius: number) {
   const start = point(cx, cy, radius, Math.PI * 0.04);
   const end = point(cx, cy, radius, Math.PI * 0.96);
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`;
-}
-
-function wellPath(cx: number, cy: number, radius: number) {
-  const start = point(cx, cy, radius, Math.PI * 0.02);
-  const end = point(cx, cy, radius, Math.PI * 0.98);
-  return `M ${cx - 80} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y} L ${cx + 80} ${cy} Z`;
 }
 
 function point(cx: number, cy: number, radius: number, angle: number) {

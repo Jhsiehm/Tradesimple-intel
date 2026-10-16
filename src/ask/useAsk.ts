@@ -56,7 +56,7 @@ export function useAsk() {
   const bindContext = useCallback((ctx: AgentContext) => { ctxRef.current = ctx; }, []);
 
   const loadStatus = useCallback(async () => {
-    if (statusRef.current) return statusRef.current;
+    if (statusRef.current?.configured) return statusRef.current;
     const res = DEMO ? { ...OFF, notice: "Ask needs the local server." } : await api<AskStatus>("/api/ask").catch(() => OFF);
     statusRef.current = res;
     setStatus(res);
@@ -100,6 +100,7 @@ export function useAsk() {
       setTurns((all) => { persist(all); return all; });
     };
     const cfg = await loadStatus();
+    if (mine.signal.aborted || ctl.current !== mine) return;
     if (!cfg.configured) {
       patch((t) => ({ ...t, phase: "error", error: cfg.notice || "Ask is not configured — add a key to .env.local" }));
       finish();
@@ -242,7 +243,13 @@ export function useAsk() {
     void loadStatus();
   }, [loadStatus]);
   const close = useCallback(() => { homeRef.current = homeTargetRef.current; setOpen(false); }, []);
-  const stop = useCallback(() => { ctl.current?.abort(); ctl.current = null; setBusy(false); }, []);
+  const stop = useCallback(() => {
+    ctl.current?.abort(); ctl.current = null; setBusy(false);
+    setTurns(all => all.map(t => t.phase === "done" || t.phase === "error" ? t : {
+      ...t, phase: "error", error: "Execution stopped. Retry to run this question again.",
+      steps: t.steps.map(s => s.state === "running" ? { ...s, state: "error", note: "Stopped by user." } : s)
+    }));
+  }, []);
   const newChat = useCallback(() => { stop(); setTurns([]); setChatId(null); setKept(false); setAttachId(""); setDraft(""); }, [stop]);
 
   const keep = useCallback(() => {
@@ -323,7 +330,7 @@ export function useAsk() {
   return {
     setHome, open, shown, show, snapTo, close, draft, setDraft, turns, busy, run, stop, newChat,
     chats, chatId, kept, keep, openSaved, forget, undoForget, dropUndo, deleted, rename, pin, attachId, setAttachId,
-    status, model, models, small, chooseModel,
+    status, refreshStatus: loadStatus, model, models, small, chooseModel,
     prefs, removePref, clearPrefs,
     session, setSourcing, setStyle, resetSession,
     detached, setDetached, bindContext,

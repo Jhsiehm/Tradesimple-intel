@@ -17,6 +17,7 @@ type TickerRow = { symbol: string; asset: string; inJoin: boolean; trades: numbe
 export type LeadersRes = {
   ok: boolean; error?: string; building?: boolean; source?: string; asOf?: string; latency?: string; basis?: string;
   progress?: { done: number; total: number; priced: number; scored: number; lastClose: string | null; running: boolean };
+  benchmarkComparisonReason?: string;
   minBuys?: number; scoredMembers?: number;
   excessTop?: Scored[]; excessBottom?: Scored[]; active?: Activity[]; late?: Activity[]; longest?: Activity[]; tickers?: TickerRow[];
 };
@@ -67,7 +68,7 @@ export function LeadersBoard({ onFollow, onList }: { onFollow: (action: string) 
     onList({
       title: "Leaderboards",
       blurb: LEAD_BLURB,
-      empty: "No members with enough priced buys yet.",
+      empty: res.benchmarkComparisonReason || "No members with enough priced buys yet.",
       status,
       items: rows.map((m) => ({
         id: m.bioguide,
@@ -123,7 +124,7 @@ export function LeadersBoard({ onFollow, onList }: { onFollow: (action: string) 
               </tbody>
             </table>
           ) : (
-            <p className="today-empty">{p?.running ? `Pricing symbols (${p.done}/${p.total}); members appear once they have ${res.minBuys} priced buys.` : `No member has ${res.minBuys} priced buys yet.`}</p>
+            <p className="today-empty">{res.benchmarkComparisonReason || (p?.running ? `Pricing symbols (${p.done}/${p.total}); members appear once they have ${res.minBuys} priced buys.` : `No member has ${res.minBuys} priced buys yet.`)}</p>
           )}
         </section>
         <section className="today-card">
