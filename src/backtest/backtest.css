@@ -8,8 +8,8 @@
 .bt-field { display: grid; gap: 3px; min-width: 0; }
 .bt-field.wide, .bt-check.wide { grid-column: 1 / -1; }
 .bt-field > span { color: var(--faint); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-.bt-field input, .bt-field select { width: 100%; min-width: 0; height: 28px; padding: 0 6px; background: #0a0e12; border: 1px solid var(--line); border-radius: 0; color: var(--ink); font-size: 12px; }
-.bt-field input:hover, .bt-field select:hover { border-color: #34414c; }
+.bt-field input, .bt-field select { width: 100%; min-width: 0; height: 28px; padding: 0 6px; background: var(--tsi-terminal-bg, #0a0e12); border: 1px solid var(--line); border-radius: 0; color: var(--ink); font-size: 12px; }
+.bt-field input:hover, .bt-field select:hover { border-color: var(--tsi-terminal-control-border, #34414c); }
 .bt-field input[type="date"] { padding: 0 4px; }
 .bt-check { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 11.5px; }
 .bt-actions { display: flex; align-items: center; gap: 10px; }
@@ -56,11 +56,11 @@
 .bt-tabs button { padding: 5px 10px; font-size: 11.5px; color: var(--dim); border: 1px solid var(--line); }
 .bt-tabs button.on { color: var(--amber); background: rgba(232, 163, 61, 0.1); border-color: rgba(232, 163, 61, 0.4); }
 .bt-sort { margin-left: auto; font-size: 11px; color: var(--faint); display: inline-flex; gap: 6px; align-items: center; }
-.bt-sort select { height: 26px; background: #0a0e12; border: 1px solid var(--line); font-size: 11.5px; }
+.bt-sort select { height: 26px; background: var(--tsi-terminal-bg, #0a0e12); border: 1px solid var(--line); font-size: 11.5px; }
 .bt-scroll { max-height: 440px; overflow: auto; border: 1px solid var(--line); }
 .bt-scroll table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .bt-scroll th, .bt-scroll td { padding: 6px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
-.bt-scroll th { position: sticky; top: 0; background: #0d1115; color: var(--faint); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.bt-scroll th { position: sticky; top: 0; background: var(--tsi-terminal-panel, #0d1115); color: var(--faint); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
 .bt-scroll td:first-child, .bt-scroll th:first-child, .bt-scroll .board-name { text-align: left; }
 .bt-scroll td:first-child { color: var(--amber); }
 .bt-scroll .board-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }

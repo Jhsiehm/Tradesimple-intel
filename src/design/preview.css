@@ -1,0 +1,55 @@
+/* This sheet is reachable only through the development-only lazy import. */
+.material-sheet { background: var(--tsi-surface-deep); color: var(--tsi-text); min-height: 100dvh; padding: 24px clamp(18px, 4vw, 64px) 40px; font-size: 13px; line-height: 1.65; color-scheme: dark; }
+.material-sheet a { color: var(--tsi-core-stone); text-underline-offset: 4px; }
+.material-head, .material-section-title { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.material-head { padding-bottom: 22px; border-bottom: 1px solid var(--tsi-surface-line); }
+.material-head span, .material-section-title > span, .material-sheet p, .material-sheet code, .material-data { color: var(--tsi-text-secondary); }
+.material-intro { padding: 38px 0 28px; max-width: 76ch; }
+.material-sheet h1 { font-size: clamp(30px, 4vw, 52px); line-height: 1.15; font-weight: 500; letter-spacing: -.035em; margin: 0 0 20px; }
+.material-sheet h2 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.material-sheet h3 { font-size: 19px; line-height: 1.4; font-weight: 500; margin: 0 0 8px; }
+.material-sheet p { max-width: 76ch; }
+.material-sheet section { margin-bottom: 42px; }
+.material-section-title { padding: 14px 0; border-top: 1px solid var(--tsi-surface-line); }
+.material-section-title > span { font-size: 11px; }
+.material-controls { display: flex; flex-wrap: wrap; gap: 18px 24px; align-items: end; padding: 8px 0 22px; }
+.material-controls label { display: grid; gap: 6px; font-size: 11px; }
+.material-controls .material-check { display: flex; align-items: center; min-height: 44px; }
+.material-controls select { min-height: 44px; padding: 0 10px; background: var(--tsi-surface-panel); border: 1px solid #587567; border-radius: 2px; text-transform: capitalize; }
+.material-controls input { accent-color: var(--tsi-core-stone); min-height: 24px; }
+.material-controls input[type="range"] { min-height: 44px; }
+.material-sheet :focus-visible { outline: 2px solid var(--tsi-core-ivory); outline-offset: 4px; }
+.material-sheet :disabled { opacity: .45; cursor: not-allowed; }
+.material-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.material-sheet figure { margin: 0; min-width: 0; }
+.material-specimen > figcaption { font-size: 12px; padding-bottom: 10px; text-transform: capitalize; }
+.material-plate { min-height: 250px; display: flex; align-items: end; overflow: hidden; border: 1px solid var(--tsi-surface-line); }
+.material-geometry { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--tsi-core-ivory); opacity: .35; pointer-events: none; }
+.material-caption { margin: 18px; padding: 16px; max-width: 34ch; }
+.material-caption p { font-size: 11px; margin: 0; }
+.material-data { padding: 16px 0; font-size: 11px; }
+.material-data dl { margin: 12px 0 0; }
+.material-data dl > div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--tsi-surface-line); padding: 6px 0; }
+.material-data dd { color: var(--tsi-text); margin: 0; text-align: right; }
+.material-core { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 16px; }
+.material-core span, .material-core code { display: block; margin-top: 8px; }
+.material-sheet code { font-size: 10px; overflow-wrap: anywhere; }
+.material-swatch { min-height: 62px; }
+.material-core span, .material-chroma-row > span { text-transform: capitalize; }
+.material-chroma { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 32px; }
+.material-chroma-row { display: grid; grid-template-columns: 70px 1fr; gap: 8px 12px; align-items: center; }
+.material-chroma-row > div { display: flex; }
+.material-chroma-row .material-swatch { flex: 1; min-height: 40px; }
+.material-chroma-row code { grid-column: 2; }
+.material-studies { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 16px; }
+.material-studies .tsi-material { height: 160px; }
+.material-studies figcaption { font-size: 11px; margin-top: 10px; }
+.material-rules { border-top: 1px solid var(--tsi-surface-line); padding-top: 24px; }
+.material-sheet footer { padding-top: 20px; border-top: 1px solid var(--tsi-surface-line); color: var(--tsi-text-secondary); font-size: 11px; }
+@media (max-width: 680px) {
+  .material-comparison, .material-chroma { grid-template-columns: 1fr; }
+  .material-core { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .material-studies { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .material-controls { gap: 12px 16px; }
+  .material-intro { padding-top: 26px; }
+}

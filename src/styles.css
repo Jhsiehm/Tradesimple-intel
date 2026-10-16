@@ -59,7 +59,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   min-width: 0;
   padding: 0 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(6, 8, 11, 0.92);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.92));
 }
 
 .brand {
@@ -300,7 +300,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   min-width: 0;
   padding: 6px 12px;
   border-bottom: 1px solid var(--line);
-  background: #090c0f;
+  background: var(--tsi-terminal-panel, #090c0f);
   z-index: 3;
 }
 .seg {
@@ -308,7 +308,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   gap: 1px;
   padding: 2px;
   border: 1px solid var(--line);
-  background: rgba(6, 8, 11, 0.88);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88));
 }
 .seg button { padding: 4px 8px; }
 .seg-label {
@@ -336,13 +336,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .legend, .map-note {
   position: absolute;
   z-index: 2;
-  background: rgba(6, 8, 11, 0.88);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88));
   border: 1px solid var(--line);
 }
 .rel {
   position: absolute;
   inset: 0;
-  background: #06080b;
+  background: var(--tsi-terminal-bg, #06080b);
   overflow: auto;
 }
 .rel-stage {
@@ -397,7 +397,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   margin: -8px 0 0 -8px;
   padding: 0;
   border: 1px solid var(--line);
-  background: #12171c;
+  background: var(--tsi-terminal-raised, #12171c);
   color: var(--dim);
   line-height: 14px;
 }
@@ -488,7 +488,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   justify-content: flex-end;
   gap: 2px;
   max-width: 280px;
-  background: rgba(6, 8, 11, 0.88);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88));
   border: 1px solid var(--line);
   padding: 3px;
 }
@@ -539,7 +539,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .board th {
   position: sticky;
   top: 0;
-  background: #0d1115;
+  background: var(--tsi-terminal-panel, #0d1115);
   color: var(--faint);
   font-weight: 500;
   letter-spacing: 0.08em;
@@ -563,7 +563,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   background: var(--line);
   border: 1px solid var(--line);
 }
-.tape-stats div { background: #0b0f13; padding: 5px 8px; min-width: 0; }
+.tape-stats div { background: var(--tsi-terminal-panel, #0b0f13); padding: 5px 8px; min-width: 0; }
 .tape-stats dt { color: var(--faint); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
 .tape-stats dd { margin: 2px 0 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .legend-line i { display: inline-block; width: 10px; height: 2px; margin-right: 5px; vertical-align: 3px; }
@@ -689,7 +689,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   margin: 4px 8px 0;
   padding: 7px 10px;
   border: 1px solid var(--line);
-  background: rgba(6, 8, 11, 0.88);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88));
   max-width: min(420px, calc(100% - 44px));
   z-index: 2;
 }
@@ -826,7 +826,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   width: 88px;
   height: 112px;
   object-fit: cover;
-  background: #141a20;
+  background: var(--tsi-terminal-raised, #141a20);
   border: 1px solid var(--line);
 }
 .member-photo.missing {
@@ -918,7 +918,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .dt { width: 100%; border-collapse: collapse; font-size: 11px; }
 .dt th, .dt td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .dt td:nth-child(2) { white-space: normal; min-width: 120px; }
-.dt th { position: sticky; top: 0; background: #11161b; color: var(--faint); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase; }
+.dt th { position: sticky; top: 0; background: var(--tsi-terminal-raised, #11161b); color: var(--faint); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase; }
 .dt tr.live { cursor: pointer; }
 .dt tr.live:hover { background: rgba(214, 168, 74, 0.08); }
 .dt-filing { color: var(--amber); text-decoration: none; }
@@ -1004,7 +1004,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   .side-stack section { flex: 1 1 0; min-width: 0; overflow: auto; }
   .fx .board-name { max-width: 150px; }
 }
-.side-stack section { border: 1px solid var(--line); background: #0b0f13; min-height: 0; }
+.side-stack section { border: 1px solid var(--line); background: var(--tsi-terminal-panel, #0b0f13); min-height: 0; }
 .side-stack h3 {
   margin: 0;
   padding: 7px 10px;
@@ -1041,7 +1041,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .mini-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mini-list small { grid-column: 3; color: var(--faint); }
 .board tr.group-row td {
-  background: #0c1014;
+  background: var(--tsi-terminal-panel, #0c1014);
   color: var(--amber) !important;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -1066,11 +1066,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .imp { display: inline-block; width: 6px; height: 6px; background: var(--nay); margin-right: 7px; vertical-align: 1px; }
 .spark { display: inline-block; vertical-align: middle; }
 .spark-empty { color: var(--faint); }
-.range-bar { position: relative; display: inline-block; width: 64px; height: 4px; background: #1a2229; vertical-align: middle; }
+.range-bar { position: relative; display: inline-block; width: 64px; height: 4px; background: var(--tsi-terminal-raised, #1a2229); vertical-align: middle; }
 .range-bar i { position: absolute; top: -3px; width: 2px; height: 10px; background: var(--amber); transform: translateX(-1px); }
-.bar { display: inline-block; width: 110px; height: 6px; background: #171e25; vertical-align: middle; }
+.bar { display: inline-block; width: 110px; height: 6px; background: var(--tsi-terminal-raised, #171e25); vertical-align: middle; }
 .bar i { display: block; height: 100%; background: var(--amber); opacity: 0.8; }
-.split-bar { display: inline-flex; width: 110px; height: 6px; background: #171e25; vertical-align: middle; }
+.split-bar { display: inline-flex; width: 110px; height: 6px; background: var(--tsi-terminal-raised, #171e25); vertical-align: middle; }
 .split-bar i { display: block; height: 100%; background: #5d86b3; }
 .split-bar b { display: block; height: 100%; background: #b8645c; }
 .calendar .board-title .seg { display: inline-flex; gap: 1px; border: 1px solid var(--line); padding: 2px; }
@@ -1085,7 +1085,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 .cal-filters .seg { display: inline-flex; gap: 1px; border: 1px solid var(--line); padding: 2px; }
-.cal-select { background: #0b0f13; border: 1px solid var(--line); padding: 4px 8px; font-size: 11px; }
+.cal-select { background: var(--tsi-terminal-panel, #0b0f13); border: 1px solid var(--line); padding: 4px 8px; font-size: 11px; }
 .count-note { margin-left: auto; color: var(--dim); font-size: 11px; }
 .note.pad { padding: 12px; margin: 0; color: var(--dim); }
 .tape-layers {
@@ -1103,7 +1103,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .tape-layers button[aria-pressed="true"] i { opacity: 1; }
 .tape-layers button small { color: var(--faint); margin-left: 5px; }
 .tape-compare { margin-left: auto; display: inline-flex; align-items: center; }
-.tape-compare select { background: #0b0f13; border: 1px solid var(--line); padding: 3px 6px; font-size: 11px; }
+.tape-compare select { background: var(--tsi-terminal-panel, #0b0f13); border: 1px solid var(--line); padding: 3px 6px; font-size: 11px; }
 div.tape-readout { flex-direction: column; gap: 2px; z-index: 1; }
 div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 .tape-readout .readout-mark { font-size: 11px; background: rgba(9, 11, 10, 0.82); padding: 1px 4px 1px 0; max-width: 72ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block !important; }
@@ -1121,7 +1121,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
   border-top: 1px solid var(--line);
   padding: 7px 16px;
   color: var(--dim);
-  background: #07090c;
+  background: var(--tsi-terminal-bg, #07090c);
 }
 .status span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status em {
@@ -1192,7 +1192,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 .maplibregl-ctrl-attrib { font-size: 10px; background: transparent !important; }
 .maplibregl-ctrl-attrib a { color: var(--dim) !important; }
 .maplibregl-ctrl-group {
-  background: rgba(6, 8, 11, 0.88) !important;
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88)) !important;
   border: 1px solid var(--line) !important;
 }
 .maplibregl-ctrl-group button { filter: invert(0.85) sepia(0.2); }
@@ -1207,7 +1207,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
   display: grid;
   gap: 4px;
   padding: 7px 10px 6px;
-  background: rgba(6, 8, 11, 0.9);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.9));
   border: 1px solid var(--line);
   border-left: 2px solid var(--amber);
   font-size: 11px;
@@ -1236,7 +1236,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
   z-index: 4;
   width: min(340px, calc(100% - 32px));
   padding: 10px 12px;
-  background: #0d1115;
+  background: var(--tsi-terminal-panel, #0d1115);
   border: 1px solid var(--line);
   font-size: 13px;
   line-height: 1.45;
@@ -1324,15 +1324,15 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 .lag-late { color: var(--nay); }
 
 /* S&P 500 board */
-.board-filter { flex: 0 1 220px; min-width: 120px; padding: 3px 8px; background: #06080b; border: 1px solid var(--line); font-size: 11px; }
+.board-filter { flex: 0 1 220px; min-width: 120px; padding: 3px 8px; background: var(--tsi-terminal-bg, #06080b); border: 1px solid var(--line); font-size: 11px; }
 .breadth { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; }
 .breadth b { font-weight: 500; }
 .breadth-bar { display: flex; flex: 1 1 160px; height: 4px; min-width: 80px; background: var(--line); }
-.breadth-bar i { display: block; background: #252d35; }
+.breadth-bar i { display: block; background: var(--tsi-terminal-raised, #252d35); }
 .breadth-bar .up-bg { background: var(--green); }
 .breadth-bar .down-bg { background: var(--nay); }
 .sector-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 2px 0 4px; }
-.sector-strip button { display: grid; gap: 1px; padding: 5px 7px; text-align: left; background: linear-gradient(var(--heat, transparent), var(--heat, transparent)), #090c0f; border: 0; font-size: 10.5px; }
+.sector-strip button { display: grid; gap: 1px; padding: 5px 7px; text-align: left; background: linear-gradient(var(--heat, transparent), var(--heat, transparent)), var(--tsi-terminal-panel, #090c0f); border: 0; font-size: 10.5px; }
 .sector-strip button span { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sector-strip button b { font-weight: 500; font-size: 12px; }
 .sector-strip button[aria-pressed="true"] { outline: 1px solid var(--amber); outline-offset: -1px; }
@@ -1425,10 +1425,7 @@ div.tape-readout p { display: flex; gap: 12px; margin: 0; }
 /* Gotham grid + Bloomberg rule */
 .topbar { box-shadow: inset 0 -1px 0 rgba(232, 163, 61, 0.22); }
 .floor, .board, .map-body {
-  background-image:
-    linear-gradient(rgba(111, 182, 200, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(111, 182, 200, 0.028) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: none;
 }
 .board-head strong, .rail-head h1 { letter-spacing: 0.08em; }
 .map-cred em, .map-outlets em, .timebar-controls > em { color: var(--cyan); }
@@ -1638,7 +1635,7 @@ body.dragging .map-body, body.dragging .widgets { pointer-events: none; }
 .ct-scope input {
   width: 120px;
   padding: 4px 8px;
-  background: rgba(6, 8, 11, 0.88);
+  background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.88));
   border: 1px solid var(--line);
   text-transform: uppercase;
 }
@@ -1743,7 +1740,7 @@ button.link.sym { color: var(--ink); text-decoration-color: rgba(228, 231, 230, 
 .scrub {
   min-width: 0;
   border-top: 1px solid var(--line);
-  background: #090c0f;
+  background: var(--tsi-terminal-panel, #090c0f);
   font-size: 11px;
   color: var(--dim);
   user-select: none;

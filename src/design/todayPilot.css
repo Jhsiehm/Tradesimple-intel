@@ -1,0 +1,20 @@
+/* Phase B: one research introduction. No global theme or data style overrides. */
+.today-overview.tsi-overview-pilot {
+  background: var(--tsi-surface-panel);
+  border: 1px solid var(--tsi-surface-line);
+  border-top: 2px solid var(--tsi-core-atlas);
+  padding: 20px;
+  color: var(--tsi-core-ivory);
+}
+.tsi-overview-pilot h2, .tsi-overview-pilot strong { color: var(--tsi-core-ivory); }
+.tsi-overview-pilot > p, .tsi-overview-pilot p.today-overview-note { color: var(--tsi-text-secondary); }
+.tsi-overview-pilot .today-overview-links button { color: var(--tsi-chroma-amber-light); }
+.tsi-overview-pilot .today-overview-links button:nth-child(2) { color: var(--tsi-chroma-cyan-light); }
+.tsi-overview-pilot .today-overview-links button:last-child { color: var(--tsi-chroma-violet-light); }
+.tsi-overview-pilot .today-overview-links button:focus-visible { outline-color: var(--tsi-core-ivory); }
+@media (max-width: 600px) { .today-overview.tsi-overview-pilot { padding: 16px; } }
+@media (forced-colors: active) {
+  .today-overview.tsi-overview-pilot { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .tsi-overview-pilot h2, .tsi-overview-pilot strong, .tsi-overview-pilot > p, .tsi-overview-pilot p.today-overview-note { color: CanvasText; }
+  .tsi-overview-pilot .today-overview-links button { color: LinkText; }
+}
