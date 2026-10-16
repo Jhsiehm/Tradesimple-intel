@@ -149,12 +149,15 @@ export function releaseTask(db, id, { lastRun, nextRun }) {
 }
 
 /** Clears a lease whose process is gone; true when it did (that run was cut off). */
-export function clearDeadLease(db, id, alive) {
+export function clearDeadLease(db, id, alive, { expectedLease, nextRun } = {}) {
   ensure(db);
   const t = getTask(db, id);
   if (!t?.running || alive(t.runningPid)) return false;
-  db.prepare("UPDATE tasks SET running_since = NULL, running_pid = NULL WHERE id = ?").run(id);
-  return true;
+  if (expectedLease && (t.runningSince !== expectedLease.runningSince || t.runningPid !== expectedLease.runningPid)) return false;
+  // A stopped lease and its next due time must change together: a second crash must not revive it.
+  return nextRun !== undefined
+    ? db.prepare("UPDATE tasks SET running_since = NULL, running_pid = NULL, next_run = ? WHERE id = ? AND running_since = ? AND running_pid = ?").run(nextRun, id, t.runningSince, t.runningPid).changes === 1
+    : db.prepare("UPDATE tasks SET running_since = NULL, running_pid = NULL WHERE id = ? AND running_since = ? AND running_pid = ?").run(id, t.runningSince, t.runningPid).changes === 1;
 }
 
 export function addRun(db, run) {

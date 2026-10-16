@@ -1,4 +1,4 @@
-import {stopRequest} from '../domain/tasks/stops.mjs';
+import {stopRequest,leaseStopRequest} from '../domain/tasks/stops.mjs';
 import {taskControl} from '../domain/tasks/control.mjs';
 import { nyDate } from "../../shared/dates.mjs";
 import { backtestSummary, bootPlan, newSignalCount, nextRunAfter, researchSeverity, runsToday, specForRun } from "../../shared/taskSchedule.mjs";
@@ -44,15 +44,21 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
   let ticking = false;
   const runPrompt = prompt || (async (args) => (await import("../ai/taskAsk.mjs")).runPromptTask(args));
 
-  /** Recomputes next runs from what is stored: a missed or cut-off run is caught up once, now. */
+  /** Catch up abandoned work unless that exact execution was explicitly stopped. */
   function boot() {
     const caught = [];
     const t = now();
     store.recoverAttempts(db,p=>alive(p,pid),t);
     for (const task of store.listTasks(db)) {
-      const interrupted = task.running && store.clearDeadLease(db, task.id, (p) => alive(p, pid));
-      const plan = bootPlan({ enabled: task.enabled, schedule: task.schedule, nextRun: task.nextRun, interrupted }, t);
-      store.setNextRun(db, task.id, plan.nextRun);
+      const stopped = task.running && leaseStopRequest(db, task);
+      const stoppedNext = task.enabled ? (task.nextRun != null && task.nextRun > t ? task.nextRun : nextRunAfter(task.schedule, t)) : null;
+      const interrupted = task.running && store.clearDeadLease(db, task.id, (p) => alive(p, pid), { expectedLease: task, ...(stopped ? { nextRun: stoppedNext } : {}) });
+      // A live or concurrently replaced lease belongs to its owner, not this recovery pass.
+      if (task.running && !interrupted) continue;
+      const plan = stopped
+        ? { catchUp: false, nextRun: stoppedNext }
+        : bootPlan({ enabled: task.enabled, schedule: task.schedule, nextRun: task.nextRun, interrupted }, t);
+      if (!stopped) store.setNextRun(db, task.id, plan.nextRun);
       if (plan.catchUp) caught.push(task.id);
     }
     return caught;

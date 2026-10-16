@@ -37,11 +37,22 @@ export function requestStop(db, id, { reason } = {}, now = Date.now()) {
   return stopRequest(db, id) || fail(409, 'This execution has already finished.');
 }
 
-export function activeAttempt(db, task) {
+/** Match the cache lease to its journal entry even after recovery has completed that entry. */
+function leaseAttempt(db, task, incompleteOnly) {
   if (!task.running) return null;
   // Initialize the journal through its public store before querying it.
   getAttempt(db, '');
-  const row = db.prepare(`SELECT a.id FROM research.task_attempts a LEFT JOIN research.task_completions c ON c.attempt_id=a.id
-    WHERE a.task_id=? AND a.started_at=? AND a.pid=? AND c.attempt_id IS NULL ORDER BY a.rowid DESC LIMIT 1`).get(task.id, task.runningSince, task.runningPid);
+  return db.prepare(`SELECT a.id FROM research.task_attempts a LEFT JOIN research.task_completions c ON c.attempt_id=a.id
+    WHERE a.task_id=? AND a.started_at=? AND a.pid=? ${incompleteOnly ? 'AND c.attempt_id IS NULL' : ''}
+    ORDER BY a.rowid DESC LIMIT 1`).get(task.id, task.runningSince, task.runningPid) || null;
+}
+
+export function activeAttempt(db, task) {
+  const row = leaseAttempt(db, task, true);
   return row ? { id: row.id, stopRequested: Boolean(stopRequest(db, row.id)) } : null;
+}
+
+export function leaseStopRequest(db, task) {
+  const row = leaseAttempt(db, task, false);
+  return row ? stopRequest(db, row.id) : null;
 }

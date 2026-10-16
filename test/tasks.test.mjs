@@ -462,3 +462,78 @@ test('stop requests reject missing, completed and invalid executions and verify 
  assert.throws(()=>requestStop(h.db,other.id,{reason:'Too late'},h.clock.t),/already finished/);
  h.db.close();
 });
+
+
+test('recovery honors the stopped lease without re-admission and preserves future scheduling', async()=>{
+ for (const mode of ['due','future','disabled']) {
+  const h=harness(),task=addTask(h.db,{enabled:mode!=='disabled'});
+  const future=h.clock.t+86_400_000;
+  if(mode==='future')store.setNextRun(h.db,task.id,future);
+  const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:10});
+  store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
+  requestStop(h.db,attempt.id,{reason:'Do not retry this interrupted execution'},h.clock.t);
+  h.clock.t+=1000;
+  assert.deepEqual(h.s.boot(),[]);
+  assert.equal(store.getAttempt(h.db,attempt.id).completion.status,'interrupted');
+  assert.equal(store.getTask(h.db,task.id).running,false);
+  const next=store.getTask(h.db,task.id).nextRun;
+  assert.equal(next,mode==='disabled'?null:mode==='future'?future:nextRunAfter(task.schedule,h.clock.t));
+  assert.equal(await h.s.tick(),0);assert.equal(h.calls.length,0);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
+  assert.deepEqual(h.s.boot(),[]);assert.equal(store.getTask(h.db,task.id).nextRun,next);
+  if(mode!=='disabled'){h.clock.t=next;assert.equal(await h.s.tick(),1);assert.equal(h.calls.length,1);}
+  h.db.close();
+ }
+});
+
+test('a prior stop never suppresses recovery of a later unstopped lease',()=>{
+ const h=harness(),task=addTask(h.db);
+ const old=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
+ requestStop(h.db,old.id,{reason:'Stop only the first execution'},h.clock.t);
+ store.completeAttempt(h.db,old.id,{status:'interrupted',finishedAt:h.clock.t});
+ h.clock.t+=1000;
+ const later=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:10});
+ store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
+ assert.deepEqual(h.s.boot(),[task.id]);assert.equal(store.getAttempt(h.db,later.id).completion.status,'interrupted');
+ assert.equal(store.getTask(h.db,task.id).nextRun,h.clock.t);h.db.close();
+});
+
+test('recovery respects a stop after completion was saved but before the lease was released',()=>{
+ const h=harness(),task=addTask(h.db);
+ const a=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
+ store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});
+ requestStop(h.db,a.id,{reason:'Stop already journaled'},h.clock.t);
+ store.completeAttempt(h.db,a.id,{status:'finished',finishedAt:h.clock.t,reason:'Synthetic terminal boundary'});
+ h.clock.t+=1000;assert.deepEqual(h.s.boot(),[]);
+ assert.equal(store.getAttempt(h.db,a.id).completion.reason,'Synthetic terminal boundary');
+ assert.ok(store.getTask(h.db,task.id).nextRun>h.clock.t);h.db.close();
+});
+
+
+test('stopped recovery leaves live leases intact and refuses a replaced lease',()=>{
+ const h=harness({alive:()=>true}),task=addTask(h.db);
+ const a=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
+ store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});const original=store.getTask(h.db,task.id);
+ requestStop(h.db,a.id,{reason:'Wait for owner checkpoint'},h.clock.t);
+ assert.deepEqual(h.s.boot(),[]);assert.equal(store.getTask(h.db,task.id).running,true);assert.equal(store.getAttempt(h.db,a.id).completion,null);
+ assert.equal(store.getTask(h.db,task.id).nextRun,original.nextRun);
+ store.releaseTask(h.db,task.id,{lastRun:h.clock.t,nextRun:original.nextRun});
+ store.claimTask(h.db,task.id,{now:h.clock.t+1,pid:7777});
+ assert.equal(store.clearDeadLease(h.db,task.id,()=>false,{expectedLease:original,nextRun:null}),false);
+ assert.equal(store.getTask(h.db,task.id).runningPid,7777);assert.equal(store.getTask(h.db,task.id).nextRun,original.nextRun);
+ h.db.close();
+});
+
+test('a stopped execution stays stopped across disk-backed recovery and another restart',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-stop-restart-')),file=path.join(dir,'cache.sqlite');let db;
+ try{
+  const clock={t:at('2026-10-09T14:00:00Z')};db=new DatabaseSync(file);
+  const task=addTask(db,{},clock),attempt=store.reserveAttempt(db,task,{startedAt:clock.t,pid:9999,trigger:'schedule',cap:10});
+  store.claimTask(db,task.id,{now:clock.t,pid:9999});requestStop(db,attempt.id,{reason:'Persist stop through restart'},clock.t);
+  db.close();db=new DatabaseSync(file);clock.t+=1000;
+  let h=harness({db,clock});assert.deepEqual(h.s.boot(),[]);const next=store.getTask(db,task.id).nextRun;
+  assert.ok(next>clock.t);db.close();db=new DatabaseSync(file);clock.t+=1000;
+  h=harness({db,clock});assert.deepEqual(h.s.boot(),[]);assert.equal(await h.s.tick(),0);
+  assert.equal(store.getTask(db,task.id).nextRun,next);assert.equal(store.countedStarts(db,clock.t).length,1);
+  assert.equal(store.getAttempt(db,attempt.id).completion.status,'interrupted');assert.equal(stopRequest(db,attempt.id).reason,'Persist stop through restart');
+ }finally{db?.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
