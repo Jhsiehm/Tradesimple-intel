@@ -73,7 +73,7 @@ const matches = JSON.stringify(actual) === JSON.stringify(expected);
 console.log(JSON.stringify({matches,stats:result.stats,inputHash:saved.inputHash},null,2));
 if (!matches) process.exitCode=1;
 `;
-export function exportRun(db, run) {
+export function exportRunFiles(db, run) {
   const engine = getEngine(db, run.engineId);
   const files = [
     { name: 'run.json', text: JSON.stringify(run, null, 2) + '\n' },
@@ -83,5 +83,6 @@ export function exportRun(db, run) {
     { name: 'README.txt', text: 'TradeSimple Intel frozen experiment\nExtract this archive and run: node replay.mjs\nNode 22.13+; no packages or network required.\nrun.json contains exact engine inputs, results, normalized event lineage, entity mappings, source metadata, exclusions, and calculation settings. evidence.json includes pinned source runs and engines, original imported datasets, and referenced frozen contract response blobs. Built-in source records remain parsed records; original provider documents are not universally archived.\nChecksums detect accidental changes, not malicious replacement of this entire archive.\nResearch only. A replay match verifies reproducibility, not predictive validity or causal interpretation.\n' }
   ];
   files.push({ name: 'checksums.json', text: JSON.stringify(Object.fromEntries(files.map(f => [f.name, hashOf(f.text)])), null, 2) + '\n' });
-  return zipFiles(files);
+  return files;
 }
+export function exportRun(db,run){return zipFiles(exportRunFiles(db,run));}

@@ -72,6 +72,7 @@ export const SMOKE = [
   ['/api/research/relationships/rel_0000/query', 405, 'error,ok'],
   ['/api/universe', 200, 'asOf,contractors,core,historicalInsiderScope,ok,onDemand,selection,sources,total'],
   ['/api/research/context', 200, 'asOf,coverage,datasets,experiments,latency,note,notebooks,ok,plans,source,tools'],
+  ['/api/research/notebooks/nb_0000/export', 400, 'error,ok'],
   ['/api/research/notebooks', 200, 'items,ok'],
   ['/api/research/notebooks/nb_0000', 404, 'error,ok'],
   ['/api/research/convergence', 200, 'items,ok'],

@@ -1,3 +1,4 @@
+import {exportNotebook} from '../domain/notebook-archive.mjs';
 import {createEventStudy,getEventStudy,listEventStudies,evaluateEventStudy} from '../domain/event-studies.mjs';
 import {createStressPlan,getStressPlan,listStressPlans,evaluateStressPlan} from '../domain/research-stress.mjs';
 import {prepareObservations,importObservations,listObservations,getObservations,deriveObservationSignals,resolveObservations,mergeObservationSnapshots} from '../domain/research-observations.mjs';
@@ -102,6 +103,12 @@ export const handlers = {
   }),
   'research.context': ctx => handle(ctx, ['GET'], () => ({ ...researchMemory(ctx.db), tools: TOOLS.map(t => ({ name:t.name, label:t.label, description:t.description, parameters:t.parameters })), coverage: 'Tool catalog only. Provider availability, coverage and as-of are checked on retrieval; no live feeds are prefetched here.' })),
   'research.notebooks': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'POST' ? { ok: true, notebook: saveNotebook(ctx.db, body) } : { ok: true, items: listNotebooks(ctx.db, new URL(ctx.req.url, 'http://localhost').searchParams.get('q'), new URL(ctx.req.url, 'http://localhost').searchParams.get('status')) }),
+  'research.notebookExport': ctx=>handle(ctx,['GET'],()=>{
+    const raw=new URL(ctx.req.url,'http://localhost').searchParams.get('revision');
+    if(raw!==null&&!/^[1-9][0-9]*$/.test(raw))return fail(400,'Choose a positive notebook revision.');
+    const out=exportNotebook(ctx.db,ctx.params.id,raw===null?undefined:Number(raw));
+    ctx.res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${out.notebookId}-r${out.revision}.zip"`,'Cache-Control':'no-store'});ctx.res.end(out.bytes);
+  }),
   'research.notebook': ctx => handle(ctx, ['GET', 'POST'], body => {
     if (ctx.req.method === 'POST') return { ok: true, notebook: saveNotebook(ctx.db, body, ctx.params.id) };
     const notebook = getNotebook(ctx.db, ctx.params.id);

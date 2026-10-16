@@ -36,6 +36,7 @@ export const MANIFEST = [
   { id: 'research.contractJobExport', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/export' },
   { id: 'research.context', path: '/api/research/context' },
   { id: 'research.notebooks', path: '/api/research/notebooks' },
+  { id: 'research.notebookExport', path: '/api/research/notebooks/:id(nb_[a-f0-9]+)/export' },
   { id: 'research.notebook', path: '/api/research/notebooks/:id(nb_[a-f0-9]+)' },
   { id: 'research.eventStudies', path: '/api/research/event-studies' },
   { id: 'research.eventStudy', path: '/api/research/event-studies/:id(evt_[a-f0-9]+)' },

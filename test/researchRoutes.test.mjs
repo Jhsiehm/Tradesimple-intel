@@ -224,3 +224,13 @@ test('notebooks pin evaluated study and stress results through revisions and app
  const history=(await call('GET',`/api/research/notebooks/${note.id}`)).body.history;assert.equal(history.length,2);assert.equal(history[1].conclusion,body.conclusion);
  for(const run of [studyRun,stressRun])assert.equal((await call('POST',`/api/research/runs/${run.id}/replay`,{})).body.matches,true);
 });
+
+test('notebook export selects an exact saved revision and rejects invalid revision requests',async()=>{
+ const body={title:'Portable HTTP finding',status:'draft',tags:[],followups:[],evidence:[{kind:'experiment',id:experiment.id}]};
+ const note=(await call('POST','/api/research/notebooks',body)).body.notebook;
+ await call('POST',`/api/research/notebooks/${note.id}`,{...note,baseRevision:1,title:'Later title'});
+ const first=await fetch(`${base}/api/research/notebooks/${note.id}/export?revision=1`);assert.equal(first.status,200);assert.equal(first.headers.get('content-type'),'application/zip');assert.match(first.headers.get('content-disposition'),/-r1.zip/);assert.equal(Buffer.from(await first.arrayBuffer()).subarray(0,2).toString(),'PK');
+ const latest=await fetch(`${base}/api/research/notebooks/${note.id}/export`);assert.equal(latest.status,200);assert.match(latest.headers.get('content-disposition'),/-r2.zip/);
+ for(const revision of ['0','-1','1.5','missing','999'])assert.equal((await call('GET',`/api/research/notebooks/${note.id}/export?revision=${revision}`)).status,400);
+ assert.equal((await call('POST',`/api/research/notebooks/${note.id}/export`,{})).status,405);
+});
