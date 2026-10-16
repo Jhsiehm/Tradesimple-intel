@@ -1,3 +1,9 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {DatabaseSync} from 'node:sqlite';
+import {createResearchBackup,restoreResearchBackup} from '../server/domain/research-backup.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {openDb} from '../server/lib/db.mjs';
@@ -6,11 +12,11 @@ import {datasetSource} from '../server/domain/research-events.mjs';
 import {runSpec} from '../server/domain/backtest/index.mjs';
 import {dayOf} from '../shared/backtest.mjs';
 import {getRun} from '../server/domain/research-store.mjs';
-import {replayRun} from '../server/domain/research-replay.mjs';
+import {replayRun,exportRun} from '../server/domain/research-replay.mjs';
 import {archiveEvidence} from '../server/domain/research-archive.mjs';
 const records=[{id:'cold',entityId:'facility:fixture',metric:'temperature',unit:'C',value:-4,eventAt:'2025-01-01',availableAt:'2025-01-03',sourceUrl:'https://example.org/cold'},{id:'warm',entityId:'facility:fixture',metric:'temperature',unit:'C',value:20,eventAt:'2025-01-04',availableAt:'2025-01-06',sourceUrl:'https://example.org/warm'}];
 const request=(rows=records)=>({name:'Synthetic temperatures',source:'Synthetic fixture',ownership:'Local researcher',license:'Test fixture only',format:'json',content:JSON.stringify(rows)});
-function database(){const prior=process.env.INTEL_CACHE;process.env.INTEL_CACHE=':memory:';try{return openDb(decodeURIComponent(new URL('..',import.meta.url).pathname));}finally{if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;}}
+function database(cache=':memory:'){const prior=process.env.INTEL_CACHE;process.env.INTEL_CACHE=cache;try{return openDb(decodeURIComponent(new URL('..',import.meta.url).pathname));}finally{if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;}}
 const policy={name:'Cold threshold signals',metric:'temperature',unit:'C',operator:'lt',threshold:0,side:'buy',bindings:{'facility:fixture':['AAPL']}};
 test('numeric observations retain units, negative values, provenance and immutable versions',()=>{
  const db=database();try{
@@ -185,4 +191,55 @@ test('forecast merging retains targets and rejects conflicting forecast identiti
   const conflict=importObservations(db,{...request([{...forecast,id:'changed-target',targetAt:'2025-01-11'}]),name:'Conflicting identity'}).snapshot;
   assert.throws(()=>mergeObservationSnapshots(db,{name:'Invalid',reason:'Fixture',identityNamespace:'Same',snapshotIds:[first.id,conflict.id]}),/retain/);
  }finally{db.close();}
+});
+
+
+test('forecast evidence survives backup recovery and standalone replay after the database closes',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-forecast-portable-'));
+ const archiveDir=path.join(dir,'standalone');fs.mkdirSync(archiveDir);
+ const db=database(path.join(dir,'cache.sqlite'));
+ let closed=false;
+ try {
+  const initial=importObservations(db,request([forecast,{...forecast,id:'late',observationId:'late-issue',availableAt:forecast.targetAt}])).snapshot;
+  const correction=importObservations(db,request([{...forecast,id:'corrected',value:20,availableAt:'2025-01-15'}])).snapshot;
+  const snapshot=mergeObservationSnapshots(db,{name:'Portable forecast history',reason:'Preserve original and late correction',identityNamespace:'Synthetic forecast issues',snapshotIds:[initial.id,correction.id]}).snapshot;
+  const derived=deriveObservationSignals(db,snapshot.id,{...policy,observationType:'forecast'}).dataset;
+  const bars=Array.from({length:80},(_,i)=>[dayOf('2025-01-01')+i,100+i,101+i]);
+  const result=await runSpec(db,{source:'dataset',datasetId:derived.id,rules:{holdDays:10}},{sourceFn:async()=>datasetSource(derived),loadBarsFn:async()=>({bars:{AAPL:bars,SPY:bars},pending:[],stale:[],cached:2,fetched:0,missing:[],oldestStoredAt:Date.now()})});
+  const run=getRun(db,result.runId);
+  fs.writeFileSync(path.join(archiveDir,'run.zip'),exportRun(db,run));
+  const backup=path.join(dir,'backup');
+  createResearchBackup(path.join(dir,'research.sqlite'),backup);
+  db.close();closed=true;
+  const restoredPath=path.join(dir,'restored.sqlite');
+  assert.equal(restoreResearchBackup(backup,restoredPath).verified,true);
+  const restored=new DatabaseSync(restoredPath,{readOnly:true});
+  try {
+   const recoveredSnapshot=JSON.parse(restored.prepare('SELECT body FROM observation_snapshots WHERE id=?').get(snapshot.id).body);
+   assert.deepEqual(recoveredSnapshot,snapshot);
+   verifyObservationComposition(recoveredSnapshot);
+   const recoveredDataset=JSON.parse(restored.prepare('SELECT body FROM datasets WHERE id=?').get(derived.id).body);
+   verifyObservationDerivation(recoveredDataset);
+   assert.deepEqual(recoveredDataset,derived);
+   const recoveredRun=JSON.parse(restored.prepare('SELECT body FROM runs WHERE id=?').get(run.id).body);
+   assert.equal(replayRun(recoveredRun).matches,true);
+  }finally{restored.close();}
+  const unpack=spawnSync('unzip',['-q','run.zip'],{cwd:archiveDir,encoding:'utf8'});
+  assert.equal(unpack.status,0,unpack.stderr);
+  // The child process has only the archive, not the application's module graph or database.
+  const replay=()=>spawnSync(process.execPath,['replay.mjs'],{cwd:archiveDir,encoding:'utf8',timeout:30000});
+  const output=replay();assert.equal(output.status,0,output.stderr);assert.equal(JSON.parse(output.stdout).matches,true);
+  const evidencePath=path.join(archiveDir,'evidence.json');
+  const evidence=JSON.parse(fs.readFileSync(evidencePath,'utf8'));
+  const preserved=evidence.datasets[derived.id].manifest.observation;
+  assert.equal(preserved.lineage.length,1);
+  assert.equal(preserved.lineage[0].targetAt,forecast.targetAt);
+  assert.deepEqual(preserved.forecastExclusions,[{id:'late',reason:'first-publication-not-before-target'}]);
+  const deliveries=JSON.parse(preserved.snapshot.rawContent).merge.sources;
+  assert.deepEqual(deliveries.map(s=>s.id).sort(),[initial.id,correction.id].sort());
+  assert.ok(deliveries.some(s=>JSON.parse(s.rawContent).some(row=>row.id==='corrected'&&row.value===20)));
+  preserved.snapshot.events[0].targetAt='2025-02-01';
+  fs.writeFileSync(evidencePath,JSON.stringify(evidence));
+  const changed=replay();assert.notEqual(changed.status,0);assert.match(changed.stderr,/Checksum mismatch: evidence.json/);
+ }finally{if(!closed)db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
