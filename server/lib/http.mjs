@@ -43,9 +43,10 @@ export function makeGate(concurrency, spacingMs) {
   let active = 0;
   let last = 0;
   let timer = null;
+  let launchPending = false;
   const queue = [];
   const pump = () => {
-    while (active < concurrency && queue.length) {
+    while (active < concurrency && queue.length && !launchPending) {
       const wait = last + spacingMs - Date.now();
       if (wait > 0) {
         if (!timer) timer = setTimeout(() => { timer = null; pump(); }, wait);
@@ -53,8 +54,13 @@ export function makeGate(concurrency, spacingMs) {
       }
       const job = queue.shift();
       active += 1;
-      last = Date.now();
-      Promise.resolve().then(job.run).then(job.resolve, job.reject).finally(() => { active -= 1; pump(); });
+      launchPending = true;
+      Promise.resolve().then(() => {
+        // Space actual starts, even when synchronous work delayed this microtask.
+        last = Date.now();
+        launchPending = false;
+        try { return job.run(); } finally { pump(); }
+      }).then(job.resolve, job.reject).finally(() => { active -= 1; pump(); });
     }
   };
   return (run, { priority = false } = {}) => new Promise((resolve, reject) => {

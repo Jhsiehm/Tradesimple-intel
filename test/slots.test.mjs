@@ -210,3 +210,44 @@ test("runAsk: plain numbers stay allowed and are still grounded as a second laye
   assert.equal(done.answer, "Excess 4.1% over 52 trades [t1].");
   assert.deepEqual(done.grounding.unmatched, []);
 });
+
+test("Markdown-escaped market slots resolve all 14 figures, including across stream boundaries", () => {
+  const rows = Array.from({ length: 17 }, (_, i) => ({ name: `Benchmark ${i}`, last: 100 + i, changePct: i - 3.25 }));
+  const body = { rows: { items: rows.slice(0, 10), total: rows.length, truncated: true } };
+  const src = { evidence: [{ id: "t1", ok: true }], bodies: new Map([["t1", body]]), raws: new Map([["t1", { rows }]]) };
+  const answer = '| Index | Last | Day change |\n|---|---|---|\n' + rows.slice(0, 7).map((r, i) =>
+    `| ${r.name} | {{t1.rows.items[${i}].last\\|num}} | {{t1.rows.items[${i}].changePct\\|pp}} |`
+  ).join('\n');
+  const expected = renderSlots(answer.replaceAll('\\|', '|'), src);
+  const actual = renderSlots(answer, src);
+  assert.equal(actual.count, 14);
+  assert.deepEqual(actual.missing, []);
+  assert.equal(actual.text, expected.text);
+  assert.deepEqual(actual.used, expected.used);
+  for (let at = 0; at <= answer.length; at++) {
+    const stream = slotStream(s => renderSlots(s, src).text);
+    assert.equal(stream.push(answer.slice(0, at)) + stream.push(answer.slice(at)) + stream.flush(), expected.text);
+  }
+  const invalid = renderSlots(String.raw`{{t1.rows.items[0].absent\|num}}`, src);
+  assert.equal(invalid.text, MISSING);
+  assert.equal(invalid.missing[0].reason, 'no such field');
+});
+
+test("runAsk fills Markdown-escaped table slots in both token events and the final answer", async () => {
+  const answer = String.raw`| Member | Excess | Ref |
+|---|---|---|
+| {{t1.rows.items[0].member\|text}} | {{t1.rows.items[0].excessReturn\|spct}} | [t1] |
+Sample size {{t1.stats.n\|int}} [t1].`;
+  const p = scripted(
+    [{ type: "tool_call", id: "c1", name: "congress_leaders", args: {} }, { type: "end", reason: "tool_calls" }],
+    [...split(answer, 1), { type: "usage", input: 100, output: 40 }, { type: "end", reason: "stop" }]
+  );
+  const events = [];
+  await runAsk({ question: "Show the disclosed trades", provider: p, tools: toolDefs(), execute: async () => structuredClone(RAW), emit: e => events.push(e), limits: ASK_LIMITS });
+  const done = events.at(-1);
+  assert.equal(done.type, 'done');
+  assert.match(done.answer, /\| Member 0 \| −3\.7% \| \[t1\] \|/);
+  assert.deepEqual(done.slots.missing, []);
+  assert.equal(done.slots.count, 3);
+  assert.equal(events.filter(e => e.type === 'token').map(e => e.delta).join(''), done.answer);
+});

@@ -89,3 +89,28 @@
 .research[data-home="false"] .data-library h3 { margin-top: 0; }
 .research[data-home="false"] .data-workbench > section > h3:first-child { margin-top: 0; font-size: 20px; }
 @media(max-width: 900px) { .data-workbench[data-selected="true"] { grid-template-columns: 1fr; } .data-library .research-list { max-height: 180px; } }
+
+.analysis-history time { font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+.analysis-history summary time { display: block; margin-top: 4px; }
+.analysis-history .analysis-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+.analysis-history .analysis-payload { font: 12px/1.6 ui-monospace, monospace; max-height: 360px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.analysis-history h3, .analysis-history .research-item strong { overflow-wrap: anywhere; }
+
+/* Useful feedback: record selection, disclosure state, and genuine work only. */
+.research[data-home="false"] .research-result { animation: research-feedback 240ms ease-out; }
+.research[data-home="false"] .research-library-disclosure > summary { color: var(--ink); font-weight: 600; }
+.research[data-home="false"] summary { cursor: pointer; transition: color 140ms ease-out; }
+.research[data-home="false"] summary::marker { color: #b7d9dd; }
+.research[data-home="false"] :is(input, select, textarea) { box-sizing: border-box; min-width: 0; max-width: 100%; }
+.research[data-home="false"] :is(.research-mapping, .research-actions) > * { min-width: 0; }
+.research[data-home="false"] .data-library .research-item strong { overflow-wrap: anywhere; }
+.research[data-home="false"] .data-library .research-item span { overflow-wrap: anywhere; }
+.research[data-home="false"] :is(.research-notebooks, .research-memory) > .research-mapping :is(input, select) { padding: 11px 12px; background: #182229; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  .research[data-home="false"] .research-result { animation: none; }
+}
+
+.research[data-home="false"] .research-scenario { animation: research-feedback 240ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .research[data-home="false"] .research-scenario { animation: none; }
+}

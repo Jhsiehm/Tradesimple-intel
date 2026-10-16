@@ -82,3 +82,24 @@ test("retry policy: timeouts, network errors, 429 and 5xx retry; other 4xx do no
   assert.equal(retryDelay(2, 500, () => 0.5), 3000);
   assert.equal(retryDelay(1, 429, () => 0.5), 5000);
 });
+
+
+test("gate spaces actual starts after a delayed launch microtask", async () => {
+  const originalNow = Date.now;
+  let now = 100;
+  Date.now = () => now;
+  try {
+    const gate = makeGate(2, 20);
+    const starts = [];
+    const first = gate(() => starts.push(now));
+    now = 200;
+    const second = gate(() => starts.push(now));
+    await first;
+    assert.deepEqual(starts, [200]);
+    now = 220;
+    await second;
+    assert.deepEqual(starts, [200, 220]);
+  } finally {
+    Date.now = originalNow;
+  }
+});

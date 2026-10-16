@@ -189,7 +189,9 @@ const tableArgs = (body) => {
 /* ---------- rendering ---------- */
 
 function renderValue(body, src, used) {
-  const [pathRaw, fmt = "auto"] = body.split("|").map((s) => s.trim());
+  // Markdown table authors escape pipes; the escape belongs to the separator,
+  // not to the JSON path. Normalize only this syntax, never guess missing fields.
+  const [pathRaw, fmt = "auto"] = body.replace(/\\\|/g, "|").split("|").map((s) => s.trim());
   const path = parsePath(pathRaw);
   if (!path) return { ok: false, text: MISSING, reason: "not a slot path (expected tN.field)" };
   const hit = resolve(path.ref, path.keys, src, ["bodies", "raws"]);
