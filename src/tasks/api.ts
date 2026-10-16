@@ -27,6 +27,7 @@ export type TaskView = {
   lastRun: string | null;
   nextRun: string | null;
   running: boolean;
+  activeAttempt?: { id: string; stopRequested: boolean } | null;
   last: { id: string; status: "ok" | "error" | "skipped"; severity: string; title: string; summary: string; at: string; source: string; asOf: string } | null;
 };
 
@@ -81,6 +82,12 @@ export async function loadResult(runId: string): Promise<Turn | null> {
 
 export async function setAdmission(paused: boolean, baseRevision: number, reason: string) {
   const out = await post<Out>("/api/tasks/control", { paused, baseRevision, reason });
+  changed();
+  return out;
+}
+
+export async function stopAttempt(id: string, reason: string) {
+  const out = await post<Out>(`/api/tasks/attempts/${id}/stop`, { reason });
   changed();
   return out;
 }

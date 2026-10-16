@@ -1,3 +1,4 @@
+import {requestStop,stopRequest,activeAttempt} from '../server/domain/tasks/stops.mjs';
 import {taskControl,setTaskControl,taskControlHistory} from '../server/domain/tasks/control.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -407,4 +408,57 @@ test('admission control is shared by independent connections and survives backup
   b.exec('DROP TRIGGER research.task_controls_update');b.exec('UPDATE research.task_controls SET paused=0');
   assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'invalid')),/checksum or identity/);
  }finally{a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('stop waits for the current backtest, retains partial evidence and charges the attempt once', async () => {
+ let release; const gate=new Promise(r=>{release=r});let calls=0;
+ const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),task=addTask(h.db,{specs:[SPEC,SPEC]});
+ const q=h.s.enqueue(task.id,'manual');await new Promise(r=>setImmediate(r));
+ const a=activeAttempt(h.db,store.getTask(h.db,task.id));assert.ok(a);assert.equal(a.stopRequested,false);
+ const request=requestStop(h.db,a.id,{reason:'Review source timing'},h.clock.t);
+ assert.deepEqual(requestStop(h.db,a.id,{reason:'Repeated click'},h.clock.t),request);
+ assert.equal(activeAttempt(h.db,store.getTask(h.db,task.id)).stopRequested,true);
+ assert.equal(store.getAttempt(h.db,a.id).completion,null);assert.equal(store.getTask(h.db,task.id).running,true);
+ release();await q.done;
+ const saved=store.getAttempt(h.db,a.id).completion.run;
+ assert.equal(calls,1);assert.equal(saved.status,'error');assert.equal(saved.meta.outcome,'stopped');assert.equal(saved.meta.completedSpecs,1);assert.equal(saved.meta.plannedSpecs,2);
+ assert.deepEqual(saved.meta.stopRequest,request);assert.equal(saved.result.phase,'error');assert.equal(saved.result.done.backtests.length,1);
+ assert.equal(store.countedStarts(h.db,h.clock.t).length,1);assert.equal(store.getTask(h.db,task.id).running,false);
+ h.clock.t+=1000;await h.s.enqueue(task.id,'manual').done;
+ assert.equal(calls,3);assert.equal(store.listAttempts(h.db)[0].completion.run.status,'ok');
+ assert.equal(store.countedStarts(h.db,h.clock.t).length,2);
+ h.db.close();
+});
+
+test('a durable stop from another connection aborts a running prompt and survives backup', async () => {
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-stop-'));
+ const a=new DatabaseSync(path.join(dir,'cache.sqlite')),b=new DatabaseSync(path.join(dir,'other-cache.sqlite'));
+ let failTimer;
+ try {
+  let began;const started=new Promise(r=>{began=r});
+  const h=harness({db:a,env:{ASK_PROVIDER:'openai',OPENAI_API_KEY:'test-not-a-key'},prompt:async({signal})=>{began();await new Promise((resolve,reject)=>{signal.addEventListener('abort',()=>reject(Error('aborted')),{once:true});});}});
+  const task=addTask(a,{kind:'prompt',prompt:'Synthetic stop test',specs:[]});const q=h.s.enqueue(task.id,'manual');await started;
+  const attempt=store.listAttempts(a)[0];requestStop(b,attempt.id,{reason:'Stop synthetic prompt'},h.clock.t);
+  await Promise.race([q.done,new Promise((_,reject)=>{failTimer=setTimeout(()=>reject(Error('Stop was not observed')),3000)})]);clearTimeout(failTimer);
+  const completed=store.getAttempt(a,attempt.id);assert.equal(completed.completion.run.meta.outcome,'stopped');assert.equal(completed.completion.run.status,'error');assert.match(completed.completion.run.summary,/Stopped/);
+  assert.equal(store.countedStarts(b,h.clock.t).length,1);
+  assert.throws(()=>b.prepare('DELETE FROM research.task_stop_requests').run(),/immutable/);
+  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));
+  assert.equal(backup.counts.task_stop_requests,1);assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_completions,1);
+ } finally {clearTimeout(failTimer);a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('stop requests reject missing, completed and invalid executions and verify checksums',()=>{
+ const h=harness(),task=addTask(h.db);const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:10});
+ assert.throws(()=>requestStop(h.db,'ta_missing',{reason:'x'},h.clock.t),/not found/);
+ assert.throws(()=>requestStop(h.db,attempt.id,{reason:' '},h.clock.t),/reason/);
+ requestStop(h.db,attempt.id,{reason:'Validate journal'},h.clock.t);
+ h.db.exec('DROP TRIGGER research.task_stop_requests_update');
+ h.db.prepare("UPDATE research.task_stop_requests SET body_hash='bad'").run();
+ assert.throws(()=>stopRequest(h.db,attempt.id),/checksum/);
+ const other=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:10});
+ store.completeAttempt(h.db,other.id,{status:'finished',finishedAt:h.clock.t});
+ assert.throws(()=>requestStop(h.db,other.id,{reason:'Too late'},h.clock.t),/already finished/);
+ h.db.close();
 });

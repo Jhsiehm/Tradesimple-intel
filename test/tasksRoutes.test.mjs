@@ -130,3 +130,19 @@ test('admission pause requires a reason and current revision, is origin guarded 
  assert.equal((await send('GET','/api/tasks/control')).body.history.length,2);
  await send('DELETE',`/api/tasks/${made.body.task.id}`);
 });
+
+
+test('stop endpoint targets an exact active attempt, enforces origin and exposes request state',async()=>{
+ const task=taskStore.createTask(db,TASK,{now:Date.now(),nextRun:null});const start=Date.now();
+ taskStore.claimTask(db,task.id,{now:start,pid:process.pid});
+ const attempt=taskStore.reserveAttempt(db,task,{startedAt:start,pid:process.pid,trigger:'manual',cap:100});assert.ok(attempt);
+ const url=`/api/tasks/attempts/${attempt.id}/stop`;
+ assert.equal((await send('GET',url)).status,405);
+ assert.equal((await send('POST',url,{reason:'test'},{origin:'https://evil.example'})).status,403);
+ assert.equal((await send('POST',url,{reason:''})).status,400);
+ assert.equal((await send('POST',url,{reason:'Synthetic route stop'})).status,202);
+ const list=await send('GET','/api/tasks');assert.deepEqual(list.body.items.find(t=>t.id===task.id).activeAttempt,{id:attempt.id,stopRequested:true});
+ const detail=await send('GET',`/api/tasks/attempts/${attempt.id}`);assert.equal(detail.body.stopRequest.reason,'Synthetic route stop');assert.equal(detail.body.attempt.completion,null);
+ taskStore.completeAttempt(db,attempt.id,{status:'interrupted',finishedAt:Date.now()});taskStore.releaseTask(db,task.id,{lastRun:start,nextRun:null});
+ assert.equal((await send('POST',url,{reason:'Retry'})).status,202);
+});

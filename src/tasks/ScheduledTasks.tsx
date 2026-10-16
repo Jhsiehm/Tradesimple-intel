@@ -1,3 +1,4 @@
+import { StopTask } from './StopTask';
 import { TaskAdmission } from "./TaskAdmission";
 import { useState } from "react";
 import type { Turn } from "../ask/types";
@@ -34,7 +35,7 @@ export function ScheduledTaskList({ openTurns, res }: { openTurns: (turns: Turn[
       {items.length ? (
         <ul>
           {items.map((t) => (
-            <li key={t.id} className={t.enabled ? "" : "off"}>
+            <li key={t.id} className={t.enabled || t.running ? "" : "off"}>
               <p className="tk-head">
                 <b title={t.prompt || t.title}>{t.title}</b>
                 <label className="tk-toggle" title={t.enabled ? "Pause" : "Resume"}>
@@ -46,6 +47,7 @@ export function ScheduledTaskList({ openTurns, res }: { openTurns: (turns: Turn[
                 <br />
                 {t.running ? <span className="tk-running"><span className="st-spin" aria-hidden /> running</span> : <>next {res?.control?.paused ? "blocked by execution pause" : t.enabled ? et(t.nextRun) : "paused"}</>}
               </p>
+              {t.activeAttempt && <StopTask key={t.activeAttempt.id} id={t.activeAttempt.id} requested={t.activeAttempt.stopRequested} />}
               {t.last ? (
                 <button type="button" className={`tk-last sev-${t.last.severity}${t.last.status === "ok" ? "" : " tk-bad"}`} onClick={() => void open(t)} title={`${t.last.source} · as of ${t.last.asOf}`}>
                   <em>{et(t.last.at)}</em> {t.last.summary}

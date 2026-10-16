@@ -47,6 +47,7 @@ after(async () => {
 export const SMOKE = [
   ["/api/tasks/control", 200, "control,history,ok"],
   ["/api/tasks/attempts", 200, "items,note,ok"],
+  ["/api/tasks/attempts/ta_deadbeef/stop", 405, "error,missing,ok"],
   ["/api/tasks/attempts/ta_deadbeef", 404, "error,missing,ok"],
   ["/api/research/event-studies", 200, "items,ok"],
   ["/api/research/event-studies/evt_deadbeef", 400, "error,ok"],

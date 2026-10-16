@@ -1,3 +1,4 @@
+import {stopRequest} from '../domain/tasks/stops.mjs';
 import {taskControl} from '../domain/tasks/control.mjs';
 import { nyDate } from "../../shared/dates.mjs";
 import { backtestSummary, bootPlan, newSignalCount, nextRunAfter, researchSeverity, runsToday, specForRun } from "../../shared/taskSchedule.mjs";
@@ -63,11 +64,12 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
     return store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), status: "skipped", counted: false, severity: "routine", title: `${task.title} · skipped`, summary: `${title}. ${summary}`, source: "TradeSimple scheduler", asOf: iso(startedAt), latency: "Not run.", meta: { reason } });
   }
 
-  async function runBacktests(task, startedAt) {
+  async function runBacktests(task, startedAt, control) {
     const lastOk = store.lastRunOf(db, task.id, "ok");
     const today = nyDate(startedAt);
     const results = [];
     for (const raw of task.specs) {
+      if (control.check()) break;
       const spec = specForRun(raw, task.window, { today, lastRunDay: lastOk ? nyDate(lastOk.startedAt) : "" });
       const t0 = now();
       let out;
@@ -94,13 +96,13 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
       source: [...new Set(good.flatMap((r) => (r.out.feeds || []).map((f) => f.source)))].join(" · ") || "TradeSimple backtest engine",
       asOf: asOfs[0] || iso(finishedAt),
       latency: `Scheduled backtest, ${((finishedAt - startedAt) / 1000).toFixed(1)} s, no model call${good.some((r) => r.out.cache === "hit") ? `; engine result cached from ${good.find((r) => r.out.cache === "hit").out.ranAt || "earlier"} (30 min)` : ""}. ${good.map((r) => (r.out.feeds || []).map((f) => `${f.label}: ${f.latency}`).join(" ")).join(" ").slice(0, 400)}`,
-      meta: { signalIds: ids, excess, fresh: freshSum, why },
+      meta: { signalIds: ids, excess, fresh: freshSum, why, completedSpecs: results.length, plannedSpecs: task.specs.length },
       result: turn
     };
   }
 
-  async function runAskPrompt(task, startedAt) {
-    const out = await runPrompt({ db, task, env, now });
+  async function runAskPrompt(task, startedAt, signal) {
+    const out = await runPrompt({ db, task, env, now, signal });
     if (out.skipped) return { skipped: true, error: out.error };
     return {
       status: out.ok ? "ok" : "error",
@@ -120,7 +122,14 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
     if(taskControl(db).paused)return pausedResult();
     const startedAt = now();
     if (!store.claimTask(db, task.id, { now: startedAt, pid })) return { ok: false, busy: true };
-    let run = null, attempt = null, admissionPaused = false;
+    let run = null, attempt = null, admissionPaused = false, poll = null, requestedStop = null, controlError = null;
+    const controller = new AbortController();
+    const check = () => {
+      if (controlError) throw controlError;
+      requestedStop = requestedStop || stopRequest(db, attempt.id);
+      if (requestedStop) controller.abort();
+      return Boolean(requestedStop);
+    };
     try {
       const cap = dailyCap(env);
       if (runsToday(store.countedStarts(db, startedAt), startedAt) >= cap) {
@@ -130,13 +139,25 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
       } else {
         attempt=store.reserveAttempt(db,task,{startedAt,pid,trigger,cap});
         if(!attempt){if(taskControl(db).paused){admissionPaused=true;return pausedResult();}run=skip(task,startedAt,"budget",`Daily cap of ${cap} scheduled runs reached`,"Another process reserved the remaining capacity.");return {ok:true,run};}
-        const r = task.kind === "backtest" ? await runBacktests(task, startedAt) : await runAskPrompt(task, startedAt);
+        poll = setInterval(() => { try { check(); } catch (err) { controlError = err; controller.abort(); } }, 250);
+        poll.unref?.();
+        const r = check() ? { meta: {} } : task.kind === "backtest" ? await runBacktests(task, startedAt, { check }) : await runAskPrompt(task, startedAt, controller.signal);
+        if (check()) {
+          r.skipped = false;
+          r.status = "error";
+          r.severity = "routine";
+          r.title = `${task.title} · stopped`;
+          r.summary = `Stopped at an execution checkpoint. ${requestedStop.reason}`;
+          r.meta = { ...r.meta, outcome: 'stopped', stopRequest: requestedStop };
+          if (r.result) { r.result.phase = 'error'; r.result.error = r.summary; r.result.notes = [...(r.result.notes || []), 'Stop requested; completed work is retained. Provider usage already incurred is not refunded.']; }
+        }
         if (r.skipped) run = skip(task, startedAt, "not-configured", r.error || "Ask is not configured", "");
         else if (store.getTask(db, task.id)) run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), counted: true, ...r, meta: { ...r.meta, trigger, attemptId:attempt.id } });
       }
     } catch (err) {
-      run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), status: "error", counted: true, severity: "routine", title: `${task.title} · failed`, summary: err?.message || "Run failed.", source: "TradeSimple scheduler", asOf: iso(startedAt), latency: "", meta: { trigger, ...(attempt?{attemptId:attempt.id}:{}) } });
+      run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), status: "error", counted: true, severity: "routine", title: `${task.title} · ${requestedStop ? "stopped" : "failed"}`, summary: requestedStop ? `Stopped at an execution checkpoint. ${requestedStop.reason}` : err?.message || "Run failed.", source: "TradeSimple scheduler", asOf: iso(startedAt), latency: "", meta: { trigger, ...(attempt?{attemptId:attempt.id}:{}), ...(requestedStop?{outcome:'stopped',stopRequest:requestedStop}:{}) } });
     } finally {
+      if (poll) clearInterval(poll);
       if(attempt)store.completeAttempt(db,attempt.id,{status:'finished',finishedAt:now(),run:run?store.getRun(db,run.id,true):null,reason:run?'':'No result row was stored; the task was removed or a repeated skip was suppressed.'});
       const cur = store.getTask(db, task.id);
       if (cur) {

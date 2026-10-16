@@ -61,6 +61,7 @@ export const MANIFEST = [
   { id: "tasks", path: "/api/tasks" },
   { id: "tasks.control", path: "/api/tasks/control" },
   { id: "tasks.attempts", path: "/api/tasks/attempts" },
+  { id: "tasks.stop", path: "/api/tasks/attempts/:id(ta_[a-f0-9]+)/stop" },
   { id: "tasks.attempt", path: "/api/tasks/attempts/:id(ta_[a-f0-9]+)" },
   { id: "tasks.result", path: "/api/tasks/runs/:id(rn_[a-z0-9]+)" },
   { id: "tasks.run", path: "/api/tasks/:id(tk_[a-z0-9]+)/run" },

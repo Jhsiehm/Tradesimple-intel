@@ -1,3 +1,4 @@
+import {activeAttempt,requestStop,stopRequest} from '../domain/tasks/stops.mjs';
 import {taskControl,taskControlHistory,setTaskControl} from '../domain/tasks/control.mjs';
 import { reply } from "../router.mjs";
 import { readJson } from "../lib/body.mjs";
@@ -16,6 +17,7 @@ function view(db, t) {
     id: t.id, kind: t.kind, title: t.title, prompt: t.prompt, specs: t.specs, window: t.window, schedule: t.schedule, every: describeSchedule(t.schedule),
     enabled: t.enabled, thresholds: t.thresholds, watch: t.watch, createdAt: iso(t.createdAt), lastRun: iso(t.lastRun), nextRun: iso(t.nextRun),
     running: t.running || taskScheduler(db).isQueued(t.id),
+    activeAttempt: activeAttempt(db,t),
     last: last ? { id: last.id, status: last.status, severity: last.severity, title: last.title, summary: last.summary, at: iso(last.startedAt), source: last.source, asOf: last.asOf } : null
   };
 }
@@ -60,8 +62,13 @@ export const handlers = {
     const b=await body(req);if(!b.ok)return b.res;
     try{return {ok:true,control:setTaskControl(db,b.value)};}catch(error){return bad(error.status||400,error.message);}
   },
+  "tasks.stop": async ({db,req,params})=>{
+    if(method(req)!=='POST')return bad(405,'POST to request a stop.');
+    const b=await body(req);if(!b.ok)return b.res;
+    try{return reply(202,{ok:true,stopRequest:requestStop(db,params.id,b.value),note:'Stop requested. The current operation may finish before the next checkpoint. Usage already incurred remains recorded.'});}catch(error){return bad(error.status||400,error.message);}
+  },
   "tasks.attempts": ({db,req})=>method(req)!=='GET'?bad(405,'Use GET.'):({ok:true,items:store.listAttempts(db).map(a=>({id:a.id,taskId:a.taskId,title:a.task.title,kind:a.task.kind,startedAt:iso(a.startedAt),trigger:a.trigger,status:a.completion?.status||'incomplete',outcome:a.completion?.run?.status||null})),note:'Durable admitted attempts count before execution, including interrupted attempts. Task definitions and recent alerts remain in the cache database.'}),
-  "tasks.attempt": ({db,req,params})=>{if(method(req)!=='GET')return bad(405,'Use GET.');const attempt=store.getAttempt(db,params.id);return attempt?{ok:true,attempt}:bad(404,'Task attempt not found.');},
+  "tasks.attempt": ({db,req,params})=>{if(method(req)!=='GET')return bad(405,'Use GET.');const attempt=store.getAttempt(db,params.id);return attempt?{ok:true,attempt,stopRequest:stopRequest(db,params.id)}:bad(404,'Task attempt not found.');},
   tasks: async ({ db, req }) => {
     if (method(req) === "GET") {
       return {
