@@ -88,3 +88,5 @@ Event studies, Stress tests, and Contract evidence use the same responsive saved
 Opening a different record and adding a scenario give brief movement feedback. Working indicators remain tied to real busy/loading states; no completion percentage is invented. Reduced-motion preferences disable these animations. Notebook and Memory filter controls share the readable input treatment. Research Home retains its existing visual identity.
 
 Verification: production build and 917 tests passed before the final scenario disclosure change; subsequent typecheck/build validates that markup. All twelve utility views were opened at 390px without document-level horizontal overflow. Event-study desktop and Convergence mobile layouts were visually inspected. This is not a live-provider acceptance test of every utility.
+
+Execution history now offers “Export execution and notebook evidence (.zip)” below the trail. Adjacent instructions explain the standalone verification command and distinguish calculation replay from model regeneration. The download was exercised in isolated browser QA; the existing responsive styles accommodate the control at 390px.

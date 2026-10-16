@@ -76,7 +76,7 @@ The answer-cache identity includes memory mode and snapshot. Controlled requests
 
 ### Controlled execution records
 
-`GET /api/research/analyses` lists up to 200 recent controlled analyses. `GET /api/research/analyses/:id` returns the full hash-linked execution journal. These are owner-local records of model-facing messages, tool definitions and outputs; they do not contain provider credentials or transport headers. The start event embeds the exact memory snapshot. Each append is committed as execution proceeds; a missing terminal event is reported as incomplete, including after a process interruption. Terminal statuses distinguish completed, failed, aborted and clarification outcomes. These records permit inspection of what happened, not deterministic regeneration of a hosted model or certification of historical external data. Full paired experiments and an in-product execution browser remain open.
+`GET /api/research/analyses` lists up to 200 recent controlled analyses. `GET /api/research/analyses/:id` returns the full hash-linked execution journal. These are owner-local records of model-facing messages, tool definitions and outputs; they do not contain provider credentials or transport headers. The start event embeds the exact memory snapshot. Each append is committed as execution proceeds; a missing terminal event is reported as incomplete, including after a process interruption. Terminal statuses distinguish completed, failed, aborted and clarification outcomes. These records permit inspection of what happened, not deterministic regeneration of a hosted model or certification of historical external data. A fixed-evidence paired executor and in-product Execution history browser are now implemented. Broader controlled tool-using comparisons remain open.
 
 ### Paired evaluation protocols
 
@@ -317,3 +317,12 @@ Combined verification after stop-aware recovery and the streaming integration: a
 - Extended responsive library/detail layouts to Event studies, Stress tests, and Contract evidence; reduced saved-list clutter in Experiments and Convergence. Added collapsible stress scenarios and real-action motion with reduced-motion support.
 - Integrated the other thread's Markdown-escaped data-slot separator fix. Corrected request-gate spacing to measure actual callback starts after delayed microtasks, with regression coverage.
 - Validation: 917 tests pass; production build passes. The full blueprint remains open, including real-provider acceptance, institutional permissions, broader research methods, and customer validation.
+
+
+### Portable individual execution evidence
+
+`GET /api/research/analyses/:id/export` now produces a ZIP linked from Execution history. It preserves the complete journal at export time, including incomplete/failed status, exact model inputs and outputs, tool payloads, and frozen memory. Exact approved notebook revisions and their underlying calculation archives accompany context-aware executions even after later edits or revocation. Export does not authorize new memory reuse. Packages are limited to 100 MiB.
+
+The standalone `node verify.mjs` command checks the manifest, journal hash chain, status, memory references/cutoffs and notebook pins, then verifies each included notebook and replays available calculations. Failed calculations remain record-only. It needs Node 22.13+ but no application, database, packages, credentials or network. External URLs or arbitrary references within tool results are not recursively fetched. This checks internal consistency, not authenticity, claim support, verified historical availability or deterministic model regeneration.
+
+Verification: 923 tests and production build pass. Tests export completed, failed and incomplete records, close the database, execute the standalone verifier, reject altered chains/statuses and missing notebook files, and preserve original approved revisions through later edits/revocation. Both successful calculation replay and failed record-only evidence are covered. Browser acceptance downloaded the actual synthetic execution ZIP and verified it in a separate temporary directory; desktop and 390px controls were inspected. Full blueprint completion remains unproven.

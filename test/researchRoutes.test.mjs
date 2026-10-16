@@ -132,6 +132,9 @@ test('saved analysis HTTP views retain execution evidence and reject mutations',
  assert.equal(detail.status,200);assert.equal(detail.body.analysis.status,'completed');assert.equal(detail.body.analysis.events.length,3);
  assert.ok((await call('GET','/api/research/analyses')).body.items.some(x=>x.id===journal.id));
  assert.equal((await call('POST',`/api/research/analyses/${journal.id}`,{})).status,405);
+ const exported=await fetch(base+`/api/research/analyses/${journal.id}/export`);
+ assert.equal(exported.status,200);assert.equal(exported.headers.get('content-type'),'application/zip');assert.equal(exported.headers.get('cache-control'),'no-store');assert.equal(Buffer.from(await exported.arrayBuffer()).readUInt32LE(0),0x04034b50);
+ assert.equal((await call('POST',`/api/research/analyses/${journal.id}/export`,{})).status,405);
 });
 test('paired protocol API registers immutable conditions without executing a provider',async()=>{
  const {prepareAskMemory}=await import('../server/ai/researchContext.mjs');

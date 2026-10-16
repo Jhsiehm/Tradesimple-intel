@@ -1,3 +1,4 @@
+import {exportAnalysis} from '../domain/analysis-archive.mjs';
 import {exportNotebook} from '../domain/notebook-archive.mjs';
 import {createEventStudy,getEventStudy,listEventStudies,evaluateEventStudy} from '../domain/event-studies.mjs';
 import {createStressPlan,getStressPlan,listStressPlans,evaluateStressPlan} from '../domain/research-stress.mjs';
@@ -75,6 +76,7 @@ export const handlers = {
   'research.pairs': ctx => handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPairProtocols(ctx.db)}:{ok:true,protocol:createPairProtocol(ctx.db,body)}),
   'research.pair': ctx => handle(ctx,['GET'],()=>({ok:true,protocol:getPairProtocol(ctx.db,ctx.params.id)})),
   'research.analyses': ctx => handle(ctx,['GET'],()=>({ok:true,items:listAnalyses(ctx.db)})),
+  'research.analysisExport': ctx => handle(ctx,['GET'],()=>{const bytes=exportAnalysis(ctx.db,ctx.params.id);ctx.res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${ctx.params.id}.zip"`,'Cache-Control':'no-store'});ctx.res.end(bytes);}),
   'research.analysis': ctx => handle(ctx,['GET'],()=>({ok:true,analysis:getAnalysis(ctx.db,ctx.params.id)})),
   'research.memoryApprovals': ctx => handle(ctx, ['GET','POST'], body => ctx.req.method === 'GET' ? {ok:true,items:listMemoryApprovals(ctx.db)} : {ok:true,approval:approveMemory(ctx.db,body)}),
   'research.memorySnapshots': ctx => handle(ctx, ['GET','POST'], body => ctx.req.method === 'GET' ? {ok:true,items:listMemorySnapshots(ctx.db)} : {ok:true,snapshot:createMemorySnapshot(ctx.db,body)}),

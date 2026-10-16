@@ -21,6 +21,7 @@ export const MANIFEST = [
   { id: 'research.pairs', path: '/api/research/pairs' },
   { id: 'research.pair', path: '/api/research/pairs/:id(pair_[a-f0-9]+)' },
   { id: 'research.analyses', path: '/api/research/analyses' },
+  { id: 'research.analysisExport', path: '/api/research/analyses/:id(analysis_[a-f0-9]+)/export' },
   { id: 'research.analysis', path: '/api/research/analyses/:id(analysis_[a-f0-9]+)' },
   { id: 'research.memoryApprovals', path: '/api/research/memory/approvals' },
   { id: 'research.memorySnapshots', path: '/api/research/memory/snapshots' },

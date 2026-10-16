@@ -67,6 +67,7 @@ export const SMOKE = [
   ["/api/research/pairs", 200, "items,ok"],
   ["/api/research/pairs/pair_deadbeef", 400, "error,ok"],
   ["/api/research/analyses", 200, "items,ok"],
+  ["/api/research/analyses/analysis_deadbeef/export", 400, "error,ok"],
   ["/api/research/analyses/analysis_deadbeef", 400, "error,ok"],
   ['/api/research/memory/approvals', 200, 'items,ok'],
   ['/api/research/memory/snapshots', 200, 'items,ok'],

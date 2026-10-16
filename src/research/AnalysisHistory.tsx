@@ -58,6 +58,8 @@ export function AnalysisHistory() {
         <div>{events.slice(page * 30, (page + 1) * 30).map(event => <EventRecord key={event.sequence} event={event} />)}</div>
         {pages > 1 && <div className="research-actions"><button className="panels-btn" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous events</button><span>Page {page + 1} of {pages}</span><button className="panels-btn" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next events</button></div>}
         <details><summary>Integrity and limitations</summary><p className="research-hash">Execution: {selected.id}<br />Journal head: {selected.headHash}</p><p>The server checks the stored hash chain when reading this record. Checksums detect inconsistency; they do not certify source truth or reproduce a hosted model. Recorded citation identifiers alone do not prove claim support.</p></details>
+        <a className="panels-btn" href={`/api/research/analyses/${selected.id}/export`}>Export execution and notebook evidence (.zip)</a>
+        <p>Extract the ZIP and run <code>node verify.mjs</code> to check the journal and replay included notebook calculations offline. This does not regenerate the model answer.</p>
         <a href={`/api/research/analyses/${selected.id}`} target="_blank" rel="noreferrer">Open full journal JSON</a>
       </section>}
     </div>
