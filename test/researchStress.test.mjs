@@ -9,7 +9,7 @@ import {spawnSync} from 'node:child_process';
 import {openDb} from '../server/lib/db.mjs';
 import {dayOf,runBacktest} from '../shared/backtest.mjs';
 import {DEFAULT_RULES} from '../shared/backtestSpec.mjs';
-import {cleanStressScenarios,stressInputs,runStress} from '../shared/researchStress.mjs';
+import {cleanStressScenarios,stressInputs,runStress,shockPrices,stressPriceSeries} from '../shared/researchStress.mjs';
 import {importDataset,datasetSource} from '../server/domain/research-events.mjs';
 import {runSpec} from '../server/domain/backtest/index.mjs';
 import {saveExperiment} from '../server/domain/research-store.mjs';
@@ -43,9 +43,9 @@ test('registered stress plans evaluate once, preserve source evidence, back up a
   const dataset=importDataset(db,{name:'Stress fixture',source:'Synthetic',format:'json',content:JSON.stringify(base.signals.map(s=>({id:s.id,symbol:s.symbol,side:s.side,eventAt:s.tradeDate,availableAt:s.signalDate})))}).dataset;
   const run=await runSpec(db,{source:'dataset',datasetId:dataset.id,rules:base.rules},{sourceFn:async()=>datasetSource(dataset),loadBarsFn:async()=>({bars:{AAPL:bars,SPY:base.benchBars.SPY},pending:[],stale:[],cached:2,fetched:0,missing:[],oldestStoredAt:Date.now()})});
   const experiment=saveExperiment(db,{runId:run.runId,title:'Synthetic baseline'});
-  const plan=createStressPlan(db,{title:'Registered sensitivity',hypothesis:'Higher costs reduce returns; delays change exposure.',experimentId:experiment.id,scenarios});assert.equal(plan.run,null);assert.equal(plan.priorPlans,0);
+  const plan=createStressPlan(db,{title:'Registered sensitivity',hypothesis:'Higher costs reduce returns; delays change exposure.',experimentId:experiment.id,scenarios:[...scenarios,{id:'price-drop',label:'Synthetic price drop',priceShock:{date:'2025-01-10',changePct:-20,symbols:['AAPL']}}]});assert.equal(plan.run,null);assert.equal(plan.priorPlans,0);
   const done=evaluateStressPlan(db,plan.id);assert.equal(done.run.inputs.kind,'stress');assert.equal(replayRun(done.run).matches,true);assert.equal(evaluateStressPlan(db,plan.id).run.id,done.run.id);
-  assert.equal(listStressPlans(db)[0].evaluated,true);assert.equal(getStressPlan(db,plan.id).scenarios.length,4);
+  assert.equal(listStressPlans(db)[0].evaluated,true);assert.equal(getStressPlan(db,plan.id).scenarios.length,5);
   assert.throws(()=>saveExperiment(db,{runId:done.run.id,title:'Wrong category'}),/locked plan/);
   assert.throws(()=>db.exec('DELETE FROM research.stress_plans'),/immutable/);
   const next=createStressPlan(db,{title:'Another sensitivity plan',hypothesis:'Document repeated analysis',experimentId:experiment.id,scenarios:[scenarios[0]]});assert.equal(next.priorPlans,1);
@@ -108,4 +108,48 @@ test('source outages preserve any-source and fixed-quorum agreement rules',()=>{
    if(policy.confirmation==='at-least')assert.ok(variants.filter(v=>v.id.startsWith('without:')).every(v=>v.counts.decisions===0));
   }
  }
+});
+
+test('dated shocks preserve originals, pre-shock prices and subsequent percentage returns',()=>{
+ const source={...base,bars:{AAPL:bars,SPY:bars},benchBars:{SPY:bars,OTHER:bars}},original=JSON.stringify(source);
+ const {inputs,priceChanges}=shockPrices(source,{date:'2025-01-10',changePct:-20,symbols:['AAPL','SPY']});
+ assert.equal(JSON.stringify(source),original);
+ assert.deepEqual(inputs.bars.AAPL.slice(0,9),bars.slice(0,9));
+ assert.deepEqual(inputs.bars.AAPL[9],[bars[9][0],bars[9][1]*.8,bars[9][2]*.8]);
+ assert.deepEqual(inputs.bars.SPY,inputs.benchBars.SPY);assert.deepEqual(inputs.benchBars.OTHER,bars);
+ assert.ok(Math.abs(inputs.bars.AAPL[11][2]/inputs.bars.AAPL[10][2]-bars[11][2]/bars[10][2])<1e-14);
+ assert.equal(priceChanges.length,3);assert.ok(priceChanges.every(c=>c.affectedBars===71&&c.firstAffectedDate==='2025-01-10'&&c.factor===.8));
+ const missingOpen={...base,bars:{AAPL:bars.map(b=>[b[0],null,b[2]])}};
+ assert.equal(shockPrices(missingOpen,{date:'2025-01-10',changePct:20,symbols:['AAPL']}).inputs.bars.AAPL[10][1],null);
+});
+
+test('shock dates without a bar start at the next saved bar, and zero or unbounded assumptions are refused',()=>{
+ const sparse={...base,bars:{AAPL:[bars[0],bars[4],bars[9]]}},shock={date:'2025-01-03',changePct:25,symbols:['AAPL']};
+ assert.equal(shockPrices(sparse,shock).priceChanges[0].firstAffectedDate,'2025-01-05');
+ const options={priceSeries:stressPriceSeries(base)};
+ for(const patch of [{date:'2025-02-30'},{date:'2024-12-31'},{date:'2026-01-01'},{symbols:[]},{symbols:['AAPL','AAPL']},{symbols:['UNKNOWN']},{changePct:0},{changePct:-100},{changePct:501},{changePct:'-20'},{extra:true}]){
+  assert.throws(()=>cleanStressScenarios([{id:'bad',label:'Bad shock',priceShock:{...shock,...patch}}],base.rules,options),/shock|symbols|frozen|bars/i);
+ }
+ const clean=cleanStressScenarios([{id:'valid',label:'Shock only',priceShock:shock}],base.rules,options)[0];
+ assert.equal(clean.delayDays,0);assert.deepEqual(clean.priceShock,shock);
+});
+
+test('a price shock changes positions spanning the date, not returns entirely after it',()=>{
+ const flat=bars.map(b=>[b[0],100,100]);
+ const source={...base,signals:[{...base.signals[0],id:'crossing',signalDate:'2025-01-03'},{...base.signals[0],id:'later',signalDate:'2025-01-20'}],bars:{AAPL:flat},benchBars:{SPY:flat},rules:{...base.rules,costBps:0,slippageBps:0}};
+ const report=runStress({base:source,scenarios:[{id:'drop',label:'Drop 20%',priceShock:{date:'2025-01-10',changePct:-20,symbols:['AAPL']}}]});
+ assert.equal(report.baseline.trades[0].ret,0);assert.equal(report.scenarios[0].result.trades[0].ret,-.2);assert.equal(report.scenarios[0].result.trades[1].ret,0);
+ assert.equal(report.scenarios[0].removed,0);assert.equal(report.scenarios[0].priceChanges[0].affectedBars,71);
+ const shorts={...source,signals:source.signals.map(s=>({...s,side:'sell'})),rules:{...source.rules,sides:'sell'}};
+ assert.equal(runStress({base:shorts,scenarios:[{id:'drop',label:'Drop',priceShock:{date:'2025-01-10',changePct:-20,symbols:['AAPL']}}]}).scenarios[0].result.trades[0].ret,.2);
+});
+
+test('Convergence shocks preserve development before a holdout shock and update targeted benchmarks consistently',()=>{
+ const base=multiBase(),before=JSON.stringify(base);
+ const report=runStress({base,scenarios:[{id:'holdout-shock',label:'Holdout price shock',sourceIds:['a'],priceShock:{date:'2025-04-10',changePct:-20,symbols:['AAPL','SPY']}}]});
+ assert.equal(JSON.stringify(base),before);assert.deepEqual(report.scenarios[0].result.periods.development,report.baseline.periods.development);
+ assert.ok(report.scenarios[0].result.periods.holdout.variants.every(v=>Math.abs(v.windowStats.benchmarkReturn+.2)<1e-12));
+ assert.equal(report.scenarios[0].priceChanges.length,2);
+ assert.deepEqual(report.scenarios[0].result.periods.holdout.variants.map(v=>v.counts),report.baseline.periods.holdout.variants.map(v=>v.counts));
+ assert.notDeepEqual(report.scenarios[0].result.periods.holdout.variants.map(v=>v.windowStats),report.baseline.periods.holdout.variants.map(v=>v.windowStats));
 });

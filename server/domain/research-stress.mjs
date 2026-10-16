@@ -2,7 +2,7 @@ import {researchStore,getExperiment,getRun,putRun,newId,hashOf} from './research
 import {getPlan} from './convergence.mjs';
 import {requireAuditedSource,INTEGRITY_VERSION} from './research-integrity.mjs';
 import {ENGINE,CONVERGENCE_ENGINE,STRESS_ENGINE} from './research-replay.mjs';
-import {cleanStressScenarios,runStress} from '../../shared/researchStress.mjs';
+import {cleanStressScenarios,runStress,stressPriceSeries} from '../../shared/researchStress.mjs';
 const ready=new WeakSet();
 function ensure(db){researchStore(db);if(ready.has(db))return;db.exec(`CREATE TABLE IF NOT EXISTS research.stress_plans (id TEXT PRIMARY KEY,created_at TEXT NOT NULL,body_hash TEXT NOT NULL,body TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS research.stress_evaluations (plan_id TEXT PRIMARY KEY,run_id TEXT NOT NULL,created_at TEXT NOT NULL);`);
@@ -24,7 +24,7 @@ export function createStressPlan(db,body){
  const comparison=body.convergencePlanId?getPlan(db,body.convergencePlanId):null;
  if(comparison&&!comparison.evaluated)throw Error('Evaluate the Convergence holdout before registering stress tests; stress cannot reveal an unopened holdout.');
  const experiment=body.experimentId?getExperiment(db,body.experimentId):null,source=comparison?getRun(db,comparison.runId):experiment?.run;
- const sourceAudit=validateSource(db,source),scenarios=cleanStressScenarios(body.scenarios,source.inputs.spec?.rules||source.inputs.rules,{sourceIds:source.inputs.sources?.map(s=>s.id)||[]});
+ const sourceAudit=validateSource(db,source),scenarios=cleanStressScenarios(body.scenarios,source.inputs.spec?.rules||source.inputs.rules,{sourceIds:source.inputs.sources?.map(s=>s.id)||[],priceSeries:stressPriceSeries(source.inputs)});
  if(comparison&&(scenarios.length>6||source.inputs.sources.some(s=>s.signals.length>5000)))throw Error('Convergence stress supports up to six scenarios and 5,000 signals per source.');
  const priorPlans=db.prepare('SELECT COUNT(*) AS n FROM research.stress_plans WHERE json_extract(body,\'$.sourceRunId\')=?').get(source.id).n;
  const plan={version:2,id:newId('stress'),title:body.title.trim(),hypothesis:body.hypothesis.trim(),createdAt:new Date().toISOString(),experimentId:experiment?.id||null,convergencePlanId:comparison?.id||null,sourceKind:comparison?'convergence':'single-source',sourceRunId:source.id,sourceInputHash:source.inputHash,sourceEngineId:source.engineId,engineId:STRESS_ENGINE.id,sourceAudit,scenarios,priorPlans};
