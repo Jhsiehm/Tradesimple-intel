@@ -1,3 +1,4 @@
+import { listNotebooks, getNotebook, notebookHistory, saveNotebook } from '../domain/notebooks.mjs';
 import { createPlan, getPlan, listPlans, evaluatePlan } from '../domain/convergence.mjs';
 import { reply } from '../router.mjs';
 import { readJson } from '../lib/body.mjs';
@@ -31,6 +32,12 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.notebooks': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'POST' ? { ok: true, notebook: saveNotebook(ctx.db, body) } : { ok: true, items: listNotebooks(ctx.db, new URL(ctx.req.url, 'http://localhost').searchParams.get('q'), new URL(ctx.req.url, 'http://localhost').searchParams.get('status')) }),
+  'research.notebook': ctx => handle(ctx, ['GET', 'POST'], body => {
+    if (ctx.req.method === 'POST') return { ok: true, notebook: saveNotebook(ctx.db, body, ctx.params.id) };
+    const notebook = getNotebook(ctx.db, ctx.params.id);
+    return notebook ? { ok: true, notebook, history: notebookHistory(ctx.db, ctx.params.id) } : fail(404, 'Notebook not found.');
+  }),
   'research.convergence': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'GET' ? { ok: true, items: listPlans(ctx.db) } : { ok: true, plan: createPlan(ctx.db, body) }),
   'research.convergencePlan': ctx => handle(ctx, ['GET'], () => ({ ok: true, plan: getPlan(ctx.db, ctx.params.id) })),
   'research.convergenceEvaluate': ctx => handle(ctx, ['POST'], () => ({ ok: true, plan: evaluatePlan(ctx.db, ctx.params.id) })),

@@ -12,6 +12,7 @@ export function researchStore(db) {
   db.prepare('ATTACH DATABASE ? AS research').run(file);
   db.exec(`
     PRAGMA research.journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS research.notebook_revisions (notebook_id TEXT NOT NULL, revision INTEGER NOT NULL, created_at TEXT NOT NULL, body_hash TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(notebook_id, revision));
     CREATE TABLE IF NOT EXISTS research.convergence_plans (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, body_hash TEXT NOT NULL, body TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS research.convergence_evaluations (plan_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS research.engines (id TEXT PRIMARY KEY, body TEXT NOT NULL);
@@ -19,7 +20,7 @@ export function researchStore(db) {
     CREATE TABLE IF NOT EXISTS research.experiments (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, title TEXT NOT NULL, hypothesis TEXT NOT NULL, run_id TEXT NOT NULL UNIQUE, parent_id TEXT);
     CREATE TABLE IF NOT EXISTS research.datasets (id TEXT PRIMARY KEY, name TEXT NOT NULL, version INTEGER NOT NULL, created_at TEXT NOT NULL, content_hash TEXT NOT NULL, body_hash TEXT NOT NULL, body TEXT NOT NULL, UNIQUE(name, version), UNIQUE(name, content_hash));
   `);
-  for (const table of ['engines', 'runs', 'experiments', 'datasets', 'convergence_plans', 'convergence_evaluations']) {
+  for (const table of ['notebook_revisions', 'engines', 'runs', 'experiments', 'datasets', 'convergence_plans', 'convergence_evaluations']) {
     for (const op of ['UPDATE', 'DELETE']) db.exec(`CREATE TRIGGER IF NOT EXISTS research.${table}_${op.toLowerCase()} BEFORE ${op} ON ${table} BEGIN SELECT RAISE(ABORT, 'Research records are immutable'); END;`);
   }
   ready.add(db);

@@ -73,3 +73,15 @@ test('convergence HTTP lifecycle locks development, evaluates once, replays and 
   assert.equal((await call('POST', `/api/research/convergence/${p.id}/evaluate`, {})).body.plan.runId, evaluated.body.plan.runId);
   assert.equal((await call('POST', `/api/research/runs/${evaluated.body.plan.runId}/replay`, {})).body.matches, true);
 });
+test('notebook HTTP API enforces origins, methods, revision checks and search', async () => {
+  const draft = { title: 'HTTP notebook', hypothesis: 'Fixture', status: 'draft', tags: ['AAPL'], evidence: [], followups: [] };
+  assert.equal((await call('POST', '/api/research/notebooks', draft, 'https://evil.example')).status, 403);
+  assert.equal((await call('DELETE', '/api/research/notebooks')).status, 405);
+  const a = await call('POST', '/api/research/notebooks', draft); assert.equal(a.status, 200);
+  const n = a.body.notebook;
+  assert.equal((await call('GET', `/api/research/notebooks/${n.id}`)).body.history.length, 1);
+  assert.equal((await call('POST', `/api/research/notebooks/${n.id}`, { ...n, baseRevision: 0 })).status, 400);
+  const b = await call('POST', `/api/research/notebooks/${n.id}`, { ...n, baseRevision: 1, conclusion: 'No evidence', decision: 'Need data', status: 'needs-data' }); assert.equal(b.body.notebook.revision, 2);
+  assert.equal((await call('GET', '/api/research/notebooks?q=AAPL&status=needs-data')).body.items.length, 1);
+  assert.equal((await call('GET', '/api/research/notebooks?q=unmatched')).body.items.length, 0);
+});

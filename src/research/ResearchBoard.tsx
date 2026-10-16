@@ -3,13 +3,14 @@ import { DEFAULT_RULES } from '../../shared/backtestSpec.mjs';
 import type { StageList } from '../types';
 import { DEMO } from '../lib/api';
 import { BacktestResults } from '../backtest/BacktestResults';
+import { Notebooks } from './Notebooks';
 import { ConvergenceLab } from './ConvergenceLab';
 import { DataHub, EventTable } from './DataHub';
 import { read, write, message, type DatasetSummary, type Experiment, type ExperimentSummary } from './api';
 import '../backtest/backtest.css';
 import './research.css';
 export function ResearchBoard({ onClose, onFollow, onList }: { onClose: () => void; onFollow: (action: string) => void; onList: (list: StageList) => void }) {
-  const [tab, setTab] = useState<'experiments' | 'data' | 'convergence'>('experiments');
+  const [tab, setTab] = useState<'experiments' | 'data' | 'convergence' | 'notebooks'>('experiments');
   const [items, setItems] = useState<ExperimentSummary[]>([]), [selected, setSelected] = useState<Experiment | null>(null);
   const [dataset, setDataset] = useState<DatasetSummary | null>(null), [title, setTitle] = useState(''), [hypothesis, setHypothesis] = useState('');
   const [holdDays, setHoldDays] = useState(30), [costBps, setCostBps] = useState(5), [slippageBps, setSlippageBps] = useState(5), [sides, setSides] = useState('buy');
@@ -35,9 +36,9 @@ export function ResearchBoard({ onClose, onFollow, onList }: { onClose: () => vo
     catch (e) { setError(message(e)); } finally { setBusy(false); }
   };
   const result = selected?.run.result;
-  return <div className="board bt research"><header className="board-head"><div className="board-title"><strong>Research</strong><span>Preserve what you tested and the evidence behind it.</span><button className="tl-close" onClick={onClose} aria-label="Close research">×</button></div><div className="bt-tabs"><button className={tab === 'experiments' ? 'on' : ''} onClick={() => setTab('experiments')}>Experiments</button><button className={tab === 'data' ? 'on' : ''} onClick={() => setTab('data')}>Data Hub</button><button className={tab === 'convergence' ? 'on' : ''} onClick={() => setTab('convergence')}>Convergence</button></div></header>
+  return <div className="board bt research"><header className="board-head"><div className="board-title"><strong>Research</strong><span>Preserve what you tested and the evidence behind it.</span><button className="tl-close" onClick={onClose} aria-label="Close research">×</button></div><div className="bt-tabs"><button className={tab === 'experiments' ? 'on' : ''} onClick={() => setTab('experiments')}>Experiments</button><button className={tab === 'data' ? 'on' : ''} onClick={() => setTab('data')}>Data Hub</button><button className={tab === 'convergence' ? 'on' : ''} onClick={() => setTab('convergence')}>Convergence</button><button className={tab === 'notebooks' ? 'on' : ''} onClick={() => setTab('notebooks')}>Notebooks</button></div></header>
     <div className="board-scroll bt-body">
-      {DEMO ? <p className="bt-note">The research registry requires the local server and is not available in the static demo.</p> : tab === 'convergence' ? <ConvergenceLab /> : tab === 'data' ? <DataHub onRun={d => { ticket.current++; setDataset(d); setTitle(`${d.name} v${d.version}`); setHypothesis(''); setSelected(null); history.replaceState(null, '', '#research'); setTab('experiments'); setNotice(''); setError(''); }} /> : <>
+      {DEMO ? <p className="bt-note">The research registry requires the local server and is not available in the static demo.</p> : tab === 'notebooks' ? <Notebooks /> : tab === 'convergence' ? <ConvergenceLab /> : tab === 'data' ? <DataHub onRun={d => { ticket.current++; setDataset(d); setTitle(`${d.name} v${d.version}`); setHypothesis(''); setSelected(null); history.replaceState(null, '', '#research'); setTab('experiments'); setNotice(''); setError(''); }} /> : <>
         <p className="bt-note">Saved runs are immutable. Replay uses frozen inputs; rerun creates a new record. Imports and experiments belong to this server’s owner. Source timestamps are retained; institutional team permissions are not part of this release.</p>
         {loading && <p role="status">Loading experiments…</p>}
         <div className="research-actions"><button className="panels-btn" onClick={() => onFollow('bt:')}>Open Backtest</button><button className="panels-btn" onClick={() => setTab('data')}>Import dataset</button></div>

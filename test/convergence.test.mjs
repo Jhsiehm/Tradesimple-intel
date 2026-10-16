@@ -87,3 +87,15 @@ test('convergence runs cannot enter single-source save and legacy export paths',
     assert.throws(() => saveExperiment(db, { title: 'Wrong record type', runId: plan.runId }), /locked plan/);
   } finally { db.close(); }
 });
+test('notebook evidence remains pinned when a convergence holdout is evaluated later', async () => {
+  const { saveNotebook, getNotebook } = await import('../server/domain/notebooks.mjs');
+  const db = dbAt();
+  try {
+    const plan = createPlan(db, { title: 'Cited plan', experimentIds: fixtures(db), spec: spec() });
+    const n = saveNotebook(db, { title: 'Pinned evidence', status: 'draft', tags: [], followups: [], evidence: [{ kind: 'convergence', id: plan.id }] });
+    const evaluated = evaluatePlan(db, plan.id); assert.notEqual(evaluated.runId, plan.runId);
+    const edited = saveNotebook(db, { ...n, baseRevision: 1, hypothesis: 'Revised question' }, n.id);
+    assert.equal(edited.evidence[0].runId, plan.runId);
+    assert.equal(getNotebook(db, n.id).evidence[0].phase, 'development only');
+  } finally { db.close(); }
+});
