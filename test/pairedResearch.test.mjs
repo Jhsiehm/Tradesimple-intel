@@ -3,9 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {zipEntries,zipEntryStream} from '../server/lib/zip.mjs';
-import {hashOf} from '../server/domain/research-store.mjs';
+import {hashOf,saveExperiment} from '../server/domain/research-store.mjs';
+import {openDb} from '../server/lib/db.mjs';
+import {dayOf} from '../shared/backtest.mjs';
+import {DEFAULT_RULES} from '../shared/backtestSpec.mjs';
+import {importDataset,datasetSource} from '../server/domain/research-events.mjs';
+import {runSpec} from '../server/domain/backtest/index.mjs';
 import {pairedArchive,exportPair} from '../server/domain/paired-archive.mjs';
-import {verifyPairedArchive} from '../server/domain/paired-verifier.mjs';
+import {verifyPairedArchive,verifyPairedDirectory} from '../server/domain/paired-verifier.mjs';
 import {savePairEvaluation,listPairEvaluations} from '../server/domain/pair-evaluations.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,9 +22,8 @@ import {startAnalysis} from '../server/domain/research-analysis.mjs';
 import {createPairProtocol} from '../server/domain/research-pairs.mjs';
 import {executePair,getPairExecution} from '../server/ai/pairedResearch.mjs';
 const env={ASK_PROVIDER:'openai',OPENAI_API_KEY:'test-only',ASK_MODEL:'fixture',ASK_STRONG_MODEL:'fixture',ASK_MONTHLY_BUDGET_USD:'0'};
-function fixture(){
- const db=new DatabaseSync(':memory:');
- const notebook=saveNotebook(db,{title:'APPROVED_MEMORY',hypothesis:'test',conclusion:'APPROVED_MEMORY',decision:'Caveat',status:'rejected',tags:[],evidence:[],followups:[]});
+function fixture({db=new DatabaseSync(':memory:'),evidence=[]}={}){
+ const notebook=saveNotebook(db,{title:'APPROVED_MEMORY',hypothesis:'test',conclusion:'APPROVED_MEMORY',decision:'Caveat',status:'rejected',tags:[],evidence,followups:[]});
  const approval=approveMemory(db,{notebookId:notebook.id,revision:1,action:'approve',reason:'Reviewed'});
  const context=createMemorySnapshot(db,{mode:'context-aware',knownAt:new Date().toISOString(),approvalIds:[approval.id]});
  const memory=prepareAskMemory(db,{mode:'isolated'});
@@ -101,7 +105,7 @@ test('paired export verifies offline after database close and detects inconsiste
   savePairEvaluation(db,p.id,{baseRevision:0,verdict:'tie',rationale:'Same supplied evidence',reviewReason:'Fixture',assessments:{isolated:assessment,'context-aware':assessment},excerpts:[{arm:'isolated',quote:'Evidence [E1].',comment:'Exact answer excerpt'}]});
   const bundle=pairedArchive(db,p.id);fs.writeFileSync(path.join(dir,'pair.zip'),exportPair(db,p.id));db.close();closed=true;
   assert.equal(verifyPairedArchive(bundle).reviews,1);
-  for(const entry of zipEntries(path.join(dir,'pair.zip'))){assert.ok(['pair.json','verify.mjs','README.txt'].includes(entry.name));const parts=[];for await(const part of zipEntryStream(path.join(dir,'pair.zip'),entry))parts.push(part);fs.writeFileSync(path.join(dir,entry.name),Buffer.concat(parts));}
+  for(const entry of zipEntries(path.join(dir,'pair.zip'))){assert.ok(!entry.name.includes('..'));fs.mkdirSync(path.dirname(path.join(dir,entry.name)),{recursive:true});const parts=[];for await(const part of zipEntryStream(path.join(dir,'pair.zip'),entry))parts.push(part);fs.writeFileSync(path.join(dir,entry.name),Buffer.concat(parts));}
   const proof=JSON.parse(execFileSync(process.execPath,[path.join(dir,'verify.mjs')],{cwd:dir,encoding:'utf8'}));assert.equal(proof.ok,true);assert.equal(proof.protocolId,p.id);
   for(const mutate of [
    b=>{b.payload.execution.result.arms.isolated.answer='Changed answer';},
@@ -112,3 +116,32 @@ test('paired export verifies offline after database close and detects inconsiste
   bundle.payloadHash='corrupt';fs.writeFileSync(path.join(dir,'pair.json'),JSON.stringify(bundle));assert.throws(()=>execFileSync(process.execPath,[path.join(dir,'verify.mjs')],{cwd:dir,stdio:'pipe'}));
  }finally{if(!closed)db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+ test('paired exports include the frozen historical notebook and replay its underlying evidence offline',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paired-evidence-'));
+  const old=process.env.INTEL_CACHE;process.env.INTEL_CACHE=':memory:';let db;
+  try{db=openDb(path.resolve('.'));}finally{if(old===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=old;}
+  try{
+   const dataset=importDataset(db,{name:'Pair source',source:'Synthetic',format:'json',content:JSON.stringify([{id:'a',symbol:'AAPL',side:'buy',eventAt:'2025-02-20',availableAt:'2025-02-21'}])}).dataset;
+   const bars=Array.from({length:100},(_,i)=>[dayOf('2025-01-01')+i,100+i,100+i]);
+   const run=await runSpec(db,{source:'dataset',datasetId:dataset.id,rules:{...DEFAULT_RULES,holdDays:10}},{sourceFn:async()=>datasetSource(dataset),loadBarsFn:async()=>({bars:{AAPL:bars,SPY:bars},pending:[],stale:[],cached:2,fetched:0,missing:[],oldestStoredAt:Date.now()})});
+   const experiment=saveExperiment(db,{runId:run.runId,title:'Pinned pair calculation'});
+   const {p,notebook}=fixture({db,evidence:[{kind:'experiment',id:experiment.id}]});
+   // A later notebook edit must not replace the approved revision used by the pair.
+   saveNotebook(db,{...notebook,baseRevision:1,conclusion:'LATER_UNAPPROVED_EDIT'},notebook.id);
+   fs.writeFileSync(path.join(dir,'pair.zip'),exportPair(db,p.id));db.close();db=null;
+   execFileSync('unzip',['-q','pair.zip'],{cwd:dir});
+   const proof=verifyPairedDirectory(dir);assert.equal(proof.status,'not-executed');assert.equal(proof.notebooks.length,1);
+   assert.equal(proof.notebooks[0].revision,1);assert.equal(proof.notebooks[0].results[0].matches,true);
+   const folder=`notebooks/${notebook.id}-r1`,noteFile=path.join(dir,folder,'notebook.json');
+   const note=JSON.parse(fs.readFileSync(noteFile,'utf8'));assert.equal(note.notebook.conclusion,'APPROVED_MEMORY');
+   const evidence=JSON.parse(fs.readFileSync(path.join(dir,folder,'runs',run.runId,'evidence.json'),'utf8'));
+   assert.equal(evidence.datasets[dataset.id].rawContent,dataset.rawContent);
+   const output=JSON.parse(execFileSync(process.execPath,[path.join(dir,'verify.mjs')],{encoding:'utf8'}));assert.equal(output.notebooks[0].uniqueRuns,1);
+   const manifestPath=path.join(dir,'checksums.json'),manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+   const missing=structuredClone(manifest);delete missing[`${folder}/notebook.json`];fs.writeFileSync(manifestPath,JSON.stringify(missing));assert.throws(()=>verifyPairedDirectory(dir),/Missing paired notebook/);
+   note.notebook.conclusion='FORGED';note.notebookHash=hashOf(note.notebook);const encoded=JSON.stringify(note);fs.writeFileSync(noteFile,encoded);
+   manifest[`${folder}/notebook.json`]=hashOf(encoded);fs.writeFileSync(manifestPath,JSON.stringify(manifest));assert.throws(()=>verifyPairedDirectory(dir),/differs from frozen memory/);
+   manifest['../outside']='bad';fs.writeFileSync(manifestPath,JSON.stringify(manifest));assert.throws(()=>verifyPairedDirectory(dir),/Unsafe paired archive path/);
+  }finally{db?.close();fs.rmSync(dir,{recursive:true,force:true});}
+ });

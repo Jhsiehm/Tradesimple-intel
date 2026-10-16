@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync,realpathSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 const hash=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 const check=(condition,message)=>{if(!condition)throw Error(message);};
 function context(s){
@@ -70,7 +71,36 @@ export function verifyPairedArchive(bundle){
  }
  return {ok:true,protocolId:p.id,status:run?.status||'not-executed',reviews:reviews.length,scope:'Checksums, frozen inputs, execution/result links and review history. Not a signature, claim-truth check or model regeneration.'};
 }
+export function verifyPairedDirectory(directory){
+ const root=path.resolve(directory),read=name=>readFileSync(path.join(root,name),'utf8');
+ const manifest=JSON.parse(read('checksums.json'));
+ check(manifest&&typeof manifest==='object'&&!Array.isArray(manifest),'Invalid paired checksum manifest.');
+ for(const name of ['pair.json','verify.mjs','README.txt'])check(manifest[name],`Missing manifest entry: ${name}`);
+ const allowed=/^(pair\.json|verify\.mjs|README\.txt|notebooks\/nb_[a-f0-9]+-r[1-9][0-9]*\/(notebook\.json|verify\.mjs|README\.txt|checksums\.json|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs)))$/;
+ for(const [name,digest] of Object.entries(manifest)){
+  check(allowed.test(name),'Unsafe paired archive path.');
+  check(hash(read(name))===digest,`Checksum mismatch: ${name}`);
+ }
+ const bundle=JSON.parse(read('pair.json')),proof=verifyPairedArchive(bundle),notebooks=new Map();
+ for(const context of Object.values(bundle.payload.contexts))for(const {notebook} of context.records){
+  check(/^nb_[a-f0-9]+$/.test(notebook.id)&&Number.isSafeInteger(notebook.revision)&&notebook.revision>0,'Invalid paired notebook identity.');
+  const key=`${notebook.id}-r${notebook.revision}`,folder=`notebooks/${key}`;
+  for(const name of ['notebook.json','checksums.json','verify.mjs'])check(manifest[`${folder}/${name}`],'Missing paired notebook evidence files.');
+  const saved=JSON.parse(read(`${folder}/notebook.json`));
+  check(saved.notebookHash===hash(notebook)&&hash(saved.notebook)===hash(notebook),'Paired notebook differs from frozen memory.');
+  notebooks.set(key,notebook);
+ }
+ const results=[];
+ for(const [key,note] of notebooks){
+  const verification=spawnSync(process.execPath,['verify.mjs'],{cwd:path.join(root,'notebooks',key),encoding:'utf8',timeout:300000,maxBuffer:2*1024*1024});
+  check(!verification.error&&verification.status===0,`Notebook evidence verification failed: ${key}: ${verification.error?.message||verification.stderr||verification.stdout}`);
+  let result;try{result=JSON.parse(verification.stdout);}catch{throw Error(`Invalid notebook verification output: ${key}`);}
+  check(result.verified===true&&result.notebookId===note.id&&result.revision===note.revision,'Notebook verification identity mismatch.');
+  results.push(result);
+ }
+ return {...proof,notebooks:results,scope:'Paired inputs, execution/result links, reviews, exact approved notebook revisions and replayable pinned calculations. Not a signature, claim-truth check or model regeneration.'};
+}
 if(process.argv[1]&&realpathSync(path.resolve(process.argv[1]))===realpathSync(fileURLToPath(import.meta.url))){
- try{const file=process.argv[2]||new URL('pair.json',import.meta.url);console.log(JSON.stringify(verifyPairedArchive(JSON.parse(readFileSync(file,'utf8'))),null,2));}
+ try{const file=process.argv[2]?path.resolve(process.argv[2]):fileURLToPath(new URL('pair.json',import.meta.url));console.log(JSON.stringify(verifyPairedDirectory(path.dirname(file)),null,2));}
  catch(error){console.error(error.message);process.exitCode=1;}
 }
