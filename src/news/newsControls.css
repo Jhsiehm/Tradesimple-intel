@@ -10,7 +10,7 @@
 .news-scope { color: var(--dim); }
 .news-health { margin-left: auto; }
 .news-controls details[open] > summary { color: var(--amber); }
-.outlet-panel, .news-health-panel { position: absolute; top: auto; left: 8px; right: 8px; z-index: 30; background: #0d1217; border: 1px solid var(--line); padding: 14px; box-shadow: 0 12px 28px #0008; max-height: min(460px, 65vh); overflow: auto; }
+.outlet-panel, .news-health-panel { position: absolute; top: auto; left: 8px; right: 8px; z-index: 30; background: var(--tsi-terminal-panel, #0d1217); border: 1px solid var(--line); padding: 14px; box-shadow: 0 12px 28px #0008; max-height: min(460px, 65vh); overflow: auto; }
 .outlet-tools { display: flex; gap: 8px; }
 .outlet-tools input { flex: 1; min-width: 0; }
 .outlet-tools input, .outlet-tools select { padding: 9px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font: inherit; }

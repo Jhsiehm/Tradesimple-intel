@@ -1,18 +1,18 @@
 /* Relationship map. Colors come from palette.ts through --tint; nothing here picks a category color. */
-.relmap { position: absolute; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); background: #0d1115; outline: none; }
+.relmap { position: absolute; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); background: var(--tsi-terminal-panel, #0d1115); outline: none; }
 .relmap-canvas { position: relative; min-height: 0; grid-row: 3; }
 .relmap-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; outline: none; }
 .relmap-canvas canvas:focus-visible { box-shadow: inset 0 0 0 1px var(--amber); }
 .relmap.drawing .relmap-canvas canvas { cursor: crosshair; }
 
-.relmap-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: rgba(6, 8, 11, 0.9); z-index: 3; }
+.relmap-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--tsi-terminal-frame, rgba(6, 8, 11, 0.9)); z-index: 3; }
 .relmap-bar .seg button:disabled { opacity: 0.35; cursor: default; }
 .relmap-bar .seg button[aria-pressed="true"] { color: var(--amber); }
 .relmap-theory-btn[aria-pressed="true"] { color: var(--tint) !important; box-shadow: inset 0 -2px 0 var(--tint); }
-.relmap-search { position: relative; display: flex; align-items: center; gap: 6px; flex: 1 1 220px; max-width: 340px; padding: 0 8px; border: 1px solid var(--line); background: #07090c; color: var(--dim); }
+.relmap-search { position: relative; display: flex; align-items: center; gap: 6px; flex: 1 1 220px; max-width: 340px; padding: 0 8px; border: 1px solid var(--line); background: var(--tsi-terminal-bg, #07090c); color: var(--dim); }
 .relmap-search input { flex: 1; min-width: 0; padding: 6px 0; background: transparent; border: none; outline: none; color: var(--ink); font-size: 12px; }
 .relmap-search:focus-within { border-color: var(--amber); }
-.relmap-search ul { position: absolute; z-index: 20; top: calc(100% + 2px); left: -1px; right: -1px; margin: 0; padding: 2px 0; list-style: none; background: #0b0f13; border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); max-height: 320px; overflow: auto; }
+.relmap-search ul { position: absolute; z-index: 20; top: calc(100% + 2px); left: -1px; right: -1px; margin: 0; padding: 2px 0; list-style: none; background: var(--tsi-terminal-panel, #0b0f13); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); max-height: 320px; overflow: auto; }
 .relmap-search li { display: grid; grid-template-columns: 18px auto minmax(0, 1fr); align-items: baseline; gap: 6px; padding: 6px 8px; cursor: pointer; }
 .relmap-search li[aria-selected="true"] { background: rgba(255, 193, 74, 0.08); }
 .relmap-search li b { font-weight: 500; color: var(--ink); white-space: nowrap; }
@@ -32,7 +32,7 @@
 .relmap-tip span { display: block; margin-top: 3px; }
 .relmap-tip small { display: block; margin-top: 3px; color: var(--dim); }
 
-.relmap-menu, .relmap-pop { position: absolute; z-index: 10; width: 288px; background: #0b0f13; border: 1px solid var(--line); border-top: 2px solid var(--tint, var(--line)); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6); font-size: 12px; }
+.relmap-menu, .relmap-pop { position: absolute; z-index: 10; width: 288px; background: var(--tsi-terminal-panel, #0b0f13); border: 1px solid var(--line); border-top: 2px solid var(--tint, var(--line)); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6); font-size: 12px; }
 .relmap-menu header, .relmap-pop header { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 9px 10px 8px; border-bottom: 1px solid var(--line); }
 .relmap-menu header strong, .relmap-pop header strong { display: block; font-weight: 500; color: var(--ink); line-height: 1.25; }
 .relmap-menu header small, .relmap-pop header small { display: block; margin-top: 2px; color: var(--dim); line-height: 1.3; }
@@ -53,7 +53,7 @@
 
 .relmap-pop { padding-bottom: 8px; }
 .relmap-pop label { display: grid; gap: 4px; padding: 8px 10px 0; color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
-.relmap-pop input, .relmap-pop textarea { width: 100%; padding: 6px 7px; background: #07090c; border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; letter-spacing: 0; text-transform: none; resize: vertical; }
+.relmap-pop input, .relmap-pop textarea { width: 100%; padding: 6px 7px; background: var(--tsi-terminal-bg, #07090c); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; letter-spacing: 0; text-transform: none; resize: vertical; }
 .relmap-pop input:focus, .relmap-pop textarea:focus { outline: none; border-color: var(--tint); }
 .relmap-pop .seg { margin: 8px 10px 0; }
 .relmap-pop .seg button[aria-pressed="true"] { color: var(--tint); }

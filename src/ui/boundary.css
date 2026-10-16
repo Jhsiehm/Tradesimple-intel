@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--bg, #06080b);
+  background: var(--bg, var(--tsi-terminal-bg, #06080b));
   z-index: 1;
 }
 .boundary p {

@@ -9,7 +9,7 @@
 .weather-actions summary span { color: var(--dim); }
 .weather-disclosure { position: relative; }
 .weather-disclosure[open] > summary { color: var(--amber); }
-.weather-popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: min(340px, calc(100vw - 32px)); padding: 14px; border: 1px solid var(--line); background: #0d1217; max-height: min(460px, 60vh); overflow: auto; box-shadow: 0 10px 24px #0008; }
+.weather-popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: min(340px, calc(100vw - 32px)); padding: 14px; border: 1px solid var(--line); background: var(--tsi-terminal-panel, #0d1217); max-height: min(460px, 60vh); overflow: auto; box-shadow: 0 10px 24px #0008; }
 .weather-sources { left: auto; right: 0; }
 .weather-popover label { display: flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
 .weather-popover label > span { margin-left: auto; color: var(--dim); }
@@ -22,7 +22,7 @@
 .weather-location { display: flex; flex-wrap: wrap; align-items: end; gap: 9px 12px; padding: 10px 0 2px; }
 .weather-location label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); }
 .weather-location form { display: flex; align-items: end; flex-wrap: wrap; gap: 6px; }
-.weather-location input, .weather-location select { background: #090d11; color: var(--ink); border: 1px solid var(--line); padding: 7px; min-height: 32px; }
+.weather-location input, .weather-location select { background: var(--tsi-terminal-bg, #090d11); color: var(--ink); border: 1px solid var(--line); padding: 7px; min-height: 32px; }
 .weather-location input { width: 95px; }
 .weather-location select { max-width: 250px; }
 .weather-location > p { flex-basis: 100%; margin: 0; color: var(--dim); line-height: 1.4; }

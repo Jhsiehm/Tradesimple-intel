@@ -5,7 +5,7 @@
   padding: 10px 12px 9px;
   border: 1px solid var(--case-hair);
   border-left: 2px solid var(--case-accent);
-  background: linear-gradient(180deg, rgba(74, 168, 255, 0.05), rgba(74, 168, 255, 0) 70%), #0a0e13;
+  background: linear-gradient(180deg, rgba(74, 168, 255, 0.05), rgba(74, 168, 255, 0) 70%), var(--tsi-terminal-panel, #0a0e13);
   min-width: 0;
 }
 .case-wait .case-headline { color: var(--faint); }

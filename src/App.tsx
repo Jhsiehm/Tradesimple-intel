@@ -566,24 +566,25 @@ export function App() {
   useEffect(() => { setDetached(false); }, [askKey, setDetached]);
 
   return (
-    <div className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
+    <div data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section} className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
           <BrandHome onHome={() => go("today:research")} />
           {DEMO ? <DemoChip /> : null}
+          {import.meta.env.VITE_HISTORY_PREVIEW === "1" ? <span className="demo-chip" title="Previously collected public data, not live. Original source timestamps are preserved. Coverage varies by feed; weather may refresh separately.">Historical preview</span> : null}
         </div>
         <nav className="nav">
           <button className="compact-find" aria-label="Search TradeSimple" aria-haspopup="dialog" onClick={() => { ask.close(); setCmdOpen(true); }}><Icon name="search" /> Find</button>
-          <button aria-current={(today === "week" || today === "leaders") ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
+          <button data-destination="today" aria-current={(today === "week" || today === "leaders") ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
             <kbd>0</kbd><IconLabel icon="today" hide>Today</IconLabel>
           </button>
           {SECTIONS.map((item, index) => (
-            <button key={item.id} aria-current={section === item.id && !today && !calendarTab ? "page" : undefined} onClick={() => go(`section:${item.id}`)} title={`${item.label} · ${item.blurb}`}>
+            <button key={item.id} data-destination={item.id} aria-current={section === item.id && !today && !calendarTab ? "page" : undefined} onClick={() => go(`section:${item.id}`)} title={`${item.label} · ${item.blurb}`}>
               <kbd>{index + 1}</kbd><IconLabel icon={item.id} hide>{item.label}</IconLabel>
             </button>
           ))}
-          <button aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Research home, conversations and saved evidence"><IconLabel icon="research">Research</IconLabel></button>
-          <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
+          <button data-destination="research" aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Research home, conversations and saved evidence"><IconLabel icon="research">Research</IconLabel></button>
+          <button className="ghost" data-destination="calendar" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
           <button className="go-btn panels-btn" onClick={() => { ask.close(); setCmdOpen(true); }} title="Search destinations, companies, members and saved research"><Icon name="search" /> Find <kbd>⌘K</kbd></button>

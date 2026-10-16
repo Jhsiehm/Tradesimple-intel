@@ -5,6 +5,8 @@ import type { StageList } from "../types";
 import { Icon, IconLabel } from "../ui/icons/Icon";
 import { WatchlistCard } from "../watch/WatchlistCard";
 import "./todayResearch.css";
+import "../design/tokens.css";
+import "../design/todayPilot.css";
 
 const LeadersBoard = lazy(() => import("./LeadersBoard").then((m) => ({ default: m.LeadersBoard })));
 
@@ -141,7 +143,7 @@ export function TodayBoard({ tab, onTab, onFollow, onClose, onList }: { tab: Tod
       ) : (
         <div className="board-scroll today-scroll">
           {res?.ok ? (
-            <section className="today-overview" aria-label="Disclosure overview">
+            <section className={`today-overview${import.meta.env.VITE_MATERIAL_OVERVIEW !== "0" ? " tsi-theme tsi-overview-pilot" : ""}`} aria-label="Disclosure overview">
               <h2>Disclosure overview</h2>
               <p>{res.counts ? <><strong>{res.counts.reports.toLocaleString()} reports</strong> from <strong>{res.counts.members.toLocaleString()} members</strong>, covering {res.counts.trades.toLocaleString()} disclosed trades in this feed.</> : "Explore the latest loaded public filings below."}</p>
               {res.building ? <p className="today-overview-note" role="status">Filings are still loading; this overview is incomplete.</p> : null}
