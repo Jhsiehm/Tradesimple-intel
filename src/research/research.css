@@ -36,3 +36,18 @@
 .convergence-period { margin: 24px 0; }
 .convergence details { margin: 16px 0; }
 .convergence pre { white-space: pre-wrap; max-height: 320px; overflow: auto; }
+.guided-experiment { display: grid; gap: 14px; max-width: 1200px; margin: 0 auto; min-width: 0; }
+.research-steps { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; padding: 12px 0; margin: 0; border-block: 1px solid var(--line); }
+.research-readiness { display: grid; gap: 10px; padding-block: 12px; border-block: 1px solid var(--line); min-width: 0; }
+.research-readiness h3 { color: var(--amber); margin: 0; }
+.guided-experiment button:disabled { cursor: not-allowed; }
+.guided-experiment p { overflow-wrap: anywhere; }
+.contract-evidence { display:grid; gap:14px; max-width:1400px; margin:0 auto; min-width:0; }
+.contract-evidence h2,.contract-evidence h3 { color:var(--ink); }
+.contract-evidence .research-table { max-height:460px; overflow:auto; }
+.contract-evidence .research-table th,.contract-evidence .research-table td { min-width:88px; }
+.contract-evidence .research-form fieldset { min-width:0; }
+.contract-evidence label { display:grid; gap:5px; color:var(--dim); font-size:12px; }
+.contract-evidence input,.contract-evidence select { min-width:0; padding:8px; color:var(--ink); background:var(--bg); border:1px solid var(--line); font:inherit; }
+.contract-evidence input[type=checkbox] { width:auto; justify-self:start; }
+@media(max-width:720px){.contract-evidence .research-table{max-height:360px}.contract-evidence .research-mapping{grid-template-columns:1fr}}

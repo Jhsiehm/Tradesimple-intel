@@ -1,0 +1,11 @@
+TRADESIMPLE INTEL — QUANT RESEARCH DEMO HANDOFF
+
+Deliverable: authentic local-app screenshot references and a 160-second, 16:9 video plan. This package is not a rendered video. Start with PROMPT-FOR-CLAUDE-DESIGN.txt, then STORYBOARD.csv. Open gallery.html to inspect every screenshot.
+
+Scenario: A quant analyst asks whether defense contract awards confirmed by public insider purchases deserve a full study. Universe: LMT, RTX, NOC, GD, HII. The useful outcome is a documented coverage gate, not a manufactured winning strategy.
+
+What actually happened: Screenshots were captured from the local TradeSimple app on 2026-10-16. A Form 4 API request returned HTTP 200 with building=true and zero eligible signals. Preserve form4-spec.json and form4-result.json as the exact request and response. History was incomplete; zero signals does NOT establish that no insider buys occurred. No completed convergence result exists in this pack. The convergence form and notebook are staged drafts, not locked/saved records. No dataset was imported and no alerts were enabled.
+
+A separate, automatically populated LMT Congress backtest illustrates diagnostics. It is an exploratory control example with different parameters (90-day holding period), NOT the defense-confirmation test. Its screen reports 13 trades and says not distinguishable from luck, p=0.65. Never splice its equity curve into the proposed 30-day multi-source study. Do not imply external validation of the app's data or calculations.
+
+All images are original viewport captures. Native timestamps, source notes, empty states, and any browser-extension artifacts are retained. Some screens show long scrollable content; the capture is not the entire dataset. Read the visible notes before animating a claim.

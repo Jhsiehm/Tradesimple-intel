@@ -6,6 +6,12 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  { id: 'research.contractJobs', path: '/api/research/contract-jobs' },
+  { id: 'research.contractJob', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)' },
+  { id: 'research.contractJobResume', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/resume' },
+  { id: 'research.contractJobPause', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/pause' },
+  { id: 'research.contractJobFreeze', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/freeze' },
+  { id: 'research.contractJobExport', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/export' },
   { id: 'research.context', path: '/api/research/context' },
   { id: 'research.notebooks', path: '/api/research/notebooks' },
   { id: 'research.notebook', path: '/api/research/notebooks/:id(nb_[a-f0-9]+)' },

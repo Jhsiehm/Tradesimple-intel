@@ -1,0 +1,25 @@
+{
+  "source": "form4",
+  "filters": {
+    "tickers": [
+      "LMT",
+      "RTX",
+      "NOC",
+      "GD",
+      "HII"
+    ],
+    "from": "2025-01-01",
+    "to": "2026-09-30",
+    "include10b51": false
+  },
+  "rules": {
+    "entry": "nextOpen",
+    "holdDays": 30,
+    "sides": "buy",
+    "sizing": "equal",
+    "benchmark": "SPY",
+    "costBps": 5,
+    "slippageBps": 5,
+    "openTrades": "exclude"
+  }
+}

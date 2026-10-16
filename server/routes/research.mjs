@@ -10,6 +10,8 @@ import { listConnectors, readConnector } from '../domain/research-connectors.mjs
 import { replayRun, exportRun } from '../domain/research-replay.mjs';
 import { runSpec } from '../domain/backtest/index.mjs';
 import { cleanSpec } from '../../shared/backtestSpec.mjs';
+import { createContractJob, jobView, listContractJobs, pauseContractJob, startContractJob, freezeContractJob, exportJob, workContractJob } from '../domain/evidence/contracts.mjs';
+import { gzipSync } from 'node:zlib';
 
 let running = false;
 const fail = (status, error) => reply(status, { ok: false, error });
@@ -34,6 +36,25 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.contractJobs': ctx => handle(ctx, ['GET', 'POST'], async body => {
+    if (ctx.req.method === 'GET') return { ok: true, items: listContractJobs(ctx.db) };
+    const job = createContractJob(ctx.db, body);
+    const initial = startContractJob(ctx.db, job.id);
+    return { ok: true, job: initial };
+  }),
+  'research.contractJob': ctx => handle(ctx, ['GET'], () => ({ ok: true, job: jobView(ctx.db, ctx.params.id) })),
+  'research.contractJobResume': ctx => handle(ctx, ['POST'], () => {
+    const existing = jobView(ctx.db, ctx.params.id);
+    if (['running','queued'].includes(existing.status)) return { ok: true, job: existing };
+    return { ok: true, job: startContractJob(ctx.db, ctx.params.id) };
+  }),
+  'research.contractJobPause': ctx => handle(ctx, ['POST'], () => ({ ok: true, job: pauseContractJob(ctx.db, ctx.params.id) })),
+  'research.contractJobFreeze': ctx => handle(ctx, ['POST'], body => ({ ok: true, dataset: datasetBrief(freezeContractJob(ctx.db, ctx.params.id, body)) })),
+  'research.contractJobExport': ctx => handle(ctx, ['GET'], () => {
+    const bytes = gzipSync(JSON.stringify(exportJob(ctx.db, ctx.params.id)));
+    ctx.res.writeHead(200, { 'Content-Type': 'application/gzip', 'Content-Disposition': `attachment; filename="${ctx.params.id}-evidence.json.gz"`, 'Cache-Control': 'no-store' });
+    ctx.res.end(bytes);
+  }),
   'research.context': ctx => handle(ctx, ['GET'], () => ({ ...researchMemory(ctx.db), tools: TOOLS.map(t => ({ name:t.name, label:t.label, description:t.description, parameters:t.parameters })), coverage: 'Tool catalog only. Provider availability, coverage and as-of are checked on retrieval; no live feeds are prefetched here.' })),
   'research.notebooks': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'POST' ? { ok: true, notebook: saveNotebook(ctx.db, body) } : { ok: true, items: listNotebooks(ctx.db, new URL(ctx.req.url, 'http://localhost').searchParams.get('q'), new URL(ctx.req.url, 'http://localhost').searchParams.get('status')) }),
   'research.notebook': ctx => handle(ctx, ['GET', 'POST'], body => {
