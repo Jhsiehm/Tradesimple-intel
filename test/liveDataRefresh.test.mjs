@@ -45,3 +45,16 @@ test('GDELT network failure falls back to labeled RSS and caches the result', as
     assert.equal(calls.length, 2);
   } finally { globalThis.fetch = original; db.close(); }
 });
+
+test('quote refresh failure keeps original timestamps and explicitly marks the cached snapshot stale', async () => {
+  const { quoteBoard } = await import('../server/chart.mjs');
+  const { KEY } = await import('../server/lib/cacheKeys.mjs');
+  const db = new DatabaseSync(':memory:');
+  db.exec('CREATE TABLE tickers (symbol TEXT, name TEXT, cik TEXT, lda_clients TEXT, recipients TEXT, districts TEXT, state TEXT, lat REAL, lon REAL); CREATE TABLE cache (key TEXT PRIMARY KEY, body TEXT, stored_at INTEGER, ttl_ms INTEGER)');
+  const old = { ok: true, asOf: '2026-10-15T12:00:00Z', items: [{ symbol: 'OLD', last: 10 }], latency: 'old' };
+  db.prepare('INSERT INTO cache VALUES (?, ?, ?, ?)').run(KEY.screener, JSON.stringify(old), 1, 1);
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('provider down'); };
+  try { const out = await quoteBoard(db); assert.equal(out.stale, true); assert.equal(out.asOf, old.asOf); assert.deepEqual(out.items, old.items); assert.match(out.latency, /STALE QUOTES/); }
+  finally { globalThis.fetch = previousFetch; db.close(); }
+});

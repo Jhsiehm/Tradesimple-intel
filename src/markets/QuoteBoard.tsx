@@ -35,7 +35,8 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [sector, setSector] = useState("All");
-  const [scope, setScope] = useState<"all" | "core" | "watch">("all");
+  const [scope, setScope] = useState<"all" | "universe" | "core" | "watch">("all");
+  const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "marketCap", dir: -1 });
   const { hasSymbol } = useWatch();
@@ -55,7 +56,8 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
   }, []);
 
   const universe = useMemo(() => board?.items || [], [board]);
-  const all = useMemo(() => universe.filter((q) => q.index?.includes("SP500")), [universe]);
+  const all = useMemo(() => scope === "universe" ? universe : universe.filter((q) => q.index?.includes("SP500")), [universe, scope]);
+  useEffect(() => setPage(0), [scope, sector, filter, sort]);
   const totalCap = useMemo(() => all.reduce((s, q) => s + (q.marketCap || 0), 0) || 1, [all]);
 
   const sectors = useMemo(() => {
@@ -83,7 +85,7 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
     const list = (scope === "all" ? all : universe).filter((r) =>
-      (scope === "all" || (scope === "core" ? r.core : hasSymbol(r.symbol)))
+      (["all", "universe"].includes(scope) || (scope === "core" ? r.core : hasSymbol(r.symbol)))
       && (sector === "All" || (r.sector || "Other") === sector)
       && (!q || `${r.symbol} ${r.name} ${r.industry}`.toLowerCase().includes(q))
     );
@@ -97,6 +99,8 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
     });
   }, [all, universe, scope, sector, filter, sort, hasSymbol]);
 
+  useEffect(() => setPage(p => Math.min(p, Math.max(0, Math.ceil(rows.length / 100) - 1))), [rows.length]);
+
   const head = (key: SortKey, label: string) => (
     <th className={sort.key === key ? "sorted" : undefined}>
       <button onClick={() => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : key === "symbol" || key === "name" || key === "sector" ? 1 : -1 }))}>
@@ -109,10 +113,11 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
     <div className="board positions sp-board">
       <header className="board-head">
         <div className="board-title">
-          <strong>S&amp;P 500</strong>
+          <strong>{scope === "universe" ? "LISTED UNIVERSE" : "S&P 500"}</strong>
           <span>{all.length ? `${rows.length} of ${all.length} names` : "Loading one screener call"}</span>
           <span className="scope toggle">
-            <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>All 500</button>
+            <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>S&amp;P 500</button>
+            <button aria-pressed={scope === "universe"} onClick={() => setScope("universe")}>All listed ({universe.length})</button>
             <button aria-pressed={scope === "core"} onClick={() => setScope("core")}>Curated joins</button>
             <button aria-pressed={scope === "watch"} onClick={() => setScope("watch")}><IconLabel icon="star-on">Watchlist</IconLabel></button>
           </span>
@@ -140,6 +145,7 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
           <em>NOTE</em> {board?.latency || "Delayed quotes."}
         </p>
       </header>
+      <div className="scope toggle" aria-label="Quote pages"><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button><span>{rows.length ? `${page * 100 + 1}–${Math.min(rows.length, (page + 1) * 100)} of ${rows.length}` : "No matching quotes"}</span><button disabled={(page + 1) * 100 >= rows.length} onClick={() => setPage(p => p + 1)}>Next</button></div>
       {error ? <p className="tape-empty">{error}</p> : null}
       <div className="board-scroll">
         <table>
@@ -156,7 +162,7 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
             </tr>
           </thead>
           <tbody>
-            {rows.map((q) => (
+            {rows.slice(page * 100, (page + 1) * 100).map((q) => (
               <tr key={q.symbol} onClick={() => onOpen(q.symbol)}>
                 <td>
                   <button className={hasSymbol(q.symbol) ? "star on" : "star"} title={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"} onClick={(e) => { e.stopPropagation(); toggleSymbol(q.symbol); }} aria-label={hasSymbol(q.symbol) ? "Remove from watchlist" : "Add to watchlist"}><Icon name={hasSymbol(q.symbol) ? "star-on" : "star"} size={12} /></button>
@@ -168,7 +174,7 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
                 <td className={tone(q.changePct)}>{q.changePct == null ? "—" : `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%`}</td>
                 <td>{q.volume ? big(q.volume) : "—"}</td>
                 <td>{q.marketCap ? big(q.marketCap) : "—"}</td>
-                <td className="dim">{q.marketCap ? `${(q.marketCap / totalCap * 100).toFixed(2)}%` : "—"}</td>
+                <td className="dim">{(scope === "universe" || q.index?.includes("SP500")) && q.marketCap ? `${(q.marketCap / totalCap * 100).toFixed(2)}%` : "—"}</td>
               </tr>
             ))}
           </tbody>

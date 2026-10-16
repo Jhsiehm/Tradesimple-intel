@@ -1,0 +1,4709 @@
+{
+  "asOf": "2026-10-16T08:22:05.879Z",
+  "total": 1500,
+  "core": 101,
+  "onDemand": 996,
+  "historicalInsiderScope": 504,
+  "sources": [
+    "https://www.sec.gov/files/company_tickers_exchange.json",
+    "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true"
+  ],
+  "selection": "Existing curated registry retained; additions ranked by current Nasdaq market capitalization with exact SEC exchange-symbol/CIK matching. Not a historical or survivorship-free index.",
+  "contractors": {
+    "fy": 2025,
+    "source": "https://api.usaspending.gov/api/v2/search/spending_by_category/recipient/",
+    "asOf": "2026-10-16T08:22:05.879Z",
+    "count": 500,
+    "mapped": 30,
+    "note": "Top 500 recipient records by net prime-contract transaction obligations in this fiscal year, not 500 consolidated public companies. Subsidiaries may appear separately. Existing parent UEI joins are inherited, not independently reverified ownership. Unresolved does not mean private. Snapshot can be revised by USAspending.",
+    "requests": [
+      {
+        "request": {
+          "filters": {
+            "time_period": [
+              {
+                "start_date": "2024-10-01",
+                "end_date": "2025-09-30"
+              }
+            ],
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "spending_level": "transactions",
+          "limit": 100,
+          "page": 1
+        },
+        "messages": [
+          "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+          "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+        ]
+      },
+      {
+        "request": {
+          "filters": {
+            "time_period": [
+              {
+                "start_date": "2024-10-01",
+                "end_date": "2025-09-30"
+              }
+            ],
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "spending_level": "transactions",
+          "limit": 100,
+          "page": 2
+        },
+        "messages": [
+          "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+          "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+        ]
+      },
+      {
+        "request": {
+          "filters": {
+            "time_period": [
+              {
+                "start_date": "2024-10-01",
+                "end_date": "2025-09-30"
+              }
+            ],
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "spending_level": "transactions",
+          "limit": 100,
+          "page": 3
+        },
+        "messages": [
+          "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+          "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+        ]
+      },
+      {
+        "request": {
+          "filters": {
+            "time_period": [
+              {
+                "start_date": "2024-10-01",
+                "end_date": "2025-09-30"
+              }
+            ],
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "spending_level": "transactions",
+          "limit": 100,
+          "page": 4
+        },
+        "messages": [
+          "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+          "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+        ]
+      },
+      {
+        "request": {
+          "filters": {
+            "time_period": [
+              {
+                "start_date": "2024-10-01",
+                "end_date": "2025-09-30"
+              }
+            ],
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "spending_level": "transactions",
+          "limit": 100,
+          "page": 5
+        },
+        "messages": [
+          "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+          "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+        ]
+      }
+    ],
+    "items": [
+      {
+        "rank": 1,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "6cf5fb1b-4988-d087-5dc1-70939d8fc6c4-C",
+        "uei": "G4KDGE4JFFK7",
+        "obligations": 34099542924.06,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 2,
+        "name": "OPTUM PUBLIC SECTOR SOLUTIONS, INC.",
+        "recipientId": "41694631-0b0f-72ed-221b-29193c88f0d2-C",
+        "uei": "XMUZGJN98231",
+        "obligations": 22490531833.8,
+        "symbols": [
+          "UNH"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 3,
+        "name": "ELECTRIC BOAT CORPORATION",
+        "recipientId": "d5ab5f51-db3a-a26f-96a1-1b24c3e2802c-C",
+        "uei": "E7BEKJ4V9528",
+        "obligations": 21366142819.4,
+        "symbols": [
+          "GD"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 4,
+        "name": "TRIWEST HEALTHCARE ALLIANCE CORP",
+        "recipientId": "bf1220c1-2373-042a-e8e1-33d5a29639d0-C",
+        "uei": "J7M9HPTGJ1S9",
+        "obligations": 13374744670.22,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 5,
+        "name": "MCKESSON CORPORATION",
+        "recipientId": "b54de748-ee64-a1e6-546e-e7007b054797-C",
+        "uei": "S1RUKWWRYFL6",
+        "obligations": 11870730004.52,
+        "symbols": [
+          "MCK"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 6,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "01c4a3a3-b4c5-ce4e-822b-d17f09985001-C",
+        "uei": "VTEWM5QSE598",
+        "obligations": 10753486398.51,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 7,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "779b3e3e-364f-7cbc-28a4-a2b4484b86f4-C",
+        "uei": "XFJMYSYFJEK4",
+        "obligations": 10431043926.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 8,
+        "name": "AMERISOURCEBERGEN DRUG CORP",
+        "recipientId": "edc402f7-abac-eafe-2aae-3fdcd8d1bb8a-C",
+        "uei": "KABZK8W6PQT3",
+        "obligations": 7442279749.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 9,
+        "name": "RTX CORPORATION",
+        "recipientId": "62e141b3-4887-5b39-6b75-eace9326395c-C",
+        "uei": "QN1BCFY7JDJ5",
+        "obligations": 7280696848.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 10,
+        "name": "BOOZ ALLEN HAMILTON INC",
+        "recipientId": "ffca72e5-fba2-798a-6969-2a6c45e9f985-C",
+        "uei": "JCBMLGPE6Z71",
+        "obligations": 6597686672.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 11,
+        "name": "HUMANA GOVERNMENT BUSINESS INC",
+        "recipientId": "1068e466-707d-6b6f-367f-0255fab79b8c-C",
+        "uei": "ZE6ZM6NKSV43",
+        "obligations": 6513706438.99,
+        "symbols": [
+          "HUM"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 12,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "9ab85632-42cc-5fa4-2a9c-d734034ddd33-C",
+        "uei": "JJM4FRDZJDX1",
+        "obligations": 6292920465.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 13,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "695d5739-ecc3-8484-ba2b-f9c8b4652a4a-C",
+        "uei": "H7PNSVNN5827",
+        "obligations": 6056139555.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 14,
+        "name": "ATLANTIC DIVING SUPPLY, INC.",
+        "recipientId": "9c708c7c-f339-5fc8-0455-a5aaea1d2da5-C",
+        "uei": "GJMSFBCNMSK3",
+        "obligations": 5993552244.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 15,
+        "name": "NATIONAL TECHNOLOGY & ENGINEERING SOLUTIONS OF SANDIA, LLC",
+        "recipientId": "b52d549e-73f7-a818-8c63-4a75904c9df5-C",
+        "uei": "LUJEPCRRT377",
+        "obligations": 5673408173.92,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 16,
+        "name": "TRIAD NATIONAL SECURITY, LLC",
+        "recipientId": "59ab4d30-abec-ded6-33c4-5d9f37fd2da0-C",
+        "uei": "X7WUS5LRBQU3",
+        "obligations": 5199738722.65,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 17,
+        "name": "SIKORSKY AIRCRAFT CORPORATION",
+        "recipientId": "d64537c9-5482-dd40-cdd4-5cf07b66329d-C",
+        "uei": "UTJWTSLMFNG4",
+        "obligations": 4831722056.26,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 18,
+        "name": "GENERAL DYNAMICS INFORMATION TECHNOLOGY, INC.",
+        "recipientId": "455555be-773d-eab1-1e6b-7b94400b757e-C",
+        "uei": "SMNWM6HN79X5",
+        "obligations": 4621791220.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 19,
+        "name": "SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "recipientId": "20af0683-f17d-1f8f-38ee-2f11bd124559-C",
+        "uei": "MMLKPW9JLX64",
+        "obligations": 4420838920.52,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 20,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "22d282c6-4508-7d30-97f1-7401ea73b12a-C",
+        "uei": "WZWRLY4G3PL8",
+        "obligations": 4373548603.34,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 21,
+        "name": "HUNTINGTON INGALLS INCORPORATED",
+        "recipientId": "1eb5d9d6-aabf-3228-e6ab-79cf9729c9d7-C",
+        "uei": "C3NLZNSMU254",
+        "obligations": 4370166805.06,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 22,
+        "name": "HUNTINGTON INGALLS INC",
+        "recipientId": "dde47d6b-a165-dbed-d5bd-a6e55ca6e591-C",
+        "uei": "WMXDDH6HJNA5",
+        "obligations": 4195762708.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 23,
+        "name": "LAWRENCE LIVERMORE NATIONAL SECURITY, LLC",
+        "recipientId": "6d990129-9566-ff86-e9ae-7c6eeef1df7c-C",
+        "uei": "PM52LCJH72T9",
+        "obligations": 3625335906.99,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 24,
+        "name": "FLUOR MARINE PROPULSION, LLC",
+        "recipientId": "27de0316-220e-8297-411f-f99b6f60443a-C",
+        "uei": "CWHMVCX7K1N6",
+        "obligations": 3551315617.84,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 25,
+        "name": "AMENTUM SERVICES, INC.",
+        "recipientId": "fe5366b4-84c8-12ff-126f-f123de29819c-C",
+        "uei": "QEMLRQA7PLG4",
+        "obligations": 3527323674.28,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 26,
+        "name": "CACI, INC. - FEDERAL",
+        "recipientId": "28eee911-76af-7147-f760-4ec5f90bec2d-C",
+        "uei": "N3PBJAVNKF61",
+        "obligations": 3519605815.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 27,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "cce9df51-3950-87f4-0b34-4353d5a08f32-C",
+        "uei": "XSV6AZJ6SDJ7",
+        "obligations": 3385092055.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 28,
+        "name": "ACCENTURE FEDERAL SERVICES LLC",
+        "recipientId": "d41a6b8a-9d6a-0d28-7e24-989e31731aad-C",
+        "uei": "C47BNA8GM833",
+        "obligations": 3234021028.21,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 29,
+        "name": "BCCG A JOINT VENTURE",
+        "recipientId": "6a7d8bd5-7ff0-a23d-26fe-cef66843cff8-C",
+        "uei": "VNQTYNAV9C25",
+        "obligations": 3127100299,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 30,
+        "name": "LOCKHEED MARTIN CORP",
+        "recipientId": "6e7a895c-aa57-8600-2a8a-4e237f6213f6-C",
+        "uei": "FYHNA5WC8XD7",
+        "obligations": 3100606944.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 31,
+        "name": "LEIDOS, INC.",
+        "recipientId": "5ddb264f-234b-872c-2571-4731fde123c6-C",
+        "uei": "UE9QJD4KK1L6",
+        "obligations": 3037225603.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 32,
+        "name": "SPACE EXPLORATION TECHNOLOGIES CORP.",
+        "recipientId": "8a3a5525-3218-a488-db0e-4823241ceb90-C",
+        "uei": "C6M7C2FLKER5",
+        "obligations": 2999808160.19,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 33,
+        "name": "DELOITTE CONSULTING LLP",
+        "recipientId": "92663aec-4451-0476-502b-d8c6919e98e0-C",
+        "uei": "CKV2L9GZKJK3",
+        "obligations": 2973145601.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 34,
+        "name": "QTC MEDICAL SERVICES INC",
+        "recipientId": "bed6217b-c46e-3951-fe4c-dab140bb2125-C",
+        "uei": "GN8YP96TMPK6",
+        "obligations": 2886404915.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 35,
+        "name": "UT-BATTELLE LLC",
+        "recipientId": "c236f280-8198-3109-89dd-96eca764ec43-C",
+        "uei": "ZLHJJ57QA2H8",
+        "obligations": 2679775140.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 36,
+        "name": "LOCKHEED MARTIN CORP",
+        "recipientId": "4051d253-67f0-30bd-2c7f-5eb539533924-C",
+        "uei": "SJDEB3MKJEW5",
+        "obligations": 2583795462.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 37,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "d7df489c-5a15-3e1b-e7fa-0e93eb94a166-C",
+        "uei": "CWM4UN76ZQW8",
+        "obligations": 2538798064.36,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 38,
+        "name": "CONSOLIDATED NUCLEAR SECURITY, LLC",
+        "recipientId": "3c1a340d-2613-1609-93ce-eb1aba0559b5-C",
+        "uei": "EWV8QKG1JUV7",
+        "obligations": 2537032357.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 39,
+        "name": "OPTUMSERVE HEALTH SERVICES, INC.",
+        "recipientId": "f14c78b7-70f6-df32-45ed-a5f56e1b9f70-C",
+        "uei": "G5XXLHZSW8X3",
+        "obligations": 2535929719.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 40,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "241d908a-e5e9-f275-b625-6b1f76859002-C",
+        "uei": "MF2LE5RK6L84",
+        "obligations": 2452537088,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 41,
+        "name": "BATH IRON WORKS CORPORATION",
+        "recipientId": "7e9ba6ab-3f37-4abd-4708-bdeecb64ea02-C",
+        "uei": "FREEMCLKFXE3",
+        "obligations": 2370441136.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 42,
+        "name": "THE JOHNS HOPKINS UNIVERSITY APPLIED PHYSICS LABORATORY LLC",
+        "recipientId": "4eae43e5-e1f1-0e77-b2fe-09a12a9a552c-C",
+        "uei": "C1HBCJ9RMBV3",
+        "obligations": 2363755170.13,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 43,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "b91e6418-aa27-f6c2-90a9-1545753a6d15-C",
+        "uei": "YD6LTFVUZNG1",
+        "obligations": 2360503115.17,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 44,
+        "name": "CALIFORNIA INSTITUTE OF TECHNOLOGY",
+        "recipientId": "6e76fa33-2d96-c636-941c-bca1997db076-C",
+        "uei": "YC1YP79BFD19",
+        "obligations": 2297110426.23,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 45,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "5fa231ae-15e3-afd3-8c5c-bb9911ba57f8-C",
+        "uei": "UEGFHX6R6KJ1",
+        "obligations": 2273652112.48,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 46,
+        "name": "SIERRA NEVADA COMPANY, LLC",
+        "recipientId": "fbd9af5f-b33e-9331-9063-295f6910ddf1-C",
+        "uei": "N1PWVLN6F4U1",
+        "obligations": 2243556112.09,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 47,
+        "name": "BAE SYSTEMS LAND & ARMAMENTS L.P.",
+        "recipientId": "aac98290-78f5-735a-8f80-d06daa6e4c59-C",
+        "uei": "DMHSJF9K3XP9",
+        "obligations": 2164547912.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 48,
+        "name": "BECHTEL PLANT MACHINERY, INC.",
+        "recipientId": "2564523b-4d13-da43-99e7-d2fb15569c2d-C",
+        "uei": "MTKMVNVK1MH6",
+        "obligations": 2144997042,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 49,
+        "name": "HONEYWELL FEDERAL MANUFACTURING & TECHNOLOGIES, LLC",
+        "recipientId": "9e9725ba-e023-684e-6d7f-f9de4201578f-C",
+        "uei": "DMEGBYTVBQS5",
+        "obligations": 2113530440.22,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 50,
+        "name": "PERATON INC.",
+        "recipientId": "129fccb1-783c-9fd1-7b6d-6ddea65ace79-C",
+        "uei": "ZBPQEJVECCT4",
+        "obligations": 2091883629.55,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 51,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "b6b091bb-570b-bf26-3e7a-b4a1a7c2d61a-C",
+        "uei": "NBSLHP77ZJQ1",
+        "obligations": 2072824490.23,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 52,
+        "name": "VETERANS EVALUATION SERVICES, INC",
+        "recipientId": "3a7a135e-cda1-0c2c-9d9b-8d44ffede757-C",
+        "uei": "MT6ZNX9BMGB7",
+        "obligations": 2033102247.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 53,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "8a7abf83-bb31-a229-bb3a-31eb356988eb-C",
+        "uei": "KMEVRAKJVBD3",
+        "obligations": 2015030515.7,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 54,
+        "name": "DELL MARKETING L.P.",
+        "recipientId": "d49f36ae-b747-42e3-5257-6787a69e51e9-C",
+        "uei": "HJLSY7RZV8X6",
+        "obligations": 1967020016.13,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 55,
+        "name": "SAVANNAH RIVER NUCLEAR SOLUTIONS LLC",
+        "recipientId": "f59302ac-85a9-ee1a-4813-9b07f3377a40-C",
+        "uei": "XLQ7CKUSQSD5",
+        "obligations": 1954824443.53,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 56,
+        "name": "GENERAL ELECTRIC COMPANY",
+        "recipientId": "66092799-9c72-fde6-e008-9d381191aed2-C",
+        "uei": "E3HYKKLT5ZT1",
+        "obligations": 1941113424.46,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 57,
+        "name": "BATTELLE ENERGY ALLIANCE, LLC",
+        "recipientId": "094b64c8-bbe6-5af3-2b26-c52e97d87eba-C",
+        "uei": "HG7XL5RBNX55",
+        "obligations": 1937803141.78,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 58,
+        "name": "PANTEXAS DETERRENCE, LLC",
+        "recipientId": "eb9633b3-ae3d-e77a-dcb7-80d93fab5b0e-C",
+        "uei": "SPG7J8395CJ5",
+        "obligations": 1921935366.6,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 59,
+        "name": "ECC CONSTRUCTORS LLC",
+        "recipientId": "201b337b-cf7d-75ff-d956-d2fd2282a790-C",
+        "uei": "LJPLMV3GCYE7",
+        "obligations": 1899671312.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 60,
+        "name": "CARAHSOFT TECHNOLOGY CORP",
+        "recipientId": "4e74aeb5-dd21-20a7-63bd-e9f934d69583-C",
+        "uei": "DT8KJHZXVJH5",
+        "obligations": 1808912707.41,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 61,
+        "name": "ASHBRITT INC",
+        "recipientId": "12044252-4d75-d818-5399-56425c7f8fcb-C",
+        "uei": "YH8JGLSMAQX3",
+        "obligations": 1797962933.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 62,
+        "name": "FERMI FORWARD DISCOVERY GROUP, LLC",
+        "recipientId": "3789bad9-1be1-43a1-47b9-7430a6b8978e-C",
+        "uei": "VLS6K3EVCMW5",
+        "obligations": 1733790762.82,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 63,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "e2d7a16e-029f-ce0e-97dc-8b32fa6dc1d1-C",
+        "uei": "M25AW7P5S7K7",
+        "obligations": 1702724313.67,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 64,
+        "name": "V2X SYSTEMS LLC",
+        "recipientId": "385c148c-559c-6218-53ff-80836c64dc4c-C",
+        "uei": "RRFJZGASZJ41",
+        "obligations": 1691316605.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 65,
+        "name": "BATTELLE MEMORIAL INSTITUTE",
+        "recipientId": "74457bb7-b18d-9762-896e-e575e7a4ed82-C",
+        "uei": "CWKJEXDG79A7",
+        "obligations": 1645715281.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 66,
+        "name": "GENERAL ATOMICS AERONAUTICAL SYSTEMS, INC.",
+        "recipientId": "e262465b-a9eb-8206-020a-98327ae917fa-C",
+        "uei": "ZH4NVFG3Z526",
+        "obligations": 1644799558.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 67,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "894dbedb-aca8-9b52-0a82-3b0fd8713b6d-C",
+        "uei": "NGBVY5X32XZ5",
+        "obligations": 1614134233.33,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 68,
+        "name": "L3HARRIS TECHNOLOGIES INTEGRATED SYSTEMS L.P.",
+        "recipientId": "9a8e6a0a-4913-b84b-e426-8fdaeb54a427-C",
+        "uei": "RDFKNPZNQ8E3",
+        "obligations": 1599275901.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 69,
+        "name": "V2X AEROSPACE LLC",
+        "recipientId": "fb63ba18-02ee-d557-7366-681926c60e0d-C",
+        "uei": "NVC1EFKKYB93",
+        "obligations": 1538284365.92,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 70,
+        "name": "GENERAL DYNAMICS LAND SYSTEMS INC.",
+        "recipientId": "99938bc0-e262-06ff-9f94-386fd3da88dc-C",
+        "uei": "HAWKSQF848W7",
+        "obligations": 1526659770.09,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 71,
+        "name": "BELL TEXTRON INC",
+        "recipientId": "9f062daf-f500-7d41-53d7-5248be76b69f-C",
+        "uei": "N5QUZAYGPKM3",
+        "obligations": 1521993663.43,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 72,
+        "name": "W S DARLEY & CO",
+        "recipientId": "b60fab9a-d60a-1c33-1470-2729b041737f-C",
+        "uei": "TENRPZGMAGJ6",
+        "obligations": 1485309759.71,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 73,
+        "name": "MAXIMUS FEDERAL SERVICES, INC.",
+        "recipientId": "f87b435f-0b05-95c9-7c0e-e60df7cdff50-C",
+        "uei": "TREKW6J3QSF5",
+        "obligations": 1483732505.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 74,
+        "name": "OSHKOSH DEFENSE LLC",
+        "recipientId": "5c99e12d-99a6-52a3-d019-34a3855a6ed7-C",
+        "uei": "ZMXAHH8M8VL8",
+        "obligations": 1479560717.01,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 75,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "3632dc26-45b8-9d0e-1128-63e866708c8f-C",
+        "uei": "SML4NN2CT556",
+        "obligations": 1477133737.26,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 76,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "a398e5f8-3381-5983-2fb6-c60a3f701eb4-C",
+        "uei": "PK8PM2GNVMP8",
+        "obligations": 1470615620.97,
+        "symbols": [
+          "NOC"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 77,
+        "name": "DRAGADOS/HAWAIIAN DREDGING/ORION JV",
+        "recipientId": "15879ec6-1b21-46be-308d-e9dc98e307c2-C",
+        "uei": "E8AXVANBZBD4",
+        "obligations": 1467673186.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 78,
+        "name": "MASSACHUSETTS INSTITUTE OF TECHNOLOGY",
+        "recipientId": "00129762-bb69-300b-a2fb-ff1b071b1e42-C",
+        "uei": "SN5KKUDR9LY8",
+        "obligations": 1442690439.98,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 79,
+        "name": "HEALTH NET FEDERAL SERVICES, LLC",
+        "recipientId": "95e5fad6-bf60-0254-a5b0-65c750733414-C",
+        "uei": "F7NGF6NJFB96",
+        "obligations": 1427302725.08,
+        "symbols": [
+          "CNC"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 80,
+        "name": "THE AEROSPACE CORPORATION",
+        "recipientId": "6cbea0a9-b56a-1fd8-3dee-e808ea373a4b-C",
+        "uei": "YA8LJBJCND19",
+        "obligations": 1405777125.2,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 81,
+        "name": "BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "recipientId": "2e141abe-fe8f-7ddc-e6a3-8bb2165836be-C",
+        "uei": "LX3BSV6NNW58",
+        "obligations": 1405618923.32,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 82,
+        "name": "CANADIAN COMMERCIAL CORPORATION",
+        "recipientId": "feff6bf5-0c8a-4590-0796-eec837a63efa-C",
+        "uei": "FA38CTVQM319",
+        "obligations": 1397519226.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 83,
+        "name": "BELL BOEING JOINT PROJECT OFFICE",
+        "recipientId": "846d3ff4-b2cb-3924-018c-2dee1e0259b7-C",
+        "uei": "JHFZTG8ZC9V2",
+        "obligations": 1350129085.29,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 84,
+        "name": "ROLLS-ROYCE CORPORATION",
+        "recipientId": "ae61fda0-8744-9361-a177-0ffcabb70c2e-C",
+        "uei": "KHK8QYLFGLU1",
+        "obligations": 1346895865.94,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 85,
+        "name": "DELL FEDERAL SYSTEMS L.P",
+        "recipientId": "3612de0a-9635-3846-a5a1-7f555fba52df-C",
+        "uei": "N1C5QLNPJLS4",
+        "obligations": 1331705242.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 86,
+        "name": "STONEX FINANCIAL LTD",
+        "recipientId": "9e88e310-e87a-d26a-2ddb-dd18f27b49a5-C",
+        "uei": "ZRGFMMN3RXV8",
+        "obligations": 1330684787.3,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 87,
+        "name": "THE MITRE CORPORATION",
+        "recipientId": "3903ae3c-2661-60bb-cdd3-1f26ad214167-C",
+        "uei": "DMHDNDCPWUD1",
+        "obligations": 1318768071.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 88,
+        "name": "THE REGENTS OF THE UNIVERSITY OF CALIFORNIA",
+        "recipientId": "9df6f273-648d-cf72-c4ef-346f414c585c-C",
+        "uei": "PKK5TD16N4H1",
+        "obligations": 1306490773.84,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 89,
+        "name": "SERCO INC",
+        "recipientId": "89bcff2a-2813-19f6-92a5-47dd33313207-C",
+        "uei": "DKJ1R5ABCN48",
+        "obligations": 1297625288.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 90,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORP",
+        "recipientId": "a039e3c2-edcd-2b9b-4459-dcde55990ab4-C",
+        "uei": "D8QQPFNYJD63",
+        "obligations": 1274025030.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 91,
+        "name": "UCHICAGO ARGONNE, LLC",
+        "recipientId": "41abc24e-d794-7e40-35af-944b40645d57-C",
+        "uei": "JA8EP8EKX8Y9",
+        "obligations": 1256550705.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 92,
+        "name": "CHEMONICS INTERNATIONAL, INC.",
+        "recipientId": "71710641-1c0a-d4c7-a593-1c039ee88fa2-C",
+        "uei": "DSUSFJFR9A33",
+        "obligations": 1233386489.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 93,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "5ad7895c-192b-21cd-8baf-92c6dce0b593-C",
+        "uei": "HJP4JZG1FUL9",
+        "obligations": 1196707341.07,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 94,
+        "name": "CGI FEDERAL INC.",
+        "recipientId": "d86df7af-f6c1-a07a-ccc4-ec74331bafc5-C",
+        "uei": "TRKEP1HEBNS5",
+        "obligations": 1193894458.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 95,
+        "name": "VALERO MARKETING AND SUPPLY CO",
+        "recipientId": "47c1ba83-c53d-4e92-e987-26c47ac8fb00-C",
+        "uei": "CQXWTJPKQJ73",
+        "obligations": 1180008774.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 96,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "f9736fab-29cf-0248-a01b-aea3ad360ecc-C",
+        "uei": "E466BXU4KJH8",
+        "obligations": 1173842577.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 97,
+        "name": "HII MISSION TECHNOLOGIES CORP",
+        "recipientId": "af71a671-8628-cf92-9d09-39fda820ddac-C",
+        "uei": "G5H7HWC4L2R5",
+        "obligations": 1160105066.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 98,
+        "name": "PARSONS GOVERNMENT SERVICES INC.",
+        "recipientId": "cb0d434a-9ad7-93b5-09dc-6067d8c45d71-C",
+        "uei": "NMBCAG1JBKL7",
+        "obligations": 1130394443.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 99,
+        "name": "AM GENERAL LLC",
+        "recipientId": "8af25486-0968-17b8-5802-b353f36e9374-C",
+        "uei": "NWM1JWVDA853",
+        "obligations": 1123243305.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 100,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "687c4cc7-53f1-d028-875d-2fc73de19122-C",
+        "uei": "H11HD5VHGHN3",
+        "obligations": 1106706100.77,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 101,
+        "name": "TEXTRON SYSTEMS CORP",
+        "recipientId": "4cda9ea4-034c-8fc4-fdd1-da02479ace65-C",
+        "uei": "WEE9WFHMACH9",
+        "obligations": 1100646464.04,
+        "symbols": [
+          "TXT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 102,
+        "name": "GENERAL ELECTRIC COMPANY",
+        "recipientId": "61dfb4da-ba2f-398f-13e9-5792607bf051-C",
+        "uei": "J1T1FEN3PWX6",
+        "obligations": 1092233032.43,
+        "symbols": [
+          "GE"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 103,
+        "name": "SAVANNAH RIVER MISSION COMPLETION, LLC",
+        "recipientId": "90e60416-b082-1719-66b0-5aa4a6026c8b-C",
+        "uei": "C32KCWJ94LY8",
+        "obligations": 1062510608.26,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 104,
+        "name": "LOCKHEED MARTIN CORP",
+        "recipientId": "46023044-eacc-a9ca-5b5e-ddc4673fc267-C",
+        "uei": "CQWLW9XRQTH5",
+        "obligations": 1058897505.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 105,
+        "name": "BECHTEL NATIONAL, INC.",
+        "recipientId": "b6a8698b-7697-5e4e-ef6c-df5f47158506-C",
+        "uei": "HGF7H89MA3D9",
+        "obligations": 1057192611.19,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 106,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "75dec7b1-56eb-4770-da4b-ac736121ab61-C",
+        "uei": "E4X3BLZPPPX3",
+        "obligations": 1047149087.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 107,
+        "name": "AT&T ENTERPRISES, LLC",
+        "recipientId": "d96f3486-0fa5-045a-5da7-9cffc0b4a114-C",
+        "uei": "MX89BGD5FK75",
+        "obligations": 1037497584.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 108,
+        "name": "FCN, INC.",
+        "recipientId": "3792ca7f-d5d2-d89c-872b-8c64e4e6390e-C",
+        "uei": "JEANDJTZ8HJ3",
+        "obligations": 1021982933.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 109,
+        "name": "INTERNATIONAL BUSINESS MACHINES CORPORATION",
+        "recipientId": "6ffc4386-853e-ef89-67e8-22c28ddcf15c-C",
+        "uei": "VV9KH3L99VE3",
+        "obligations": 1014061757.94,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 110,
+        "name": "ORACLE HEALTH GOVERNMENT SERVICES, INC.",
+        "recipientId": "9232b26d-789d-bdd2-5a6d-28714f1dfa2c-C",
+        "uei": "DT2KS3HH5FP5",
+        "obligations": 1006450120.03,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 111,
+        "name": "MANTECH ADVANCED SYSTEMS INTERNATIONAL, INC.",
+        "recipientId": "ceac1920-9ceb-17a6-9bf7-026817a02917-C",
+        "uei": "JY2BDT2K58Z6",
+        "obligations": 1003229513.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 112,
+        "name": "MISSION SUPPORT & TEST SERVICES LLC",
+        "recipientId": "f624bb0c-c85e-d8e7-ce74-b8080a10bce6-C",
+        "uei": "YSYZHPCG4XB3",
+        "obligations": 994614476.72,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 113,
+        "name": "LEIDOS, INC.",
+        "recipientId": "e77c753b-6638-3d5b-442e-c1225ca669d6-C",
+        "uei": "MDSWM6MB1BH7",
+        "obligations": 991376283.18,
+        "symbols": [
+          "LDOS"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 114,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "f5a16ae3-dea9-9665-e3ae-4580e21e57fc-C",
+        "uei": "HEBCLD22EJD1",
+        "obligations": 989403262.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 115,
+        "name": "PERATON ENTERPRISE SOLUTIONS LLC",
+        "recipientId": "333909ba-42cf-a1ce-3959-1ede2882d7f6-C",
+        "uei": "MBSRAWAQ9559",
+        "obligations": 979836240.2,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 116,
+        "name": "M1 SUPPORT SERVICES, L.P.",
+        "recipientId": "f4832a42-513d-107f-4852-9539b2c518e1-C",
+        "uei": "PNAFHATW8BD7",
+        "obligations": 969042334.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 117,
+        "name": "NOBLE SUPPLY & LOGISTICS, LLC",
+        "recipientId": "f1addd3f-8f09-bd87-cec8-f143401629ba-C",
+        "uei": "YLE5AAYNVPK6",
+        "obligations": 961879241.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 118,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "fe5032b4-c053-b1d1-c4c9-7d6d9e770723-C",
+        "uei": "LALWKM623MU7",
+        "obligations": 951455135.03,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 119,
+        "name": "MINBURN TECHNOLOGY GROUP, LLC",
+        "recipientId": "625ff1da-e9a2-cbdc-c8b3-fdd521fd1efc-C",
+        "uei": "WN8JFVZTBCA5",
+        "obligations": 946022958.83,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 120,
+        "name": "BL HARBERT INTERNATIONAL LLC",
+        "recipientId": "f9896eaa-17af-6d01-f48f-cda50097f023-C",
+        "uei": "XXNJCWMAKNH8",
+        "obligations": 938209384.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 121,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "f321e226-c4b2-f29f-443b-86843ff28e53-C",
+        "uei": "MZK8TCNF24G2",
+        "obligations": 937156462.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 122,
+        "name": "FISHER SAND & GRAVEL CO",
+        "recipientId": "fa0b2d2c-6660-adbe-e0ea-4035b15e4cbd-C",
+        "uei": "XAVBDA4D13N7",
+        "obligations": 928459404,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 123,
+        "name": "RAYTHEON/LOCKHEED MARTIN JAVELIN JV",
+        "recipientId": "2acfbd75-26c2-0328-d37e-27e90dcef4db-C",
+        "uei": "WGB7GAKM7A68",
+        "obligations": 928385072.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 124,
+        "name": "ROCKWELL COLLINS, INC.",
+        "recipientId": "fbaf2f7a-d2a8-a4b8-2388-3abc483658a7-C",
+        "uei": "J4Q3HP6NHK47",
+        "obligations": 925154274.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 125,
+        "name": "HARRIS CORPORATION",
+        "recipientId": "0fee4ffe-0a02-2e9b-6dad-4bb544bb2ac9-C",
+        "uei": "E98VT6T8R7E1",
+        "obligations": 918037659.65,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 126,
+        "name": "THUNDERCAT TECHNOLOGY, LLC",
+        "recipientId": "dbceb126-f729-60e7-d55a-ba235f519653-C",
+        "uei": "UER4AJLUB8D5",
+        "obligations": 913241241.17,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 127,
+        "name": "BAE SYSTEMS LAND AND ARMAMENTS L.P.",
+        "recipientId": "4e82bc60-9b65-7c43-0d5f-4d41ace9f16b-C",
+        "uei": "D2ETMTLWJCJ1",
+        "obligations": 911058036.41,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 128,
+        "name": "LOYAL SOURCE GOVERNMENT SERVICES LLC",
+        "recipientId": "a11a2c49-b200-c5b0-6719-7b2d0bb9764c-C",
+        "uei": "Y54FQAPG4TN5",
+        "obligations": 899773580.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 129,
+        "name": "KBR WYLE SERVICES, LLC",
+        "recipientId": "a0a87c1c-b46f-7c1f-9eb0-a389f77904a8-C",
+        "uei": "L693MQDFLKD1",
+        "obligations": 897692504.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 130,
+        "name": "ALLIANCE FOR ENERGY INNOVATION, LLC",
+        "recipientId": "b5d8d22f-d83a-3e58-af13-5381d3c31019-C",
+        "uei": "DVGLNXBURMP3",
+        "obligations": 894961395.34,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 131,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "cbf8729b-05b4-083d-1dea-1bd2a60d19bd-C",
+        "uei": "FNBAMFZ3GD53",
+        "obligations": 891930366.04,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 132,
+        "name": "BAE SYSTEMS INFORMATION AND ELECTRONIC SYSTEMS INTEGRATION INC.",
+        "recipientId": "cdc6b956-a9c8-8548-7902-4512c9ccb343-C",
+        "uei": "F9AVUZ8YBGQ6",
+        "obligations": 877600653.36,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 133,
+        "name": "OLIN WINCHESTER LLC",
+        "recipientId": "616bca4f-e2ec-546a-f5a9-246df427d803-C",
+        "uei": "HCFGYBJNH9S5",
+        "obligations": 874218335.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 134,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "c1d87c0c-1b5f-f2c8-c447-e001bb4cc08c-C",
+        "uei": "VSBAFMDKTWL4",
+        "obligations": 868554889.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 135,
+        "name": "MINISTRY OF DEFENSE",
+        "recipientId": "bbe9233e-e10f-881f-b54d-ff7c211a88aa-C",
+        "uei": "C1KKFURZSEF5",
+        "obligations": 863499647.13,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 136,
+        "name": "KBR SERVICES, LLC",
+        "recipientId": "77b600af-8a01-de99-cfcc-06558d83a984-C",
+        "uei": "YSQMHRS4HSC5",
+        "obligations": 847305879.7,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 137,
+        "name": "KONGSBERG DEFENCE & AEROSPACE AS",
+        "recipientId": "2f22cbe0-84d3-21d8-f5eb-bc0207105ebb-C",
+        "uei": "V24HYE4YVGH6",
+        "obligations": 847161563.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 138,
+        "name": "FOUR POINTS TECHNOLOGY, L.L.C.",
+        "recipientId": "2a4d3db7-e268-7b36-3610-c75337f0b7e1-C",
+        "uei": "H1KHJPJH9R51",
+        "obligations": 844879390.32,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 139,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "622f0580-7b5e-83b3-fedc-ebc6a2dee446-C",
+        "uei": "JKVWEPKJRR65",
+        "obligations": 838390121.1,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 140,
+        "name": "BROOKHAVEN SCIENCE ASSOCIATES LLC",
+        "recipientId": "a5024890-88ca-4c65-a382-b8beefb2111d-C",
+        "uei": "R85KZ9JP3NM3",
+        "obligations": 833759899.13,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 141,
+        "name": "BLUE ORIGIN WASHINGTON, LLC",
+        "recipientId": "0347a12c-6b74-43ee-1e94-4986e09d6a5e-C",
+        "uei": "SH2ER4W6LH13",
+        "obligations": 828970508.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 142,
+        "name": "V3GATE, LLC",
+        "recipientId": "d46ad2a7-ed19-9535-4f24-787705845610-C",
+        "uei": "J4KHM5JY79E3",
+        "obligations": 822090145.87,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 143,
+        "name": "SUPPLYCORE LLC",
+        "recipientId": "038feb1d-f65f-cb60-0833-9e70db12d7b7-C",
+        "uei": "HTYJC5P9ZMH5",
+        "obligations": 818302203.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 144,
+        "name": "SALIENT CRGT, INC.",
+        "recipientId": "fd25b722-602d-ec58-3a7a-d6555b8d8ea7-C",
+        "uei": "Q5LJNF15T2R5",
+        "obligations": 816134921,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 145,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "a7284824-a186-1d38-f257-0fd2f2e09ff5-C",
+        "uei": "ULU9F3WMEH66",
+        "obligations": 814455761.11,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 146,
+        "name": "AUSTAL USA, LLC",
+        "recipientId": "099794ca-0664-2157-ef0e-3ae0148aef77-C",
+        "uei": "RG6LJJM6JBS3",
+        "obligations": 807055745.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 147,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "20e2511b-72bb-ef09-f739-ac4bc059bafb-C",
+        "uei": "DJUCEANK2KP4",
+        "obligations": 803590431.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 148,
+        "name": "L3HARRIS GLOBAL COMMUNICATIONS, INC.",
+        "recipientId": "fe1273eb-82d1-0fbe-536c-7bb59157c827-C",
+        "uei": "LJNAJVPB3MW1",
+        "obligations": 803195890.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 149,
+        "name": "HANFORD TANK WASTE OPERATIONS & CLOSURE, LLC",
+        "recipientId": "b8db5aa0-8953-edc9-33e9-0ba2f6d5563f-C",
+        "uei": "S3NQNFD3YS43",
+        "obligations": 796035009.24,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 150,
+        "name": "GENERAL DYNAMICS ORDNANCE AND TACTICAL SYSTEMS, INC.",
+        "recipientId": "fefa9485-36e4-9820-72ad-356e6028032e-C",
+        "uei": "FNEJKBCACXL1",
+        "obligations": 792558080.87,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 151,
+        "name": "THE GEO GROUP, INC.",
+        "recipientId": "9b308edb-a62c-659b-704b-ef4e5cf3f795-C",
+        "uei": "JMLKZZ1NL2Z6",
+        "obligations": 791460351.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 152,
+        "name": "LEIDOS, INC.",
+        "recipientId": "b37ddcf2-0924-f6e0-0fee-c40823f5789b-C",
+        "uei": "QLNMVC12KWY3",
+        "obligations": 783208655.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 153,
+        "name": "BARNARD SPENCER JOINT VENTURE",
+        "recipientId": "eadbdb24-6a7b-473a-36b6-9e4d711f8825-C",
+        "uei": "US79M57E8DT9",
+        "obligations": 778434100,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 154,
+        "name": "ATLAS AIR, INC.",
+        "recipientId": "411abe8c-ec15-5434-5e42-8e684d5992fc-C",
+        "uei": "CKB5NJY4CQL3",
+        "obligations": 759379660.12,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 155,
+        "name": "ASRC FEDERAL FACILITIES LOGISTICS, LLC",
+        "recipientId": "bf9cd280-b7a0-642a-5795-f5156204f71a-C",
+        "uei": "MA1VZ6667CB1",
+        "obligations": 752676286.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 156,
+        "name": "PALANTIR USG INC",
+        "recipientId": "11a97fdb-cb3b-16d2-aa67-a0f7b265b4ae-C",
+        "uei": "HNN4F9JZWDY8",
+        "obligations": 744531812.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 157,
+        "name": "THE LELAND STANFORD JUNIOR UNIVERSITY",
+        "recipientId": "0c13d643-4334-38ed-1952-0db7e2ac5e56-C",
+        "uei": "HJD6G4D6TJY5",
+        "obligations": 741362635.51,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 158,
+        "name": "L3HARRIS TECHNOLOGIES, INC.",
+        "recipientId": "ff82f82d-0b7f-0534-6465-02811ca0e11a-C",
+        "uei": "LB5KVANFKPY7",
+        "obligations": 741200635.39,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 159,
+        "name": "GENERAL DYNAMICS MISSION SYSTEMS, INC.",
+        "recipientId": "f09ed3a7-cbd4-f4d6-046d-eb0780590412-C",
+        "uei": "MWDRZJ2ZVPV7",
+        "obligations": 735273909.35,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 160,
+        "name": "LEIDOS, INC.",
+        "recipientId": "876f1621-8b69-d47c-7fa6-933c63b9da44-C",
+        "uei": "KTMAJCY6JXM3",
+        "obligations": 712874432.83,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 161,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "b302814a-8713-3c2f-8b0a-d0b8fc09976f-C",
+        "uei": "NMHFLDYJJ4C5",
+        "obligations": 704448345.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 162,
+        "name": "DRS NETWORK & IMAGING SYSTEMS LLC",
+        "recipientId": "d2126cd6-57c0-413f-1983-5b4216598036-C",
+        "uei": "MC27B7LGBL34",
+        "obligations": 703471961.53,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 163,
+        "name": "TCOM, L.P.",
+        "recipientId": "647ea90d-332a-fa56-4076-8f8c117adea6-C",
+        "uei": "HEZDP5MN11A3",
+        "obligations": 700651190.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 164,
+        "name": "TORCH TECHNOLOGIES INC",
+        "recipientId": "4185d6ab-6726-b8f6-b5f8-8d839ccb063c-C",
+        "uei": "YA63J5PVEZE6",
+        "obligations": 686696070.99,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 165,
+        "name": "BOOZ ALLEN HAMILTON INC",
+        "recipientId": "30b32b62-ffbf-d7e6-5b9d-95a295b95a6d-C",
+        "uei": "KHK6E1JW9C15",
+        "obligations": 680822144.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 166,
+        "name": "AEVEX AEROSPACE, LLC",
+        "recipientId": "5da4b54f-498e-61d5-5927-dd6bf5a1d3e5-C",
+        "uei": "LL8SH4DDJSK6",
+        "obligations": 676883540.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 167,
+        "name": "DEFENSE SYSTEMS AND SOLUTIONS",
+        "recipientId": "34029cc2-a3ce-6e12-3143-ed585c513530-C",
+        "uei": "NWKQVQED4C81",
+        "obligations": 673077314.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 168,
+        "name": "DELOITTE & TOUCHE LLP",
+        "recipientId": "921ab747-c89d-0aa2-e86e-5fa9b858e626-C",
+        "uei": "F9KSDU7L9VP6",
+        "obligations": 669231364.93,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 169,
+        "name": "BAE SYSTEMS MARITIME SOLUTIONS SAN DIEGO INC.",
+        "recipientId": "e35a8de4-8796-4af3-56c6-9583f780ab11-C",
+        "uei": "ZMBFGXHLGLM3",
+        "obligations": 662925002.84,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 170,
+        "name": "CSI AVIATION, INC",
+        "recipientId": "965e0a8e-62bd-79ee-4305-1f66e9bc7c87-C",
+        "uei": "D5BNEHB3UL89",
+        "obligations": 660605915.71,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 171,
+        "name": "XATOR LLC",
+        "recipientId": "e3be6629-1714-1015-6fc5-92ae6e24ccb1-C",
+        "uei": "ZJFDNMA46LT9",
+        "obligations": 645119224.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 172,
+        "name": "KBR WYLE SERVICES, LLC",
+        "recipientId": "eb13e842-2068-e3ee-0453-d02b9582e5cd-C",
+        "uei": "HYBLSJAMM2F4",
+        "obligations": 642893739.94,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 173,
+        "name": "PHILLIPS 66 COMPANY",
+        "recipientId": "650f94c9-3d2e-ce76-81ed-9267ca8739fd-C",
+        "uei": "MNDKKMTB8EJ1",
+        "obligations": 640345498.73,
+        "symbols": [
+          "PSX"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 174,
+        "name": "DYNETICS, INC.",
+        "recipientId": "83f39725-68ce-aaf2-164d-475e790e2b8e-C",
+        "uei": "FH7ML8E9EWJ7",
+        "obligations": 635938350.35,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 175,
+        "name": "MSM GROUP NORTH AMERICA INC.",
+        "recipientId": "4fbf9e62-1607-b106-72d2-69b93cf203da-C",
+        "uei": "XG69KMM7M6U5",
+        "obligations": 635200000,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 176,
+        "name": "FRESENIUS MEDICAL CARE HOLDINGS INC",
+        "recipientId": "04fb53b7-8e6a-01c9-c7cc-5e29d89ee4be-C",
+        "uei": "NVL9NNKL2617",
+        "obligations": 635052753.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 177,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "ac0b9590-0ad8-0854-a7ed-8474dc0b203b-C",
+        "uei": "QF4VA87ST9F7",
+        "obligations": 634755801.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 178,
+        "name": "BOLLINGER MISSISSIPPI SHIPBUILDING, LLC",
+        "recipientId": "765932b0-a253-7f20-902e-a6caabfff045-C",
+        "uei": "MDQKF8LKF232",
+        "obligations": 631562506.65,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 179,
+        "name": "HII MISSION TECHNOLOGIES CORP",
+        "recipientId": "09209b6d-af2a-79f6-ec11-b314812e454b-C",
+        "uei": "GS7HBMNZEMK3",
+        "obligations": 631313758.33,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 180,
+        "name": "UNITED CLEANUP OAK RIDGE LLC",
+        "recipientId": "04c9710e-1037-d496-7f24-6fd362c80c8c-C",
+        "uei": "CM39N6XPQF41",
+        "obligations": 630252943.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 181,
+        "name": "HONEYWELL INTERNATIONAL INC.",
+        "recipientId": "360760cb-a2ed-6aa4-2d81-a7909557d12c-C",
+        "uei": "KBL6XLDCXKG8",
+        "obligations": 626216758.1,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 182,
+        "name": "S-OIL CORPORATION",
+        "recipientId": "0ae2f924-ff89-04f5-4f89-ce2907cc4373-C",
+        "uei": "ZGCENJD7ZG18",
+        "obligations": 624134418.28,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 183,
+        "name": "UNITED LAUNCH SERVICES, LLC",
+        "recipientId": "96b9d7ec-4f76-3e5d-ef47-355f7ce954df-C",
+        "uei": "XHAMULHCL9N3",
+        "obligations": 618693347.6,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 184,
+        "name": "WHITING-TURNER CONTRACTING COMPANY, THE",
+        "recipientId": "71cf1e91-51f2-f450-1fe3-3576b19bb828-C",
+        "uei": "VEP4UN7LDMK5",
+        "obligations": 610535813.46,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 185,
+        "name": "LEIDOS, INC.",
+        "recipientId": "32109085-1976-8da6-d5cd-7c8077389b75-C",
+        "uei": "MYKLJHTX3MM7",
+        "obligations": 603497545.93,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 186,
+        "name": "RQ CONSTRUCTION, LLC",
+        "recipientId": "cfa69dd8-4b23-ff60-720d-4b32d819868b-C",
+        "uei": "NE61LN4FM1A5",
+        "obligations": 601181613.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 187,
+        "name": "PARAGON SYSTEMS INC",
+        "recipientId": "9d4208db-18a5-67fc-43ec-1232c608ede7-C",
+        "uei": "RG1VD6RNMXB5",
+        "obligations": 598067967.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 188,
+        "name": "NEW TECH SOLUTIONS, INC.",
+        "recipientId": "e0f8746a-9a3b-810a-257a-cae2d63868da-C",
+        "uei": "XK11LLUL61A7",
+        "obligations": 594825783.82,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 189,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "df8638e3-b642-fae8-6730-21c1ec716038-C",
+        "uei": "M6BRZ1FHEZQ1",
+        "obligations": 594404857.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 190,
+        "name": "GENERAL DYNAMICS OTS (WILKES BARRE), LLC",
+        "recipientId": "106fad1c-0ab3-3ef9-fbce-ce27e10778fe-C",
+        "uei": "V1TVADBWD4E9",
+        "obligations": 585843902.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 191,
+        "name": "FEDERAL EXPRESS CORPORATION",
+        "recipientId": "079718fe-322b-0b89-6522-302314b5d75f-C",
+        "uei": "EM7LMJJCF6B7",
+        "obligations": 581893585.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 192,
+        "name": "ECS FEDERAL, LLC",
+        "recipientId": "ed304eb7-3464-d0e8-d3b2-66199b0e0fcb-C",
+        "uei": "XYB4JU4PA6T4",
+        "obligations": 580750861.14,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 193,
+        "name": "TPC-NAN A JOINT VENTURE",
+        "recipientId": "4d01f74e-0754-4ea6-afd4-cc7ba15e16b5-C",
+        "uei": "PKLXKHZPXKJ8",
+        "obligations": 579073009.78,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 194,
+        "name": "MEDLINE INDUSTRIES, LP",
+        "recipientId": "e69126ba-ae4e-13a4-4552-7eae9f4ad09d-C",
+        "uei": "DMPAKJ9N9K66",
+        "obligations": 578854819.3,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 195,
+        "name": "L3 TECHNOLOGIES, INC.",
+        "recipientId": "b09dcd04-a8c9-ee78-bf74-30e428504408-C",
+        "uei": "FRJQGQHDX4J3",
+        "obligations": 570123716.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 196,
+        "name": "EXPRESS SCRIPTS INC",
+        "recipientId": "c3c80cb0-4a72-deb4-fbe8-e5da5bd0762a-C",
+        "uei": "QKNTMFZFR6E9",
+        "obligations": 561111047.31,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 197,
+        "name": "LEIDOS BIOMEDICAL RESEARCH INC",
+        "recipientId": "277c2f00-0fc5-832e-69d3-accd25c68bfc-C",
+        "uei": "HV8BH9BPG8Y9",
+        "obligations": 559562924.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 198,
+        "name": "CENTRAL PLATEAU CLEANUP COMPANY, LLC",
+        "recipientId": "dc1dd035-91a6-af48-2614-9e83723ee374-C",
+        "uei": "J4TDNRDMRMZ3",
+        "obligations": 558409059.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 199,
+        "name": "GLOBAL MILITARY PRODUCTS INC",
+        "recipientId": "8df2d6bc-e363-72b0-b415-bb999441a393-C",
+        "uei": "L168LBGMAA13",
+        "obligations": 557401636.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 200,
+        "name": "THE MITRE CORPORATION",
+        "recipientId": "d8b4e294-638c-065b-3660-76b4d196e819-C",
+        "uei": "GAVABYGCURL7",
+        "obligations": 557205548.03,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 201,
+        "name": "MOTOR OIL (HELLAS) CORINTH REFINERIES S.A.",
+        "recipientId": "3f6b5264-02af-028b-a5c5-0aaec1f56acc-C",
+        "uei": "HPBTLPA2JR77",
+        "obligations": 551246853.3,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 202,
+        "name": "NATIONAL STEEL AND SHIPBUILDING COMPANY",
+        "recipientId": "d3b182df-5daa-6f63-c00e-d99b7ba7875e-C",
+        "uei": "Q85KVUK3JBF5",
+        "obligations": 550418749.17,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 203,
+        "name": "DOMESTIC AWARDEES (UNDISCLOSED)",
+        "recipientId": "b34cb2e3-60c2-69e0-9288-a94226437041-C",
+        "uei": "KA5HQCLKUVW1",
+        "obligations": 550384879.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 204,
+        "name": "MARATHON PETROLEUM COMPANY LP",
+        "recipientId": "8878e10c-20f9-85e0-d6e3-e61e5e367aac-C",
+        "uei": "LEM4ASHMJES5",
+        "obligations": 542132597.11,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 205,
+        "name": "AMERESCO INC",
+        "recipientId": "0451d0a6-e23c-a300-e312-b391f833cb4e-C",
+        "uei": "DKL8RJPGE4R3",
+        "obligations": 541219451.33,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 206,
+        "name": "GUIDEHOUSE INC.",
+        "recipientId": "a0cb5664-8703-c7dc-a188-4a96f90a16c9-C",
+        "uei": "N9NJK877QJK9",
+        "obligations": 540682584.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 207,
+        "name": "NORTHSTAR MARITIME DISMANTLEMENT SERVICES, LLC",
+        "recipientId": "33b22d59-f51c-26be-94f0-72f10f3b1e30-C",
+        "uei": "YZCLUHP44LN1",
+        "obligations": 533749731,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 208,
+        "name": "DAVITA INC.",
+        "recipientId": "fde4d740-1423-fe85-019c-81b3879ec27f-C",
+        "uei": "PCJQZRE36Z73",
+        "obligations": 533649880.45,
+        "symbols": [
+          "DVA"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 209,
+        "name": "MICROSOFT CORPORATION",
+        "recipientId": "dd77b7c3-663e-cb91-229f-5766a50e9b7f-C",
+        "uei": "FMVPEWNJGLM1",
+        "obligations": 531571632.85,
+        "symbols": [
+          "MSFT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 210,
+        "name": "IDAHO ENVIRONMENTAL COALITION LLC",
+        "recipientId": "9728cac1-d53a-87c1-e11e-797e35325b34-C",
+        "uei": "LQ5ZLNE3EM27",
+        "obligations": 531136380.11,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 211,
+        "name": "NAN INC",
+        "recipientId": "59a43f23-38e4-9f4d-cf6c-43d185e9419e-C",
+        "uei": "J1P1SQSCUYK6",
+        "obligations": 528700101.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 212,
+        "name": "METROPOLITAN SECURITY SERVICES, INC.",
+        "recipientId": "835e42fb-f461-4e30-e17e-3205a1805635-C",
+        "uei": "M8XJCDL1AE26",
+        "obligations": 527335775.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 213,
+        "name": "INTUITIVE RESEARCH AND TECHNOLOGY CORPORATION",
+        "recipientId": "47f4f1d7-8101-2ec0-c3e8-3841ec247ed6-C",
+        "uei": "M227DFMCJY67",
+        "obligations": 519200115.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 214,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "ea75ddee-2d00-ac7f-5e72-6f42d7c88c8c-C",
+        "uei": "KDT2YLB34NT6",
+        "obligations": 518450643.45,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 215,
+        "name": "SIERRA NEVADA COMPANY, LLC",
+        "recipientId": "c1b45f68-30f2-cc4f-d151-169001068edb-C",
+        "uei": "DD2QET4D27T3",
+        "obligations": 515233853.55,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 216,
+        "name": "BECHTEL NATIONAL, INC.",
+        "recipientId": "7cfe19f0-3996-b85d-3d93-9ebc1c887d0a-C",
+        "uei": "WA9LNGN2DPF4",
+        "obligations": 513359781.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 217,
+        "name": "FAIRWINDS TECHNOLOGIES LLC",
+        "recipientId": "29efc594-6891-a465-5460-35af813de98c-C",
+        "uei": "R3G6PWHQRAY5",
+        "obligations": 511463445.81,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 218,
+        "name": "CROWLEY GOVERNMENT SERVICES, INC.",
+        "recipientId": "572e442b-f0f8-e4ab-6a99-b97521c958ef-C",
+        "uei": "VMEFT5X61JT9",
+        "obligations": 510934292.65,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 219,
+        "name": "WORLD WIDE TECHNOLOGY LLC",
+        "recipientId": "d96a4bfd-2da7-00c1-948d-44005efba1a1-C",
+        "uei": "C8VFSNKTMQB6",
+        "obligations": 509757740.7,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 220,
+        "name": "SCIENTIFIC RESEARCH CORPORATION",
+        "recipientId": "7905361a-d6ee-2495-f5e3-9ed8ce4fcd1b-C",
+        "uei": "FAK7LNGRNAN5",
+        "obligations": 498012229.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 221,
+        "name": "AEROVIRONMENT, INC",
+        "recipientId": "5c230f88-bf30-19f8-5853-79c1472f53a9-C",
+        "uei": "MWKWXVSSC518",
+        "obligations": 496200224.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 222,
+        "name": "BEYOND NEW HORIZONS, LLC",
+        "recipientId": "89aaffa1-277e-3787-6bad-5eaffcdfb542-C",
+        "uei": "KNZUXDQ8C9S4",
+        "obligations": 496145999.38,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 223,
+        "name": "CLARK CONSTRUCTION GROUP LLC",
+        "recipientId": "8470bfbc-50af-251d-d192-3059c5b82618-C",
+        "uei": "QQBXQR679KM9",
+        "obligations": 492314229.45,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 224,
+        "name": "COUNTERTRADE PRODUCTS, INC.",
+        "recipientId": "99253b24-712b-034b-e1a4-77c8e86b4b5b-C",
+        "uei": "CN4KSKX2UQY5",
+        "obligations": 492307400.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 225,
+        "name": "THE JOHNS HOPKINS MEDICAL SERVICES CORPORATION",
+        "recipientId": "81fdb5c6-e1df-cea3-949b-1f69661fa81b-C",
+        "uei": "RZLCPNEEJDC5",
+        "obligations": 485468316.39,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 226,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "27b04395-cee8-a47d-2a5c-3e2b78dc7b0a-C",
+        "uei": "LAJJQWA1PF31",
+        "obligations": 481287254.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 227,
+        "name": "HARPER CONSTRUCTION COMPANY, INC.",
+        "recipientId": "bcc6c5bc-1af8-dd8c-f661-b7e35ae139bd-C",
+        "uei": "GMJPZCJDUG24",
+        "obligations": 475351662.02,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 228,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "a4c9e27d-cd85-f35f-2202-78864868ed6e-C",
+        "uei": "U6UKKQU345T7",
+        "obligations": 475049804.21,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 229,
+        "name": "GEORGIA TECH APPLIED RESEARCH CORP",
+        "recipientId": "36ac2fcd-7f60-603d-ffe7-a3101dd0bc95-C",
+        "uei": "L3G5SBQ2PLK5",
+        "obligations": 474824450.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 230,
+        "name": "FORD MOTOR CO",
+        "recipientId": "4a8a3973-3640-6b1b-95a5-c93d26884389-C",
+        "uei": "QD3MLADL7366",
+        "obligations": 474028572.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 231,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORP",
+        "recipientId": "a4e18d9e-ec75-2c26-9475-543f727fdbe7-C",
+        "uei": "JRVLDEXMYDK8",
+        "obligations": 472869680.95,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 232,
+        "name": "IRON BOW TECHNOLOGIES, LLC",
+        "recipientId": "132f5878-a9b2-eeda-115a-041797eaf981-C",
+        "uei": "Q2M4FYALZJ89",
+        "obligations": 472309930.19,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 233,
+        "name": "THE CHARLES STARK DRAPER LABORATORY, INC.",
+        "recipientId": "875a4072-7b37-6250-a5ab-8428c8e47565-C",
+        "uei": "GTJHZE4M7YK1",
+        "obligations": 471654706.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 234,
+        "name": "TEXTRON AVIATION INC",
+        "recipientId": "e91d8566-9d98-0b52-e41f-3afaebeaa161-C",
+        "uei": "LH8RF2CKLWK5",
+        "obligations": 468348850.09,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 235,
+        "name": "CARDINAL HEALTH 200, LLC",
+        "recipientId": "f10ee812-1419-69f4-1cc5-85651ce21e16-C",
+        "uei": "ZJEUBM5FYLQ2",
+        "obligations": 468236413.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 236,
+        "name": "DRS SUSTAINMENT SYSTEMS, INC",
+        "recipientId": "69e0bc60-3c33-981b-b6f2-080ec54f14f0-C",
+        "uei": "FG7HKV9NTDK5",
+        "obligations": 460741250.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 237,
+        "name": "CORE TECH-HDCC-KAJIMA LLC",
+        "recipientId": "29ccca1f-a79d-ba9c-0abd-5c3261dbdee3-C",
+        "uei": "H3PJV2J2DAA2",
+        "obligations": 457810057.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 238,
+        "name": "APPLIED RESEARCH ASSOCIATES, INC.",
+        "recipientId": "e4f166e8-db1c-b7aa-1fa5-f9bd4d7879f5-C",
+        "uei": "LTMGBJ76B9D8",
+        "obligations": 456880228.35,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 239,
+        "name": "BATTELLE MEMORIAL INSTITUTE",
+        "recipientId": "d035b043-1694-6193-563e-4e6b32dbf656-C",
+        "uei": "F125YU6SWK59",
+        "obligations": 452864996.24,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 240,
+        "name": "CACI NSS, LLC",
+        "recipientId": "b5d927cd-b446-286a-877d-dbdc6e0d20d5-C",
+        "uei": "GS59ABNVD6N7",
+        "obligations": 452302496.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 241,
+        "name": "CACI NSS, LLC",
+        "recipientId": "49aa319d-7bfb-ef1b-d43e-e82eed09d3bf-C",
+        "uei": "EELEC8QCC3N8",
+        "obligations": 449426975.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 242,
+        "name": "VIGOR MARINE LLC",
+        "recipientId": "1d4b036b-803c-6344-53e6-6fde8206978c-C",
+        "uei": "L7ZETMM4M9R3",
+        "obligations": 444217161.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 243,
+        "name": "ANDURIL INDUSTRIES, INC.",
+        "recipientId": "1869c03a-77bb-b66c-469b-988719bbec4c-C",
+        "uei": "KC3CH2MSK7Q3",
+        "obligations": 442235007.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 244,
+        "name": "BRASFIELD & GORRIE LLC",
+        "recipientId": "a4499a6f-2139-8774-afa2-247720ff681c-C",
+        "uei": "TWVGJRMK6Z78",
+        "obligations": 441833145.7,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 245,
+        "name": "RAM-SYSTEM GMBH",
+        "recipientId": "0b919837-92b3-f090-90a7-56a52abf0915-C",
+        "uei": "YMYQQQBNG2K5",
+        "obligations": 440906357.06,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 246,
+        "name": "ERNST & YOUNG LLP",
+        "recipientId": "dd8305ba-1d9b-c594-9391-076ac5a963ad-C",
+        "uei": "ECMMFNMSLXM7",
+        "obligations": 439937974.44,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 247,
+        "name": "VERIZON BUSINESS NETWORK SERVICES LLC",
+        "recipientId": "0341544e-23d8-fe98-3d76-1cdbc8b37e2f-C",
+        "uei": "GEYFS4D96R55",
+        "obligations": 436261575.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 248,
+        "name": "AMENTUM TECHNOLOGY, INC.",
+        "recipientId": "435aa33d-8ca5-7631-ec18-85dbb07c6fa1-C",
+        "uei": "H2RGSKWXKHQ5",
+        "obligations": 434097964.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 249,
+        "name": "GENERAL DYNAMICS-OTS, INC.",
+        "recipientId": "3a02f6ab-9df3-cbfd-b60f-1542efce4906-C",
+        "uei": "Q9SBTF8ELUP4",
+        "obligations": 430741787.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 250,
+        "name": "FLUOR-BWXT PORTSMOUTH LLC",
+        "recipientId": "c4f82ce8-c362-d57d-5eb9-8dc44eca8392-C",
+        "uei": "NG33LHHLGG15",
+        "obligations": 427213014.13,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 251,
+        "name": "MARTINS POINT HEALTH CARE INC",
+        "recipientId": "64576063-8876-08ef-f170-c6182195039b-C",
+        "uei": "DJUHB4QNYAS6",
+        "obligations": 426584290.28,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 252,
+        "name": "OMNI AIR INTERNATIONAL, LLC",
+        "recipientId": "13d35825-45c8-f53d-38a9-3f0817b916d2-C",
+        "uei": "D1T9Z2Y9LMT1",
+        "obligations": 425690174.93,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 253,
+        "name": "JBW GROUP LLC",
+        "recipientId": "82a5a405-f704-9692-1f5d-f13d307a5f80-C",
+        "uei": "RYENYEUPVKA8",
+        "obligations": 425539479.26,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 254,
+        "name": "ODYSSEY SYSTEMS CONSULTING GROUP, LTD.",
+        "recipientId": "036ad08c-f0d9-227c-a4d8-5185dd387ab8-C",
+        "uei": "GUXLUYETMM48",
+        "obligations": 424523600.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 255,
+        "name": "LUMEN TECHNOLOGIES GOVERNMENT SOLUTIONS, INC.",
+        "recipientId": "dcc7220d-7604-b0b5-8961-5a07865199ea-C",
+        "uei": "LL22S1ELLY93",
+        "obligations": 422841004.84,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 256,
+        "name": "JPATS LOGISTICS SERVICES, LLC",
+        "recipientId": "4edea933-ba6d-bf0d-024e-238b936b245e-C",
+        "uei": "LNM9GYXMBE38",
+        "obligations": 422654520.98,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 257,
+        "name": "LEIDOS, INC.",
+        "recipientId": "15534848-08a8-1966-50fd-042be5191faa-C",
+        "uei": "X38JVP4R72E1",
+        "obligations": 422576506.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 258,
+        "name": "KPMG LLP",
+        "recipientId": "6432ec51-4000-ee31-2f37-d259e7a75d15-C",
+        "uei": "MAA3SBSDQVM1",
+        "obligations": 421320069.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 259,
+        "name": "CATERPILLAR INC",
+        "recipientId": "9bca02d6-dc64-52ba-4d3e-bc5b38b1f6a5-C",
+        "uei": "C9C6HPQLL4A8",
+        "obligations": 420695263.34,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 260,
+        "name": "KIEWIT INFRASTRUCTURE WEST CO.",
+        "recipientId": "b80d73f9-1a5c-4053-0b9f-d4d0b5321a96-C",
+        "uei": "YSNNL4FGAQ53",
+        "obligations": 420047406.06,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 261,
+        "name": "LEIDOS, INC.",
+        "recipientId": "0bf701d6-8935-ff83-f538-61a988d9e121-C",
+        "uei": "JSTDGZNFP4A3",
+        "obligations": 418842236.97,
+        "symbols": [
+          "LDOS"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 262,
+        "name": "M. C. DEAN, INC.",
+        "recipientId": "a81ae18c-cbc0-5d23-ac06-c9243fff1ad0-C",
+        "uei": "RD55NEXJ5EW4",
+        "obligations": 418436122.02,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 263,
+        "name": "PETROMAX REFINING COMPANY LLC",
+        "recipientId": "27df5277-8a96-1659-7b58-083547d488e7-C",
+        "uei": "YD3QNKMHEFJ8",
+        "obligations": 415805388.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 264,
+        "name": "DEPLOYED RESOURCES LLC",
+        "recipientId": "c7182f2d-51c0-8f51-d5cc-02630b0a90c2-C",
+        "uei": "GFTGQRJ8F959",
+        "obligations": 414846249.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 265,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "49ba01f3-56b6-92fd-1814-1a521f21fe7e-C",
+        "uei": "MJENSFHZJP11",
+        "obligations": 413075458.77,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 266,
+        "name": "SIG SAUER INC.",
+        "recipientId": "0171220c-321a-4609-5065-af7e04637e51-C",
+        "uei": "R5KXGA7V9AL8",
+        "obligations": 407374445.2,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 267,
+        "name": "DATA LINK SOLUTIONS LLC",
+        "recipientId": "c98b136d-0e1d-f50a-801c-a39f5aca7224-C",
+        "uei": "PPVTFMDK1NN5",
+        "obligations": 406745470.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 268,
+        "name": "KIEWIT US CONTRACTORS CO",
+        "recipientId": "ab5be562-fbf8-7520-bd79-3ec050c5b39d-C",
+        "uei": "L84WJXJKLLK8",
+        "obligations": 403944000,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 269,
+        "name": "DGCI CORPORATION",
+        "recipientId": "478579fd-fc1a-5713-dc62-00ccea729e14-C",
+        "uei": "KYUDF7WJKQB8",
+        "obligations": 403845070.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 270,
+        "name": "UNITED CONCORDIA COMPANIES, INC.",
+        "recipientId": "351af436-ab50-8ae3-488e-d632247d8d45-C",
+        "uei": "EUEVXMR5L7A3",
+        "obligations": 403272054.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 271,
+        "name": "AMTEC CORPORATION",
+        "recipientId": "8a541d97-e66b-f473-d8e3-cd59b5384bb8-C",
+        "uei": "Y6PYN1Q8UKY7",
+        "obligations": 401095812.4,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 272,
+        "name": "GENERAL ATOMICS",
+        "recipientId": "e33e9412-0ef8-71d1-941b-300424a00029-C",
+        "uei": "TVRYQ3N3B8H5",
+        "obligations": 399578853.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 273,
+        "name": "JT4 LLC",
+        "recipientId": "3cd5a283-748b-5f73-8bbf-d1732f6d6b72-C",
+        "uei": "JKCNBX9J66E6",
+        "obligations": 398057080.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 274,
+        "name": "LOCKHEED MARTIN CORP",
+        "recipientId": "ec40d701-df42-cef7-1247-f7307851485d-C",
+        "uei": "KFN4YJH98D51",
+        "obligations": 397461040.05,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 275,
+        "name": "NELNET SERVICING LLC",
+        "recipientId": "cd787d0c-db43-3ebb-f395-dc3ed272e5e9-C",
+        "uei": "MNXKQ62J7AE8",
+        "obligations": 397232036.04,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 276,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "d6601efc-adc3-1030-5904-be323dc49433-C",
+        "uei": "Q11ZHUFBW741",
+        "obligations": 396015319.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 277,
+        "name": "CORECIVIC, INC.",
+        "recipientId": "b7ab6cd4-f511-cfe7-c92f-b20d45921e9c-C",
+        "uei": "HJGMJN1JKL46",
+        "obligations": 395871571.26,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 278,
+        "name": "MODERN TECHNOLOGY SOLUTIONS, INC.",
+        "recipientId": "b4ef6003-1f01-d9c4-b29f-b4e2015f014e-C",
+        "uei": "R8KMUKAJRKJ6",
+        "obligations": 395629288.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 279,
+        "name": "UNDERSEA SENSOR SYSTEMS, INC.",
+        "recipientId": "a9a93357-4d33-62df-2eb5-f1e6a7297dda-C",
+        "uei": "U2KQBGF9LJ97",
+        "obligations": 394249766.31,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 280,
+        "name": "FLEET VEHICLE SOURCE INC",
+        "recipientId": "70cfcc5e-6463-439c-995c-5d2e7305f4ac-C",
+        "uei": "CGAKREGGN9J3",
+        "obligations": 391386732,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 281,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORP",
+        "recipientId": "7075086b-d0b1-a7a5-3638-402a7aba0b1c-C",
+        "uei": "NYAPEDKLW2A5",
+        "obligations": 391225833.64,
+        "symbols": [
+          "NOC"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 282,
+        "name": "DDB CHICAGO INC.",
+        "recipientId": "b002b486-6a1f-efce-20d4-13fef59093fe-C",
+        "uei": "ZYCVPMAU6MH8",
+        "obligations": 390942186.01,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 283,
+        "name": "INTERNATIONAL BUSINESS MACHINES CORPORATION",
+        "recipientId": "cae13eb7-b259-520c-9ae0-a46eb3ea2acd-C",
+        "uei": "J64CSQTQNRC1",
+        "obligations": 390443838.28,
+        "symbols": [
+          "IBM"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 284,
+        "name": "MISCELLANEOUS FOREIGN AWARDEES",
+        "recipientId": null,
+        "uei": "LN9PU5M2YZN5",
+        "obligations": 388246806.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 285,
+        "name": "J & J MAINTENANCE INC",
+        "recipientId": "80d30511-4f48-088f-1c94-f7404764de80-C",
+        "uei": "Y4TKSMDNTRN6",
+        "obligations": 384749132.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 286,
+        "name": "AMENTUM TECHNOLOGY, INC.",
+        "recipientId": "64d116c0-8e36-0200-3878-827560dca24a-C",
+        "uei": "DTRJLHVLK8F4",
+        "obligations": 381874317.78,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 287,
+        "name": "DCS CORPORATION",
+        "recipientId": "6eb1a41a-0f06-b7ec-39f3-5c94f8248a6a-C",
+        "uei": "FJS8P9C6B368",
+        "obligations": 381611263.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 288,
+        "name": "FEDEX SUPPLY CHAIN DISTRIBUTION SYSTEM, INC.",
+        "recipientId": "5196bee3-3520-4d0f-a473-5763e5da1b05-C",
+        "uei": "Q9PFF5JU9TR4",
+        "obligations": 381330215.43,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 289,
+        "name": "PALMETTO GBA, LLC",
+        "recipientId": "e873614b-bdb9-4847-d252-1215921131ab-C",
+        "uei": "CFLDECZBMDV6",
+        "obligations": 380692472.99,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 290,
+        "name": "TRIPLE CANOPY INC",
+        "recipientId": "b9a8aca3-3402-7ba5-301b-8cabbaf8b523-C",
+        "uei": "F481BZWYCZA7",
+        "obligations": 379685262.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 291,
+        "name": "MANTECH TSG-2 JOINT VENTURE",
+        "recipientId": "7ae71094-9045-9fe2-c434-2440f003e5ef-C",
+        "uei": "V9KKND8S1KJ3",
+        "obligations": 379188774.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 292,
+        "name": "381 CONSTRUCTORS",
+        "recipientId": "2ba8f2b3-d34a-f139-cbc0-e9c7fdb38f38-C",
+        "uei": "P4LGE35HG4B5",
+        "obligations": 376674941,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 293,
+        "name": "L3 TECHNOLOGIES, INC.",
+        "recipientId": "a7fcc56d-a9b9-2518-3763-f96f3085abf1-C",
+        "uei": "VJGEGN9GZM11",
+        "obligations": 372703729.02,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 294,
+        "name": "AECOM TECHNICAL SERVICES, INC.",
+        "recipientId": "5613b50e-28cb-41f8-331e-2fc18e08b0ae-C",
+        "uei": "EPUXNLX5EYC4",
+        "obligations": 372556946.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 295,
+        "name": "LINQUEST CORPORATION",
+        "recipientId": "94657412-ad9f-323d-a845-cf0021e8dfb7-C",
+        "uei": "HQBRRJBLDQ37",
+        "obligations": 372110959.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 296,
+        "name": "VERTEX MODERNIZATION AND SUSTAINMENT LLC",
+        "recipientId": "2f18b06e-0bd5-b083-f202-ac6fb1275a31-C",
+        "uei": "NQCCULJZFY29",
+        "obligations": 371892583.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 297,
+        "name": "SYSTEMS PLANNING AND ANALYSIS, INC.",
+        "recipientId": "0a2926cc-4d2e-6cfb-62d0-f65d0e91ebb1-C",
+        "uei": "TRE8LWVNNXL3",
+        "obligations": 367615441.46,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 298,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "690fafd3-ecd8-1228-92a0-07aa28dd1ee2-C",
+        "uei": "HLWWEH2CCXW5",
+        "obligations": 367315442.31,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 299,
+        "name": "BLUEFORGE ALLIANCE",
+        "recipientId": "1eb0939d-ac40-1bb9-cbec-f7cfb2cecb81-C",
+        "uei": "F8PEZKXES8B1",
+        "obligations": 366110270,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 300,
+        "name": "EMERGENT, LLC",
+        "recipientId": "d20dbc28-ffde-003c-e506-9e3a16d343b6-C",
+        "uei": "NUNVJJM2UYY1",
+        "obligations": 362500064.22,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 301,
+        "name": "RESEARCH TRIANGLE INSTITUTE",
+        "recipientId": "8303ed9b-9fb4-3e90-ca81-50bbcf400948-C",
+        "uei": "JJHCMK4NT5N3",
+        "obligations": 361544065.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 302,
+        "name": "MAGELLAN FEDERAL, INC.",
+        "recipientId": "2d99de66-dae6-be97-bf85-f0df84e5df5a-C",
+        "uei": "MFYCXCNW4WL5",
+        "obligations": 360470033.85,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 303,
+        "name": "METRO MACHINE CORP.",
+        "recipientId": "54212f12-7156-e472-c7d9-9cfbdedf007e-C",
+        "uei": "J1FCJLK5LGU5",
+        "obligations": 359097742.12,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 304,
+        "name": "W.W. GRAINGER, INC.",
+        "recipientId": "02d96557-827b-7983-b39e-007f84487932-C",
+        "uei": "DBQGN324ULK3",
+        "obligations": 358210581.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 305,
+        "name": "J.E. DUNN CONSTRUCTION COMPANY",
+        "recipientId": "dce65e37-4d31-b857-7318-55ab31c49bcf-C",
+        "uei": "Y9FCAN97NHC9",
+        "obligations": 357400896.22,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 306,
+        "name": "PECKHAM VOCATIONAL INDUSTRIES, INC.",
+        "recipientId": "cbe9543d-390f-e03c-9e0d-06bd0b86b9e6-C",
+        "uei": "FKJWA9VNRNC9",
+        "obligations": 357316129.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 307,
+        "name": "GENERAL DYNAMICS-OTS, INC.",
+        "recipientId": "ba0a3473-b6f3-7cf8-cc64-e960ca9aa621-C",
+        "uei": "KZK8C85C1T94",
+        "obligations": 351228762.82,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 308,
+        "name": "GENERAL DYNAMICS MISSION SYSTEMS, INC.",
+        "recipientId": "09f25d0c-0e54-1095-0191-a9797ddbaf68-C",
+        "uei": "LKMMNBMPUNH7",
+        "obligations": 350907556.53,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 309,
+        "name": "AAR GOVERNMENT SERVICES, INC.",
+        "recipientId": "f21bf992-9b99-df82-c21a-898a38331075-C",
+        "uei": "GFWVNNYFEVR2",
+        "obligations": 346899443.99,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 310,
+        "name": "PATRIOT CONTRACT SERVICES, LLC",
+        "recipientId": "409db48f-4ace-26a3-5b52-6d6cebfed48a-C",
+        "uei": "S9L9DZ8RBNL6",
+        "obligations": 346755330.38,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 311,
+        "name": "THE PENNSYLVANIA STATE UNIVERSITY",
+        "recipientId": "f12508df-b414-7a41-54a0-3351d8ed6cb0-C",
+        "uei": "NPM2J7MSCF61",
+        "obligations": 345023492.87,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 312,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "0d5744ec-afe5-eea8-0593-f35c6a784084-C",
+        "uei": "XYUMJHQ1LJV5",
+        "obligations": 343557909.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 313,
+        "name": "GDC MIDDLE EAST COMPANY",
+        "recipientId": "d189963c-eae6-2f6a-060a-9d86d0dcc553-C",
+        "uei": "VC4ATJKUYL24",
+        "obligations": 343391120.83,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 314,
+        "name": "LMI CONSULTING, LLC",
+        "recipientId": "9291f485-a281-155d-c22c-1821a912cefe-C",
+        "uei": "QVEKLLJUGHJ7",
+        "obligations": 343327252.43,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 315,
+        "name": "ASAHI REFINING USA INC",
+        "recipientId": "bb19d6bf-9975-f10a-ee78-4404ebdc6d61-C",
+        "uei": "GL5NPDBBRMC8",
+        "obligations": 339833337.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 316,
+        "name": "GREAT LAKES DREDGE & DOCK CO, LLC",
+        "recipientId": "a8ce365d-613d-3362-4d1d-16a5186a9d24-C",
+        "uei": "M9LFLA6K8HE4",
+        "obligations": 336601888.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 317,
+        "name": "GENERAL DYNAMICS MISSION SYSTEMS, INC.",
+        "recipientId": "ce3a6822-92c5-cded-c149-4a33114c7826-C",
+        "uei": "MU3CM1145E44",
+        "obligations": 336442903.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 318,
+        "name": "ADVANTAGED SOLUTIONS, LLC",
+        "recipientId": "4acbf6ad-1bf1-6bcc-ebf6-f88aa57cffa8-C",
+        "uei": "WD8KKTRJWAZ3",
+        "obligations": 333632947.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 319,
+        "name": "AIRBUS US SPACE & DEFENSE INC",
+        "recipientId": "f152cbca-9e40-26d9-b747-0de26c36b105-C",
+        "uei": "KDFTJG6RK5A8",
+        "obligations": 327044263.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 320,
+        "name": "REPKON USA - DEFENSE, LLC",
+        "recipientId": "2f6e932d-0d80-9f86-4a29-81bb8759c401-C",
+        "uei": "JN2TGNPNSJT5",
+        "obligations": 326250000,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 321,
+        "name": "CREDENCE MANAGEMENT SOLUTIONS LIMITED LIABILITY COMPANY",
+        "recipientId": "421be47b-ffc8-a394-1f62-a25955938c63-C",
+        "uei": "FZNCSKF4X6D9",
+        "obligations": 325722180.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 322,
+        "name": "BERING STRAITS GLOBAL INNOVATIONS, LLC",
+        "recipientId": "dfafda03-1976-b849-5784-98e55d7fbd47-C",
+        "uei": "SRXQFZPNVF42",
+        "obligations": 325688267.66,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 323,
+        "name": "BAE SYSTEMS INFORMATION & ELECTRONIC SYSTEMS INTEGRATION INC",
+        "recipientId": "b3f30bd6-735c-4e80-496e-ca69d0c1851c-C",
+        "uei": "LL86LYMYHK36",
+        "obligations": 325174436.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 324,
+        "name": "WALSH FEDERAL LLC",
+        "recipientId": "05ed5d46-f203-4dc6-623a-3f47ed6933dd-C",
+        "uei": "DMFWBVTL9324",
+        "obligations": 324053922.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 325,
+        "name": "CACI TECHNOLOGIES, LLC",
+        "recipientId": "4763c991-6108-3b12-d5e3-f29d6935270b-C",
+        "uei": "NGEEG7KP11V4",
+        "obligations": 323655130.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 326,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "15a7d2ee-b7aa-fe37-36ec-ff299338b908-C",
+        "uei": "XM8ZJ6ML9CW7",
+        "obligations": 323164916.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 327,
+        "name": "L3 TECHNOLOGIES, INC.",
+        "recipientId": "99445697-56a1-e0c2-2dae-1cf1845f27a1-C",
+        "uei": "LG6WVXVEEJN3",
+        "obligations": 323116762.11,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 328,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "e398bb29-99aa-01cc-549d-c40fc7d84e10-C",
+        "uei": "GUVUU89P78Q3",
+        "obligations": 321460967.51,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 329,
+        "name": "GM DEFENSE LLC",
+        "recipientId": "cec0f228-893b-bedf-9285-e4d369a0e62f-C",
+        "uei": "Y3J5B74JL4J1",
+        "obligations": 320717420.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 330,
+        "name": "PERIMETER SOLUTIONS LP",
+        "recipientId": "d7665c4a-faef-2a5a-e1c1-ac4f097e6df0-C",
+        "uei": "QGUQWSU5AHB4",
+        "obligations": 319165121.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 331,
+        "name": "AMAZON WEB SERVICES, INC.",
+        "recipientId": "645df5f2-66e3-8d2b-a612-3bff6ed3da30-C",
+        "uei": "NQEWN6C1LSU5",
+        "obligations": 314481892.96,
+        "symbols": [
+          "AMZN"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 332,
+        "name": "BATTELLE SAVANNAH RIVER ALLIANCE, LLC",
+        "recipientId": "9a7b543a-2b81-001e-d309-3a0f027dff01-C",
+        "uei": "KNXDWU1G3E81",
+        "obligations": 302244895.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 333,
+        "name": "ARMTEC DEFENSE PRODUCTS CO.",
+        "recipientId": "f068550b-e1e7-c215-438a-337081922281-C",
+        "uei": "ZHMBDGNETMG3",
+        "obligations": 300594889.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 334,
+        "name": "ASSOCIATION OF UNIVERSITIES FOR RESEARCH IN ASTRONOMY, INC.",
+        "recipientId": "bc396b9b-bdab-f7b7-b1a8-1409da07fdc0-C",
+        "uei": "W1NBN156CYF9",
+        "obligations": 299494592.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 335,
+        "name": "DMS PHARMACEUTICAL GROUP INC",
+        "recipientId": "e0b0d75c-c687-575d-b178-a3ea2944f3b1-C",
+        "uei": "PX72BSBQTKJ3",
+        "obligations": 299158970.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 336,
+        "name": "AEROJET ROCKETDYNE OF DE, INC",
+        "recipientId": "f87ea7aa-b645-2932-36c2-e89cb4e9a016-C",
+        "uei": "JCZYYYQ7JGF5",
+        "obligations": 299151035,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 337,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "988be7bc-cdfb-c4c1-87ad-3f6d251f7392-C",
+        "uei": "JLWLJXQ3M995",
+        "obligations": 298500419.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 338,
+        "name": "ELBIT SYSTEMS OF AMERICA - NIGHT VISION LLC",
+        "recipientId": "6b8b09a4-5f3a-e25e-ba3c-35d432d9c5cf-C",
+        "uei": "MYE5L662RU13",
+        "obligations": 298429015.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 339,
+        "name": "THE BOEING COMPANY",
+        "recipientId": "34db6aa4-6de2-9e0f-6ccb-8ba1fc9e4ba9-C",
+        "uei": "NJVNVWQJMPA4",
+        "obligations": 297434284.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 340,
+        "name": "BAE SYSTEMS MARITIME SOLUTIONS NORFOLK INC.",
+        "recipientId": "881cc7b1-1565-b245-1554-a9edc55a5f45-C",
+        "uei": "ERMDZBE4J8Q9",
+        "obligations": 295919447.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 341,
+        "name": "MAXIMUS EDUCATION LLC",
+        "recipientId": "006841da-7298-d92c-02f0-ad58caa4eefa-C",
+        "uei": "HSUVUJE1ESU7",
+        "obligations": 295267628.55,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 342,
+        "name": "ROCKWELL COLLINS, INC.",
+        "recipientId": "a4c28996-484c-cf28-76b4-8e46e982c93e-C",
+        "uei": "SWBKVD2EKUH7",
+        "obligations": 294601066.94,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 343,
+        "name": "VALIANT GLOBAL DEFENSE SERVICES INC.",
+        "recipientId": "3e8849bb-d4a7-c664-9900-3cc32c7d9f36-C",
+        "uei": "PD3UQQ22NQW1",
+        "obligations": 293269736.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 344,
+        "name": "PERATON RISK DECISION INC.",
+        "recipientId": "00ccac2d-61d5-6622-40d2-4dc8cbfeb310-C",
+        "uei": "P78LRLNYPUF4",
+        "obligations": 293181901.28,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 345,
+        "name": "SAUER CONSTRUCTION, LLC",
+        "recipientId": "c587380c-fe2b-292c-888b-4cd2249f856a-C",
+        "uei": "SBVUVJ2G3NL4",
+        "obligations": 292438670.9,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 346,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "f7392ad3-7b3f-619d-bad4-a8a48b0ba61e-C",
+        "uei": "LEMLXG994AU3",
+        "obligations": 289917048.14,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 347,
+        "name": "BECHTEL PARSONS BLUE GRASS, A JOINT VENTURE",
+        "recipientId": "1a013712-3dae-504d-6387-80cb82004002-C",
+        "uei": "DS75LBB3UZJ6",
+        "obligations": 289456114.93,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 348,
+        "name": "FOUR LLC",
+        "recipientId": "c07a6919-cdf9-7d1f-a566-40a65f12479b-C",
+        "uei": "X1JJYEW4HAN9",
+        "obligations": 288845036.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 349,
+        "name": "MANSON CONSTRUCTION CO",
+        "recipientId": "54aa8711-d13e-9d80-45f0-605318253bc6-C",
+        "uei": "UJGKNVYG6UZ3",
+        "obligations": 288398773.66,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 350,
+        "name": "ICF INCORPORATED, L.L.C.",
+        "recipientId": "f7268051-dfb6-e5cf-ab3d-11235ea4137f-C",
+        "uei": "QHBLBNKKV4U3",
+        "obligations": 287806209.4,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 351,
+        "name": "THALLE CONSTRUCTION CO INC",
+        "recipientId": "880ef35a-f087-3ed6-ac27-9d2211947165-C",
+        "uei": "RMVJU76MCN81",
+        "obligations": 285417976.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 352,
+        "name": "SODEXO MANAGEMENT INC.",
+        "recipientId": "0176f789-4d36-f170-e11b-ad7ed43891d4-C",
+        "uei": "VG33D4SQVLE3",
+        "obligations": 285280223.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 353,
+        "name": "HPI FEDERAL LLC",
+        "recipientId": "5854bb09-e3fb-546c-f374-0845f138f8e8-C",
+        "uei": "DJRUN4KK1HK3",
+        "obligations": 283660602.48,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 354,
+        "name": "DLT SOLUTIONS, LLC",
+        "recipientId": "abde3f7b-54a5-dbb5-7db4-5c1474b8cdff-C",
+        "uei": "F1N2KDGBDTU8",
+        "obligations": 282298957.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 355,
+        "name": "CAE USA INC.",
+        "recipientId": "9e67b08e-3216-1899-37a1-aec1a547f83f-C",
+        "uei": "HVQBAL5E7R23",
+        "obligations": 282040626.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 356,
+        "name": "GENERAL MOTORS LLC",
+        "recipientId": "2a839246-22d5-baf9-2c2f-aa4b3b9dc37f-C",
+        "uei": "DG8EN42LYHL6",
+        "obligations": 281711901,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 357,
+        "name": "LANCER INFORMATION SOLUTIONS, LLC",
+        "recipientId": "ebab4895-f155-392d-b3ec-fca286753df2-C",
+        "uei": "NNDATBHM7KY1",
+        "obligations": 279460084.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 358,
+        "name": "L3HARRIS TECHNOLOGIES, INC.",
+        "recipientId": "8cdf9a30-6987-41a0-fdc4-f48e1b88b1bf-C",
+        "uei": "QM4EZDV15JL8",
+        "obligations": 278879561.78,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 359,
+        "name": "NOBLIS, INC.",
+        "recipientId": "7d96988d-f5f9-0427-55f1-bd3bf36777be-C",
+        "uei": "NPJ9GV7K4CL1",
+        "obligations": 277104822.04,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 360,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "714e4813-7667-ae43-50eb-73dcba4aa3d9-C",
+        "uei": "H9M6J1PND9M3",
+        "obligations": 276417011.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 361,
+        "name": "PALANTIR TECHNOLOGIES INC.",
+        "recipientId": "1ea8a9a4-3726-3491-9040-66950bb67606-C",
+        "uei": "FSY4LVSBGWB7",
+        "obligations": 276034396.92,
+        "symbols": [
+          "PLTR"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 362,
+        "name": "RENK AMERICA LLC",
+        "recipientId": "ce489b14-e371-f3d0-034c-dc3a0d9e6d6d-C",
+        "uei": "SXLXWY1BHUT7",
+        "obligations": 275714090.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 363,
+        "name": "SONOVA USA INC",
+        "recipientId": "fb00211d-fb2b-a453-6408-0afb71cb2867-C",
+        "uei": "N5VSMWF4G7K7",
+        "obligations": 274611921.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 364,
+        "name": "CDW GOVERNMENT LLC",
+        "recipientId": "5f4e5d33-10ef-b0cc-1f33-8835b33808f1-C",
+        "uei": "PHZDZ8SJ5CM1",
+        "obligations": 274361858.23,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 365,
+        "name": "SO-PAK-CO, INC",
+        "recipientId": "790ab0e4-8810-b98e-75a7-33df1a6e9588-C",
+        "uei": "R5X5DXMX96M4",
+        "obligations": 273799675.08,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 366,
+        "name": "VIASAT INC",
+        "recipientId": "3e01e0d6-80fd-1df8-fd7c-08efc2828a82-C",
+        "uei": "L9Z1ASN3B8E7",
+        "obligations": 273460792.35,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 367,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "e5a4578f-af26-a940-ae73-aac74a0863aa-C",
+        "uei": "LCV2N9FVV739",
+        "obligations": 271317618.35,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 368,
+        "name": "PROFESSIONAL CONTRACT SERVICES, INC.",
+        "recipientId": "0759412f-91f6-f348-daae-e077e056eeb7-C",
+        "uei": "T4T8AHYNF9V3",
+        "obligations": 269298402.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 369,
+        "name": "AMERIQUAL GROUP LLC",
+        "recipientId": "cc47cdf0-bfe0-401b-3aa5-29a0e1545ec0-C",
+        "uei": "YHJKT5C6J4B6",
+        "obligations": 269075188.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 370,
+        "name": "AFFIGENT, LLC",
+        "recipientId": "b8d01603-144c-7b0c-ecf0-24060cd72b94-C",
+        "uei": "M46UYYHVH4B1",
+        "obligations": 268496091.08,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 371,
+        "name": "TECOLOTE RESEARCH, INC.",
+        "recipientId": "d8f9524f-faae-66f1-0094-c37a117d7b3b-C",
+        "uei": "EETHKKLA2VB4",
+        "obligations": 267600645.99,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 372,
+        "name": "AMERICAN SYSTEMS CORPORATION",
+        "recipientId": "64f84c6a-3ec2-0244-a2e5-bcc7e4a5a2ca-C",
+        "uei": "CFWRL5LXXX93",
+        "obligations": 267023775.31,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 373,
+        "name": "APPLIED RESEARCH SOLUTIONS, INC.",
+        "recipientId": "674dc223-0116-908c-4bad-17e86f80414e-C",
+        "uei": "KHUUB19KDMA3",
+        "obligations": 266893520.2,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 374,
+        "name": "SOUTHWEST RESEARCH INSTITUTE",
+        "recipientId": "445af2f9-543d-9e63-c6fd-0feebf238d59-C",
+        "uei": "PB11V1KH3KV4",
+        "obligations": 266266913.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 375,
+        "name": "BAE SYSTEMS ORDNANCE SYSTEMS INC.",
+        "recipientId": "4173f69f-70df-dac4-e6ef-43c4a1dc229c-C",
+        "uei": "XLPYCXG31TV7",
+        "obligations": 264325035.52,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 376,
+        "name": "ACQUISITION LOGISTICS LLC",
+        "recipientId": "ea7deee4-8b05-e52c-bd8e-c9b2ebca673c-C",
+        "uei": "Y5U3BSK2G389",
+        "obligations": 263224561.48,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 377,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "c19bef58-16e3-f32b-b699-25b3078161f8-C",
+        "uei": "FVSEZFPCQ316",
+        "obligations": 262460032.52,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 378,
+        "name": "STERLING COMPUTERS CORPORATION",
+        "recipientId": "456a17c9-3bd9-f107-77ee-816e474d173e-C",
+        "uei": "YZTLALWM4UC7",
+        "obligations": 261202103.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 379,
+        "name": "ACACIA CENTER FOR JUSTICE",
+        "recipientId": "495d2928-798d-131c-100e-b49633d4814e-C",
+        "uei": "CAJ4W5QGNKK9",
+        "obligations": 261192646.8,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 380,
+        "name": "WELLPOINT FEDERAL SOLUTIONS, INC.",
+        "recipientId": "9668679c-e45b-76b9-c5c8-62cd7c157d08-C",
+        "uei": "TJNDFEALGTB5",
+        "obligations": 261054351.95,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 381,
+        "name": "RANGE GENERATION NEXT LLC",
+        "recipientId": "efbf25aa-6c78-4e02-37f9-e9ea57594856-C",
+        "uei": "E6J8JNNJ6AA5",
+        "obligations": 260633474.51,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 382,
+        "name": "LONGBOW LLC",
+        "recipientId": "7f7a8f41-f3ed-2a27-60a1-463193891c6c-C",
+        "uei": "NKALELNK6F48",
+        "obligations": 258142335.23,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 383,
+        "name": "GOVERNMENT ACQUISITIONS LLC",
+        "recipientId": "bcd07db9-001a-b962-dbab-d463bb99028f-C",
+        "uei": "R98MW4ZKUUK3",
+        "obligations": 257232648.44,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 384,
+        "name": "AGILE DECISION SCIENCES, LLC",
+        "recipientId": "4b05f6bb-c9ce-8ef9-4701-7ba8cd771827-C",
+        "uei": "C6EMRJ67V4M3",
+        "obligations": 256991431.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 385,
+        "name": "SAAB, INC",
+        "recipientId": "7d2ce7d4-ca1b-ffed-9f57-c00e22be152e-C",
+        "uei": "H5FMLSGM29L1",
+        "obligations": 256786831.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 386,
+        "name": "US FOODS INC",
+        "recipientId": "657d0048-0716-b5a7-a210-b775c051562f-C",
+        "uei": "HZYTJENLLM81",
+        "obligations": 255364104.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 387,
+        "name": "FCA US LLC",
+        "recipientId": "fca82c16-eea0-87aa-760c-e419b390d40b-C",
+        "uei": "GVAKTC49BNJ8",
+        "obligations": 254195532.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 388,
+        "name": "OAK RIDGE ASSOCIATED UNIVERSITIES, INCORPORATED",
+        "recipientId": "e6b7e416-a508-1880-a035-fd6fd043049b-C",
+        "uei": "JW7MLW3RRK34",
+        "obligations": 254033434.66,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 389,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "c798c2aa-022b-9a6f-21c5-8060af622f14-C",
+        "uei": "LXKGXB75YKY6",
+        "obligations": 253940209.76,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 390,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "3ae62382-e723-2359-a5c9-5c26f274b88c-C",
+        "uei": "F9PAEKAAXGB6",
+        "obligations": 252167646.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 391,
+        "name": "ADVANCED COMPUTER CONCEPTS, INC.",
+        "recipientId": "72ca0d6d-bfb3-664d-fa88-47cacc8687d3-C",
+        "uei": "CGE8ABMZLZN9",
+        "obligations": 252025592.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 392,
+        "name": "PAE GOVERNMENT SERVICES, INC.",
+        "recipientId": "fd602973-d119-7ced-a3e7-11ecee5a9318-C",
+        "uei": "JENBF1KKWZ93",
+        "obligations": 251507202.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 393,
+        "name": "TOTE SERVICES, LLC",
+        "recipientId": "6c48f956-83a6-813a-8495-68275f67c840-C",
+        "uei": "UFQGBQM3JDY5",
+        "obligations": 250876496.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 394,
+        "name": "GLOBAL FOOD SERVICES COMPANY",
+        "recipientId": "bf378be3-b9ad-7466-2f0e-ea258a5267f6-C",
+        "uei": "LGJQTD8NQ678",
+        "obligations": 249580049.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 395,
+        "name": "IT CONCEPTS, INC.",
+        "recipientId": "06a58e22-1667-d970-e0c2-078eacc221ed-C",
+        "uei": "GJ5YALPQMCH1",
+        "obligations": 249497688.79,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 396,
+        "name": "EDFINANCIAL SERVICES LLC",
+        "recipientId": "fda79c3f-1b49-fe91-889e-e7151ab415b2-C",
+        "uei": "TB69PMAFZSK8",
+        "obligations": 249322949.58,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 397,
+        "name": "BCG FEDERAL CORP.",
+        "recipientId": "e0fc1ba7-7f61-1986-d36b-ac0ccc27e77a-C",
+        "uei": "EFNQK7LCF373",
+        "obligations": 249171457.88,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 398,
+        "name": "OPTUMRX ADMINISTRATIVE SERVICES, LLC",
+        "recipientId": "363acf50-3b89-1daa-f2db-96d3a18ca559-C",
+        "uei": "HMKHFD2LB123",
+        "obligations": 247701540.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 399,
+        "name": "INSTITUTE FOR DEFENSE ANALYSES",
+        "recipientId": "75aa05c3-f63a-d876-e5e5-87585cf51dce-C",
+        "uei": "JM98J68UPRK1",
+        "obligations": 246917575.39,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 400,
+        "name": "BLUE TECH INC.",
+        "recipientId": "1d2b86ed-22ef-ab63-ef2c-787925497c54-C",
+        "uei": "MDC5LDZKQAM4",
+        "obligations": 246199008.74,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 401,
+        "name": "METGREEN SOLUTIONS INC",
+        "recipientId": "2f9b400e-dc80-c49f-f49b-d0f639359e45-C",
+        "uei": "J4TDZHLCUGW3",
+        "obligations": 245573756.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 402,
+        "name": "UNIVERSITY OF DAYTON",
+        "recipientId": "58d13fb1-427c-0461-53db-341b90f81c0c-C",
+        "uei": "V62NC51F7YV1",
+        "obligations": 245351546.33,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 403,
+        "name": "S. J. AMOROSO CONSTRUCTION CO., LLC",
+        "recipientId": "6ff9cbd5-019e-8877-b1cb-d88b2789e0db-C",
+        "uei": "KU19CNLCK2K7",
+        "obligations": 245200343.07,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 404,
+        "name": "TECHFLOW, INC.",
+        "recipientId": "5c0e234e-22eb-facb-f1ac-15f7644564b1-C",
+        "uei": "WDXQN83XB8Z8",
+        "obligations": 244973044.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 405,
+        "name": "JOHNSON CONTROLS BUILDING AUTOMATION SYSTEMS, LLC",
+        "recipientId": "0d1a2358-e8ec-6142-7139-ea3ae4401a11-C",
+        "uei": "LFD2YFMZJ1J3",
+        "obligations": 244628321.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 406,
+        "name": "FAMILY HEALTH INTERNATIONAL",
+        "recipientId": "ce3945f4-76a8-ff4b-68a5-6562e575fc0c-C",
+        "uei": "VRAASTY11EA3",
+        "obligations": 244241461.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 407,
+        "name": "APTIM FEDERAL SERVICES, LLC",
+        "recipientId": "c5912817-ed0a-c755-b348-a6281e8c41cc-C",
+        "uei": "JT9NZ8J1KQF5",
+        "obligations": 243751901.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 408,
+        "name": "DAI GLOBAL LLC",
+        "recipientId": "f5131cc3-19f5-1683-c880-bdc9614ba308-C",
+        "uei": "JKMEF5QVJK24",
+        "obligations": 242741980.89,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 409,
+        "name": "AMENTUM TECHNOLOGY, INC.",
+        "recipientId": "40ed4eec-af42-15cf-f36d-7a56194f7f4b-C",
+        "uei": "K8QPQLGTRM33",
+        "obligations": 241172821.6,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 410,
+        "name": "GRANITE CONSTRUCTION COMPANY",
+        "recipientId": "5c5c255f-88aa-e029-7b17-f53d64e0734a-C",
+        "uei": "VAYJNMM2KBE5",
+        "obligations": 240289067.39,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 411,
+        "name": "MISSOURI HIGHER EDUCATION LOAN AUTHORITY",
+        "recipientId": "b005fff7-e9e3-cf0e-af12-6810483a15a1-C",
+        "uei": "N76QY63KMM18",
+        "obligations": 239777671.83,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 412,
+        "name": "DETYENS SHIPYARDS INC",
+        "recipientId": "5ea95424-348d-c9fa-169a-c0d1cadb40fe-C",
+        "uei": "VLXGTHQE5ES7",
+        "obligations": 238678575.73,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 413,
+        "name": "BAE SYSTEMS LAND & ARMAMENTS L.P.",
+        "recipientId": "b5ca9859-c0d6-48c3-60a8-d8ccf2343a45-C",
+        "uei": "YNJNTZWVC3H6",
+        "obligations": 237991047.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 414,
+        "name": "BIRDON AMERICA INC",
+        "recipientId": "759f5b64-ba7d-d6c7-9660-214019c8d6c5-C",
+        "uei": "X59QGBTBZK65",
+        "obligations": 237612869.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 415,
+        "name": "COGNOSANTE MVH LLC",
+        "recipientId": "8040802b-969d-bb42-f639-49fa32dcf7ea-C",
+        "uei": "XDDKMXTVJSN8",
+        "obligations": 237146278.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 416,
+        "name": "HONEYWELL INTERNATIONAL INC.",
+        "recipientId": "62c486be-b101-ea2f-e0c1-4f3bf00a305b-C",
+        "uei": "ZLHMCNLMEYK1",
+        "obligations": 237013216.09,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 417,
+        "name": "NORIDIAN HEALTHCARE SOLUTIONS, LLC",
+        "recipientId": "f3fe6b22-862f-e8d8-8cbf-bd0912f6c89e-C",
+        "uei": "S9LBFM3QCED8",
+        "obligations": 236144108.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 418,
+        "name": "INMARSAT GOVERNMENT, INC.",
+        "recipientId": "a76066ea-2b38-7251-6fd8-dab62b297127-C",
+        "uei": "UK8HWZTN2QG3",
+        "obligations": 234684639.85,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 419,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "4a228748-a256-002e-de46-4dd145e98dfe-C",
+        "uei": "Y5ZZFR2AQC63",
+        "obligations": 233486395.41,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 420,
+        "name": "SKOOKUM EDUCATIONAL PROGRAMS",
+        "recipientId": "e41e79be-776c-8091-7dc2-b77c7f687af0-C",
+        "uei": "M1TCVLSF65Z9",
+        "obligations": 232946533.88,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 421,
+        "name": "UTAH STATE UNIVERSITY SPACE DYNAMICS LABORATORY",
+        "recipientId": "d40557c2-6876-05d9-0860-a0e72d4483ab-C",
+        "uei": "Z3KMZ212SL85",
+        "obligations": 232933536.41,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 422,
+        "name": "AMERICAN ORDNANCE LLC",
+        "recipientId": "1286c0e7-b6b5-8c72-2905-d83a8bb61653-C",
+        "uei": "QHL5DNL1NUK3",
+        "obligations": 232710981.87,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 423,
+        "name": "SOLDIERPOINT DIGITAL HEALTH, LLC",
+        "recipientId": "028e2d7f-cbff-9566-abcd-0fa8199499cc-C",
+        "uei": "PULLHCE2VM13",
+        "obligations": 231195786.7,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 424,
+        "name": "CHEVRON USA INC.",
+        "recipientId": "deb1d465-49fc-877e-6f83-066c774fb2f5-C",
+        "uei": "ETM1CJGUA6H8",
+        "obligations": 231046544.41,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 425,
+        "name": "INTERNATIONAL AUTO LOGISTICS, LLC",
+        "recipientId": "45735626-9598-1536-348c-b28c97aafd5b-C",
+        "uei": "FBUPGPFL74A3",
+        "obligations": 229335962.86,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 426,
+        "name": "KIEWIT-ALBERICI SIOP MACC AJV",
+        "recipientId": "40d8ab7c-f234-91ff-7a7d-fc4a7a5d8f94-C",
+        "uei": "DCNRFXF8MZW5",
+        "obligations": 228800000,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 427,
+        "name": "THE TRUSTEES OF PRINCETON UNIVERSITY",
+        "recipientId": "9c1ec395-7a2e-ac81-70e3-371cfa83f023-C",
+        "uei": "NJ1YPQXQG7U5",
+        "obligations": 228224025.87,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 428,
+        "name": "ALVOGEN, INC.",
+        "recipientId": "5f848ba3-060d-73b5-e32f-0727f499cda5-C",
+        "uei": "LJNNGDV77Y98",
+        "obligations": 227680602.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 429,
+        "name": "LIBERTY IT SOLUTIONS LLC",
+        "recipientId": "2d9a559d-25cf-52c9-ab77-545026f70977-C",
+        "uei": "GLGMWJ8EVMR9",
+        "obligations": 227409593.11,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 430,
+        "name": "NOVITAS SOLUTIONS, INC.",
+        "recipientId": "07344146-ebdc-c97f-7f90-948c2627417f-C",
+        "uei": "PLHWY41UW5V3",
+        "obligations": 227406727.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 431,
+        "name": "OASIS SYSTEMS, LLC",
+        "recipientId": "bc62a539-da64-77c2-0b2b-286752741463-C",
+        "uei": "MST2Z1EG1HV7",
+        "obligations": 227357757.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 432,
+        "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "recipientId": "0ca58ca0-62b6-202c-8fb2-08c05b07b900-C",
+        "uei": "GWFBQY413N79",
+        "obligations": 227152551.7,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 433,
+        "name": "TYSON FOODS INC.",
+        "recipientId": "388ab88d-74c2-54ac-19e4-cb2df60ad520-C",
+        "uei": "DX7AU4JMLPC7",
+        "obligations": 226992632.47,
+        "symbols": [
+          "TSN"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 434,
+        "name": "TRACE SYSTEMS, INC.",
+        "recipientId": "1c06cbd9-ad6c-cf24-d051-2dbdfe9f72d5-C",
+        "uei": "EJL6AMKWYLP5",
+        "obligations": 226744030.05,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 435,
+        "name": "GOVCIO, LLC",
+        "recipientId": "0eac385c-8f65-cdfa-5f38-e31678aede60-C",
+        "uei": "D84JK2RNL7V4",
+        "obligations": 226676676.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 436,
+        "name": "NW CONSTRUCTION, INC",
+        "recipientId": "e130b27b-e353-3fa4-e8d1-31e07705bef6-C",
+        "uei": "SNSLU2QXJ7Z5",
+        "obligations": 225853814.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 437,
+        "name": "INTREPID LLC",
+        "recipientId": "cc42d153-b742-6bde-a3b1-db4376a3307f-C",
+        "uei": "HNK6ED5J3BN9",
+        "obligations": 225667787.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 438,
+        "name": "GOVSMART, INC.",
+        "recipientId": "a4ce814d-f601-2150-98bf-6f203db0ea2f-C",
+        "uei": "DJACUETFQUL8",
+        "obligations": 225524796.09,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 439,
+        "name": "ACC CONSTRUCTION CO., INC.",
+        "recipientId": "1eb42aa2-5383-c4a7-ee6b-53e6d23bbb2f-C",
+        "uei": "QXNSEJFDC1K3",
+        "obligations": 223582415.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 440,
+        "name": "CLARK CONSTRUCTION GROUP - CALIFORNIA, LP",
+        "recipientId": "619c649d-6647-e354-f2e2-5cd6d5d240ff-C",
+        "uei": "WNJKMV59ZUL3",
+        "obligations": 223519004.85,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 441,
+        "name": "DPR-RQ CONSTRUCTION, LLC",
+        "recipientId": "ea4259c9-0e65-6761-4a94-64538152cc87-C",
+        "uei": "ER3MFYYS2J86",
+        "obligations": 222557385.61,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 442,
+        "name": "AMENTUM PARSONS LOGISTICS SERVICES LLC",
+        "recipientId": "041726c1-3a7a-772d-80e3-ef77df2c8e2d-C",
+        "uei": "PW8NMYB8WLP5",
+        "obligations": 222237250.97,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 443,
+        "name": "NATIONAL AIR CARGO GROUP, INC",
+        "recipientId": "c6a29183-d220-16c0-aeef-316f1e1f5ae5-C",
+        "uei": "FCZYF8MGM1K6",
+        "obligations": 221915465.02,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 444,
+        "name": "ALVAREZ LLC",
+        "recipientId": "d55dabdb-0c89-b6e8-e4f5-5817d2be7b63-C",
+        "uei": "Y928UVG75CT6",
+        "obligations": 221174498.33,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 445,
+        "name": "SDV OFFICE SYSTEMS LLC",
+        "recipientId": "88b54a53-a6bb-87a0-c4c9-391906338911-C",
+        "uei": "H4F8YGMM78K6",
+        "obligations": 220367033.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 446,
+        "name": "AKIMA FACILITIES OPERATIONS LLC",
+        "recipientId": "4fe1a364-ca0f-b20c-0ee2-8e08689e4b66-C",
+        "uei": "K218AKKG7SH6",
+        "obligations": 220186140.91,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 447,
+        "name": "RELIANCE TEST & TECHNOLOGY, LLC",
+        "recipientId": "c346868c-bd6a-c893-0b8a-d4cc136d17a2-C",
+        "uei": "LFMMBZEMM2X3",
+        "obligations": 220095613.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 448,
+        "name": "ULTRA ELECTRONICS OCEAN SYSTEMS INC.",
+        "recipientId": "f078089b-fd45-9b60-a77d-cc20c668fe84-C",
+        "uei": "SVHJHMJH65S8",
+        "obligations": 220048461.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 449,
+        "name": "PARKER-HANNIFIN CORPORATION",
+        "recipientId": "137b38c4-bf6f-f07e-ff51-388f7c2748b9-C",
+        "uei": "D8HJPMFFSGS3",
+        "obligations": 219169834.53,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 450,
+        "name": "KIEWIT INFRASTRUCTURE WEST CO.",
+        "recipientId": "d0dc1da3-ded5-f485-0458-2b2a216eab92-C",
+        "uei": "KGG6RMJ7D9P8",
+        "obligations": 217243435,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 451,
+        "name": "WESTON SOLUTIONS INC",
+        "recipientId": "ed87cc13-6006-a345-af34-144da0c3fa4c-C",
+        "uei": "Z4XGALW7L9K6",
+        "obligations": 215501475.6,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 452,
+        "name": "PERATON TECHNOLOGY SERVICES INC.",
+        "recipientId": "b6cf6b76-108b-9715-e35f-19d7e27422ca-C",
+        "uei": "CJ38H41QMGA1",
+        "obligations": 215067460.39,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 453,
+        "name": "BAE SYSTEMS SPACE & MISSION SYSTEMS INC.",
+        "recipientId": "f414ac71-05ca-f93c-6efa-a79cbe0dcfcd-C",
+        "uei": "C8ZLJ61YJ528",
+        "obligations": 214673620.08,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 454,
+        "name": "COMPANION DATA SERVICES LLC",
+        "recipientId": "0b22b365-b4ae-4eef-1792-b31b435ca131-C",
+        "uei": "FMV5MKKUNH36",
+        "obligations": 214491716.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 455,
+        "name": "AMERICAN ROLL-ON ROLL-OFF CARRIER, LLC",
+        "recipientId": "e43a0546-2dc3-df54-71a4-efd593f21890-C",
+        "uei": "EDN5GKZMTAZ9",
+        "obligations": 214216082.77,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 456,
+        "name": "CFM INTERNATIONAL INC",
+        "recipientId": "aaa9ecdd-9fa1-85ab-d4e5-8d5f806ed19e-C",
+        "uei": "Q6HPK83NVT26",
+        "obligations": 213866483.64,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 457,
+        "name": "KALITTA AIR LLC",
+        "recipientId": "da49cfbf-46e7-576f-06c7-acfebb55e78c-C",
+        "uei": "XZNQBX2NRCZ5",
+        "obligations": 213638449.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 458,
+        "name": "JEFFERSON SCIENCE ASSOCIATES, LLC",
+        "recipientId": "922e681a-31fd-7c94-54df-717d940a89c9-C",
+        "uei": "MTWLVRJR54N7",
+        "obligations": 213622258.92,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 459,
+        "name": "CADDELL CONSTRUCTION CO. (DE), LLC",
+        "recipientId": "1ee271cd-2103-5e4c-ba2d-a3386ac33049-C",
+        "uei": "ELJMJND6DDF3",
+        "obligations": 213591286.5,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 460,
+        "name": "WEEKS MARINE, INC.",
+        "recipientId": "0fc60b26-6209-2d88-286c-8f386f58ef0e-C",
+        "uei": "ED3FZHBD52V3",
+        "obligations": 213545914.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 461,
+        "name": "FOREIGN UTILITY CONSOLIDATED REPORTING",
+        "recipientId": "e561bd4b-7c3d-fa60-d98d-1fb6a4eee4a9-C",
+        "uei": "JKRMS84PMND5",
+        "obligations": 211279088.01,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 462,
+        "name": "RAYTHEON COMPANY",
+        "recipientId": "48b5678a-6704-3414-09de-c3abf9e7556e-C",
+        "uei": "GMBYU6KAN9J3",
+        "obligations": 211247790,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 463,
+        "name": "A-MARK PRECIOUS METALS, INC.",
+        "recipientId": "15780210-826c-b52c-a2ea-4323ae3a95f8-C",
+        "uei": "CJZ8EW1Q7JJ6",
+        "obligations": 211235721.96,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 464,
+        "name": "MANAGEMENT & TRAINING CORPORATION",
+        "recipientId": "05d0fd70-3b91-2efe-b533-5d973d1ea671-C",
+        "uei": "G58ZEJ7HJGM1",
+        "obligations": 210566407.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 465,
+        "name": "TOMER - A GOVERNMENT-OWNED COMPANY LTD",
+        "recipientId": "2b7550bf-5c69-e783-b0e7-aee2d1ad3e0e-C",
+        "uei": "HRWPSLD3HCD1",
+        "obligations": 210512878.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 466,
+        "name": "TRAX INTERNATIONAL CORPORATION",
+        "recipientId": "78b2c5e2-ffe0-79d4-f52c-d4918f55404a-C",
+        "uei": "XDC4K4U6LDK6",
+        "obligations": 209746197.69,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 467,
+        "name": "GLOBAL PACIFIC DESIGN BUILDERS, LLC",
+        "recipientId": "7c93a360-3115-1447-1188-c357078e4429-C",
+        "uei": "KVASMBDVTK24",
+        "obligations": 208793606.42,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 468,
+        "name": "L3HARRIS TECHNOLOGIES, INC.",
+        "recipientId": "a27d0b46-05ef-1c8c-c7b6-5cf7a5f57e7e-C",
+        "uei": "LHJPD6T16EV9",
+        "obligations": 208483395.32,
+        "symbols": [
+          "LHX"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 469,
+        "name": "L3HARRIS FUZING AND ORDNANCE SYSTEMS, INC.",
+        "recipientId": "03cd4adf-0052-ef23-c433-3d39eb602520-C",
+        "uei": "H42MN1TYJ257",
+        "obligations": 207729376.15,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 470,
+        "name": "ABT GLOBAL LLC",
+        "recipientId": "4b2f02c9-273a-8c69-ef1f-2e98bf47f78b-C",
+        "uei": "C9S1NLQ67626",
+        "obligations": 207700587.75,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 471,
+        "name": "CAE USA INC.",
+        "recipientId": "540036d0-2511-fa2d-1988-c140d1e2895d-C",
+        "uei": "U163W6LBZTQ3",
+        "obligations": 207419481.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 472,
+        "name": "U.S. MARINE MANAGEMENT, LLC",
+        "recipientId": "6fc20ce0-35fe-9544-8374-2371c850560d-C",
+        "uei": "ULJ3VFQNYKQ4",
+        "obligations": 207124242.56,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 473,
+        "name": "LOCKHEED MARTIN CORPORATION",
+        "recipientId": "0701db1f-8045-4e60-83f7-5fd066cdf38d-C",
+        "uei": "Z9B5HQ9HSTM5",
+        "obligations": 207120671.34,
+        "symbols": [
+          "LMT"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 474,
+        "name": "SPARTON DELEON SPRINGS, LLC",
+        "recipientId": "13c8b5ab-4fff-69fd-2232-aa37d916b8ae-C",
+        "uei": "H7KFX5RH75K3",
+        "obligations": 206929226.52,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 475,
+        "name": "SOFTRAMS LLC",
+        "recipientId": "032a0d60-c2bc-9e9b-abe5-d6e488d48084-C",
+        "uei": "P4X8JNU7TMQ7",
+        "obligations": 206735585.85,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 476,
+        "name": "FLUOR FEDERAL SERVICES INC",
+        "recipientId": "f8e92406-63f8-2165-1aa8-cdb4ceeb209f-C",
+        "uei": "NZ9CUMF36PK1",
+        "obligations": 206554490.49,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 477,
+        "name": "SEVENSON ENVIRONMENTAL SERVICES, INC.",
+        "recipientId": "b3a52d53-3e9f-f073-0b82-1b204931fc0c-C",
+        "uei": "VHPJR3MJWV49",
+        "obligations": 206512774.82,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 478,
+        "name": "LAUREL TECHNOLOGIES PARTNERSHIP",
+        "recipientId": "69f87500-7b7d-1324-a404-72573498e80a-C",
+        "uei": "JLREE96WGKM5",
+        "obligations": 206235571.18,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 479,
+        "name": "TRIMAN INDUSTRIES INC",
+        "recipientId": "58066858-87e7-cdb8-6f7e-de093686ad6e-C",
+        "uei": "VWX3JEES4FF7",
+        "obligations": 206195528.62,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 480,
+        "name": "HII FLEET SUPPORT GROUP LLC",
+        "recipientId": "670bf984-b000-9ce3-4c3a-032ca41b44b9-C",
+        "uei": "VGCPT3NSM831",
+        "obligations": 205250702.3,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 481,
+        "name": "ECC INTERNATIONAL, LLC",
+        "recipientId": "61dbe5d9-100e-56a0-385b-42ad4f1841c7-C",
+        "uei": "ST9GNLFDLXV5",
+        "obligations": 205102810.01,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 482,
+        "name": "PARAGON PROFESSIONAL SERVICES LLC",
+        "recipientId": "a2a0931c-b3fd-8737-f260-ffb2cba740b1-C",
+        "uei": "K8RNMK1CCQW3",
+        "obligations": 203770333.27,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 483,
+        "name": "AMERICAN RHEINMETALL VEHICLES, LLC",
+        "recipientId": "e768e508-b641-3656-ba6a-e975bb7b03f8-C",
+        "uei": "Q5K4AJYMU3U1",
+        "obligations": 203434611.25,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 484,
+        "name": "IMT DEFENSE CORP",
+        "recipientId": "9278adec-b10b-d976-45c8-9b60edc18ad0-C",
+        "uei": "JQVHPQK77633",
+        "obligations": 202878156.14,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 485,
+        "name": "TETRA TECH, INC.",
+        "recipientId": "9c8bd8f3-f7da-600d-94c4-04e09c223b38-C",
+        "uei": "LMRMKLLL3LG5",
+        "obligations": 202370158.63,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 486,
+        "name": "STEAMPUNK, INC.",
+        "recipientId": "063933ec-ff9e-6092-a518-37a029be4c71-C",
+        "uei": "LJZTDJWPG431",
+        "obligations": 202084502.57,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 487,
+        "name": "OWENS & MINOR DISTRIBUTION INC",
+        "recipientId": "84ec6fc7-f665-c4ab-a05f-3c994f06e3b8-C",
+        "uei": "FBK9DN1ACF95",
+        "obligations": 201703339.47,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 488,
+        "name": "SOFTWARE INFORMATION RESOURCE CORP.",
+        "recipientId": "2a71ed51-39c8-082f-31a0-f31d55a0a651-C",
+        "uei": "EJJMMJHYDFH6",
+        "obligations": 201083270.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 489,
+        "name": "JAMAICA BEARINGS CO., INC.",
+        "recipientId": "82f222d8-322d-fc4f-0a95-cb390a9ce29f-C",
+        "uei": "YQWKDTNVB4J9",
+        "obligations": 200803056.37,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 490,
+        "name": "HURLEY JV, LLP",
+        "recipientId": "08aad554-8971-5fd6-881b-ea493a0192f3-C",
+        "uei": "J1LWSNNJ6EY9",
+        "obligations": 200687402,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 491,
+        "name": "AMERICAN CENTRIFUGE OPERATING, LLC",
+        "recipientId": "d527144c-7fea-82ff-aff0-e95e5fd6e488-C",
+        "uei": "L8VHV5CNBV97",
+        "obligations": 198316152.48,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 492,
+        "name": "SECURIGENCE LLC",
+        "recipientId": "fe569147-ec14-c7b1-0396-b9c5fa2d212f-C",
+        "uei": "Q56SJRTSJSE4",
+        "obligations": 198256377.51,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 493,
+        "name": "OCEAN SHIPS, INC.",
+        "recipientId": "43ae179f-4614-4681-6241-3b04f06109f7-C",
+        "uei": "J3KFWB7L63U6",
+        "obligations": 198169232.6,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 494,
+        "name": "UNITED PARCEL SERVICE CO.",
+        "recipientId": "a8e90c7c-8175-41a5-b841-5b038f67a07d-C",
+        "uei": "YF8QFWJLNBV8",
+        "obligations": 198028800.6,
+        "symbols": [
+          "UPS"
+        ],
+        "mapping": "existing-parent-uei"
+      },
+      {
+        "rank": 495,
+        "name": "WESTAT, INC.",
+        "recipientId": "1a05eb77-da74-5790-7cc1-11f261fd252e-C",
+        "uei": "NVUWAFWQ57S5",
+        "obligations": 197827907.36,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 496,
+        "name": "PETRO STAR INC.",
+        "recipientId": "8b371384-dcf2-537a-8e1a-b8a8bc3513fa-C",
+        "uei": "JGSGGJJTAMK1",
+        "obligations": 197767514.46,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 497,
+        "name": "STRUCTSURE PROJECTS INC",
+        "recipientId": "80464fd4-c2d1-8e26-c32d-2a5bbbd73c15-C",
+        "uei": "F3K2LWVKFLX9",
+        "obligations": 197716581.59,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 498,
+        "name": "COLOSSAL CONTRACTING LLC",
+        "recipientId": "decd8e4d-0c57-0c5c-0a05-c76dce02e356-C",
+        "uei": "F4M9NB1HD785",
+        "obligations": 197257221.54,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 499,
+        "name": "AVANTUS FEDERAL LLC",
+        "recipientId": "266ca0b8-90d7-4ee7-a8ec-696c5055f92d-C",
+        "uei": "XLL3UPBT4MW6",
+        "obligations": 196533457.16,
+        "symbols": [],
+        "mapping": "unresolved"
+      },
+      {
+        "rank": 500,
+        "name": "BAXTERS NORTH AMERICA, INC.",
+        "recipientId": "586eb4a8-f2fc-034b-e1e3-a23fe80db4ff-C",
+        "uei": "LYJCV5JASBR5",
+        "obligations": 196215518.31,
+        "symbols": [],
+        "mapping": "unresolved"
+      }
+    ]
+  }
+}

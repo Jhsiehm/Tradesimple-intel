@@ -106,7 +106,7 @@ async function fetchClientYear(client, year) {
 export async function lobbyingBoard(db) {
   const hit = readCache(db, KEY.ldaBoard);
   if (hit) return hit;
-  const tickers = listTickers(db);
+  const tickers = listTickers(db).filter(t => t.ldaClients.length);
   const all = [];
   const totals = [];
   await pool(tickers, 3, async (ticker) => {

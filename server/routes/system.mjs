@@ -18,6 +18,7 @@ export const handlers = {
     if (!geoFiles.has(name)) geoFiles.set(name, staticFile(() => fs.readFileSync(path.join(root, "data", "geo", name))));
     geoFiles.get(name)(req, res, { "Content-Type": "application/geo+json", "Cache-Control": "public, max-age=86400" });
   },
+  universe: ({ root }) => ({ ok: true, ...JSON.parse(fs.readFileSync(path.join(root, "data", "universe.json"), "utf8")) }),
   health: () => ({ ok: true }),
   tickers: ({ db }) => ({ ok: true, items: listTickers(db) }),
   ticker: ({ db, params, query }) => tickerDossier(db, params.symbol.toUpperCase(), query.params.get("lobby") !== "0"),

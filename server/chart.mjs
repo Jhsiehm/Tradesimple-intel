@@ -1,6 +1,8 @@
 import { listTickers, readCache, writeCache, tickerBySymbol } from "./lib/db.mjs";
 import { cryptoDigits, instrumentBySymbol } from "./instruments.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
+import { once } from "./lib/once.mjs";
+import { readStale } from "./lib/cache.mjs";
 import { nasdaqJson } from "./feeds/nasdaq.mjs";
 import { round, sessionQuote, yahooChart } from "./feeds/yahoo.mjs";
 
@@ -96,9 +98,30 @@ export async function priceChart(db, symbol, spanId) {
 export async function quoteBoard(db) {
   const tickers = listTickers(db);
   const hit = readCache(db, KEY.screener);
-  if (hit) return hit;
+  const registered = new Set(tickers.map(t => t.symbol));
+  const matchesRegistry = hit && new Set([...(hit.items || []).map(t => t.symbol), ...(hit.missing || [])]).size === registered.size
+    && [...(hit.items || []).map(t => t.symbol), ...(hit.missing || [])].every(s => registered.has(s));
+  if (matchesRegistry) return hit;
+  const stale = readStale(db, KEY.screener)?.value;
+  if (stale?.items?.length) {
+    // Keep the board responsive during upstream outages. One background refresh is shared.
+    void once(KEY.screener, () => refreshQuotes(db, tickers)).catch(() => {});
+    return { ...stale, stale: true, latency: `STALE QUOTES: showing the last stored snapshot from ${stale.asOf} while a refresh is attempted. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
+  }
+  return once(KEY.screener, () => refreshQuotes(db, tickers));
+}
+
+async function refreshQuotes(db, tickers) {
   const started = Date.now();
-  const body = await nasdaqJson("screener/stocks?tableonly=true&limit=10000&download=true", 30000);
+  let body;
+  try {
+    body = await nasdaqJson("screener/stocks?tableonly=true&limit=10000&download=true", 30000);
+    if (!body?.data?.rows?.length) throw new Error("Empty Nasdaq screener response");
+  } catch (err) {
+    const stale = readStale(db, KEY.screener)?.value;
+    if (!stale?.items?.length) return { ok: false, error: "Nasdaq quotes temporarily unavailable; retry shortly.", items: [] };
+    return { ...stale, stale: true, latency: `STALE QUOTES: refresh failed; showing the last stored snapshot from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
+  }
   const bySymbol = new Map((body?.data?.rows || []).map((r) => [String(r.symbol).trim().replace(/[/.^]/g, "-"), r]));
   const num = (v) => {
     const n = Number(String(v ?? "").replace(/[$,%]/g, ""));

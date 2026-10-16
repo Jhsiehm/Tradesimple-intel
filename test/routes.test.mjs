@@ -45,6 +45,7 @@ after(async () => {
 
 /** [sample url, status, keys] — keys are the sorted top-level JSON keys, or a content type for non-JSON. */
 export const SMOKE = [
+  ['/api/universe', 200, 'asOf,contractors,core,historicalInsiderScope,ok,onDemand,selection,sources,total'],
   ['/api/research/context', 200, 'asOf,coverage,datasets,experiments,latency,note,notebooks,ok,plans,source,tools'],
   ['/api/research/notebooks', 200, 'items,ok'],
   ['/api/research/notebooks/nb_0000', 404, 'error,ok'],
@@ -128,7 +129,7 @@ export const SMOKE = [
   ["/api/air/near?lat=40.75&lon=-73.99", 200, "asOf,error,items,lat,latency,lon,nm,ok,source"],
   ["/api/air/route/UAL1", 200, "callsign,error,ok,source"],
   ["/api/news/x", 200, "asOf,feeds,items,latency,mode,ok,source,tokenMissing,trends,trendsAsOf"],
-  ["/api/markets/board", 500, "error,ok"],
+  ["/api/markets/board", 200, "error,items,ok"],
   ["/api/markets/chart?symbol=AAPL&span=1d", 500, "error,ok"],
   ["/api/fx/board", 200, "asOf,items,latency,matrix,ok,source"],
   ["/api/crypto/board", 200, "asOf,global,items,latency,ok,source"],

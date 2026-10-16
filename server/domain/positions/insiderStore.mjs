@@ -60,6 +60,7 @@ export function ensureInsiderStore(db) {
 export function joinsByCik(db) {
   const byCik = new Map();
   for (const t of listTickers(db)) {
+    if (t.insiderHistory === false) continue;
     const cik = Number(t.cik);
     if (!cik) continue;
     if (!byCik.has(cik)) byCik.set(cik, []);

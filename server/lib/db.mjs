@@ -100,6 +100,8 @@ function hydrate(row) {
     pacs: extras.get(row.symbol)?.pacs || [],
     core: extras.get(row.symbol)?.core !== false,
     index: extras.get(row.symbol)?.index || [],
+    insiderHistory: extras.get(row.symbol)?.insiderHistory !== false,
+    universe: extras.get(row.symbol)?.universe || null,
     sector: extras.get(row.symbol)?.sector || "",
     industry: extras.get(row.symbol)?.industry || "",
     joinBasis: extras.get(row.symbol)?.joinBasis || null,

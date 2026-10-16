@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEMO, post } from '../lib/api';
 import { message, read, write, type Dataset, type DatasetSummary, type Preview, type EventRow } from './api';
+import { UniverseCoverage } from './UniverseCoverage';
 const fields = ['id', 'symbol', 'eventAt', 'availableAt', 'side', 'sourceUrl', 'value'];
 export function EventTable({ events }: { events: EventRow[] }) {
   return <div className="research-table"><table><thead><tr><th>Record</th><th>Entity</th><th>Event time</th><th>Available time</th></tr></thead><tbody>{events.map((e, i) => <tr key={`${e.id}:${i}`}><td>{e.id}</td><td>{e.entity.securityId}<small>{e.entity.companyId || 'No CIK mapping'}</small></td><td>{e.eventAt || 'Unknown'}</td><td>{e.availableAt}<small>{e.availabilityBasis}</small></td></tr>)}</tbody></table></div>;
@@ -33,6 +34,7 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
   };
   return <div className="research-content">
     <h2>Data Hub</h2><p>Import transaction signals with explicit public-availability dates. Files stay on this server. Symbols must match the existing registry. Maximum 5,000 rows and 2 MiB; no partial imports.</p>
+    <UniverseCoverage />
     <fieldset className="research-form" disabled={busy || DEMO}>
       <label>Dataset name<input value={name} maxLength={120} onChange={e => { change(); setName(e.target.value); }} placeholder="Utility insider events" /></label>
       <label>Source label<input value={source} maxLength={300} onChange={e => { change(); setSource(e.target.value); }} placeholder="Your data source and coverage" /></label>

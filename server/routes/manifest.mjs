@@ -36,6 +36,7 @@ export const MANIFEST = [
   { id: "tasks.result", path: "/api/tasks/runs/:id(rn_[a-z0-9]+)" },
   { id: "tasks.run", path: "/api/tasks/:id(tk_[a-z0-9]+)/run" },
   { id: "tasks.item", path: "/api/tasks/:id(tk_[a-z0-9]+)" },
+  { id: "universe", path: "/api/universe", snapshot: true },
   { id: "tickers", path: "/api/tickers", warm: "discover", snapshot: true },
   { id: "hq", path: "/api/hq" },
   { id: "hq.symbol", path: "/api/hq/:symbol([A-Za-z.\\-]+)" },

@@ -1,4 +1,4 @@
-import { coreKey, listCore, readCache, writeCache } from "../../lib/db.mjs";
+import { coreKey, listCore, listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { secText } from "../../feeds/sec.mjs";
 import { once } from "../../lib/once.mjs";
 import { pool } from "../../lib/pool.mjs";
@@ -165,8 +165,8 @@ const dayAfter = (day) => new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).
  */
 export async function insiderHistory(db, opts = {}) {
   const symbols = new Set(opts.symbols || []);
-  const list = (opts.tickers || listCore(db)).filter((t) => t.cik && (!symbols.size || symbols.has(t.symbol)));
-  const store = opts.store === false || !db ? null : storeReady(db);
+  const list = (opts.tickers || (symbols.size ? listTickers(db) : listCore(db))).filter((t) => t.cik && (!symbols.size || symbols.has(t.symbol)));
+  const store = opts.store === false || !db || list.some(t => t.insiderHistory === false) ? null : storeReady(db);
   if (!store) return submissionsHistory(db, { ...opts, tickers: list });
   const { from = "", to = "" } = opts;
   const stored = storeRows(db, { from, to: to && to < store.coveredThrough ? to : store.coveredThrough, symbols: list.map((t) => t.symbol) });

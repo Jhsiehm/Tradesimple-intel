@@ -1,5 +1,6 @@
-// Warms every API cache the UI reads. Prints status and time per route, never bodies.
+// Warms board caches and core ticker details; --all-tickers explicitly expands detail warming. Prints status and time per route, never bodies.
 // Usage: npm run warm [-- --base http://127.0.0.1:8787 --traders 50 --no-tickers]
+import { defaultWarmTickers } from "../shared/universe.mjs";
 import { fillRoute, warmSamples } from "../server/routes/manifest.mjs";
 
 const args = process.argv.slice(2);
@@ -114,11 +115,11 @@ async function main() {
   await pool((supply?.items || []).map((s) => fillRoute("markets.supplyChain", { symbol: s })), 3);
 
   if (TICKERS) {
-    const rows = tickers?.items || [];
+    const rows = args.includes("--all-tickers") ? tickers?.items || [] : defaultWarmTickers(tickers?.items || []);
     const symbols = rows.map((t) => t.symbol);
     // Same split as the UI: the dossier skips LDA.gov (?lobby=0) and /api/lobby?client= loads it on its own.
     // LDA.gov can hang for 45 s per client, so its warm runs beside the dossiers instead of inside them.
-    const clients = [...new Set(rows.map((t) => t.ldaClients?.[0] || t.name).filter(Boolean))];
+    const clients = [...new Set(rows.flatMap((t) => t.ldaClients || []).filter(Boolean))];
     console.log(`— ${symbols.length} ticker dossiers + positions · ${clients.length} LDA clients alongside`);
     await Promise.all([
       pool(symbols.flatMap((s) => [fillRoute("ticker", { symbol: s }, "lobby=0"), fillRoute("markets.position", { symbol: s })]), 2),
