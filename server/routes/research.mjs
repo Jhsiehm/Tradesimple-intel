@@ -1,3 +1,4 @@
+import {exportPaperArchive} from '../domain/paper-archive.mjs';
 import {createPaperAccount,getPaperAccount,listPaperAccounts,recordPaperAction} from '../domain/paper-ledger.mjs';
 import {createRetrieval,listRetrievals,getRetrieval,resumeRetrieval} from '../domain/connector-retrievals.mjs';
 import {exportAnalysis} from '../domain/analysis-archive.mjs';
@@ -51,6 +52,7 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.paperArchive':ctx=>handle(ctx,['GET'],()=>{const bytes=exportPaperArchive(ctx.db,ctx.params.id);ctx.res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${ctx.params.id}.zip"`,'Cache-Control':'no-store'});ctx.res.end(bytes);}),
   'research.paperAccounts':ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPaperAccounts(ctx.db)}:{ok:true,ledger:createPaperAccount(ctx.db,body)}),
   'research.paperAccount':ctx=>handle(ctx,['GET'],()=>({ok:true,ledger:getPaperAccount(ctx.db,ctx.params.id)})),
   'research.paperAction':ctx=>handle(ctx,['POST'],body=>({ok:true,ledger:recordPaperAction(ctx.db,ctx.params.id,body)})),

@@ -613,3 +613,9 @@ The registered assumptions and original price inputs stay immutable. Scenario ou
 - `GET /api/research/paper/:id/export` downloads the complete account, events and recomputed state as JSON. Source experiment export is linked separately. The JSON is an inspectable ledger, not a standalone execution-engine bundle or cryptographic proof of an actor's identity.
 
 Paper tables and their source references participate in research backup verification and restore. Reconciliation means internal integer-cent/share arithmetic and hash-chain verification; it does not reconcile broker or exchange records. Rejected attempts are returned as errors without ledger events. Team approvals, aggregate risk, automated paper strategies, market-backed simulated execution and broker reconciliation remain separate work.
+
+### Portable paper verification archive
+
+`GET /api/research/paper/:id/archive` downloads a ZIP containing the account and full event history, recomputed state, the version-1 paper calculation module, source experiment metadata, the exact source run/engine/transitive evidence, checksum manifests, and `verify.mjs`. Extract and run `node verify.mjs` with Node 22.13+; no app, database, packages or network are required. The original `/export` route remains the plain JSON option.
+
+Verification checks file hashes and paths, event chain and approvals, risk-rule enforcement, cash/share/fee/halt replay, source experiment/run/input pins and the original source engine checksum, then executes the source's bundled replay. It fails on missing or altered evidence. Archives are capped at 100 MiB before ZIP packaging and capture the ledger at export time, excluding later activity. A verified archive does not prove identity, market prices, actual execution, current account state or investment merit; replacing the whole archive/verifier is outside checksum protection.
