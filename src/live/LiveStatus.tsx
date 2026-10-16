@@ -4,7 +4,7 @@ import { when } from "../lib/api";
 import { markLiveSeen, useLive } from "./stream";
 import "./live.css";
 
-const LINK: Record<string, string> = { off: "demo · no live feed", connecting: "connecting…", open: "live", retrying: "reconnecting…" };
+const LINK: Record<string, string> = { off: "demo · no live feed", paused: "paused in background", connecting: "connecting…", open: "live", retrying: "reconnecting…" };
 
 function useNow(ms: number) {
   const [now, setNow] = useState(() => Date.now());

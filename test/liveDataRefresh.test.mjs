@@ -55,6 +55,22 @@ test('quote refresh failure keeps original timestamps and explicitly marks the c
   db.prepare('INSERT INTO cache VALUES (?, ?, ?, ?)').run(KEY.screener, JSON.stringify(old), 1, 1);
   const previousFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error('provider down'); };
-  try { const out = await quoteBoard(db); assert.equal(out.stale, true); assert.equal(out.asOf, old.asOf); assert.deepEqual(out.items, old.items); assert.match(out.latency, /STALE QUOTES/); }
+  try { const out = await quoteBoard(db); assert.equal(out.stale, true); assert.equal(out.asOf, old.asOf); assert.deepEqual(out.items, old.items); assert.match(out.latency, /REFRESHING QUOTES/); await new Promise(resolve => setImmediate(resolve)); const failed = await quoteBoard(db); assert.equal(failed.refreshing, false); assert.match(failed.latency, /provider down/); assert.equal(failed.asOf, old.asOf); }
   finally { globalThis.fetch = previousFetch; db.close(); }
+});
+
+test('an expired quote snapshot transitions from refreshing to fresh without waiting for the next expiry', async () => {
+ const { quoteBoard } = await import('../server/chart.mjs');
+ const { KEY } = await import('../server/lib/cacheKeys.mjs');
+ const db = new DatabaseSync(':memory:');
+ db.exec("CREATE TABLE tickers (symbol TEXT, name TEXT, cik TEXT, lda_clients TEXT, recipients TEXT, districts TEXT, state TEXT, lat REAL, lon REAL); CREATE TABLE cache (key TEXT PRIMARY KEY, body TEXT, stored_at INTEGER, ttl_ms INTEGER); INSERT INTO tickers VALUES ('AAA', 'Company', NULL, '[]', '[]', '[]', NULL, NULL, NULL)");
+ db.prepare('INSERT INTO cache VALUES (?, ?, ?, ?)').run(KEY.screener, JSON.stringify({ok:true,asOf:'2020-01-01T00:00:00Z',items:[{symbol:'AAA',last:1}],missing:[]}),1,1);
+ const original=globalThis.fetch;let release, calls=0;
+ globalThis.fetch=async()=>{calls++;await new Promise(r=>{release=r;});return Response.json({data:{rows:[{symbol:'AAA',lastsale:'$2.00',marketCap:'10'}]}});};
+ try {
+  const before=await quoteBoard(db);assert.equal(before.refreshing,true);assert.equal(before.items[0].last,1);
+  await quoteBoard(db);assert.equal(calls,1,'refresh shared while in flight');
+  release();await new Promise(r=>setImmediate(r));
+  const after=await quoteBoard(db);assert.equal(after.stale,undefined);assert.equal(after.items[0].last,2);assert.equal(calls,1);
+ } finally {globalThis.fetch=original;db.close();}
 });

@@ -26,6 +26,7 @@ type Board = {
   asOf?: string;
   latency?: string;
   items?: Quote[];
+  refreshing?: boolean;
 };
 
 type SortKey = "symbol" | "name" | "sector" | "last" | "changePct" | "volume" | "marketCap" | "weight";
@@ -43,16 +44,24 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
 
   useEffect(() => {
     let cancel = false;
-    const load = () => api<Board>("/api/markets/board")
-      .then((res) => {
+    let timer = 0;
+    const load = async () => {
+      let delay = POLL;
+      try {
+        const res = await api<Board>("/api/markets/board");
         if (cancel) return;
         if (!res.ok) setError(res.error || "No quotes");
         else { setError(""); setBoard(res); }
-      })
-      .catch((err: Error) => { if (!cancel) setError(err.message); });
+        // Pick up the background result before its 60-second cache expires again.
+        if (res.refreshing) delay = 2_000;
+      } catch (err) {
+        if (!cancel) setError(err instanceof Error ? err.message : "Quotes unavailable");
+      } finally {
+        if (!cancel) timer = window.setTimeout(load, delay);
+      }
+    };
     void load();
-    const timer = window.setInterval(load, POLL);
-    return () => { cancel = true; window.clearInterval(timer); };
+    return () => { cancel = true; window.clearTimeout(timer); };
   }, []);
 
   const universe = useMemo(() => board?.items || [], [board]);

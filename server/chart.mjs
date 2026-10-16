@@ -2,7 +2,7 @@ import { listTickers, readCache, writeCache, tickerBySymbol } from "./lib/db.mjs
 import { cryptoDigits, instrumentBySymbol } from "./instruments.mjs";
 import { KEY } from "./lib/cacheKeys.mjs";
 import { once } from "./lib/once.mjs";
-import { readStale } from "./lib/cache.mjs";
+import { failureText, readStale } from "./lib/cache.mjs";
 import { nasdaqJson } from "./feeds/nasdaq.mjs";
 import { round, sessionQuote, yahooChart } from "./feeds/yahoo.mjs";
 
@@ -105,8 +105,12 @@ export async function quoteBoard(db) {
   const stale = readStale(db, KEY.screener)?.value;
   if (stale?.items?.length) {
     // Keep the board responsive during upstream outages. One background refresh is shared.
-    void once(KEY.screener, () => refreshQuotes(db, tickers)).catch(() => {});
-    return { ...stale, stale: true, latency: `STALE QUOTES: showing the last stored snapshot from ${stale.asOf} while a refresh is attempted. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
+    const failure = readCache(db, `${KEY.screener}:refresh-failure`);
+    if (!failure) void once(KEY.screener, () => refreshQuotes(db, tickers)).catch(() => {});
+    return { ...stale, stale: true, refreshing: !failure,
+      ...(failure ? { refreshFailure: failure } : {}),
+      latency: `${failure ? `STALE QUOTES: Nasdaq ${failure.reason}; retry after ${failure.retryAt}.` : "REFRESHING QUOTES: cached snapshot expired; checking Nasdaq."} Showing the last successful fetch from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
+
   }
   return once(KEY.screener, () => refreshQuotes(db, tickers));
 }
@@ -118,10 +122,13 @@ async function refreshQuotes(db, tickers) {
     body = await nasdaqJson("screener/stocks?tableonly=true&limit=10000&download=true", 30000);
     if (!body?.data?.rows?.length) throw new Error("Empty Nasdaq screener response");
   } catch (err) {
+    const at = Date.now();
+    writeCache(db, `${KEY.screener}:refresh-failure`, { at: new Date(at).toISOString(), reason: failureText(err, 30000), retryAt: new Date(at + 30000).toISOString() }, 30000);
     const stale = readStale(db, KEY.screener)?.value;
     if (!stale?.items?.length) return { ok: false, error: "Nasdaq quotes temporarily unavailable; retry shortly.", items: [] };
     return { ...stale, stale: true, latency: `STALE QUOTES: refresh failed; showing the last stored snapshot from ${stale.asOf}. ${stale.items.length} quoted names; current registry has ${tickers.length}.` };
   }
+  db.prepare("DELETE FROM cache WHERE key = ?").run(`${KEY.screener}:refresh-failure`);
   const bySymbol = new Map((body?.data?.rows || []).map((r) => [String(r.symbol).trim().replace(/[/.^]/g, "-"), r]));
   const num = (v) => {
     const n = Number(String(v ?? "").replace(/[$,%]/g, ""));

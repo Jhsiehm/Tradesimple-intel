@@ -5,7 +5,7 @@ import { DEMO } from "../lib/api";
 export type LivePush = LiveAlertRow & { replay?: boolean };
 export type Fresh = Record<string, Record<string, number>>;
 export type LiveState = {
-  link: "off" | "connecting" | "open" | "retrying";
+  link: "off" | "paused" | "connecting" | "open" | "retrying";
   poller: "on" | "off" | "";
   symbols: string[];
   checks: LiveStatus[];
@@ -81,7 +81,7 @@ function heard() {
 }
 
 function connect() {
-  if (DEMO || source || !users) return;
+  if (DEMO || source || !users || document.visibilityState === "hidden") return;
   window.clearTimeout(timer);
   set({ link: failures ? "retrying" : "connecting" });
   const es = new EventSource(lastSeq ? `${STREAM}?after=${lastSeq}` : STREAM);
@@ -111,23 +111,41 @@ function connect() {
   };
 }
 
+function visibilityChanged() {
+  if (document.visibilityState === "hidden") {
+    window.clearTimeout(timer);
+    drop();
+    set({ link: "paused", retryAt: 0 });
+  } else if (users) {
+    connect();
+  }
+}
+
 function retain() {
   users++;
+  if (users === 1) document.addEventListener("visibilitychange", visibilityChanged);
   connect();
   return () => {
     users--;
     if (users) return;
+    document.removeEventListener("visibilitychange", visibilityChanged);
     window.clearTimeout(timer);
     drop();
   };
 }
 
+// Stable identities prevent React resubscription on each store update. Re-subscribing
+// the last listener otherwise closes/reopens SSE and emits another store update.
+const subscribeLive = (w: () => void) => {
+  watchers.add(w);
+  const release = retain();
+  return () => { watchers.delete(w); release(); };
+};
+const getLiveSnapshot = () => state;
+
 /** Live poller state: stream link, per-check status, new-since-seen counts. One EventSource is shared by every caller. */
 export function useLive(): LiveState {
-  return useSyncExternalStore(
-    (w) => { watchers.add(w); const release = retain(); return () => { watchers.delete(w); release(); }; },
-    () => state
-  );
+  return useSyncExternalStore(subscribeLive, getLiveSnapshot);
 }
 
 /** Called for every pushed detection (replays after a reconnect carry `replay: true`). */
