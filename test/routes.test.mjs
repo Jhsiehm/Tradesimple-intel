@@ -45,11 +45,22 @@ after(async () => {
 
 /** [sample url, status, keys] — keys are the sorted top-level JSON keys, or a content type for non-JSON. */
 export const SMOKE = [
+  ['/api/research/convergence', 200, 'items,ok'],
+  ['/api/research/convergence/cv_0000', 400, 'error,ok'],
+  ['/api/research/convergence/cv_0000/evaluate', 405, 'error,ok'],
+  ['/api/research/experiments', 200, 'items,ok'],
+  ['/api/research/experiments/exp_0000', 404, 'error,ok'],
+  ['/api/research/datasets', 200, 'connectors,items,ok'],
+  ['/api/research/datasets/ds_0000', 404, 'error,ok'],
+  ['/api/research/preview', 405, 'error,ok'],
+  ['/api/research/run', 405, 'error,ok'],
+  ['/api/research/runs/run_0000/replay', 405, 'error,ok'],
+  ['/api/research/runs/run_0000/export', 404, 'error,ok'],
   ["/geo/states.geojson", 200, "application/geo+json"],
   ["/geo/nope.geojson", 404, "error,ok"],
   ["/api/health", 200, "ok"],
   ["/api/backtest", 200, "benchmarks,committees,defaults,limits,ok,sectors,sources"],
-  ["/api/backtest?spec=%7B%22source%22%3A%22congress%22%7D", 503, "building,description,error,missing,ok,spec"],
+  ["/api/backtest?spec=%7B%22source%22%3A%22congress%22%7D", 503, "building,description,error,missing,ok,runId,spec"],
   ["/api/backtest?spec=nope", 400, "error,missing,ok"],
   ["/api/backtest/replicate", 400, "error,missing,ok"],
   ["/api/backtest/search", 200, "defaults,ok,state"],

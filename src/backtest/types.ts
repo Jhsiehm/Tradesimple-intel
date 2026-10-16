@@ -6,6 +6,8 @@ export type BtFeed = { label: string; source: string; asOf: string; latency: str
 
 /** What POST /api/backtest returns on success, plus the run's own labels. */
 export type BtRun = BacktestResult & {
+  runId?: string;
+  engineId?: string;
   spec: BacktestSpec;
   description: string;
   source: string;
@@ -21,7 +23,7 @@ export type BtRun = BacktestResult & {
   reality?: Reality | null;
 };
 
-export type BtFailure = { ok: false; error: string; missing?: string; building?: boolean; description?: string };
+export type BtFailure = { ok: false; runId?: string; error: string; missing?: string; building?: boolean; description?: string };
 
 export type BtOptions = {
   ok: true;

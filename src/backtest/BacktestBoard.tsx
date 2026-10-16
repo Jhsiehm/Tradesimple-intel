@@ -1,3 +1,4 @@
+import { SaveExperiment } from '../research/SaveExperiment';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeSpec, type BacktestSpec } from "../../shared/backtestSpec.mjs";
 import { when } from "../lib/api";
@@ -60,6 +61,7 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
     void navigator.clipboard?.writeText(url).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => null);
   };
   const running = bt.state.phase === "running";
+  const frozenId = done?.runId || (bt.state.phase === "error" ? bt.state.runId : undefined);
 
   return (
     <div className="board bt">
@@ -85,6 +87,7 @@ export function BacktestBoard({ seed, onFollow, onClose, onList }: { seed: strin
         ) : null}
         {bt.state.phase === "running" ? <p className="bt-note">{bt.state.note}</p> : null}
         {bt.state.phase === "error" ? <p className="bt-note warn" role="alert">{bt.state.error}{bt.state.missing ? ` Set ${bt.state.missing} in .env.local.` : ""}</p> : null}
+        {frozenId ? <SaveExperiment key={frozenId} runId={frozenId} description={done?.description || describeSpec(spec)} onOpen={() => onFollow("today:research")} /> : null}
         {done ? <BacktestResults run={done} onFollow={(a) => { if (a) onFollow(a); }} onCopy={copy} copied={copied} /> : bt.state.phase === "idle" ? (
           <p className="bt-empty">Pick signals and rules, then run. Nothing here is an order, a recommendation, or a forecast.</p>
         ) : null}

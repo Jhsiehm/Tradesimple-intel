@@ -6,6 +6,17 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  { id: 'research.convergence', path: '/api/research/convergence' },
+  { id: 'research.convergencePlan', path: '/api/research/convergence/:id(cv_[a-f0-9]+)' },
+  { id: 'research.convergenceEvaluate', path: '/api/research/convergence/:id(cv_[a-f0-9]+)/evaluate' },
+  { id: 'research.experiments', path: '/api/research/experiments' },
+  { id: 'research.experiment', path: '/api/research/experiments/:id(exp_[a-f0-9]+)' },
+  { id: 'research.datasets', path: '/api/research/datasets' },
+  { id: 'research.dataset', path: '/api/research/datasets/:id(ds_[a-f0-9]+)' },
+  { id: 'research.preview', path: '/api/research/preview' },
+  { id: 'research.run', path: '/api/research/run' },
+  { id: 'research.replay', path: '/api/research/runs/:id(run_[a-f0-9]+)/replay' },
+  { id: 'research.export', path: '/api/research/runs/:id(run_[a-f0-9]+)/export' },
   { id: "geo", path: "/geo/:name(.*)", samples: ["/geo/states.geojson", "/geo/cd119.geojson"], warm: "board" },
   { id: "health", path: "/api/health", snapshot: true },
   { id: "backtest", path: "/api/backtest" },

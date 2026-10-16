@@ -6,6 +6,7 @@
 
 export const SOURCES = ["congress", "form4", "contracts", "lobbying"];
 export const SOURCE_LABEL = {
+  dataset: "Imported dataset",
   congress: "Congressional trades",
   form4: "Form 4 insider trades",
   contracts: "Contract awards",
@@ -145,8 +146,13 @@ export function cleanFilters(raw) {
 export function cleanSpec(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: "A spec object is required." };
   const source = String(raw.source || "congress");
-  if (!SOURCES.includes(source)) return { ok: false, error: `source must be one of ${SOURCES.join(", ")}.` };
+  if (!SOURCES.includes(source) && source !== "dataset") return { ok: false, error: `source must be one of ${SOURCES.join(", ")}.` };
   const spec = { source, filters: cleanFilters(raw.filters), rules: cleanRules(raw.rules) };
+  if (source === "dataset") {
+    if (!/^ds_[a-f0-9]{32}$/.test(String(raw.datasetId || ""))) return { ok: false, error: "A saved dataset version ID is required." };
+    if (specKey(spec.filters) !== specKey(DEFAULT_FILTERS)) return { ok: false, error: "Dataset experiments use their frozen rows. Import a filtered version to change the signal cohort." };
+    spec.datasetId = raw.datasetId;
+  }
   if (source === "lobbying" && !spec.filters.tickers.length) {
     return { ok: false, error: "Lobbying spikes are read per ticker. Add up to 40 tickers from data/tickers.json." };
   }
@@ -198,7 +204,7 @@ export function encodeSpec(spec) {
   const c = cleanSpec(spec);
   if (!c.ok) return "";
   const { source, filters, rules } = c.spec;
-  return toB64url(specKey({ source, filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
+  return toB64url(specKey({ source, ...(c.spec.datasetId ? { datasetId: c.spec.datasetId } : {}), filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
 }
 
 export function decodeSpec(token) {

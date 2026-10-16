@@ -1,3 +1,6 @@
+import { putRun, getRun, getDataset } from '../research-store.mjs';
+import { ENGINE } from '../research-replay.mjs';
+import { identities, signalEvents, datasetSource } from '../research-events.mjs';
 import { runBacktest } from "../../../shared/backtest.mjs";
 import { REALITY, realityCheck } from "../../../shared/backtestStats.mjs";
 import { BENCHMARKS, BENCHMARK_LABEL, DEFAULT_FILTERS, DEFAULT_RULES, LIMITS, SECTOR_ETF, SOURCES, SOURCE_LABEL, cleanSpec, describeSpec, specHash } from "../../../shared/backtestSpec.mjs";
@@ -55,19 +58,23 @@ export function capSignals(input, sides = "both") {
  * Run one spec. Cached by spec hash (30 min) only when every price was in hand. Capped signals, a symbol cap,
  * and a wall-clock budget bound the run; what did not finish is counted in the caveats, never dropped silently.
  */
-export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = loadBars, now = Date.now() } = {}) {
+export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = loadBars, now = Date.now(), fresh = false, sourceFn = null } = {}) {
   const cleaned = cleanSpec(raw);
   if (!cleaned.ok) return { ok: false, error: cleaned.error, missing: "" };
   const spec = cleaned.spec;
   const hash = specHash(spec);
-  const hit = readCache(db, KEY.backtest(hash));
-  if (hit && hit.realityVersion === REALITY.version) return { ...hit, cache: "hit" };
+  const hit = fresh || sourceFn ? null : readCache(db, KEY.backtest(hash));
+  if (hit && hit.realityVersion === REALITY.version && hit.engineId === ENGINE.id && hit.runId && getRun(db, hit.runId)) return { ...hit, cache: "hit" };
   const t0 = Date.now();
   const deadline = t0 + budgetMs;
 
   // Sources that read filings one by one (Form 4) get part of the budget; prices need the rest.
-  const src = await SOURCE_FNS[spec.source](db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
-  if (src.error) return { ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) };
+  const loadSource = sourceFn || (spec.source === 'dataset' ? async () => { const d = getDataset(db, spec.datasetId); return d ? datasetSource(d) : { error: 'Dataset version not found.' }; } : SOURCE_FNS[spec.source]);
+  const src = await loadSource(db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
+  const identity = src.identity || identities(db);
+  const provenance = { source: src.dataset ? 'import' : spec.source, dataset: src.dataset || null, identity, records: src.records || [], feeds: src.feeds || [], dropped: src.dropped || {}, statistics: REALITY, runtime: process.version };
+  const failed = body => { const runId = putRun(db, { inputs: null, result: body, provenance, engine: ENGINE }); return { ...body, runId }; };
+  if (src.error) return failed({ ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) });
   const tSignals = Date.now();
 
   const uncapped = src.signals.length;
@@ -82,20 +89,21 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const benchBars = Object.fromEntries([...benchIds].map((id) => [id, priced.bars[id]]).filter(([, v]) => v?.length));
   const missingBench = [...benchIds].filter((id) => !benchBars[id]);
   if (missingBench.length === benchIds.size) {
-    return { ok: false, error: `No benchmark prices for ${missingBench.join(", ")} yet${priced.pending.length ? ". Prices are still loading; try again shortly" : ""}.`, building: priced.pending.length > 0, spec, description: describeSpec(spec) };
+    return failed({ ok: false, error: `No benchmark prices for ${missingBench.join(", ")} yet${priced.pending.length ? ". Prices are still loading; try again shortly" : ""}.`, building: priced.pending.length > 0, spec, description: describeSpec(spec) });
   }
   const symbolBars = Object.fromEntries(symbols.map((s) => [s, priced.bars[s]]).filter(([, v]) => v?.length));
   const pendingSyms = priced.pending.filter((s) => symbols.includes(s));
   if (pendingSyms.length) notes.push({ level: "warn", id: "pending", text: `${pendingSyms.length} tickers were still loading prices when the ${Math.round(budgetMs / 1000)} s budget ended and are left out of this run (${pendingSyms.slice(0, 10).join(", ")}${pendingSyms.length > 10 ? "…" : ""}). They keep loading; run again in a minute.` });
   if (priced.stale.length) notes.push({ level: "info", id: "stale", text: `${priced.stale.length} tickers use a cached price history older than 12 h because Yahoo did not answer.` });
 
-  const result = runBacktest({
+  const inputs = {
     signals,
     bars: symbolBars,
     benchBars,
     rules: spec.rules,
     context: { ...src.context, notes, unpriced: pendingSyms }
-  });
+  };
+  const result = runBacktest(inputs);
   const reality = result.stats ? realityCheck({ trades: result.trades, bars: symbolBars, benchBars, rules: result.rules }) : null;
   const tEngine = Date.now();
   const last = lastBarDay({ ...symbolBars, ...benchBars });
@@ -109,13 +117,13 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     }
   ];
   const asOfs = feeds.map((f) => f.asOf).filter(Boolean).sort();
-  const complete = !pendingSyms.length && !src.building;
+  const complete = !pendingSyms.length && !missingBench.length && !src.building;
   const body = {
     ...result,
     reality,
     realityVersion: REALITY.version,
     spec,
-    description: describeSpec(spec),
+    description: src.dataset ? `${src.dataset.name} v${src.dataset.version} · ${describeSpec(spec)}` : describeSpec(spec),
     source: feeds.map((f) => f.source).filter(Boolean).join(" · "),
     asOf: asOfs[0] || iso(tEngine),
     latency: `${feeds.map((f) => `${f.label}: ${f.latency}`).filter((s) => s.length > 10).join(" ")} Run took ${((tEngine - t0) / 1000).toFixed(1)} s.`,
@@ -127,6 +135,12 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     cache: "miss",
     ranAt: iso(now)
   };
-  if (complete) writeCache(db, KEY.backtest(hash), body, RESULT_TTL);
+  provenance.events = src.dataset ? src.records : signalEvents(signals, provenance.source, identity, iso(now));
+  provenance.feeds = feeds;
+  provenance.matchedSignals = src.signals;
+  const runId = putRun(db, { inputs, result: { ...body, engineResult: result }, provenance, engine: ENGINE });
+  body.runId = runId;
+  body.engineId = ENGINE.id;
+  if (complete && !sourceFn) writeCache(db, KEY.backtest(hash), body, RESULT_TTL);
   return body;
 }

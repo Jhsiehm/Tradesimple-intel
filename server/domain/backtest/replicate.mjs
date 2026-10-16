@@ -1,3 +1,4 @@
+import { getRun } from '../research-store.mjs';
 import { dayOf, isoOf } from "../../../shared/backtest.mjs";
 import { readCache } from "../../lib/db.mjs";
 import { readStale } from "../../lib/cache.mjs";
@@ -13,8 +14,12 @@ const barsOf = (db, symbol) => readCache(db, KEY.bars(symbol)) || readStale(db, 
  * (each symbol and benchmark, from ten days before the first public date to the last exit) that the engine read.
  * The run itself comes from the 30-minute result cache when it is warm.
  */
-export async function replicateSpec(db, raw, { run = runSpec } = {}) {
-  const out = await run(db, raw);
+export async function replicateSpec(db, raw, { run = runSpec, runId = null } = {}) {
+  const saved = runId ? getRun(db, runId) : null;
+  if (runId && !saved) return { ok: false, error: 'Frozen run not found.' };
+  if (saved?.inputs?.kind === 'convergence') return { ok: false, error: 'Use the Research frozen comparison export for Convergence runs.' };
+  const out = saved ? saved.result : await run(db, raw);
+  const frozen = saved || (out.runId ? getRun(db, out.runId) : null);
   if (!out.ok) return out;
   const trades = out.trades || [];
   const priceFeed = (out.feeds || []).find((f) => f.label === "Prices") || {};
@@ -47,7 +52,7 @@ export async function replicateSpec(db, raw, { run = runSpec } = {}) {
   const benches = [...new Set([...trades.map((t) => t.benchmark), calendarId])].sort();
   for (const [list, ids] of [[result.prices, symbols], [result.benchmarks, benches]]) {
     for (const symbol of ids) {
-      const bars = barsOf(db, symbol);
+      const bars = frozen?.inputs ? (list === result.prices ? frozen.inputs.bars[symbol] : frozen.inputs.benchBars[symbol]) : barsOf(db, symbol);
       if (bars?.length) list.push({ symbol, bars: cut(bars) });
       else result.missing.push(symbol);
     }

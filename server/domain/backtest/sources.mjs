@@ -74,6 +74,7 @@ export async function congressSource(db, f) {
   const s = board.progress?.senate;
   return {
     signals: out.signals,
+    records: board.items,
     dropped: out.dropped,
     feeds,
     building: Boolean(board.building),
@@ -112,6 +113,7 @@ export async function form4Source(db, f, { deadline = 0, history = insiderHistor
   const { shortList, capped } = res.coverage;
   return {
     signals: out.signals,
+    records: res.items,
     dropped: out.dropped,
     feeds: [feed("Signals", res)],
     building: Boolean(res.building),
@@ -146,6 +148,7 @@ export async function contractsSource(db, f) {
   const out = contractSignals({ rows, filters: f, sectorOf: sectorLookup(db) });
   return {
     signals: out.signals,
+    records: rows,
     dropped: out.dropped,
     feeds,
     context: {
@@ -175,6 +178,7 @@ export async function lobbyingSource(db, f) {
   const out = lobbySignals({ filingsBySymbol, filters: f, sectorOf: sectorLookup(db) });
   return {
     signals: out.signals,
+    records: filingsBySymbol,
     dropped: out.dropped,
     feeds,
     context: {

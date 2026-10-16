@@ -1,4 +1,4 @@
-export type BacktestSource = "congress" | "form4" | "contracts" | "lobbying";
+export type BacktestSource = "congress" | "form4" | "contracts" | "lobbying" | "dataset";
 export type BacktestRules = {
   entry: "nextOpen" | "nextClose";
   holdDays: number;
@@ -37,7 +37,7 @@ export type BacktestFilters = {
   clusterMin: number;
   awardWithinDays: number;
 };
-export type BacktestSpec = { source: BacktestSource; filters: BacktestFilters; rules: BacktestRules };
+export type BacktestSpec = { source: BacktestSource; datasetId?: string; filters: BacktestFilters; rules: BacktestRules };
 
 export const SOURCES: BacktestSource[];
 export const SOURCE_LABEL: Record<BacktestSource, string>;

@@ -46,8 +46,8 @@ export const handlers = {
   /** The spec, the trades, and the daily bars one run used, so it can be re-run outside the app. */
   "backtest.replicate": async ({ db, query }) => {
     const raw = specFromQuery(query.str("spec"));
-    if (!raw) return reply(400, { ok: false, error: "spec is required: a JSON object or a #bt= token.", missing: "" });
-    return guarded(() => replicateSpec(db, raw));
+    if (!raw && !query.str("runId")) return reply(400, { ok: false, error: "spec is required: a JSON object or a #bt= token.", missing: "" });
+    return guarded(() => replicateSpec(db, raw, { runId: query.str("runId") || null }));
   },
   /** POST starts a signal search (options in the body); GET ?id= polls one; GET alone shows the latest or idle. */
   "backtest.search": async ({ db, req, query }) => {

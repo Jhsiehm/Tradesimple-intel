@@ -504,3 +504,66 @@ No new API keys are required:
 API: `/api/weather/hazards` returns independent feed states, source coverage and timestamps; `/api/weather/forecast?lat=29.76&lon=-95.37` returns the point forecast. Concurrent identical fetches are coalesced. Upstream failures retain cached data explicitly labeled **stale**, or show unavailable without manufacturing an all-clear. These feeds have no delivery SLA. The static demo does not contain weather snapshots and shows an unavailable state.
 
 Commodity notes describe conditional exposure channels and locations to investigate. They do not match events to facilities, estimate lost production, forecast prices, or provide push/emergency notifications. This release does not include global radar, marine-wave forecasts, every national warning system, or gridded drought/soil-moisture products.
+
+## Phase 1: experiments and Data Hub
+
+Open **Research** in the navigation or enter `RESEARCH` in Find. The research workspace uses the existing center stage.
+
+### Save, inspect, replay, export
+
+Run a backtest, then choose **Save experiment** and record a title and hypothesis. The calculation already has a frozen run ID: saving does not fetch or recalculate it. Research → Experiments shows saved runs, including partial runs and failed attempts created through the Research runner. **Verify offline replay** reruns the deterministic engine and statistical checks against the exact saved inputs without any network access. **Rerun as new experiment** reads the current built-in feeds (or the selected immutable imported dataset version), loads prices through the existing cache, and creates a new run linked to its parent. It does not force a vendor refresh or overwrite the original.
+
+**Export frozen run** downloads a ZIP containing `run.json`, the original calculation modules, an offline `replay.mjs`, and SHA-256 checksums. Extract it and run `node replay.mjs` (Node 22.13+, no packages or network). The script checks archive contents and compares all engine results and statistical checks exactly. The recorded engine is used even after the app is upgraded. In-app replay refuses a different engine hash and directs you to the export. A match verifies reproducibility, not predictive validity.
+
+Runs retain normalized engine signals, all matched signals before caps, adjusted prices and benchmark bars, rules, context/caveats, statistical seed/settings, outputs, original parsed records supplied by the source adapter, source labels and as-of metadata, and a snapshot/hash of the current ticker identity registry. They do not universally archive original PDFs or provider responses, nor replay upstream parsers or historical entity resolution. Existing CSV replication downloads now use frozen price inputs when a run ID is available.
+
+### Import transaction signals
+
+Data Hub accepts UTF-8 CSV (including quoted fields/newlines) or JSON as an array of objects or `{ "items": [...] }`. Limits: **2 MiB and 5,000 records per import**. Provide a dataset name and source label. Use **Map source columns** when your field names differ, then **Preview and validate** before importing. Imports with any invalid row are rejected atomically. The preview displays up to 100 validation errors and ten normalized rows.
+
+Required fields:
+
+- `id`: unique source record ID within the dataset (up to 200 characters).
+- `symbol`: exact ticker-registry match, case-insensitive. No fuzzy entity joins.
+- `eventAt`: transaction date, `YYYY-MM-DD` or a UTC ISO timestamp ending in `Z`.
+- `availableAt`: public-availability date/time in the same format, on or after the event. It is never inferred from transaction or ingestion time.
+- `side`: `buy` or `sell`.
+
+Optional fields: `sourceUrl` (HTTP/S reference without embedded credentials), `value` (positive transaction amount). Missing source URLs are counted and shown. Availability is explicitly labeled **importer-asserted, not independently verified**. Ingestion time, timestamp precision, source record ID, original row, stable `ticker:SYMBOL` / `cik:ID` identifiers, and identity snapshot version are preserved. Mapping history is not a historical security master: current mapping validity is stated explicitly.
+
+A changed import under the same name creates a new immutable version; identical content, mapping, source, and identity snapshot reuse the existing version. **Create experiment from this version** evaluates those transaction signals with the existing engine, a SPY benchmark, equal weighting, configurable hold/cost/slippage/side rules, and next-trading-day entry. The existing 1,500-signal and 350-symbol run caps still apply and appear in caveats. This is a basic transaction-signal importer, not arbitrary factor or multi-source strategy ingestion.
+
+### Basic API connectors
+
+Configure `RESEARCH_API_CONNECTORS` in `.env.local` as shown in `.env.example`, then restart the API. Each named connector defines a fixed HTTPS GET endpoint and an optional `tokenEnv` naming a server-side Bearer credential. The browser receives connector names only. Selecting a connector and previewing fetches one JSON response; importing saves that exact preview content after validation, without silently fetching a second version.
+
+Connectors accept JSON arrays or `items` arrays, use the same column mapping and validation as uploads, and share the import size limit. Requests pin vetted public DNS addresses, have a 15-second timeout, reject redirects/private addresses, and use port 443. Query parameters, arbitrary headers, pagination, OAuth flows, scheduling, and database connectors are outside this initial connector. Keep access tokens in `.env.local`; never put them in source rows or URLs.
+
+### Durability, ownership and backups
+
+Research is stored in **`data/research.sqlite`**, independently of `data/cache.sqlite`. When `INTEL_CACHE` points elsewhere, research defaults to `research.sqlite` in that directory; `INTEL_RESEARCH` overrides it. Both files and their WAL sidecars are gitignored. Immutable SQL tables hold runs, engines, datasets, and saved experiments. The API exposes no overwrite/delete operation; there is no automatic research retention cleanup. Monitor disk usage: every newly calculated backtest is frozen, even before it is explicitly saved as an experiment.
+
+For a consistent backup, stop the API and copy `research.sqlite` and any `research.sqlite-wal` / `research.sqlite-shm` files together, or use SQLite’s online backup mechanism. Restore to the configured research location before restarting. Do not treat this file as a disposable cache. A cache reset cannot delete saved experiments. Checksums detect corruption but are not a signature against a malicious database administrator.
+
+This phase inherits the app’s single-owner authentication and same-origin write protections. Imported private data and saved experiments are visible to that server’s owner; organizational RBAC and isolated project tenants are later work. Isolated/context-aware/paired AI memory, historical relationship validity, held-out validation, and multi-source signal composition are not added by Phase 1.
+
+API endpoints:
+
+- `GET/POST /api/research/experiments`: list or save an existing `runId` with `title`, `hypothesis`, and optional `parentId`.
+- `GET /api/research/experiments/:id`: inspect metadata, results, and a bounded lineage preview.
+- `POST /api/research/run`: run and save a built-in `spec`, or an imported `datasetId` with `rules`; requires a title.
+- `POST /api/research/runs/:id/replay`: recompute with frozen inputs using the matching engine.
+- `GET /api/research/runs/:id/export`: download the frozen archive and original engine.
+- `GET/POST /api/research/datasets`: list or atomically import a version.
+- `GET /api/research/datasets/:id`: inspect coverage, caveats, and first ten events.
+- `POST /api/research/preview`: validate `name`, `source`, `format`, `content`, and optional `mapping`; or preview a configured `connector`.
+
+Research tests exercise CSV/JSON validation, temporal and entity constraints, immutable versions, cache deletion/restart durability, exact replay, portable export/checksum failures, credential handling and public-address connector restrictions, and API write guards.
+
+### Phase 2 — Convergence Lab
+
+Open **Research → Convergence** after saving two or three completed source experiments. Declare the ticker universe, development/holdout dates, embargo, trailing confirmation window, holding period, and costs. The first selected experiment supplies the common frozen adjusted-price snapshot; it must cover every declared ticker and SPY. Distinct source families (or distinct imported dataset names) are required. Current committee/hearing membership cohorts are refused.
+
+Locking creates an immutable plan and development run. The separate holdout action evaluates the locked rules once; repeat requests return the same recorded run. Overlapping prior holdout evaluations are counted. All-source same-ticker/same-side confirmation is compared with each source alone and, for three sources, all leave-one-out pairs. Matching resets at the split; prices stop at each period boundary and incomplete positions are excluded. Signals enter after the final required public date. Each source contributes at most one vote per ticker/side/day.
+
+Total excess uses a common full-window SPY return with zero return on idle strategy capital. Mean trade excess, excluded trades, confirmation lineage, and seeded entry-week bootstrap intervals are available. Ablations are descriptive, not causal or multiple-testing-adjusted. Historical source coverage, current-universe survivorship, imported availability assertions, and any prior inspection remain limitations. Preserve the source experiments alongside exports; comparison archives contain the exact selected signals, common prices, source run IDs/checksums and caveats, and original calculation engine for offline replay.

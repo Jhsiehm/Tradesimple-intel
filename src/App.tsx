@@ -66,6 +66,7 @@ const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) =
 const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
 const TodayBoard = lazy(() => import("./congress/TodayBoard").then((m) => ({ default: m.TodayBoard })));
 const ContractsBoard = lazy(() => import("./contracts/ContractsBoard").then((m) => ({ default: m.ContractsBoard })));
+const ResearchBoard = lazy(() => import("./research/ResearchBoard").then(m => ({ default: m.ResearchBoard })));
 const BacktestBoard = lazy(() => import("./backtest/BacktestBoard").then((m) => ({ default: m.BacktestBoard })));
 /** The demo snapshot has no intraday bars. */
 const OPEN_SPAN: ChartSpan = DEMO ? "1y" : "5m";
@@ -74,7 +75,7 @@ const TRAIL_KEY = "intel:trail:v1";
 const TODAY_SEEN = "intel:today:seen";
 const TODAY_STATUS: StatusLine = { source: "House Clerk · Senate eFD", asOf: "", latency: "Filed up to 45 days after the trade." };
 const TIMELINE_STATUS: StatusLine = { source: "House Clerk PTR PDFs / Senate eFD", asOf: "", latency: "Trade date as disclosed; filed up to 45 days later by law." };
-type TodayTab = "week" | "leaders" | "bt";
+type TodayTab = "week" | "leaders" | "bt" | "research";
 
 export function App() {
   const nav = useView();
@@ -113,7 +114,7 @@ export function App() {
   const reportList = useCallback((list: StageList) => setStageList(list), []);
   const reportTimeline = useCallback((status: StatusLine) => setTimelineStatus(status), []);
   const [today, setToday] = useState<TodayTab | null>(() => {
-    const hash = location.hash.match(/^#(week|leaders|bt)\b/)?.[1] as TodayTab | undefined;
+    const hash = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
     if (hash) return hash;
     if (location.hash) return null;
     try { return DEMO || !localStorage.getItem(TODAY_SEEN) ? "week" : null; } catch { return "week"; }
@@ -184,7 +185,7 @@ export function App() {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
     const onHash = () => {
       const id = location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null;
-      const board = location.hash.match(/^#(week|leaders|bt)\b/)?.[1] as TodayTab | undefined;
+      const board = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
       if (board === "bt" && location.hash.startsWith("#bt=")) setBtSeed(`token:${location.hash.slice(4)}`);
       if (id || board) recordRef.current(id ? `timeline:${id}` : `today:${board}`);
       if (id) { setSection("congress"); setCalendarTab(null); }
@@ -316,7 +317,7 @@ export function App() {
     const v = rest.join(":");
     if (kind === "map") apply(viewFor("section:map", { intelOn })!);
     else if (kind === "calendar") { closeStage(); setCalendarTab("earnings"); void openCalendarData(); }
-    else if (kind === "today") openToday(v === "leaders" || v === "bt" ? v : "week");
+    else if (kind === "today") openToday(v === "leaders" || v === "bt" || v === "research" ? v : "week");
     else if (kind === "alerts") { setPanelsOpen(false); setAlertsOpen(true); }
     else routeAction(action);
   }
@@ -354,7 +355,7 @@ export function App() {
   }
 
   const follow = (action: string) => {
-    if (action.startsWith("ask:")) return go(action);
+    if (action.startsWith("ask:") || action.startsWith("today:")) return go(action);
     if (!/^(news|meeting|roll):/.test(action)) record(action);
     routeAction(action);
   };
@@ -410,14 +411,14 @@ export function App() {
   function closeToday() {
     setToday(null);
     setSelectedId(null);
-    if (/^#(week|leaders|bt)\b/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+    if (/^#(week|leaders|bt|research)\b/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   }
 
   /** Timeline and the Today board both own the center stage; navigating elsewhere closes both. */
   function closeStage() {
     setTimelineId(null);
     setToday(null);
-    if (/^#(timeline\/|week$|leaders$|bt\b)/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+    if (/^#(timeline\/|week$|leaders$|bt\b|research\b)/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   }
 
   function openToday(tab: TodayTab) {
@@ -531,7 +532,7 @@ export function App() {
     ? (marketView === "supply" ? supplySymbol : chartSymbol)
     : drawer?.watch || "";
   const foot = timelineId ? (timelineStatus || TIMELINE_STATUS) : onToday ? (stageList?.status || TODAY_STATUS) : view.status;
-  const footLabel = timelineId ? "TIMELINE" : onToday ? "TODAY" : rail.rail.open ? "LIST SOURCE" : "LIST (HIDDEN)";
+  const footLabel = timelineId ? "TIMELINE" : today === "research" ? "RESEARCH" : onToday ? "TODAY" : rail.rail.open ? "LIST SOURCE" : "LIST (HIDDEN)";
   const reset = () => { setSelectedId(null); setDossier(null); };
   const askTheory = boardOn && selectedId?.startsWith("theory:")
     ? board.graph.theories.find((t) => selectedId === `theory:${t.id}`) || null
@@ -572,7 +573,7 @@ export function App() {
         </div>
         <nav className="nav">
           <button className="compact-find" aria-label="Search TradeSimple" aria-haspopup="dialog" onClick={() => { ask.close(); setCmdOpen(true); }}><Icon name="search" /> Find</button>
-          <button aria-current={today && today !== "bt" ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
+          <button aria-current={(today === "week" || today === "leaders") ? "page" : undefined} onClick={() => go(`today:${today === "leaders" ? "leaders" : "week"}`)} title="This week in Congress trading, and leaderboards">
             <kbd>0</kbd><IconLabel icon="today" hide>Today</IconLabel>
           </button>
           {SECTIONS.map((item, index) => (
@@ -580,6 +581,7 @@ export function App() {
               <kbd>{index + 1}</kbd><IconLabel icon={item.id} hide>{item.label}</IconLabel>
             </button>
           ))}
+          <button aria-current={today === "research" ? "page" : undefined} onClick={() => go("today:research")} title="Saved experiments and versioned datasets">Research</button>
           <button className="ghost" aria-pressed={calendarTab != null} aria-current={calendarTab ? "page" : undefined} onClick={openCalendar} title="Calendar"><IconLabel icon="calendar" hide>Calendar</IconLabel></button>
         </nav>
         <div className="tools">
@@ -611,7 +613,7 @@ export function App() {
       <main className="stage" style={phone ? undefined : { gridTemplateColumns: timelineId ? "minmax(0, 1fr)" : rail.columns }}>
         <div className="map-wrap">
           <div className="map-bar toggle">
-            {today && !timelineId ? <span className="bar-note">{today === "bt" ? "Backtest · entries are the day after a record became public · caveats below every result · " : "Today · newest Congress trade disclosures and leaderboards · names open timelines, tickers open charts · "}<kbd>esc</kbd> closes</span> : null}
+            {today && !timelineId ? <span className="bar-note">{today === "research" ? "Research · frozen experiments and versioned datasets · " : today === "bt" ? "Backtest · entries are the day after a record became public · caveats below every result · " : "Today · newest Congress trade disclosures and leaderboards · names open timelines, tickers open charts · "}<kbd>esc</kbd> closes</span> : null}
             {calendarTab ? <span className="bar-note">Calendar · Earnings, macro, lobbying, and PAC events · rows open in the dossier · <kbd>esc</kbd> closes</span> : null}
             {barFor === "congress" ? (
               <CongressBar
@@ -691,6 +693,8 @@ export function App() {
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
             {phone && !timelineId && !today && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
+            ) : today === "research" ? (
+              <ResearchBoard onFollow={follow} onClose={closeToday} onList={reportList} />
             ) : today === "bt" ? (
               <BacktestBoard key={btSeed} seed={btSeed} onFollow={follow} onClose={closeToday} onList={reportList} />
             ) : today ? (

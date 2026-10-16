@@ -12,3 +12,6 @@ demo/snapshot.partial
 dist-demo
 data/bot-state.json
 .cursor/coordination
+
+data/research.sqlite
+data/research.sqlite-*

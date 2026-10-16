@@ -17,9 +17,9 @@ function download(name: string, data: BlobPart, mime: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2_000);
 }
 
-async function fetchReplicate(spec: BacktestSpec) {
+async function fetchReplicate(spec: BacktestSpec, runId?: string) {
   for (let n = 0; n < 6; n++) {
-    const res = await fetch(`/api/backtest/replicate?spec=${encodeSpec(spec)}`);
+    const res = await fetch(`/api/backtest/replicate?spec=${encodeSpec(spec)}${runId ? `&runId=${encodeURIComponent(runId)}` : ""}`);
     const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
     if (res.ok && body.ok) return body;
     if (res.status !== 429 && res.status !== 503) throw new Error(body.error || `HTTP ${res.status}`);
@@ -29,12 +29,12 @@ async function fetchReplicate(spec: BacktestSpec) {
 }
 
 /** Everything needed to re-run one backtest outside the app: spec, trades, daily prices, scripts, methods. */
-export function Replicate({ spec, compact = false }: { spec: BacktestSpec; compact?: boolean }) {
+export function Replicate({ spec, runId, compact = false }: { spec: BacktestSpec; runId?: string; compact?: boolean }) {
   const [state, setState] = useState<State>({ phase: "idle" });
   const load = async () => {
     setState({ phase: "loading" });
     try {
-      const rep = await fetchReplicate(spec);
+      const rep = await fetchReplicate(spec, runId);
       const files = [
         ...replicateFiles(rep),
         { name: "replicate.mjs", mime: "text/javascript", text: nodeScript },

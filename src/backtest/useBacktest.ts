@@ -8,7 +8,7 @@ export type BtState =
   | { phase: "idle" }
   | { phase: "running"; since: number; note: string }
   | { phase: "done"; run: BtRun }
-  | { phase: "error"; error: string; missing?: string };
+  | { phase: "error"; error: string; missing?: string; runId?: string };
 
 const RETRY_MS = 9_000;
 const MAX_RETRIES = 6;
@@ -43,7 +43,7 @@ export function useBacktest() {
             return;
           }
           if (res.building && n < MAX_RETRIES) { timer.current = window.setTimeout(() => attempt(n + 1), RETRY_MS); return; }
-          setState({ phase: "error", error: res.error, missing: res.missing });
+          setState({ phase: "error", error: res.error, missing: res.missing, runId: res.runId });
         })
         .catch((err: Error) => { if (mine === turn.current) setState({ phase: "error", error: err.message }); });
     };

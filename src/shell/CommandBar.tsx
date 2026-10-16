@@ -15,6 +15,7 @@ type Command = { code: string; label: string; hint: string; action: string };
 
 /** Static destinations, Bloomberg-style mnemonics on the left. Actions route through App.go(). */
 const STATIC: Command[] = [
+  { code: "RESEARCH", label: "Research · experiments and Data Hub", hint: "Saved runs, offline replay, CSV and API imports", action: "today:research" },
   { code: "WEEK", label: "Today · filings and watchlist", hint: "This week in Congress trading, newest filings and biggest trades", action: "today:week" },
   { code: "LEAD", label: "Today · leaderboards", hint: "Buys vs S&P 500, most active, late filers", action: "today:leaders" },
   { code: "CONG", label: "Congress", hint: "Votes, bills, members, committees", action: "section:congress" },

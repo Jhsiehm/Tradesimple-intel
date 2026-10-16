@@ -25,7 +25,7 @@ function Tile({ label, value, sub, cls, title }: { label: string; value: string;
 type Tab = "trades" | "members" | "tickers";
 type Sort = "entry" | "ret" | "excess";
 
-export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun; onFollow: (action: string) => void; onCopy: () => void; copied: boolean }) {
+export function BacktestResults({ run, onFollow, onCopy, copied, frozen = false }: { frozen?: boolean; run: BtRun; onFollow: (action: string) => void; onCopy: () => void; copied: boolean }) {
   const [tab, setTab] = useState<Tab>("trades");
   const [sort, setSort] = useState<Sort>("entry");
   const [shown, setShown] = useState(100);
@@ -43,7 +43,7 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
 
   return (
     <div className="bt-results">
-      {run.building ? <p className="bt-note warn">Partial run: {run.pending.length ? `${run.pending.length} tickers were still loading prices` : "disclosures are still being read"}. Asking again every few seconds until it settles.</p> : null}
+      {run.building ? <p className="bt-note warn">Partial run: {run.pending.length ? `${run.pending.length} tickers were still loading prices` : "disclosures are still being read"}. {frozen ? "This saved snapshot will not change. Rerun to try newer data." : "Asking again every few seconds until it settles."}</p> : null}
       {!s ? (
         <p className="bt-empty">{run.counts.matched === 0 || run.counts.signals === 0 ? "No signals matched these filters." : `${run.counts.signals} signals matched but none could be priced and held to an exit. See the notes below.`}</p>
       ) : (
@@ -75,7 +75,7 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
           <div className="bt-tabs" role="tablist">
             {(["trades", "members", "tickers"] as Tab[]).map((t) => (
               <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-                {t === "trades" ? `Trades (${run.trades.length})` : t === "members" ? `By ${run.spec.source === "contracts" ? "agency" : run.spec.source === "form4" ? "insider" : "member"} (${run.byMember.total})` : `By ticker (${run.byTicker.total})`}
+                {t === "trades" ? `Trades (${run.trades.length})` : t === "members" ? `By ${run.spec.source === "dataset" ? "dataset" : run.spec.source === "contracts" ? "agency" : run.spec.source === "form4" ? "insider" : "member"} (${run.byMember.total})` : `By ticker (${run.byTicker.total})`}
               </button>
             ))}
             {tab === "trades" ? (
@@ -128,7 +128,7 @@ export function BacktestResults({ run, onFollow, onCopy, copied }: { run: BtRun;
           <div><dt>Run</dt><dd><span>{run.cache === "hit" ? "Served from the 30-minute result cache. " : ""}{(run.timing.totalMs / 1000).toFixed(1)} s total: signals {run.timing.signalsMs} ms, prices {(run.timing.pricesMs / 1000).toFixed(1)} s, engine {run.timing.engineMs} ms.</span></dd></div>
         </dl>
         <button className="bt-copy" onClick={onCopy}><Icon name="link" /> {copied ? "Link copied" : "Copy link to this backtest"}</button>
-        {s ? <Replicate spec={run.spec} /> : null}
+        {s ? <Replicate runId={run.runId} spec={run.spec} /> : null}
       </section>
     </div>
   );
