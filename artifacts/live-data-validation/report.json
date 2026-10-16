@@ -1,0 +1,543 @@
+{
+  "createdAt": "2026-10-16T08:14:00.336Z",
+  "liveValidation": {
+    "experiment": "exp_1b4d44e3f3b045bba740b35891287d0a",
+    "run": "run_c51ec67652804813a57180910ac9aaab",
+    "ok": true,
+    "counts": {
+      "signals": 9,
+      "offeredSignals": 9,
+      "used": 9,
+      "skipped": 0,
+      "matched": 9,
+      "tickers": 1,
+      "priced": 1
+    },
+    "replayMatches": true,
+    "export": {
+      "status": 200,
+      "bytes": 641081,
+      "zip": true
+    },
+    "lagText": "Availability gap on the 9 signals (signal date minus event date): median 90 days, mean 53.11, 90th percentile 90, longest 90. Dates follow the source or dataset timing policy, including any assumed delays; see its coverage and timing caveats. Entry is on a later trading day.",
+    "sourceTiming": "Frozen evidence; availability uses an assumed publication delay."
+  },
+  "contractEvidence": {
+    "HII": {
+      "job": "ev_62ddbc90ad5c41509a5a5b8be8b84ca0",
+      "expected": 204,
+      "received": 204,
+      "uniqueVersions": 204,
+      "ambiguousVersions": 0,
+      "status": "complete within declared January 2025 scope"
+    },
+    "LMT": {
+      "job": "ev_35366c40148d47a7be59420f0ae3f908",
+      "expected": 2804,
+      "received": 2804,
+      "uniqueVersions": 2799,
+      "ambiguousVersions": 44,
+      "status": "partial; reconciliation review required",
+      "verifiedPartialHandoff": {
+        "experiment": "exp_01f145d19f774eeea87c0f2028f56b5a",
+        "run": "run_9606f2e1ce604c1b9a156c43f5fd1ef0",
+        "warning": {
+          "level": "warn",
+          "id": "evidenceCoverage",
+          "text": "Frozen evidence has incomplete retrieval, ambiguous identities, unmapped recipients or missing fields. Review its coverage manifest before interpreting results."
+        },
+        "replayMatches": true
+      }
+    }
+  },
+  "insiderBackfill": {
+    "rows": 469719,
+    "forms": 190566,
+    "tickers": 504,
+    "quarters": 27,
+    "dailyDays": 10,
+    "coveredFrom": "2020-01-01",
+    "coveredThrough": "2026-10-15",
+    "errors": 0
+  },
+  "warming": {
+    "initialRoutes": 835,
+    "initialFailures": 1,
+    "repairedInitialFailure": "/api/strait/news now returns Google News RSS fallback",
+    "supplementalRoutesAttempted": 932,
+    "allTickerDossiersAndPositions": 504,
+    "remainingTickerRoutes": 0,
+    "lobbyingListingFailures": 143,
+    "lobbyingListingQueriesDeferred": 43
+  },
+  "remainingGaps": {
+    "lobbying": "LDA.gov returned HTTP 429. Further lobbying requests stopped; cached failures retain retry times.",
+    "activeLdaFailureQueries": 249,
+    "scannedHouseReportsUnparsed": 118,
+    "absentFromNasdaqScreener": [
+      "PSKY",
+      "WBD"
+    ],
+    "contractHistoricalOwnership": "Current recipient mappings do not establish historical ownership.",
+    "contractTiming": "Publication lags are assumptions, not verified publication dates."
+  },
+  "validation": {
+    "testsPassed": 768,
+    "testsFailed": 0,
+    "productionBuild": "passed"
+  },
+  "feedAudit": [
+    {
+      "path": "/api/markets/insiders",
+      "http": 200,
+      "source": "SEC EDGAR Form 4 (issuer submissions)",
+      "asOf": "2026-10-16T06:06:00.203Z",
+      "counts": {
+        "errors": 0,
+        "scanned": 101,
+        "items": 1736
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Form 4 is due two business days after the trade. Rows are the latest eight Form 4s per join-table issuer. Code P is an open-market buy, S a sale, A a grant, F tax withholding. 15 forms a join-table company filed as the owner of another company's shares are left out of its rows."
+        }
+      ]
+    },
+    {
+      "path": "/api/markets/whales",
+      "http": 200,
+      "source": "SEC EDGAR 13F-HR information tables",
+      "asOf": "2026-10-16T07:56:37.950Z",
+      "counts": {
+        "errors": 0,
+        "items": 2509
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Quarter-end holdings filed up to 45 days after quarter end. 21 of 21 named funds in data/whales.json; change is this 13F against the one before. Issuers matched by name to the join table. Options excluded."
+        }
+      ]
+    },
+    {
+      "path": "/api/markets/politicians",
+      "http": 200,
+      "source": "House Clerk PTR PDFs · Senate eFD PTRs",
+      "asOf": "2026-10-16T07:56:38.004Z",
+      "counts": {
+        "errors": 1,
+        "items": 11262
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "building",
+          "value": false
+        },
+        {
+          "at": "latency",
+          "value": "STOCK Act allows up to 45 days from trade to filing. Parsed 823 of 823 electronic House and 269 of 269 Senate reports filed since 2025-01-03. Lag is filed date minus trade date. Senate amendments keep the original report date and list the amendment date separately. A trade listed in more than one report counts once (104 repeat rows folded: 93 Senate amendment, 11 House; 11 take amended values); `public` is the earliest date it was disclosed, or the amendment date for a trade only in an amendment."
+        }
+      ]
+    },
+    {
+      "path": "/api/congress/bills",
+      "http": 200,
+      "source": "Congress.gov",
+      "asOf": "2026-10-16T08:03:54.488Z",
+      "counts": {
+        "items": 50
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        }
+      ]
+    },
+    {
+      "path": "/api/markets/shorts",
+      "http": 200,
+      "source": "FINRA consolidated short interest",
+      "asOf": "2026-10-16T03:50:31.202Z",
+      "counts": {
+        "scanned": 101,
+        "items": 400
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Settlement-date snapshots published twice a month, about a week after settlement."
+        }
+      ]
+    },
+    {
+      "path": "/api/congress/calendar",
+      "http": 200,
+      "source": "Congress.gov committee meetings",
+      "asOf": "2026-10-16T08:03:54.500Z",
+      "counts": {
+        "items": 80
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Scheduled and recent meetings as posted by committee clerks. Times are UTC."
+        }
+      ]
+    },
+    {
+      "path": "/api/contracts/dod",
+      "http": 200,
+      "source": "War.gov (Department of Defense) daily contract announcements",
+      "asOf": "2026-10-16T07:36:14.083Z",
+      "counts": {
+        "items": 20
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Posted around 5 p.m. ET each business day for awards of $7.5 million or more, months before the same actions reach USAspending. Fetched in 0.3 s."
+        }
+      ]
+    },
+    {
+      "path": "/api/contracts/board",
+      "http": 200,
+      "source": "USAspending.gov prime contract obligations · SEC XBRL revenue",
+      "asOf": "2026-10-16T03:47:05.869Z",
+      "counts": {
+        "sectors": 11,
+        "items": 200
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "building",
+          "value": false
+        },
+        {
+          "at": "latency",
+          "value": "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered."
+        }
+      ]
+    },
+    {
+      "path": "/api/news",
+      "http": 200,
+      "source": "45 RSS wires",
+      "asOf": "2026-10-16T07:59:58.411Z",
+      "counts": {
+        "errors": 0,
+        "feeds": 45,
+        "items": 700
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Publisher RSS, polled every five minutes. Headline time is the publisher's stamp."
+        }
+      ]
+    },
+    {
+      "path": "/api/news/x",
+      "http": 200,
+      "source": "Bluesky public AppView (same outlets as their X accounts) · Truth Social via trumpstruth.org · X trending via trends24.in",
+      "asOf": "2026-10-16T08:04:04.928Z",
+      "counts": {
+        "feeds": 19,
+        "trends": 20,
+        "items": 295
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "No X API token, so X posts themselves are not readable (public X mirrors are bot-walled). These are the same accounts posting on Bluesky, usually within minutes of X, plus Trump's Truth Social posts from an unofficial archive (about 5–30 min behind). Cached 3 min · 19/19 accounts answered in 10344 ms · newest post 08:02 UTC. Add X_BEARER_TOKEN to switch to X itself."
+        }
+      ]
+    },
+    {
+      "path": "/api/news/xpulse",
+      "http": 200,
+      "source": "trends24.in (hourly snapshots of X trending topics) · curated account list",
+      "asOf": "2026-10-16T07:00:14.758Z",
+      "counts": {
+        "accounts": 6
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Trending lists are hourly snapshots published by trends24, typically up to an hour behind X · cached 10 min · fetched in 5012 ms. \"New\" means it was not on the previous hour's list. Symbols are joined only by exact company name or cashtag from data/tickers.json."
+        },
+        {
+          "at": "posts.ok",
+          "value": true
+        },
+        {
+          "at": "posts.latency",
+          "value": "No X API token, so X posts themselves are not readable (public X mirrors are bot-walled). These are the same accounts posting on Bluesky, usually within minutes of X, plus Trump's Truth Social posts from an unofficial archive (about 5–30 min behind). Cached 3 min · 19/19 accounts answered in 10394 ms · newest post 08:02 UTC. Add X_BEARER_TOKEN to switch to X itself."
+        }
+      ]
+    },
+    {
+      "path": "/api/calendar/earnings",
+      "http": 200,
+      "source": "Nasdaq earnings calendar",
+      "asOf": "2026-10-16T08:04:05.113Z",
+      "counts": {
+        "items": 563
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Scheduled report dates and consensus EPS as published by Nasdaq. Shows join-table names plus companies above $50B market cap."
+        }
+      ]
+    },
+    {
+      "path": "/api/calendar/lobbying",
+      "http": 200,
+      "source": "LDA.gov",
+      "asOf": "2026-10-16T07:36:16.123Z",
+      "counts": {
+        "items": 400,
+        "totals": 504
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Join-table clients only, this year and last. Rechecked every 2h; lag is posted date minus quarter end (LD-2 due in 20 days)."
+        }
+      ]
+    },
+    {
+      "path": "/api/macro/strip",
+      "http": 200,
+      "source": "FRED (St. Louis Fed) · Federal Reserve · Nasdaq economic calendar",
+      "asOf": "2026-10-16T07:49:26.651Z",
+      "counts": {
+        "items": 12
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "FRED series update on release; CPI is monthly, Treasury yields daily with a one-day lag."
+        }
+      ]
+    },
+    {
+      "path": "/api/calendar/pacs",
+      "http": 200,
+      "source": "FEC bulk data (committee master, candidate master, committee-to-candidate contributions)",
+      "asOf": "2026-10-16T03:45:28.006Z",
+      "counts": {
+        "rows": 500,
+        "groups": 60
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "FEC bulk files refresh weekly and are rechecked daily; lag is the filing image date minus the gift date. Cycles 2026, 2024, 2022. PACs joined to tickers through data/tickers.json."
+        }
+      ]
+    },
+    {
+      "path": "/api/strait/news",
+      "http": 200,
+      "source": "Google News RSS",
+      "asOf": "2026-10-16T08:03:35.038Z",
+      "counts": {
+        "items": 8
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        }
+      ]
+    },
+    {
+      "path": "/api/strait/ais",
+      "http": 200,
+      "source": "AISStream",
+      "asOf": "2026-10-16T08:04:05.668Z",
+      "counts": {
+        "items": 11
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Positions update while the server holds the websocket."
+        }
+      ]
+    },
+    {
+      "path": "/api/earth/imagery",
+      "http": 200,
+      "asOf": "2026-10-16T07:21:21.094Z",
+      "counts": {},
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        }
+      ]
+    },
+    {
+      "path": "/api/earth/lanes",
+      "http": 200,
+      "source": "CIA Map of the World's Oceans (2012), georeferenced by newzealandpaul/Shipping-Lanes",
+      "asOf": "2012 chart · reference routes, not live traffic",
+      "counts": {},
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        }
+      ]
+    },
+    {
+      "path": "/api/markets/board",
+      "http": 200,
+      "source": "Nasdaq stock screener (all US listings, one call)",
+      "asOf": "2026-10-16T08:04:08.088Z",
+      "counts": {
+        "missing": 2,
+        "items": 502
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Exchange-delayed last sale (about 15 min in session) · refreshed every 60s · fetched in 2266 ms · 502 of 504 join-table names matched"
+        },
+        {
+          "at": "missing",
+          "value": [
+            "PSKY",
+            "WBD"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/api/earth/live",
+      "http": 200,
+      "source": "NASA GIBS WMTS capabilities",
+      "asOf": "2026-10-16T08:04:08.689Z",
+      "counts": {
+        "layers": 3
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Geostationary frames every 10 min; GIBS posts each about an hour after capture, so frame age is shown per satellite · capabilities read in 3s"
+        }
+      ]
+    },
+    {
+      "path": "/api/crypto/board",
+      "http": 200,
+      "source": "Yahoo Finance chart · CoinGecko markets",
+      "asOf": "2026-10-16T08:04:07.000Z",
+      "counts": {
+        "items": 18
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Crypto trades 24/7. Prices are delayed session quotes; market cap, supply, and ATH from CoinGecko's free API refresh every few minutes."
+        }
+      ]
+    },
+    {
+      "path": "/api/fx/board",
+      "http": 200,
+      "source": "Yahoo Finance chart (CCY and ICE DXY)",
+      "asOf": "2026-10-16T08:04:12.000Z",
+      "counts": {
+        "items": 25
+      },
+      "status": [
+        {
+          "at": "ok",
+          "value": true
+        },
+        {
+          "at": "latency",
+          "value": "Delayed indicative rates. FX trades around the clock Sunday evening to Friday evening; crosses in the matrix are derived from USD legs."
+        }
+      ]
+    }
+  ]
+}

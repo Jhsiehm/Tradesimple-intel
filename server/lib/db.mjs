@@ -30,23 +30,33 @@ export function openDb(root) {
   `);
   {
     const rows = JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8"));
-    db.exec("DELETE FROM tickers");
     const insert = db.prepare(`
       INSERT INTO tickers (symbol, name, cik, lda_clients, recipients, districts, state, lat, lon)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    for (const row of rows) {
-      insert.run(
-        row.symbol,
-        row.name,
-        row.cik,
-        JSON.stringify(row.ldaClients),
-        JSON.stringify(row.recipients),
-        JSON.stringify(row.districts),
-        row.state,
-        row.lat,
-        row.lon
-      );
+    // CLI refreshes share this database with the API. Readers must never see a
+    // half-seeded registry while another process opens a connection.
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.exec("DELETE FROM tickers");
+      for (const row of rows) {
+        insert.run(
+          row.symbol,
+          row.name,
+          row.cik,
+          JSON.stringify(row.ldaClients),
+          JSON.stringify(row.recipients),
+          JSON.stringify(row.districts),
+          row.state,
+          row.lat,
+          row.lon
+        );
+      }
+      db.exec("COMMIT");
+    } catch (err) {
+      db.exec("ROLLBACK");
+      db.close();
+      throw err;
     }
   }
   return db;

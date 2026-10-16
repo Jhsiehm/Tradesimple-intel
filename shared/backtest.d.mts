@@ -88,6 +88,6 @@ export function runBacktest(input: {
   bars?: Record<string, Bar[]>;
   benchBars?: Record<string, Bar[]>;
   rules?: unknown;
-  context?: { notes?: { level?: "info" | "warn"; id?: string; text: string }[]; paperFilings?: number; unparsed?: number; rangeAmounts?: boolean; unpriced?: string[] };
+  context?: { sourceFamily?: string; notes?: { level?: "info" | "warn"; id?: string; text: string }[]; paperFilings?: number; unparsed?: number; rangeAmounts?: boolean; unpriced?: string[] };
   calendar?: Bar[] | null;
 }): BacktestResult;

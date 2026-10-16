@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { researchReadiness } from '../shared/researchReadiness.mjs';
+import { datasetSource } from '../server/domain/research-events.mjs';
+test('partial frozen evidence remains a source gap after the dataset handoff', () => {
+ const dataset = { events: [], caveats: [], manifest: { policy: { mode: 'assumed' }, coverage: { completed: 0, partitions: 1, ambiguousVersions: 44 } } };
+ const source = datasetSource(dataset);
+ assert.match(source.feeds[0].latency, /assumed publication delay/);
+ assert.equal(researchReadiness({ ok: true, building: false, counts: { signals: 3, used: 3 }, caveats: { items: source.context.notes } }).status, 'source-gaps');
+ dataset.manifest.coverage = { completed: 1, partitions: 1, ambiguousVersions: 0 };
+ assert.equal(datasetSource(dataset).context.notes.length, 0);
+});
 const base = { ok: true, building: false, counts: { signals: 2, used: 1, tickers: 1, priced: 1 }, trades: [{ symbol: 'LMT', signal: '2025-02-01' }], caveats: { exclusions: {}, excludedSymbols: {} } };
 test('unfinished history never becomes a zero-signal finding', () => {
  const out = researchReadiness({ ...base, building: true, counts: { signals: 0 } }, ['LMT']);

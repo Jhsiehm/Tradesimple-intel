@@ -469,7 +469,11 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   const missed = unpricedLine(signals.length, trades.length, skipped);
   if (missed) add("warn", "unpriced", missed);
   if (lag) {
+    if (context.sourceFamily && context.sourceFamily !== "congress") {
+      add("info", "lag", `Availability gap on the ${lag.n} signals (signal date minus event date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}. Dates follow the source or dataset timing policy, including any assumed delays; see its coverage and timing caveats. Entry is on a later trading day.`);
+    } else {
     add("info", "lag", `Disclosure lag on the ${lag.n} signals (original filing date minus trade date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}; ${lag.over45} filed after the 45-day STOCK Act deadline. Entry is the first trading day after the public date, so the run only uses what was public.`);
+    }
     if (lag.amended) add("info", "amendLag", `${lag.amended.n} signals first appear in a later amendment, a median ${lag.amended.median} days (up to ${lag.amended.max}) after the original report; they enter after the amendment date. That wait is not counted as filing lag.`);
   }
   if (rules.sizing === "amountMid" || context.rangeAmounts) {

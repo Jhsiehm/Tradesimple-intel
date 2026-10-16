@@ -18,8 +18,8 @@ export async function straitNews(db) {
   let body;
   try {
     body = await fetchJson(url);
-  } catch (err) {
-    if (err.status !== 429) throw err;
+  } catch {
+    // Network failures and upstream outages need the same fallback as rate limits.
     return rssNews(db);
   }
   if (!body || typeof body !== "object" || !Array.isArray(body.articles)) return rssNews(db);

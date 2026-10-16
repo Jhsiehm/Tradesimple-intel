@@ -101,7 +101,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     bars: symbolBars,
     benchBars,
     rules: spec.rules,
-    context: { ...src.context, notes, unpriced: pendingSyms }
+    context: { ...src.context, sourceFamily: spec.source, notes, unpriced: pendingSyms }
   };
   const result = runBacktest(inputs);
   const reality = result.stats ? realityCheck({ trades: result.trades, bars: symbolBars, benchBars, rules: result.rules }) : null;

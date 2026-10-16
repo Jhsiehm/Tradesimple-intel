@@ -212,6 +212,13 @@ test("disclosure lag statistics come from the filing and trade dates", () => {
   assert.equal(out.caveats.lag.amended, null);
 });
 
+test("dataset timing does not inherit a Congress filing deadline", () => {
+  const out = run({ signals: [sig({ tradeDate: isoOf(START - 90) })], bars: { AAA: flat(60) }, context: { sourceFamily: 'dataset' } });
+  const lag = out.caveats.items.find(x => x.id === 'lag').text;
+  assert.match(lag, /Availability gap/);
+  assert.doesNotMatch(lag, /STOCK Act|filed after/);
+});
+
 test("amendment delay is reported apart from filing lag", () => {
   const out = run({
     signals: [

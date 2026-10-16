@@ -96,5 +96,12 @@ export function importDataset(db, request) {
   return { ok: true, dataset: putDataset(db, p.name, p.payload, p.contentHash) };
 }
 export function datasetSource(dataset) {
-  return { identity: dataset.identity, signals: dataset.events.map(e => ({ id: `${dataset.id}:${e.id}`, symbol: e.entity.symbol, signalDate: e.availableAt.slice(0, 10), tradeDate: e.eventAt.slice(0, 10), side: e.side, sizeHint: e.value, sizeIsRange: false, actor: dataset.id, actorLabel: dataset.name, sector: e.entity.sector || '' })), records: dataset.events, context: { notes: dataset.caveats.map((text, i) => ({ id: `import${i}`, level: 'warn', text })) }, feeds: [{ label: dataset.name, source: dataset.source, asOf: dataset.createdAt, latency: 'Imported snapshot; public dates asserted by the importer.' }], dataset: { id: dataset.id, name: dataset.name, version: dataset.version, contentHash: dataset.contentHash } };
+  const notes = dataset.caveats.map((text, i) => ({ id: `import${i}`, level: 'warn', text }));
+  const coverage = dataset.manifest?.coverage;
+  if (coverage && (coverage.completed < coverage.partitions || coverage.ambiguousVersions > 0 || coverage.unmapped > 0 || coverage.missingAmounts > 0 || coverage.missingDates > 0)) {
+    notes.push({ id: 'evidenceCoverage', level: 'warn', text: 'Frozen evidence has incomplete retrieval, ambiguous identities, unmapped recipients or missing fields. Review its coverage manifest before interpreting results.' });
+  }
+  const timing = dataset.manifest?.policy?.mode;
+  const latency = timing ? `Frozen evidence; availability uses ${timing === 'assumed' ? 'an assumed publication delay' : timing === 'observed' ? 'collector first-observation dates, not original publication' : 'verified publication dates'}.` : 'Imported snapshot; public dates asserted by the importer.';
+  return { identity: dataset.identity, signals: dataset.events.map(e => ({ id: `${dataset.id}:${e.id}`, symbol: e.entity.symbol, signalDate: e.availableAt.slice(0, 10), tradeDate: e.eventAt.slice(0, 10), side: e.side, sizeHint: e.value, sizeIsRange: false, actor: dataset.id, actorLabel: dataset.name, sector: e.entity.sector || '' })), records: dataset.events, context: { notes }, feeds: [{ label: dataset.name, source: dataset.source, asOf: dataset.createdAt, latency }], dataset: { id: dataset.id, name: dataset.name, version: dataset.version, contentHash: dataset.contentHash } };
 }
