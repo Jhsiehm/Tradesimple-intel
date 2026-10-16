@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { researchStore, putRun, saveExperiment } from '../server/domain/research-store.mjs';
+import { researchStore, putRun, saveExperiment, hashOf } from '../server/domain/research-store.mjs';
 import { ENGINE, replayRun } from '../server/domain/research-replay.mjs';
 import { runBacktest, dayOf } from '../shared/backtest.mjs';
 import { realityCheck, REALITY } from '../shared/backtestStats.mjs';
@@ -93,4 +93,20 @@ test('online backup includes committed WAL research and restores a replayable ru
     assert.throws(() => restoreResearchBackup(backupDir, path.join(dir, 'invalid.sqlite')), /checksum mismatch/);
     assert.equal(fs.existsSync(path.join(dir, 'invalid.sqlite')), false);
   } finally { db.close(); fs.rmSync(dir, {recursive:true,force:true}); }
+});
+
+
+test('backup refuses a notebook whose evidence pin disagrees with its run',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-notebook-backup-')),db=new DatabaseSync(path.join(dir,'cache.sqlite'));
+ try{
+  researchStore(db);const runId=putRun(db,{inputs:null,result:{ok:false},provenance:{},engine:ENGINE});
+  const experiment=saveExperiment(db,{runId,title:'Failed attempt retained as evidence'});
+  const note=saveNotebook(db,{title:'Pinned attempt',status:'draft',tags:[],followups:[],evidence:[{kind:'experiment',id:experiment.id}]});
+  createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'valid'));
+  const forged={...note,evidence:note.evidence.map(e=>({...e,inputHash:'incorrect'}))},encoded=JSON.stringify(forged);
+  db.exec('DROP TRIGGER research.notebook_revisions_update');
+  db.prepare('UPDATE research.notebook_revisions SET body=?,body_hash=? WHERE notebook_id=?').run(encoded,hashOf(encoded),note.id);
+  assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'invalid')),/Notebook evidence run/);
+  assert.throws(()=>saveNotebook(db,{...forged,baseRevision:1},note.id),/pinned checksum/);
+ }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

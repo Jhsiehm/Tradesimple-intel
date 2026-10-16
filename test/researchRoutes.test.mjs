@@ -206,3 +206,21 @@ test('event studies HTTP lifecycle locks conditions and preserves replay/export'
  assert.ok((await call('GET','/api/research/event-studies')).body.items.some(item=>item.id===p.id&&item.evaluated));
  const exported=await fetch(`${base}/api/research/runs/${run.id}/export`);assert.equal(exported.status,200);assert.equal(exported.headers.get('content-type'),'application/zip');
 });
+
+test('notebooks pin evaluated study and stress results through revisions and approved memory',async()=>{
+ const study=(await call('POST','/api/research/event-studies',{title:'Notebook event evidence',hypothesis:'Descriptive test',experimentId:experiment.id,spec:{from:'2025-01-01',to:'2025-03-01',before:1,after:2,sides:'both'}})).body.plan;
+ const stress=(await call('POST','/api/research/stress',{title:'Notebook stress evidence',hypothesis:'Higher cost test',experimentId:experiment.id,scenarios:[{id:'fees',label:'Higher fees',extraCostBps:10}]})).body.plan;
+ const body={title:'Study-supported finding',hypothesis:'Synthetic evidence only',conclusion:'No investment conclusion',decision:'Retain limitations for later research',status:'inconclusive',tags:[],followups:[],evidence:[{kind:'event-study',id:study.id,runId:'forged'},{kind:'stress',id:stress.id,runId:'forged'}]};
+ assert.equal((await call('POST','/api/research/notebooks',body)).status,400);
+ const studyRun=(await call('POST',`/api/research/event-studies/${study.id}/evaluate`,{})).body.plan.run;
+ assert.equal((await call('POST','/api/research/notebooks',body)).status,400);
+ const stressRun=(await call('POST',`/api/research/stress/${stress.id}/evaluate`,{})).body.plan.run;
+ const saved=await call('POST','/api/research/notebooks',body);assert.equal(saved.status,200);const note=saved.body.notebook;
+ assert.deepEqual(note.evidence.map(e=>e.runId),[studyRun.id,stressRun.id]);assert.deepEqual(note.evidence.map(e=>e.inputHash),[studyRun.inputHash,stressRun.inputHash]);
+ const revised=(await call('POST',`/api/research/notebooks/${note.id}`,{...note,baseRevision:1,conclusion:'Revised interpretation',evidence:note.evidence.map(e=>({...e,runId:experiment.runId,inputHash:'forged'}))})).body.notebook;
+ assert.deepEqual(revised.evidence,note.evidence);
+ const approval=(await call('POST','/api/research/memory/approvals',{notebookId:note.id,revision:2,action:'approve',reason:'Synthetic reviewed evidence'})).body.approval;
+ const frozen=await call('POST','/api/research/memory/snapshots',{mode:'context-aware',knownAt:new Date().toISOString(),approvalIds:[approval.id]});assert.equal(frozen.status,200);assert.deepEqual(frozen.body.snapshot.records[0].notebook.evidence,note.evidence);
+ const history=(await call('GET',`/api/research/notebooks/${note.id}`)).body.history;assert.equal(history.length,2);assert.equal(history[1].conclusion,body.conclusion);
+ for(const run of [studyRun,stressRun])assert.equal((await call('POST',`/api/research/runs/${run.id}/replay`,{})).body.matches,true);
+});

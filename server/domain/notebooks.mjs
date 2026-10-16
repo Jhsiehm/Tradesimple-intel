@@ -1,3 +1,5 @@
+import {getStressPlan} from './research-stress.mjs';
+import {getEventStudy} from './event-studies.mjs';
 import { researchStore, hashOf, newId, getExperiment, getRun } from './research-store.mjs';
 import { getPlan } from './convergence.mjs';
 export const FINDING_STATES = ['draft', 'promising', 'inconclusive', 'rejected', 'needs-data'];
@@ -44,16 +46,21 @@ export function saveNotebook(db, body, id = null) {
   if (!Array.isArray(body.evidence) || body.evidence.length > 30) throw new Error('Attach at most 30 evidence records.');
   const seen = new Set();
   const evidence = body.evidence.map(e => {
-    if (!['experiment', 'convergence'].includes(e.kind) || typeof e.id !== 'string') throw new Error('Choose an existing experiment or Convergence plan.');
+    if (!['experiment', 'convergence', 'stress', 'event-study'].includes(e.kind) || typeof e.id !== 'string') throw new Error('Choose an existing experiment, Convergence plan, evaluated stress plan or evaluated event study.');
     const key = `${e.kind}:${e.id}`;
     if (seen.has(key)) throw new Error('Evidence is already attached.'); seen.add(key);
     // Existing references retain the exact run that supported the earlier conclusion.
     const retained = previous?.evidence.find(old => old.kind === e.kind && old.id === e.id);
-    if (retained) { if (!getRun(db, retained.runId)) throw new Error('Evidence run is missing.'); return retained; }
+    if (retained) { const run=getRun(db,retained.runId); if (!run || run.inputHash!==retained.inputHash) throw new Error('Evidence run is missing or differs from its pinned checksum.'); return retained; }
     if (e.kind === 'experiment') {
       const exp = getExperiment(db, e.id);
       if (!exp) throw new Error('Evidence experiment not found.');
       return { kind: e.kind, id: exp.id, title: exp.title, runId: exp.runId, inputHash: exp.run.inputHash, source: exp.run.provenance.dataset?.name || exp.run.provenance.source || exp.run.result.spec?.source || '', phase: 'experiment' };
+    }
+    if(e.kind==='stress'||e.kind==='event-study'){
+      const plan=e.kind==='stress'?getStressPlan(db,e.id):getEventStudy(db,e.id);
+      if(!plan.run)throw new Error('Evaluate the study or stress plan before attaching its results.');
+      return {kind:e.kind,id:plan.id,title:plan.title,runId:plan.run.id,inputHash:plan.run.inputHash,source:e.kind==='event-study'?`SPY · ${plan.spec.model||'market-adjusted'}`:'Registered source sensitivity',phase:e.kind==='event-study'?'event study evaluated':'stress scenarios evaluated'};
     }
     const plan = getPlan(db, e.id);
     return { kind: e.kind, id: plan.id, title: plan.title, runId: plan.runId, inputHash: plan.inputHash, source: plan.sources.map(s => s.label).join(' + '), phase: plan.evaluated ? 'holdout evaluated' : 'development only' };

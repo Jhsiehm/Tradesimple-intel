@@ -24,6 +24,13 @@ function inspect(file) {
         if (table === 'runs' && hashOf(body.inputs) !== body.inputHash) throw new Error('Run input checksum mismatch.');
       }
     }
+    for(const row of db.prepare('SELECT body FROM notebook_revisions').iterate()){
+      const notebook=JSON.parse(row.body);
+      for(const reference of notebook.evidence||[]){
+        const stored=db.prepare('SELECT body FROM runs WHERE id=?').get(reference.runId),run=stored&&JSON.parse(stored.body);
+        if(!run||run.inputHash!==reference.inputHash)throw Error('Notebook evidence run is missing or differs from its pinned checksum.');
+      }
+    }
     if(present.includes('event_study_plans'))for(const row of db.prepare('SELECT body FROM event_study_plans').iterate()){
       const plan=JSON.parse(row.body),sourceRow=db.prepare('SELECT body FROM runs WHERE id=?').get(plan.sourceRunId);
       const source=sourceRow&&JSON.parse(sourceRow.body);
