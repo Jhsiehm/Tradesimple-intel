@@ -1,7 +1,7 @@
 import { TaskAdmission } from "./TaskAdmission";
 import { useState } from "react";
 import type { Turn } from "../ask/types";
-import { openStored, removeTask, runNow, setEnabled, type TaskView } from "./api";
+import { openStored, removeTask, runNow, setEnabled, type TaskView, type TasksRes } from "./api";
 import { useTasks } from "./useTasks";
 import "./tasks.css";
 
@@ -11,6 +11,9 @@ const et = (iso: string | null) => (iso ? `${ET.format(new Date(iso))} ET` : "â€
 /** Scheduled research tasks, compact, inside the Ask sheet's Saved area. Results post to Alerts; each opens here. */
 export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[]) => void; active: boolean }) {
   const { res } = useTasks(active);
+  return <ScheduledTaskList openTurns={openTurns} res={res} />;
+}
+export function ScheduledTaskList({ openTurns, res }: { openTurns: (turns: Turn[]) => void; res: TasksRes | null }) {
   const [fault, setFault] = useState("");
   const [confirm, setConfirm] = useState("");
   const items = res?.items || [];

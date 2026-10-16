@@ -1,12 +1,12 @@
+import { ResearchSidebar, useResearchSidebar } from './ResearchSidebar';
+import { Icon } from '../ui/icons/Icon';
 import { ResearchEmblem } from './ResearchEmblem';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { AskApi } from '../ask/useAsk';
 import { hasContext } from '../ask/useAsk';
 import { contextLine, type AgentContext } from '../agent/context';
 import { TurnView } from '../agent/AskSheet';
-import { SavedChats } from '../ask/SavedChats';
 import { ModelPick } from '../ask/ModelPick';
-import { ScheduledTasks } from '../tasks/ScheduledTasks';
 import { SpendLine } from '../ask/Spend';
 import { read, message } from './api';
 import './home.css';
@@ -18,8 +18,9 @@ function Methods() {
 }
 export function ResearchHome({ask,context,onFollow,onTool}: {ask:AskApi;context:AgentContext;onFollow:(a:string)=>void;onTool:(t:'experiments'|'data'|'convergence'|'notebooks'|'guided'|'contractEvidence'|'memory'|'stress'|'eventStudies')=>void}) {
   const [catalog,setCatalog] = useState<Catalog|null>(null), [error,setError] = useState(''), [search,setSearch] = useState('');
-  const [libraryOpen, setLibraryOpen] = useState(false);
-  useEffect(()=>{ let live=true; read<Catalog>('context').then(x=>{if(live)setCatalog(x);}).catch(e=>{if(live)setError(message(e));}); return ()=>{live=false;}; },[]);
+  const layout=useResearchSidebar(), [refreshing,setRefreshing]=useState(false);
+  const refresh=useCallback(async()=>{setRefreshing(true);try{setCatalog(await read<Catalog>('context'));setError('');}catch(e){setError(message(e));}finally{setRefreshing(false);}},[]);
+  useEffect(()=>{void refresh();},[refresh]);
   const last=ask.turns.at(-1), active=last?.steps.slice().reverse().find(s=>s.state==='running');
   const suggestions=[
     ...ask.chats.filter(c=>c.id!==ask.chatId).slice(0,2).map(c=>({label:'From saved chat · browser-local',title:c.title,question:'Review the attached saved chat. Identify its unresolved hypotheses and propose a falsifiable follow-up. Separate prior assertions from newly retrieved evidence.',chat:c.id})),
@@ -29,18 +30,12 @@ export function ResearchHome({ask,context,onFollow,onTool}: {ask:AskApi;context:
     {label:'Starter · all available layers',title:'Build an evidence map',question:'Help me investigate a company across available data layers. Ask for the company and scope, inspect source availability, and distinguish records, market observations and unverified signals. Label sources, as-of, latency and missing coverage.',chat:''}
   ].slice(0,4);
   const submit=()=>{if(!ask.busy&&ask.status?.configured&&ask.draft.trim())void ask.run(ask.draft);};
-  return <section className="research-home" data-conversation={ask.turns.length > 0}>
-    <aside className="research-sidebar" data-open={libraryOpen} aria-label="Research library">
-      <div className="research-sidebar-title"><ResearchEmblem/><strong>Research</strong><button className="research-library-toggle" onClick={() => setLibraryOpen(false)} aria-label="Close research library">×</button></div>
-      <button className="research-new" onClick={() => { ask.newChat(); setLibraryOpen(false); }} disabled={ask.busy}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M8 2v12M2 8h12"/></svg>New conversation</button>
-      <nav aria-label="Research tools">{([{id:'guided',title:'Guided experiment'}, {id:'contractEvidence',title:'Contract evidence'}, {id:'experiments',title:'Experiments'}, {id:'notebooks',title:'Notebooks'}, {id:'memory',title:'Memory'}, {id:'data',title:'Data Hub'}, {id:'convergence',title:'Convergence'}, {id:'eventStudies',title:'Event studies'}, {id:'stress',title:'Stress tests'}] as const).map(t => <button key={t.id} onClick={() => onTool(t.id)}>{t.title}</button>)}</nav>
-      <details className="research-scheduled"><summary>Scheduled research</summary><ScheduledTasks openTurns={turns => { ask.openTurns(turns); setLibraryOpen(false); }} active/></details>
-      <div className="research-saved"><SavedChats ask={{...ask, openSaved: id => { ask.openSaved(id); setLibraryOpen(false); }}}/></div>
-      <p className="research-local-note">Conversations saved in this browser.</p>
-    </aside>
-    <main className="research-main">
+  return <section className="research-home" data-conversation={ask.turns.length > 0} data-sidebar-open={layout.open} onKeyDown={event=>{if(layout.mobile&&layout.open&&event.key==='Escape'){event.preventDefault();event.stopPropagation();layout.close();}}}>
+    <ResearchSidebar ask={ask} context={context} catalog={catalog} error={error} refreshing={refreshing} onRefresh={()=>void refresh()} onTool={onTool} layout={layout}/>
+    {layout.mobile&&layout.open&&<button className="research-sidebar-backdrop" aria-label="Close research sidebar" onClick={layout.close}/>}
+    <main className="research-main" inert={layout.mobile&&layout.open}>
     {error&&<p role="alert" className="bt-note warn">{error}</p>}
-    <header className="research-home-top"><button className="research-library-toggle" onClick={() => setLibraryOpen(!libraryOpen)} aria-expanded={libraryOpen}>Library</button><span>{ask.turns.length ? 'Conversation' : 'New conversation'}</span><button onClick={()=>ask.show()}>Open in side panel</button></header>
+    <header className="research-home-top"><button ref={layout.trigger} className="research-library-toggle" onClick={layout.toggle} aria-expanded={layout.open} aria-controls="research-workspace-sidebar" aria-label={layout.open ? "Hide research sidebar" : "Show research sidebar"}><Icon name="panels" size={16}/><span>Workspace</span></button><span>{ask.turns.length ? 'Conversation' : 'New conversation'}</span><button onClick={()=>ask.show()}>Open in side panel</button></header>
     <div className="research-chat-stage">
     {!ask.turns.length ? <div className="research-hero"><ResearchEmblem/><h1>What would you like to research?</h1></div> : <div className="research-conversation" aria-label="Research conversation">{ask.turns.map(t=><TurnView key={t.id} turn={t} busy={ask.busy} ask={ask} prompts={[]} onFollow={onFollow}/>)}</div>}
     {ask.busy && <div className="research-execution" role="status"><ResearchEmblem active/><div><strong>{active?.label || last?.phase || 'Working'}</strong><p>{active?.source || 'Waiting for a tool observation or model response'} · elapsed progress, no estimated completion percentage</p></div></div>}
