@@ -8,11 +8,11 @@ import {
 } from "./chats";
 import { readEvents } from "./stream";
 import { AUTO } from "../../shared/modelRoute.mjs";
-import type { AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn } from "./types";
+import type { MemoryRequest, AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn } from "./types";
 
 export type AskApi = ReturnType<typeof useAsk>;
 /** `fresh`: skip a reusable stored answer (the "Re-ask" button). */
-type RunOpts = { answers?: Record<string, unknown>; acceptDefaults?: boolean; turnId?: string; fresh?: boolean };
+type RunOpts = { memory?: MemoryRequest; answers?: Record<string, unknown>; acceptDefaults?: boolean; turnId?: string; fresh?: boolean };
 
 const OFF: AskStatus = { ok: false, configured: false, provider: "", model: "", missing: [], notice: "The API did not answer.", tools: [] };
 
@@ -86,10 +86,12 @@ export function useAsk() {
     setOpen(!homeRef.current);
     setDraft("");
     const s = state.current;
-    const ctx = hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
+    const memory = opts.memory || (opts.turnId ? s.turns.find(t => t.id === opts.turnId)?.memory : undefined);
+    const ctx = !memory && hasContext(ctxRef.current) && !s.detached ? ctxRef.current : null;
     const ctxLabel = ctx ? (ctx.theory ? `theory ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}` : ctx.label || ctx.node || "") : "";
-    const prior = opts.turnId ? s.turns.filter((t) => t.id !== opts.turnId) : s.turns;
+    const prior = memory ? [] : opts.turnId ? s.turns.filter((t) => t.id !== opts.turnId) : s.turns;
     const turn = blankTurn(question, opts.turnId ? { id: opts.turnId, context: ctxLabel } : { context: ctxLabel });
+    if (memory) turn.memory = memory;
     const tid = turn.id;
     setTurns(opts.turnId ? s.turns.map((t) => (t.id === tid ? turn : t)) : [...s.turns, turn]);
     setBusy(true);
@@ -108,16 +110,17 @@ export function useAsk() {
     }
     const used = s.choice && s.choice !== AUTO && (cfg.models || []).some((m) => m.id === s.choice) ? s.choice : AUTO;
     patch((t) => ({ ...t, model: used === AUTO ? "" : used }));
-    const attached = s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
+    const attached = !memory && s.attachId ? s.chats.find((c) => c.id === s.attachId && c.id !== s.chatId) || null : null;
     const bts = lastBacktests(prior);
     const bt = bts.at(-1) || null;
     const payload = JSON.stringify({
       question,
       history: historyOf(prior),
+      ...(memory ? {memory} : {}),
       model: used,
       context: ctx ? { node: ctx.node, theory: ctx.theory, label: ctx.label || "" } : null,
       attached: attachedBody(attached),
-      prefs: s.prefs,
+      prefs: memory ? null : s.prefs,
       session: s.session,
       prior: bt?.spec || null,
       priors: bts.map((b) => b.spec),

@@ -1,3 +1,4 @@
+import { auditSignals, INTEGRITY_VERSION } from '../server/domain/research-integrity.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { cleanConvergence, combineSignals, runConvergence } from '../shared/convergence.mjs';
 import { dayOf } from '../shared/backtest.mjs';
 import { openDb } from '../server/lib/db.mjs';
-import { putRun, saveExperiment, getRun } from '../server/domain/research-store.mjs';
+import { putRun, saveExperiment, getRun, hashOf } from '../server/domain/research-store.mjs';
 import { ENGINE, replayRun, exportRun } from '../server/domain/research-replay.mjs';
 import { createPlan, evaluatePlan, getPlan, listPlans } from '../server/domain/convergence.mjs';
 const spec = () => cleanConvergence({ from: '2025-01-01', split: '2025-04-01', to: '2025-06-30', universe: 'AAPL', windowDays: 7, embargoDays: 7, rules: { holdDays: 10 } });
@@ -16,9 +17,10 @@ const sources = () => [{ id: 'a', label: 'A', signals: [sig('a1', '2025-01-05'),
 const bars = () => Array.from({ length: 181 }, (_, i) => [dayOf('2025-01-01') + i, 100 + i, 101 + i]);
 const input = () => ({ kind: 'convergence', phase: 'evaluation', spec: spec(), sources: sources(), bars: { AAPL: bars() }, benchBars: { SPY: bars().map(b => [b[0], 100, 100]) } });
 function dbAt() { const prior = process.env.INTEL_CACHE; process.env.INTEL_CACHE = ':memory:'; try { return openDb(decodeURIComponent(new URL('..', import.meta.url).pathname)); } finally { if (prior === undefined) delete process.env.INTEL_CACHE; else process.env.INTEL_CACHE = prior; } }
-function fixtures(db) {
+function fixtures(db, { legacy = false, badTiming = false } = {}) {
   const i = input();
-  return i.sources.map((s, n) => saveExperiment(db, { title: s.label, runId: putRun(db, { engine: ENGINE, inputs: { signals: s.signals, bars: i.bars, benchBars: i.benchBars }, provenance: { matchedSignals: s.signals }, result: { ok: true, spec: { source: ['congress', 'form4'][n], filters: {} } } }) }).id);
+  if (badTiming) i.sources[0].signals.push(sig('invalid-future', '2099-01-01'));
+  return i.sources.map((s, n) => saveExperiment(db, { title: s.label, runId: putRun(db, { engine: ENGINE, inputs: { signals: s.signals, bars: i.bars, benchBars: i.benchBars }, provenance: { matchedSignals: s.signals, ...(legacy ? {} : { integrity: { ...auditSignals(s.signals, { source: ['congress', 'form4'][n] }).report, accepted: s.signals.length } }) }, result: { ok: true, ...(legacy ? {} : { integrityVersion: INTEGRITY_VERSION }), spec: { source: ['congress', 'form4'][n], filters: {} } } }) }).id);
 }
 test('confirmation waits for last public date, deduplicates daily votes, and is order independent', () => {
   const ss = sources(); ss[0].signals.push(sig('duplicate', '2025-01-05'));
@@ -66,6 +68,9 @@ test('locked plans persist exact inputs, evaluate once, track exposure, and repl
     fs.writeFileSync(path.join(dir, 'run.zip'), exportRun(db, run));
     const unzip = spawnSync('unzip', ['-q', 'run.zip'], { cwd: dir, encoding: 'utf8' }); assert.equal(unzip.status, 0, unzip.stderr);
     const replay = spawnSync(process.execPath, ['replay.mjs'], { cwd: dir, encoding: 'utf8' }); assert.equal(replay.status, 0, replay.stderr); assert.equal(JSON.parse(replay.stdout).matches, true);
+    const evidence = JSON.parse(fs.readFileSync(path.join(dir, 'evidence.json'), 'utf8'));
+    assert.equal(Object.keys(evidence.runs).length, 3);
+    for (const ref of run.provenance.sourceRuns) assert.equal(evidence.runs[ref.runId].inputHash, ref.inputHash);
     assert.throws(() => createPlan(db, { ...request, experimentIds: [experimentIds[0], experimentIds[0]] }), /distinct/);
     assert.throws(() => createPlan(db, { ...request, spec: { ...spec(), universe: 'MSFT' } }), /price coverage/);
   } finally { db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
@@ -97,5 +102,37 @@ test('notebook evidence remains pinned when a convergence holdout is evaluated l
     const edited = saveNotebook(db, { ...n, baseRevision: 1, hypothesis: 'Revised question' }, n.id);
     assert.equal(edited.evidence[0].runId, plan.runId);
     assert.equal(getNotebook(db, n.id).evidence[0].phase, 'development only');
+  } finally { db.close(); }
+});
+
+test('new comparisons refuse legacy or invalid source timing without rewriting saved runs', () => {
+  const db = dbAt();
+  try {
+    const legacy = fixtures(db, { legacy: true });
+    assert.throws(() => createPlan(db, { title: 'Old inputs', experimentIds: legacy, spec: spec() }), /predates current historical-integrity/);
+    const invalid = fixtures(db, { badTiming: true });
+    assert.throws(() => createPlan(db, { title: 'Invalid inputs', experimentIds: invalid, spec: spec() }), /invalid historical timing/);
+    assert.equal(listPlans(db).length, 0);
+    const valid = createPlan(db, { title: 'Audited inputs', experimentIds: fixtures(db), spec: spec() });
+    const frozen = getRun(db, valid.runId);
+    assert.equal(frozen.provenance.sourceAudits.length, 2);
+    assert.equal(frozen.provenance.integrityVersion, INTEGRITY_VERSION);
+    assert.equal(replayRun(frozen).matches, true);
+  } finally { db.close(); }
+});
+
+test('legacy locked plans remain readable but cannot newly evaluate an unaudited holdout', () => {
+  const db = dbAt();
+  try {
+    const current = createPlan(db, { title: 'Current', experimentIds: fixtures(db), spec: spec() });
+    const run = getRun(db, current.runId);
+    const legacyRunId = putRun(db, { inputs: run.inputs, result: run.result, provenance: { sourceRuns: run.provenance.sourceRuns }, engine: { id: run.engineId, files: {} } });
+    const legacy = { id: 'cv_legacy', title: 'Legacy', createdAt: current.createdAt, spec: current.spec, sources: current.sources, developmentRunId: legacyRunId };
+    const body = JSON.stringify(legacy);
+    db.prepare('INSERT INTO research.convergence_plans VALUES (?, ?, ?, ?)').run(legacy.id, legacy.createdAt, hashOf(body), body);
+    assert.equal(getPlan(db, legacy.id).evaluated, false);
+    assert.equal(replayRun(getRun(db, legacyRunId)).matches, true);
+    assert.throws(() => evaluatePlan(db, legacy.id), /predates current historical-integrity/);
+    assert.equal(getPlan(db, legacy.id).evaluated, false);
   } finally { db.close(); }
 });

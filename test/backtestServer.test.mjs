@@ -60,8 +60,8 @@ test("congress signals: public date is the filing date; filters apply; unjoined 
   assert.equal(amended.dropped.amendedLater, 1);
   assert.equal(amended.signals[0].filedDate, "2025-03-20", "the original filing date travels with the signal for lag stats");
   const folded = congressSignals({ trades: [trade({ id: "fo", chamber: "senate", filed: "2025-03-20", amended: "2025-05-02", public: "2025-03-20", revised: ["type"] })], filters: F(), sectorOf: sector });
-  assert.equal(folded.signals[0].signalDate, "2025-03-20", "a trade also in the original report is public at the original filing");
-  assert.equal(folded.dropped.amendedLater, undefined);
+  assert.equal(folded.signals[0].signalDate, "2025-05-02", "corrected values cannot be traded before their amendment became public");
+  assert.equal(folded.dropped.amendedLater, 1);
   assert.equal(folded.dropped.revised, 1);
   assert.equal(congressSignals({ trades, filters: F({ party: "R" }), sectorOf: sector }).signals.length, 1);
   assert.equal(congressSignals({ trades, filters: F({ minAmount: 15000 }), sectorOf: sector }).signals.length, 3);

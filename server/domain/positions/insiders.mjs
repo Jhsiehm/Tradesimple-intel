@@ -1,3 +1,4 @@
+import { preserveSourceDocument } from '../source-documents.mjs';
 import { coreKey, listCore, listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { secText } from "../../feeds/sec.mjs";
 import { once } from "../../lib/once.mjs";
@@ -36,6 +37,7 @@ export function form4Rows(ticker, pick, parsed) {
   const rows = parsed.lines.map((line, i) => ({
     id: `f4-${ticker.symbol}-${pick.accession}-${i}`,
     accession: pick.accession,
+    ...(parsed.sourceDocument ? { sourceDocument: parsed.sourceDocument } : {}),
     symbol: ticker.symbol,
     person: parsed.owner,
     title: parsed.title,
@@ -114,7 +116,7 @@ export function insiderTrades(db) {
 const reading = new Map();
 
 /** One parsed Form 4, cached for six months. Concurrent asks for the same accession share one fetch. */
-export function form4(db, cik, pick) {
+export function form4(db, cik, pick, { read = secText } = {}) {
   const key = KEY.secForm4(pick.accession);
   const hit = readCache(db, key);
   if (hit) return Promise.resolve(hit);
@@ -122,7 +124,9 @@ export function form4(db, cik, pick) {
   const job = (async () => {
     const raw = String(pick.doc || "").replace(/^xslF345X\d+\//, "");
     const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${pick.accession.replace(/-/g, "")}/${raw}`;
-    const parsed = parseForm4(await secText(url));
+    const content = await read(url);
+    const parsed = parseForm4(content);
+    parsed.sourceDocument = preserveSourceDocument(db, { url, content, mediaType: /\.xml$/i.test(raw) ? 'application/xml' : 'text/plain' });
     writeCache(db, key, parsed, 6 * MONTH);
     return parsed;
   })().finally(() => reading.delete(key));

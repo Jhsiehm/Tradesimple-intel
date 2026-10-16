@@ -259,6 +259,8 @@ export function TurnView({ turn, busy, ask, prompts, onFollow }: { turn: Turn; b
     <>
       <p className="ask-user"><em className="ask-kicker">You{turn.context ? ` · with ${turn.context}` : ""}</em>{turn.question}</p>
       <article className="ask-turn">
+        {turn.memory && <p className="bt-note">{turn.memory.mode === 'isolated' ? 'Isolated analysis · saved research disabled' : 'Context-aware analysis · selected approved revisions only'}. Earlier chat, page context and saved backtest preferences were not sent. {done?.memory && <a href={`/api/research/memory/snapshots/${done.memory.snapshotId}`} target="_blank" rel="noreferrer">Inspect frozen context · cutoff {done.memory.knownAt}</a>}</p>}
+        {done?.analysisId && <p className="bt-note"><a href={`/api/research/analyses/${done.analysisId}`} target="_blank" rel="noreferrer">Inspect saved analysis and execution evidence</a></p>}
         <Steps turn={turn} />
         {turn.clarify ? <Clarify ask={turn.clarify} disabled={busy} onRun={(answers, acceptDefaults) => void ask.run(turn.question, { answers, acceptDefaults, turnId: turn.id })} /> : null}
         {turn.text ? <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} /> : null}

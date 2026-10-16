@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEMO, post } from '../lib/api';
 import { message, read, write, type Dataset, type DatasetSummary, type Preview, type EventRow } from './api';
+import { ObservationHub } from './ObservationHub';
 import { UniverseCoverage } from './UniverseCoverage';
 const fields = ['id', 'symbol', 'eventAt', 'availableAt', 'side', 'sourceUrl', 'value'];
 export function EventTable({ events }: { events: EventRow[] }) {
   return <div className="research-table"><table><thead><tr><th>Record</th><th>Entity</th><th>Event time</th><th>Available time</th></tr></thead><tbody>{events.map((e, i) => <tr key={`${e.id}:${i}`}><td>{e.id}</td><td>{e.entity.securityId}<small>{e.entity.companyId || 'No CIK mapping'}</small></td><td>{e.eventAt || 'Unknown'}</td><td>{e.availableAt}<small>{e.availabilityBasis}</small></td></tr>)}</tbody></table></div>;
 }
 export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void }) {
+  const [kind, setKind] = useState<'signals' | 'observations'>('signals');
   const [datasets, setDatasets] = useState<DatasetSummary[]>([]), [connectors, setConnectors] = useState<{ id: string; label: string }[]>([]);
   const [name, setName] = useState(''), [source, setSource] = useState(''), [content, setContent] = useState(''), [format, setFormat] = useState('csv'), [connector, setConnector] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({}), [preview, setPreview] = useState<Preview | null>(null), [selected, setSelected] = useState<Dataset | null>(null);
@@ -33,7 +35,8 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
     catch (e) { setError(message(e)); } finally { setBusy(false); }
   };
   return <div className="research-content">
-    <h2>Data Hub</h2><p>Import transaction signals with explicit public-availability dates. Files stay on this server. Symbols must match the existing registry. Maximum 5,000 rows and 2 MiB; no partial imports.</p>
+    <h2>Data Hub</h2><div className="research-actions"><button className="panels-btn" aria-pressed={kind === 'signals'} onClick={() => setKind('signals')}>Transaction signals</button><button className="panels-btn" aria-pressed={kind === 'observations'} onClick={() => setKind('observations')}>Numeric observations</button></div>
+    {kind === 'observations' ? <ObservationHub onRun={onRun} /> : <><p>Import transaction signals with explicit public-availability dates. Files stay on this server. Symbols must match the existing registry. Maximum 5,000 rows and 2 MiB; no partial imports.</p>
     <UniverseCoverage />
     <fieldset className="research-form" disabled={busy || DEMO}>
       <label>Dataset name<input value={name} maxLength={120} onChange={e => { change(); setName(e.target.value); }} placeholder="Utility insider events" /></label>
@@ -48,8 +51,8 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
     </fieldset>
     {!connectors.length && <p className="bt-note">API connectors are configured on the server through RESEARCH_API_CONNECTORS in .env.local. Credentials stay on the server. CSV and JSON file import work without a connector.</p>}
     {busy && <p role="status">Working…</p>}{error && <p role="alert" className="bt-note warn">{error}</p>}{notice && <p role="status">{notice}</p>}
-    {preview && <section><h3>Validation preview</h3><p>{preview.coverage.valid} valid / {preview.coverage.received} rows · {preview.coverage.rejected} rejected · {preview.coverage.missingSourceUrls} without source URLs.</p>{preview.errors.length > 0 && <ul>{preview.errors.map((e, i) => <li key={i}>Data row {e.row} · {e.field}: {e.message}</li>)}</ul>}{preview.errorCount > 100 && <p>Showing the first 100 of {preview.errorCount} errors.</p>}{preview.preview.length > 0 && <EventTable events={preview.preview} />}</section>}
+    {preview && <section><h3>Validation preview</h3>{preview.retrieval && <p>API retrieval completed: {preview.retrieval.pages} pages · {preview.retrieval.rows} records. Historical completeness is not certified.</p>}<p>{preview.coverage.valid} valid / {preview.coverage.received} rows · {preview.coverage.rejected} rejected · {preview.coverage.missingSourceUrls} without source URLs.</p>{preview.errors.length > 0 && <ul>{preview.errors.map((e, i) => <li key={i}>Data row {e.row} · {e.field}: {e.message}</li>)}</ul>}{preview.errorCount > 100 && <p>Showing the first 100 of {preview.errorCount} errors.</p>}{preview.preview.length > 0 && <EventTable events={preview.preview} />}</section>}
     <h3>Saved dataset versions</h3>{!datasets.length ? <p>No datasets imported yet. Preview a file above to begin.</p> : <div className="research-list">{datasets.map(d => <button className="research-item" key={d.id} onClick={() => void inspect(d.id)}><strong>{d.name} · v{d.version}</strong><span>{d.rows} rows · {d.createdAt.slice(0, 10)}</span></button>)}</div>}
     {selected && <section><h3>{selected.name} · version {selected.version}</h3><p>{selected.source} · imported {selected.createdAt} · availability {selected.coverage.from} to {selected.coverage.to}</p><p>{selected.coverage.received} rows · {selected.coverage.missingSourceUrls} without original source URLs</p><ul>{selected.caveats.map(c => <li key={c}>{c}</li>)}</ul><p className="research-hash">Dataset checksum: {selected.contentHash}</p><EventTable events={selected.preview} /><button className="bt-run" onClick={() => onRun({ ...selected, rows: selected.coverage.received })}>Create experiment from this version</button></section>}
-  </div>;
+  </>}</div>;
 }

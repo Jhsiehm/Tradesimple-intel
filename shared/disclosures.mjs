@@ -109,6 +109,7 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
       lag: first.lag,
       public: publicDateOf(first),
       ...(revised.length ? { revised } : {}),
+      sourceDocuments: [...new Map(sorted.flatMap(r => [...(r.sourceDocuments || []), ...(r.sourceDocument ? [r.sourceDocument] : [])]).map(ref => [ref.hash, ref])).values()],
       alsoIn: sorted.filter((r) => r !== first).map((r) => r.id)
     };
   });

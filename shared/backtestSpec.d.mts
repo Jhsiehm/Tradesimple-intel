@@ -37,7 +37,8 @@ export type BacktestFilters = {
   clusterMin: number;
   awardWithinDays: number;
 };
-export type BacktestSpec = { source: BacktestSource; datasetId?: string; filters: BacktestFilters; rules: BacktestRules };
+export type RelationshipPolicy = { snapshotId: string; predicate: string; path?: string[]; object: string; subjects: Record<string, string> };
+export type BacktestSpec = { relationship?: RelationshipPolicy; source: BacktestSource; datasetId?: string; filters: BacktestFilters; rules: BacktestRules };
 
 export const SOURCES: BacktestSource[];
 export const SOURCE_LABEL: Record<BacktestSource, string>;

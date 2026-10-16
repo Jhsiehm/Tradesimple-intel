@@ -119,7 +119,10 @@ test('offline archive contains its engine and validates checksums before replay'
     fs.writeFileSync(path.join(dir, 'run.zip'), exportRun(db, run));
     const unpack = spawnSync('unzip', ['-q', 'run.zip'], { cwd: dir, encoding: 'utf8' }); assert.equal(unpack.status, 0, unpack.stderr);
     const replay = spawnSync(process.execPath, ['replay.mjs'], { cwd: dir, encoding: 'utf8' }); assert.equal(replay.status, 0, replay.stderr); assert.equal(JSON.parse(replay.stdout).matches, true);
-    fs.appendFileSync(path.join(dir, 'run.json'), ' ');
+    const evidence = JSON.parse(fs.readFileSync(path.join(dir, 'evidence.json'), 'utf8'));
+    assert.equal(evidence.datasets[run.provenance.dataset.id].rawContent, csv);
+    assert.equal(evidence.runs[run.id].inputHash, run.inputHash);
+    fs.appendFileSync(path.join(dir, 'evidence.json'), ' ');
     const corrupted = spawnSync(process.execPath, ['replay.mjs'], { cwd: dir, encoding: 'utf8' }); assert.notEqual(corrupted.status, 0); assert.match(corrupted.stderr, /Checksum mismatch/);
     assert.throws(() => replayRun({ ...run, engineId: 'different-version' }), /engine has changed/);
     assert.equal(run.engineId, ENGINE.id);
@@ -140,4 +143,26 @@ test('API connector refuses private DNS, redirects, oversized bodies and credent
   await assert.rejects(readConnector('fixture', { env: config, lookup: publicLookup, request: async () => new Response(config.FIXTURE_TOKEN) }), /credential/);
   await assert.rejects(readConnector('fixture', { env: { RESEARCH_API_CONNECTORS: '{secret-broken' } }), error => !error.message.includes('secret-broken'));
   await assert.rejects(readConnector('__proto__', { env: config }), /configured/);
+});
+
+test('timing exclusions are frozen and cannot re-enter Convergence through matched signals', async () => {
+  const db = dbAt();
+  try {
+    const dataset = importDataset(db, request()).dataset;
+    const src = datasetSource(dataset);
+    src.signals.push({ ...src.signals[0], id: 'future-record', signalDate: '2099-01-01' });
+    const result = await runSpec(db, { source: 'dataset', datasetId: dataset.id }, { sourceFn: async () => src, loadBarsFn: async () => priced() });
+    const run = getRun(db, result.runId);
+    assert.equal(run.provenance.integrity.excluded, 1);
+    assert.equal(run.provenance.integrity.exclusions[0].id, 'future-record');
+    assert.deepEqual(run.provenance.coverage.signals, { matched: 2, timingEligible: 1, timingExcluded: 1, selected: 1 });
+    assert.equal(run.provenance.coverage.source.kind, 'frozen-dataset');
+    assert.equal(run.provenance.coverage.source.records.valid, 1);
+    assert.equal(run.provenance.coverage.historicalCompleteness, 'not-certified');
+    assert.equal(run.provenance.coverage.status, 'calculation-complete');
+    assert.deepEqual(run.provenance.coverage.prices.loaded, ['AAPL', 'SPY']);
+    assert.equal(run.provenance.matchedSignals.length, 1);
+    assert.equal(run.inputs.signals.length, 1);
+    assert.equal(replayRun(run).matches, true);
+  } finally { db.close(); }
 });

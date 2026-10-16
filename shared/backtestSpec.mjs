@@ -153,6 +153,20 @@ export function cleanSpec(raw) {
     if (specKey(spec.filters) !== specKey(DEFAULT_FILTERS)) return { ok: false, error: "Dataset experiments use their frozen rows. Import a filtered version to change the signal cohort." };
     spec.datasetId = raw.datasetId;
   }
+  if (raw.relationship != null) {
+    const r = raw.relationship;
+    const entity = /^(company|security|facility|jurisdiction|agency|institution|person|industry|policy):[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/;
+    if (!r || typeof r !== 'object' || Array.isArray(r) || !/^rel_[a-f0-9]{32}$/.test(r.snapshotId || '') ||
+      !['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'].includes(r.predicate) ||
+      typeof r.object !== 'string' || !entity.test(r.object) || !r.subjects || typeof r.subjects !== 'object' || Array.isArray(r.subjects))
+      return { ok: false, error: 'Relationship eligibility requires a saved snapshot, predicate, typed object and explicit symbol-to-subject mappings.' };
+    if (r.path != null && (!Array.isArray(r.path) || r.path.length < 1 || r.path.length > 4 || r.path[0] !== r.predicate || r.path.some(p => !['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'].includes(p))))
+      return { ok: false, error: 'A relationship path must contain 1–4 supported predicates, starting with the selected relationship.' };
+    const entries = Object.entries(r.subjects);
+    if (!entries.length || entries.length > 1500 || entries.some(([symbol, subject]) => !SYMBOL.test(symbol) || typeof subject !== 'string' || !entity.test(subject)))
+      return { ok: false, error: 'Provide 1–1,500 exact ticker-to-entity mappings for relationship eligibility.' };
+    spec.relationship = { snapshotId: r.snapshotId, predicate: r.predicate, object: r.object, ...(r.path?.length > 1 ? {path: [...r.path]} : {}), subjects: Object.fromEntries(entries.sort(([a],[b]) => a.localeCompare(b))) };
+  }
   if (source === "lobbying" && !spec.filters.tickers.length) {
     return { ok: false, error: "Lobbying spikes are read per ticker. Add up to 40 tickers from data/tickers.json." };
   }
@@ -204,7 +218,7 @@ export function encodeSpec(spec) {
   const c = cleanSpec(spec);
   if (!c.ok) return "";
   const { source, filters, rules } = c.spec;
-  return toB64url(specKey({ source, ...(c.spec.datasetId ? { datasetId: c.spec.datasetId } : {}), filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
+  return toB64url(specKey({ source, ...(c.spec.datasetId ? { datasetId: c.spec.datasetId } : {}), ...(c.spec.relationship ? { relationship: c.spec.relationship } : {}), filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
 }
 
 export function decodeSpec(token) {
@@ -233,6 +247,7 @@ export function describeSpec(spec) {
     `${SOURCE_LABEL[spec.source]}${who ? ` · ${who}` : ""} · ${side}`,
     f.tickers.length ? `tickers ${f.tickers.slice(0, 6).join(", ")}${f.tickers.length > 6 ? "…" : ""}` : "",
     f.sector,
+    spec.relationship ? `relationship ${(spec.relationship.path || [spec.relationship.predicate]).join(" → ")} ${spec.relationship.object} at signal publication (snapshot ${spec.relationship.snapshotId})` : "",
     f.minAmount ? `≥ ${fmtUsd(f.minAmount)}` : "",
     f.maxAmount ? `< ${fmtUsd(f.maxAmount)}` : "",
     f.maxLagDays ? `filed within ${f.maxLagDays} d of the trade` : "",

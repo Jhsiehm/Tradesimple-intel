@@ -1,3 +1,4 @@
+import { requireAuditedSource, INTEGRITY_VERSION } from './research-integrity.mjs';
 import { cleanConvergence, runConvergence } from '../../shared/convergence.mjs';
 import { dayOf } from '../../shared/backtest.mjs';
 import { researchStore, getExperiment, getRun, putRun, newId, hashOf } from './research-store.mjs';
@@ -43,8 +44,10 @@ export function createPlan(db, body) {
   if (!Array.isArray(body.experimentIds) || body.experimentIds.length < 2 || body.experimentIds.length > 3 || new Set(body.experimentIds).size !== body.experimentIds.length) throw new Error('Choose two or three distinct saved experiments.');
   const experiments = body.experimentIds.map(id => getExperiment(db, String(id)));
   const families = new Set();
+  const sourceAudits = [];
   const sources = experiments.map(e => {
     if (!e?.run.inputs || !e.run.result.ok || e.run.result.building || e.run.inputs.kind) throw new Error('Sources must be completed single-source experiments.');
+    sourceAudits.push(requireAuditedSource(e.run));
     const f = e.run.result.spec.filters || {};
     if (f.committee || f.nearHearingDays) throw new Error('Committee and hearing cohorts use current membership; choose a source without these filters.');
     const family = e.run.provenance.dataset ? `dataset:${e.run.provenance.dataset.name}` : e.run.result.spec.source;
@@ -59,7 +62,7 @@ export function createPlan(db, body) {
   validatePrices(reference.benchBars.SPY, 'SPY', spec);
   const inputs = { kind: 'convergence', phase: 'development', spec, sources, bars, benchBars: { SPY: reference.benchBars.SPY } };
   const report = runConvergence(inputs);
-  const provenance = { sourceRuns: experiments.map(e => ({ experimentId: e.id, runId: e.run.id, inputHash: e.run.inputHash, caveats: e.run.result.caveats, feeds: e.run.provenance.feeds })), priceRunId: experiments[0].run.id, priorEvaluations: exposure(db, spec) };
+  const provenance = { integrityVersion: INTEGRITY_VERSION, sourceAudits, sourceRuns: experiments.map(e => ({ experimentId: e.id, runId: e.run.id, inputHash: e.run.inputHash, caveats: e.run.result.caveats, feeds: e.run.provenance.feeds })), priceRunId: experiments[0].run.id, priorEvaluations: exposure(db, spec) };
   db.exec('SAVEPOINT convergence_create');
   try {
     const developmentRunId = putRun(db, { inputs, result: { ok: true, convergence: report }, provenance, engine: CONVERGENCE_ENGINE });
@@ -74,6 +77,7 @@ export function evaluatePlan(db, id) {
   const plan = storedPlan(db, id);
   if (db.prepare('SELECT 1 FROM research.convergence_evaluations WHERE plan_id=?').get(id)) return getPlan(db, id);
   const original = getRun(db, plan.developmentRunId);
+  if (original.provenance.integrityVersion !== INTEGRITY_VERSION) throw new Error('This plan predates current historical-integrity checks. Create a new plan from newly audited source experiments. Its original report and export remain available.');
   if (original.engineId !== CONVERGENCE_ENGINE.id) throw new Error('Engine changed since lock. Create a new plan with the current engine.');
   const inputs = { ...original.inputs, phase: 'evaluation' };
   const report = runConvergence(inputs);

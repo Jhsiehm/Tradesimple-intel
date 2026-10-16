@@ -39,8 +39,18 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     const content = text(turn.content, 1500);
     if (content) history.push({ role: turn.role, content });
   }
+  let memory = null;
+  if (raw.memory != null) {
+    const m=raw.memory;
+    if (!m || typeof m!=='object' || Array.isArray(m) || !['isolated','context-aware'].includes(m.mode)) return {ok:false,error:'Choose isolated or context-aware memory.'};
+    if (m.mode==='context-aware' && !/^mem_[a-f0-9]{32}$/.test(m.snapshotId || '')) return {ok:false,error:'Choose a frozen memory snapshot.'};
+    if (m.mode==='isolated' && m.snapshotId) return {ok:false,error:'An isolated request cannot select saved context.'};
+    if (history.length || raw.attached || raw.context || raw.prior || raw.priors?.length) return {ok:false,error:'Controlled memory requests start a fresh analysis. Remove chat history, attached chats, page context and previous backtests.'};
+    memory={mode:m.mode,...(m.mode==='context-aware' ? {snapshotId:m.snapshotId} : {})};
+  }
   return {
     ok: true,
+    ...(memory ? {memory} : {}),
     question,
     history: history.slice(-limits.history),
     model: text(raw.model, 120),

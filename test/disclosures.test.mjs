@@ -88,3 +88,10 @@ test("publicDateOf takes the later amendment date only", () => {
   assert.equal(publicDateOf({ filed: "2025-03-20", amended: null }), "2025-03-20");
   assert.equal(publicDateOf({ filed: "2025-03-20", amended: "2025-04-01" }), "2025-04-01");
 });
+test('merged corrections preserve both original and amended document references', () => {
+  const original = { hash: 'original', url: 'https://example.org/original' };
+  const correction = { hash: 'correction', url: 'https://example.org/correction' };
+  const { items } = dedupeDisclosures([row({ sourceDocument: original }), amend({ amount: '$1,001 - $15,000', amountLow: 1001, sourceDocument: correction })]);
+  assert.equal(items.length, 1);
+  assert.deepEqual(items[0].sourceDocuments.map(r => r.hash), ['original', 'correction']);
+});

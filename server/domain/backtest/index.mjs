@@ -1,3 +1,5 @@
+import { relationshipEligibility } from '../relationship-history.mjs';
+import { auditSignals, INTEGRITY_VERSION } from '../research-integrity.mjs';
 import { putRun, getRun, getDataset } from '../research-store.mjs';
 import { ENGINE } from '../research-replay.mjs';
 import { identities, signalEvents, datasetSource } from '../research-events.mjs';
@@ -64,7 +66,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const spec = cleaned.spec;
   const hash = specHash(spec);
   const hit = fresh || sourceFn ? null : readCache(db, KEY.backtest(hash));
-  if (hit && hit.realityVersion === REALITY.version && hit.engineId === ENGINE.id && hit.runId && getRun(db, hit.runId)) return { ...hit, cache: "hit" };
+  if (hit && hit.integrityVersion === INTEGRITY_VERSION && hit.realityVersion === REALITY.version && hit.engineId === ENGINE.id && hit.runId && getRun(db, hit.runId)) return { ...hit, cache: "hit" };
   const t0 = Date.now();
   const deadline = t0 + budgetMs;
 
@@ -72,20 +74,38 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const loadSource = sourceFn || (spec.source === 'dataset' ? async () => { const d = getDataset(db, spec.datasetId); return d ? datasetSource(d) : { error: 'Dataset version not found.' }; } : SOURCE_FNS[spec.source]);
   const src = await loadSource(db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
   const identity = src.identity || identities(db);
-  const provenance = { source: src.dataset ? 'import' : spec.source, dataset: src.dataset || null, identity, records: src.records || [], feeds: src.feeds || [], dropped: src.dropped || {}, statistics: REALITY, runtime: process.version };
+  const provenance = { source: src.dataset ? 'import' : spec.source, dataset: src.dataset || null, identity, records: src.records || [], coverage: { requested: { from: spec.filters.from || null, to: spec.filters.to || null, symbols: spec.filters.tickers || [] }, source: src.coverage || { completeness: 'unknown' }, status: 'source-loaded' }, feeds: src.feeds || [], dropped: src.dropped || {}, statistics: REALITY, runtime: process.version };
+  const sourceRecords = Array.isArray(src.records) ? src.records : Object.values(src.records || {}).flat();
+  const archivedRecords = sourceRecords.filter(record => record?.sourceDocument?.hash || record?.sourceDocuments?.length);
+  const documentRefs = archivedRecords.flatMap(record => [...(record.sourceDocuments || []), ...(record.sourceDocument ? [record.sourceDocument] : [])]);
+  provenance.coverage.originalDocuments = { records: sourceRecords.length, recordsWithDocument: archivedRecords.length, distinctDocuments: new Set(documentRefs.map(ref => ref.hash)).size, status: documentRefs.length ? 'partially-archived; see record references' : 'not-archived-by-this-path' };
   const failed = body => { const runId = putRun(db, { inputs: null, result: body, provenance, engine: ENGINE }); return { ...body, runId }; };
   if (src.error) return failed({ ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) });
   const tSignals = Date.now();
 
   const uncapped = src.signals.length;
-  const capped = capSignals(src.signals, spec.rules.sides);
+  const audit = auditSignals(src.signals, { source: spec.source, now: iso(now) });
+  provenance.integrity = audit.report;
+  let eligibleSignals = audit.signals;
+  if (spec.relationship) {
+    try {
+      const eligibility = relationshipEligibility(db, eligibleSignals, spec.relationship);
+      eligibleSignals = eligibility.signals;
+      provenance.relationship = eligibility.report;
+    } catch (error) { return failed({ok:false,error:error.message,missing:'',spec,description:describeSpec(spec)}); }
+  }
+  const capped = capSignals(eligibleSignals, spec.rules.sides);
+  provenance.coverage.signals = { matched: uncapped, timingEligible: audit.signals.length, timingExcluded: audit.report.excluded, ...(spec.relationship ? {relationshipEligible: eligibleSignals.length, relationshipExcluded: audit.signals.length - eligibleSignals.length} : {}), selected: capped.signals.length };
   const signals = capped.signals;
   const symbols = capped.symbols;
-  const notes = [...(src.context.notes || []), ...capped.notes];
+  const notes = [...(src.context.notes || []), ...audit.notes, ...capped.notes];
+  if (provenance.relationship) notes.push({id:'relationshipEligibility',level:'warn',text:`Relationship eligibility retained ${eligibleSignals.length} of ${audit.signals.length} timing-eligible signals. Snapshot and per-signal exclusions are frozen; assertions and identity mappings are researcher supplied.`});
   const benchIds = new Set(spec.rules.benchmark === "SECTOR" ? ["SPY", ...new Set(signals.map((s) => SECTOR_ETF[s.sector]).filter(Boolean))] : [spec.rules.benchmark]);
   const need = [...new Set([...symbols, ...benchIds])];
   const priced = await loadBarsFn(db, need, { deadline });
   const tPrices = Date.now();
+  provenance.coverage.prices = { requested: need, loaded: need.filter(s => priced.bars[s]?.length), pending: priced.pending, missing: priced.missing, stale: priced.stale };
+  provenance.coverage.status = 'prices-loaded';
   const benchBars = Object.fromEntries([...benchIds].map((id) => [id, priced.bars[id]]).filter(([, v]) => v?.length));
   const missingBench = [...benchIds].filter((id) => !benchBars[id]);
   if (missingBench.length === benchIds.size) {
@@ -122,6 +142,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     ...result,
     reality,
     realityVersion: REALITY.version,
+    integrityVersion: INTEGRITY_VERSION,
     spec,
     description: src.dataset ? `${src.dataset.name} v${src.dataset.version} · ${describeSpec(spec)}` : describeSpec(spec),
     source: feeds.map((f) => f.source).filter(Boolean).join(" · "),
@@ -135,9 +156,11 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     cache: "miss",
     ranAt: iso(now)
   };
+  provenance.coverage.status = complete ? 'calculation-complete' : 'calculation-partial';
+  provenance.coverage.historicalCompleteness = 'not-certified';
   provenance.events = src.dataset ? src.records : signalEvents(signals, provenance.source, identity, iso(now));
   provenance.feeds = feeds;
-  provenance.matchedSignals = src.signals;
+  provenance.matchedSignals = eligibleSignals;
   const runId = putRun(db, { inputs, result: { ...body, engineResult: result }, provenance, engine: ENGINE });
   body.runId = runId;
   body.engineId = ENGINE.id;

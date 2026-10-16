@@ -59,7 +59,7 @@ export function saveExperiment(db, { runId, title, hypothesis = '', parentId = n
   if (typeof hypothesis !== 'string' || hypothesis.length > 4000) throw new Error('Hypothesis must be at most 4,000 characters.');
   const run = getRun(db, String(runId || ''));
   if (!run) throw new Error('Frozen run not found. Run the backtest again before saving.');
-  if (run.inputs?.kind === 'convergence') throw new Error('Convergence runs belong to their locked plan, not single-source experiments.');
+  if (run.inputs?.kind) throw new Error('Comparison and stress runs belong to their locked plan, not single-source experiments.');
   if (parentId && !db.prepare('SELECT id FROM research.experiments WHERE id = ?').get(String(parentId))) throw new Error('Parent experiment not found.');
   const existing = db.prepare('SELECT id FROM research.experiments WHERE run_id = ?').get(runId);
   if (existing) return getExperiment(db, existing.id);

@@ -13,7 +13,7 @@ export const NOT_CONFIGURED: string;
 
 export type AskTurn = { role: "user" | "assistant"; content: string };
 export function cleanAsk(raw: unknown, limits?: AskLimits):
-  | { ok: true; question: string; history: AskTurn[]; model: string; context: AskContext | null; attached: AttachedChat | null;
+  | { ok: true; memory?: {mode: "isolated" | "context-aware"; snapshotId?: string}; question: string; history: AskTurn[]; model: string; context: AskContext | null; attached: AttachedChat | null;
       prefs: Prefs | null; session: AskSession; prior: BacktestSpec | null; priors: BacktestSpec[]; answers: Record<string, string | number | boolean>; acceptDefaults: boolean }
   | { ok: false; error: string };
 export function systemPrompt(today: string, modes?: { sourcing?: string; style?: string } | null): string;

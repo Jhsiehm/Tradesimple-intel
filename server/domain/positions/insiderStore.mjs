@@ -52,6 +52,7 @@ export function ensureInsiderStore(db) {
     );
     CREATE TABLE IF NOT EXISTS insider_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `);
+  if (!db.prepare('PRAGMA table_info(insider_tx)').all().some(c => c.name === 'source_document')) db.exec('ALTER TABLE insider_tx ADD COLUMN source_document TEXT');
   ready.add(db);
   return db;
 }
@@ -71,8 +72,8 @@ export function joinsByCik(db) {
   return { byCik, joins: (h >>> 0).toString(36) };
 }
 
-const INSERT = `INSERT OR REPLACE INTO insider_tx (ticker, accession, line, issuer_cik, form, person, title, code, side, shares, price, value, owned, plan, traded, filed, lag, source)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERT = `INSERT OR REPLACE INTO insider_tx (ticker, accession, line, issuer_cik, form, person, title, code, side, shares, price, value, owned, plan, traded, filed, lag, source, source_document)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 /**
  * Writes forms ({ accession, issuerCik, form, rows: form4Rows output }) in one transaction. The data set replaces
@@ -92,7 +93,7 @@ export function writeForms(db, forms, source) {
       else if (has.get(f.accession)) { skipped += 1; continue; }
       for (const r of f.rows) {
         const line = Number(String(r.id).split("-").pop());
-        ins.run(r.symbol, f.accession, line, Number(f.issuerCik), f.form, r.person, r.title, r.code, r.side, r.shares, r.price, r.value, r.owned, r.plan ? 1 : 0, r.traded || null, r.filed, r.lag ?? null, source);
+        ins.run(r.symbol, f.accession, line, Number(f.issuerCik), f.form, r.person, r.title, r.code, r.side, r.shares, r.price, r.value, r.owned, r.plan ? 1 : 0, r.traded || null, r.filed, r.lag ?? null, source, r.sourceDocument ? JSON.stringify(r.sourceDocument) : null);
         rows += 1;
       }
     }
@@ -228,6 +229,7 @@ export function storeRows(db, { from = "", to = "", symbols = [], amendments = f
     items: rows.map((r) => ({
       id: `f4-${r.ticker}-${r.accession}-${r.line}`,
       accession: r.accession,
+      ...(r.source_document ? { sourceDocument: JSON.parse(r.source_document) } : {}),
       symbol: r.ticker,
       person: r.person,
       title: r.title,

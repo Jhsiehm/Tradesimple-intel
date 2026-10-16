@@ -102,7 +102,9 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
     const sector = sectorOf(t.symbol);
     if (f.sector && sector !== f.sector) continue;
     // A trade also in the original report was public at the original filing; one only in an amendment, at the amendment.
-    const publicDate = t.public || publicDateOf(t);
+    // Corrected values cannot influence a historical rule before the amendment was public.
+    // The explorer may retain earliest disclosure time; calculations use the values' availability.
+    const publicDate = t.revised?.length ? [t.public, publicDateOf(t)].filter(Boolean).sort().at(-1) : t.public || publicDateOf(t);
     if (!inRange(publicDate, f)) continue;
     if (f.minAmount && !(t.amountLow >= f.minAmount)) continue;
     if (f.maxAmount && !(t.amountLow < f.maxAmount)) continue;

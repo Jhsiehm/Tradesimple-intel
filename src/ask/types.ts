@@ -1,3 +1,5 @@
+export type MemoryRequest = { mode: 'isolated' | 'context-aware'; snapshotId?: string };
+export type MemoryReceipt = { mode: 'isolated' | 'context-aware'; snapshotId: string; contentHash: string; knownAt: string };
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { TaskDraft } from "../../shared/taskSchedule.mjs";
 import type { BtRun } from "../backtest/types";
@@ -78,6 +80,8 @@ export type Done = {
   /** Set when the answer is a stored one replayed because its data had not changed. */
   reused?: Reused | null;
   session?: { set?: { sourcing?: string; style?: string; v?: number; updated?: string }; clear?: boolean } | null;
+  memory?: MemoryReceipt;
+  analysisId?: string;
   modes?: { sourcing: string; style: string; label: string } | null;
 };
 
@@ -92,6 +96,7 @@ export type ClarifyAsk = {
 
 /** One exchange: the question and everything the answer streamed. */
 export type Turn = {
+  memory?: MemoryRequest;
   id: string;
   question: string;
   at: string;

@@ -1,4 +1,10 @@
 .research-content { display: grid; gap: 14px; min-width: 0; }
+.relationship-history > * { min-width: 0; }
+.relationship-history .research-mapping { min-width: 0; }
+@media (max-width: 720px) {
+  .relationship-history .research-mapping { grid-template-columns: 1fr; }
+  .relationship-history .research-actions > button { max-width: 100%; white-space: normal; }
+}
 .research-content h2 { font-size: 17px; font-weight: 500; margin: 4px 0; color: var(--ink); }
 .research-content h3 { font-size: 13px; font-weight: 500; margin: 4px 0; color: var(--amber); }
 .research p, .research li, .research-save p { color: var(--dim); font-size: 12px; line-height: 1.6; margin: 4px 0; }
@@ -51,3 +57,40 @@
 .contract-evidence input,.contract-evidence select { min-width:0; padding:8px; color:var(--ink); background:var(--bg); border:1px solid var(--line); font:inherit; }
 .contract-evidence input[type=checkbox] { width:auto; justify-self:start; }
 @media(max-width:720px){.contract-evidence .research-table{max-height:360px}.contract-evidence .research-mapping{grid-template-columns:1fr}}
+
+.relationship-eligibility { min-width: 0; }
+.relationship-eligibility > label { margin: 12px 0; }
+.relationship-eligibility p { overflow-wrap: anywhere; }
+.app.phone .research .panels-btn { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; min-height: 36px; }
+
+.research-memory > * { min-width: 0; }
+.memory-review { white-space: pre-wrap; overflow-wrap: anywhere; }
+.research-form .memory-selection { display: flex; align-items: flex-start; gap: 10px; }
+.research-form .memory-selection input { width: auto; flex: none; margin-top: 3px; }
+.memory-selection small { display: block; padding-top: 4px; }
+
+.research-pairs { min-width:0; }
+.research-pairs p { max-width:78ch; overflow-wrap:anywhere; }
+.research-pairs details { margin-block:16px; }
+.research-pairs pre { max-height:300px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+.pair-answers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin-block:20px; }
+.pair-answers > section { min-width:0; }
+.pair-answer { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; margin-block:12px; }
+@media(max-width:720px){.pair-answers{grid-template-columns:1fr;gap:24px}}
+
+.observation-hub > *, .observation-hub section > * { min-width: 0; }
+.observation-hub p, .observation-hub label { overflow-wrap: anywhere; }
+.observation-hub .research-table { max-height: 360px; }
+.observation-hub .bt-run { max-width: 100%; white-space: normal; }
+@media (max-width: 720px) { .observation-hub .research-mapping { grid-template-columns: 1fr; } }
+
+.observation-merge-sources { display: grid; gap: 10px; max-height: 260px; overflow-y: auto; }
+.observation-merge-sources label { grid-template-columns: auto 1fr; align-items: start; }
+.observation-merge-sources input[type="checkbox"] { width: auto; accent-color: var(--amber); }
+
+.observation-hub a { overflow-wrap: anywhere; }
+
+.research-stress > *, .research-stress section > * { min-width: 0; }
+.research-stress pre { white-space: pre-wrap; }
+.research-stress .panels-btn, .research-stress .bt-run { max-width: 100%; white-space: normal; }
+@media (max-width: 720px) { .research-stress .research-mapping { grid-template-columns: 1fr; } }

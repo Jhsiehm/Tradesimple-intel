@@ -75,6 +75,7 @@ export async function congressSource(db, f) {
   return {
     signals: out.signals,
     records: board.items,
+    coverage: { kind: 'congress-disclosures', from: board.from || null, progress: board.progress || null, building: Boolean(board.building), completeness: 'not-certified' },
     dropped: out.dropped,
     feeds,
     building: Boolean(board.building),
@@ -85,7 +86,7 @@ export async function congressSource(db, f) {
       notes: [
         ...notes,
         ...(board.building ? [{ level: "warn", id: "building", text: "Disclosures are still being read; this run uses what is parsed so far." }] : []),
-        ...(board.dedupe?.merged ? [{ level: "info", id: "dedupe", text: `Across all disclosures, ${board.dedupe.merged} rows repeat a trade already listed in another report (${board.dedupe.byChamber?.senate || 0} Senate amendments re-listing the original, ${board.dedupe.byChamber?.house || 0} House lines filed twice) and are counted once, public on the earliest filing.${out.dropped.revised ? ` ${out.dropped.revised} of these signals use the amendment's corrected values (type or amount).` : ""}` }] : []),
+        ...(board.dedupe?.merged ? [{ level: "info", id: "dedupe", text: `Across all disclosures, ${board.dedupe.merged} rows repeat a trade already listed in another report (${board.dedupe.byChamber?.senate || 0} Senate amendments re-listing the original, ${board.dedupe.byChamber?.house || 0} House lines filed twice) and are counted once; unchanged values use the earliest filing date.${out.dropped.revised ? ` ${out.dropped.revised} of these signals use corrected values (type or amount) and wait until the amendment date.` : ""}` }] : []),
         ...(out.dropped.amendedLater ? [{ level: "info", id: "amended", text: `${out.dropped.amendedLater} Senate trades appear only in an amended report, not in the original we have. Their public date is the amendment date, not the original filing date.` }] : []),
         { level: "info", id: "window", text: `Reports filed since ${board.from}; trades before the earliest filing in the window are not here. ${out.dropped.notJoined || 0} trades in tickers outside data/tickers.json are left out (no guessed joins).` }
       ]
@@ -114,6 +115,7 @@ export async function form4Source(db, f, { deadline = 0, history = insiderHistor
   return {
     signals: out.signals,
     records: res.items,
+    coverage: { kind: 'form4-history', from, to: f.to || null, filings: res.filings, issuers: res.issuers ?? null, providerCoverage: res.coverage, building: Boolean(res.building), completeness: 'not-certified' },
     dropped: out.dropped,
     feeds: [feed("Signals", res)],
     building: Boolean(res.building),
@@ -149,6 +151,7 @@ export async function contractsSource(db, f) {
   return {
     signals: out.signals,
     records: rows,
+    coverage: { kind: 'largest-contract-actions', windowDays: 365, perRequestLimit: 100, requestedSymbols: f.tickers, failures, completeness: 'sample' },
     dropped: out.dropped,
     feeds,
     context: {
@@ -179,6 +182,7 @@ export async function lobbyingSource(db, f) {
   return {
     signals: out.signals,
     records: filingsBySymbol,
+    coverage: { kind: 'lobbying-filings', requestedSymbols: f.tickers, gaps, completeness: 'not-certified' },
     dropped: out.dropped,
     feeds,
     context: {

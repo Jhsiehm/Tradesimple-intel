@@ -1,3 +1,4 @@
+import { preserveSourceDocument } from '../source-documents.mjs';
 import { fetchJson } from "../../lib/http.mjs";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { readStale, throughCache } from "../../lib/cache.mjs";
@@ -64,24 +65,26 @@ async function ldaClientYear(db, client, year, ttlOverride = 0) {
     ttlMs: ttlOverride || (year < now - 1 ? 30 * DAY : 12 * HOUR),
     downMs: LDA_DOWN_MS,
     timeoutMs: PAGE_TIMEOUT,
-    load: () => fetchClientYear(client, year)
+    load: () => fetchClientYear(db, client, year)
   });
   const stored = down ? staleAt : readStale(db, key)?.storedAt;
   return { rows: value, storedAt: stored ? new Date(stored).toISOString() : "", down };
 }
 
-async function fetchClientYear(client, year) {
+export async function fetchClientYear(db, client, year, { read = fetchJson } = {}) {
   const want = client.toUpperCase().replace(/[.,]/g, "");
   const rows = [];
   let url = `https://lda.gov/api/v1/filings/?client_name=${encodeURIComponent(client)}&filing_year=${year}&page_size=25`;
   for (let page = 0; url && page < 8; page += 1) {
-    const body = await fetchJson(url, { headers: { Authorization: `Token ${process.env.LDA_API_KEY}` } }, PAGE_TIMEOUT);
+    const body = await read(url, { headers: { Authorization: `Token ${process.env.LDA_API_KEY}` } }, PAGE_TIMEOUT);
+    const sourceDocument = preserveSourceDocument(db, { url, content: JSON.stringify(body), mediaType: 'application/json' });
     for (const f of body.results || []) {
       const name = String(f.client?.name || "").toUpperCase().replace(/[.,]/g, "");
       if (!name.startsWith(want) && !name.includes(want)) continue;
       const acts = f.lobbying_activities || [];
       rows.push({
         id: `lda:${f.filing_uuid}`,
+        sourceDocument,
         year: f.filing_year,
         period: f.filing_period_display || f.filing_type_display || "",
         type: f.filing_type,

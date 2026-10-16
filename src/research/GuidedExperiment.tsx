@@ -1,9 +1,10 @@
+import { RelationshipEligibility, emptyRelationshipDraft, parseRelationshipDraft } from './RelationshipEligibility';
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_RULES, type BacktestSource } from '../../shared/backtestSpec.mjs';
 import { researchReadiness } from '../../shared/researchReadiness.mjs';
 import { read, write, message, type Experiment } from './api';
 const KEY = 'research-guided-draft-v1';
-const initial = { title: '', hypothesis: '', tickers: '', from: '', to: '', source: 'form4', hold: '30', cost: '5', slippage: '5', experimentId: '' };
+const initial = { ...emptyRelationshipDraft, title: '', hypothesis: '', tickers: '', from: '', to: '', source: 'form4', hold: '30', cost: '5', slippage: '5', experimentId: '' };
 type Draft = typeof initial;
 function restore(): Draft {
   try { const value = JSON.parse(localStorage.getItem(KEY) || '{}'); return Object.fromEntries(Object.entries(initial).map(([key, fallback]) => [key, typeof value?.[key] === 'string' ? value[key] : fallback])) as Draft; } catch { return initial; }
@@ -18,14 +19,15 @@ export function GuidedExperiment({ onOpen, onTool }: { onOpen: (id: string) => v
   const update = (key: keyof Draft, value: string) => { setDraft(d => ({ ...d, [key]: value, experimentId: '' })); setExperiment(null); setError(''); };
   const universe = [...new Set(draft.tickers.toUpperCase().split(/[\s,]+/).filter(Boolean))];
   const validDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s;
-  const issues = [!draft.title.trim() && 'Add a title.', !draft.hypothesis.trim() && 'Write a falsifiable hypothesis.', (!universe.length || universe.length > 40 || universe.some(s => !/^[A-Z0-9.^-]{1,16}$/.test(s))) && 'Enter 1–40 ticker symbols.', (!validDate(draft.from) || !validDate(draft.to) || draft.from >= draft.to) && 'Choose a valid start date before the end date.', (!draft.hold.trim() || !Number.isInteger(+draft.hold) || +draft.hold < 1 || +draft.hold > 730) && 'Hold must be 1–730 whole calendar days.', [draft.cost, draft.slippage].some(s => !s.trim() || !Number.isFinite(+s) || +s < 0 || +s > 300) && 'Costs and slippage must be 0–300 bps per side.', !['form4', 'congress', 'contracts', 'lobbying'].includes(draft.source) && 'Choose a supported source.'].filter(Boolean);
+  const relationship = parseRelationshipDraft(draft);
+  const issues = [relationship.error,!draft.title.trim() && 'Add a title.', !draft.hypothesis.trim() && 'Write a falsifiable hypothesis.', (!universe.length || universe.length > 40 || universe.some(s => !/^[A-Z0-9.^-]{1,16}$/.test(s))) && 'Enter 1–40 ticker symbols.', (!validDate(draft.from) || !validDate(draft.to) || draft.from >= draft.to) && 'Choose a valid start date before the end date.', (!draft.hold.trim() || !Number.isInteger(+draft.hold) || +draft.hold < 1 || +draft.hold > 730) && 'Hold must be 1–730 whole calendar days.', [draft.cost, draft.slippage].some(s => !s.trim() || !Number.isFinite(+s) || +s < 0 || +s > 300) && 'Costs and slippage must be 0–300 bps per side.', !['form4', 'congress', 'contracts', 'lobbying'].includes(draft.source) && 'Choose a supported source.'].filter(Boolean);
   const result = experiment?.run.result;
   const readiness = researchReadiness(result, universe);
   const run = async () => {
     if (busy || issues.length) return;
     setBusy(true); setError('');
     try {
-      const out = await write<{ experiment: Experiment }>('run', { title: draft.title, hypothesis: draft.hypothesis, ...(experiment ? { parentId: experiment.id } : {}), spec: { source: draft.source as BacktestSource, filters: { tickers: universe, from: draft.from, to: draft.to }, rules: { ...DEFAULT_RULES, holdDays: +draft.hold, costBps: +draft.cost, slippageBps: +draft.slippage, sides: 'buy', openTrades: 'exclude' } } });
+      const out = await write<{ experiment: Experiment }>('run', { title: draft.title, hypothesis: draft.hypothesis, ...(experiment ? { parentId: experiment.id } : {}), spec: { relationship: relationship.policy, source: draft.source as BacktestSource, filters: { tickers: universe, from: draft.from, to: draft.to }, rules: { ...DEFAULT_RULES, holdDays: +draft.hold, costBps: +draft.cost, slippageBps: +draft.slippage, sides: 'buy', openTrades: 'exclude' } } });
       // Preserve the resulting identifier even if navigation unmounted this view during execution.
       const saved = { ...draft, experimentId: out.experiment.id };
       try {
@@ -45,6 +47,7 @@ export function GuidedExperiment({ onOpen, onTool }: { onOpen: (id: string) => v
       <div className="research-mapping"><label>Signal source<select value={draft.source} onChange={e => update('source', e.target.value)}><option value="form4">Form 4 insider buys</option><option value="congress">Congressional buys</option><option value="contracts">Contract awards</option><option value="lobbying">Lobbying spikes</option></select></label>
       {(['from', 'to', 'hold', 'cost', 'slippage'] as const).map((key, i) => <label key={key}>{['Public date from', 'Public date through', 'Hold (calendar days)', 'Cost per side (bps)', 'Slippage per side (bps)'][i]}<input type={i < 2 ? 'date' : 'number'} min={i < 2 ? undefined : key === 'hold' ? 1 : 0} max={i < 2 ? undefined : key === 'hold' ? 730 : 300} step={key === 'hold' ? 1 : 'any'} value={draft[key]} onInput={e => update(key, e.currentTarget.value)} onChange={e => update(key, e.target.value)} /></label>)}</div>
       <p>Buy only · next trading day open after public availability · equal weight · SPY · unfinished trades excluded. Commission + slippage: {Number.isFinite(+draft.cost + +draft.slippage) ? 2 * (+draft.cost + +draft.slippage) : '—'} bps round trip.</p>
+      <RelationshipEligibility value={draft} onChange={next => { setDraft(d => ({ ...d, ...next, experimentId: '' })); setExperiment(null); setError(''); }} />
       <p>Checking fetches inputs, calculates a diagnostic backtest and saves a frozen experiment, including partial or failed results. It is not a certification of complete historical coverage.</p>
       {issues.length > 0 && <ul aria-label="Before checking">{issues.map(s => <li key={String(s)}>{s}</li>)}</ul>}
       <button className="bt-run" disabled={issues.length > 0 || busy} onClick={() => void run()}>{busy ? 'Checking sources and prices…' : experiment ? 'Check again as a new experiment' : 'Check inputs and save diagnostic run'}</button>

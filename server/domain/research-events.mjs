@@ -1,3 +1,4 @@
+import {verifyConnectorEvidence} from './research-connector-evidence.mjs';
 /** Event contract v1: event time, public availability and ingestion time are distinct. */
 import { listTickers } from '../lib/db.mjs';
 import { hashOf, putDataset } from './research-store.mjs';
@@ -19,7 +20,7 @@ export function identities(db) {
 }
 export function signalEvents(signals, source, identity, ingestedAt) {
   const by = new Map(identity.rows.map(x => [x.symbol, x]));
-  return signals.map(s => ({ schemaVersion: 1, id: `${source}:${s.id}`, sourceRecordId: s.id, source, entity: by.get(s.symbol) || { securityId: `ticker:${s.symbol}`, companyId: null, symbol: s.symbol }, eventAt: s.tradeDate || null, availableAt: s.signalDate, availabilityPrecision: 'day', availabilityBasis: source === 'contracts' ? 'assumed-publication-lag' : 'source-derived-public-date', ingestedAt, identityVersion: identity.version }));
+  return signals.map(s => ({ schemaVersion: 1, id: `${source}:${s.id}`, sourceRecordId: s.id, source, entity: by.get(s.symbol) || { securityId: `ticker:${s.symbol}`, companyId: null, symbol: s.symbol }, eventAt: s.tradeDate || null, availableAt: s.signalDate, availabilityPrecision: 'day', availabilityBasis: s.availabilityBasis || (source === 'contracts' ? 'assumed-publication-lag' : 'source-derived-public-date'), ingestedAt, identityVersion: identity.version }));
 }
 /** RFC4180-style CSV with quoted commas/newlines, escaped quotes, BOM and CRLF. */
 export function parseCsv(text) {
@@ -56,7 +57,7 @@ export function prepareDataset(db, request, { now = new Date().toISOString() } =
   let parsed;
   if (format === 'csv') parsed = parseCsv(content);
   else if (format === 'json') {
-    const json = JSON.parse(content); const rows = Array.isArray(json) ? json : json?.items;
+    const json = JSON.parse(content); verifyConnectorEvidence(json); const rows = Array.isArray(json) ? json : json?.items;
     if (!Array.isArray(rows) || rows.some(r => !r || typeof r !== 'object' || Array.isArray(r))) throw new Error('JSON must be an array of row objects or {items: [...]}.');
     parsed = { rows, headers: [...new Set(rows.flatMap(Object.keys))] };
   } else throw new Error('Format must be csv or json.');
@@ -103,5 +104,5 @@ export function datasetSource(dataset) {
   }
   const timing = dataset.manifest?.policy?.mode;
   const latency = timing ? `Frozen evidence; availability uses ${timing === 'assumed' ? 'an assumed publication delay' : timing === 'observed' ? 'collector first-observation dates, not original publication' : 'verified publication dates'}.` : 'Imported snapshot; public dates asserted by the importer.';
-  return { identity: dataset.identity, signals: dataset.events.map(e => ({ id: `${dataset.id}:${e.id}`, symbol: e.entity.symbol, signalDate: e.availableAt.slice(0, 10), tradeDate: e.eventAt.slice(0, 10), side: e.side, sizeHint: e.value, sizeIsRange: false, actor: dataset.id, actorLabel: dataset.name, sector: e.entity.sector || '' })), records: dataset.events, context: { notes }, feeds: [{ label: dataset.name, source: dataset.source, asOf: dataset.createdAt, latency }], dataset: { id: dataset.id, name: dataset.name, version: dataset.version, contentHash: dataset.contentHash } };
+  return { coverage: { kind: 'frozen-dataset', records: dataset.coverage, retrieval: dataset.manifest?.coverage || null, completeness: 'not-certified' }, identity: dataset.identity, signals: dataset.events.map(e => ({ id: `${dataset.id}:${e.id}`, symbol: e.entity.symbol, signalDate: e.availableAt.slice(0, 10), availabilityBasis: e.availabilityBasis || 'unknown', tradeDate: e.eventAt.slice(0, 10), side: e.side, sizeHint: e.value, sizeIsRange: false, actor: dataset.id, actorLabel: dataset.name, sector: e.entity.sector || '' })), records: dataset.events, context: { notes }, feeds: [{ label: dataset.name, source: dataset.source, asOf: dataset.createdAt, latency }], dataset: { id: dataset.id, name: dataset.name, version: dataset.version, contentHash: dataset.contentHash } };
 }

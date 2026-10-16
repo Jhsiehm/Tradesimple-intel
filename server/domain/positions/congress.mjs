@@ -1,3 +1,4 @@
+import { preserveSourceDocument } from '../source-documents.mjs';
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -172,6 +173,7 @@ async function houseTrades(db, people, progress, rows, tick) {
         state,
         district: num === "0" ? state : `${state}-${num}`,
         symbol: line.symbol,
+        ...(line.sourceDocument ? { sourceDocument: line.sourceDocument } : {}),
         asset: line.asset,
         assetType: line.assetType,
         owner: line.owner,
@@ -201,12 +203,14 @@ async function clerkIndex(db, year) {
   return stdout;
 }
 
-async function ptrLines(db, filing) {
+export async function ptrLines(db, filing, { read = fetchBytes } = {}) {
   const key = KEY.ptrDoc(filing.docId);
   const hit = readCache(db, key);
   if (hit) return hit.lines;
   const url = `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${filing.year}/${filing.docId}.pdf`;
-  const lines = await parsePtrPdf(await fetchBytes(url, { headers: { "User-Agent": BROWSER_UA } }, 60000));
+  const bytes = await read(url, { headers: { 'User-Agent': BROWSER_UA } }, 60000);
+  const sourceDocument = preserveSourceDocument(db, { url, content: bytes, mediaType: 'application/pdf' });
+  const lines = (await parsePtrPdf(new Uint8Array(bytes))).map(line => ({ ...line, sourceDocument }));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
 }
@@ -286,6 +290,7 @@ async function senateTrades(db, people, progress, rows, tick) {
         state: member?.state || "",
         district: member?.state || "",
         symbol: line.symbol,
+        ...(line.sourceDocument ? { sourceDocument: line.sourceDocument } : {}),
         asset: line.asset,
         assetType: line.assetType,
         owner: line.owner,
@@ -335,14 +340,15 @@ async function efdSession() {
   return { cookie: cookie(), csrf: jar.get("csrftoken") || token };
 }
 
-async function efdLines(db, href, session) {
+export async function efdLines(db, href, session, { read = fetchText } = {}) {
   const key = KEY.efdPtr(href);
   const hit = readCache(db, key);
   if (hit) return hit.lines;
-  const html = await fetchText(`https://efdsearch.senate.gov${href}`, {
+  const html = await read(`https://efdsearch.senate.gov${href}`, {
     headers: { "User-Agent": BROWSER_UA, Cookie: session.cookie, Referer: "https://efdsearch.senate.gov/search/" }
   });
-  const lines = parseEfd(html);
+  const sourceDocument = preserveSourceDocument(db, { url: `https://efdsearch.senate.gov${href}`, content: html, mediaType: 'text/html' });
+  const lines = parseEfd(html).map(line => ({ ...line, sourceDocument }));
   writeCache(db, key, { lines }, 6 * MONTH);
   return lines;
 }

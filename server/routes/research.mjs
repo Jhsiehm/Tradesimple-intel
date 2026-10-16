@@ -1,3 +1,13 @@
+import {createEventStudy,getEventStudy,listEventStudies,evaluateEventStudy} from '../domain/event-studies.mjs';
+import {createStressPlan,getStressPlan,listStressPlans,evaluateStressPlan} from '../domain/research-stress.mjs';
+import {prepareObservations,importObservations,listObservations,getObservations,deriveObservationSignals,resolveObservations,mergeObservationSnapshots} from '../domain/research-observations.mjs';
+import {exportPair} from '../domain/paired-archive.mjs';
+import {listPairEvaluations,savePairEvaluation} from '../domain/pair-evaluations.mjs';
+import {executePair,getPairExecution} from '../ai/pairedResearch.mjs';
+import {createPairProtocol,getPairProtocol,listPairProtocols} from '../domain/research-pairs.mjs';
+import {listAnalyses,getAnalysis} from '../domain/research-analysis.mjs';
+import { approveMemory, listMemoryApprovals, createMemorySnapshot, getMemorySnapshot, listMemorySnapshots } from '../domain/research-context.mjs';
+import { importRelationships, listRelationshipSnapshots, getRelationshipSnapshot, queryRelationships } from '../domain/relationship-history.mjs';
 import { TOOLS } from '../ai/tools.mjs';
 import { researchMemory } from '../domain/research-memory.mjs';
 import { listNotebooks, getNotebook, notebookHistory, saveNotebook } from '../domain/notebooks.mjs';
@@ -14,6 +24,7 @@ import { createContractJob, jobView, listContractJobs, pauseContractJob, startCo
 import { gzipSync } from 'node:zlib';
 
 let running = false;
+let pairRunning = false;
 const fail = (status, error) => reply(status, { ok: false, error });
 const brief = experiment => {
   const { inputs, ...run } = experiment.run;
@@ -36,6 +47,40 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.eventStudies': ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listEventStudies(ctx.db)}:{ok:true,plan:createEventStudy(ctx.db,body)}),
+  'research.eventStudy': ctx=>handle(ctx,['GET'],()=>({ok:true,plan:getEventStudy(ctx.db,ctx.params.id)})),
+  'research.eventStudyEvaluate': ctx=>handle(ctx,['POST'],()=>({ok:true,plan:evaluateEventStudy(ctx.db,ctx.params.id)})),
+  'research.stressPlans': ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listStressPlans(ctx.db)}:{ok:true,plan:createStressPlan(ctx.db,body)}),
+  'research.stressPlan': ctx=>handle(ctx,['GET'],()=>({ok:true,plan:getStressPlan(ctx.db,ctx.params.id)})),
+  'research.stressEvaluate': ctx=>handle(ctx,['POST'],()=>({ok:true,plan:evaluateStressPlan(ctx.db,ctx.params.id)})),
+  'research.observations': ctx => handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listObservations(ctx.db),connectors:listConnectors()}:importObservations(ctx.db,body)),
+  'research.observationMerge': ctx => handle(ctx,['POST'],body=>mergeObservationSnapshots(ctx.db,body)),
+  'research.observationPreview': ctx => handle(ctx,['POST'],async body=>{const imported=body.connector?await readConnector(body.connector):null;const {payload,...preview}=prepareObservations({...body,...(imported||{})});return {...preview,...(imported||{})};}),
+  'research.observation': ctx => handle(ctx,['GET'],()=>({ok:true,snapshot:getObservations(ctx.db,ctx.params.id)})),
+  'research.observationResolve': ctx => handle(ctx,['POST'],body=>({ok:true,result:resolveObservations(getObservations(ctx.db,ctx.params.id),body)})),
+  'research.observationDerive': ctx => handle(ctx,['POST'],body=>{const out=deriveObservationSignals(ctx.db,ctx.params.id,body);return {...out,dataset:datasetBrief(out.dataset),transformation:{policy:out.transformation.policy,received:out.transformation.received,selected:out.transformation.selected,signals:out.transformation.signals}};}),
+  'research.pairExport': ctx => handle(ctx,['GET'],()=>{const bytes=exportPair(ctx.db,ctx.params.id);ctx.res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${ctx.params.id}.zip"`,'Cache-Control':'no-store'});ctx.res.end(bytes);}),
+  'research.pairEvaluations': ctx => handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPairEvaluations(ctx.db,ctx.params.id)}:{ok:true,evaluation:savePairEvaluation(ctx.db,ctx.params.id,body)}),
+  'research.pairRun': ctx => handle(ctx,['GET','POST'],async()=>{
+    if(ctx.req.method==='GET')return {ok:true,execution:getPairExecution(ctx.db,ctx.params.id)};
+    const existing=getPairExecution(ctx.db,ctx.params.id);
+    if(existing)return {ok:true,execution:existing};
+    if(pairRunning)return fail(429,'Another paired evaluation is running.');
+    pairRunning=true;
+    const controller=new AbortController();const close=()=>controller.abort();ctx.res.on('close',close);
+    try{return {ok:true,execution:await executePair(ctx.db,ctx.params.id,{signal:controller.signal})};}
+    finally{pairRunning=false;ctx.res.off('close',close);}
+  }),
+  'research.pairs': ctx => handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPairProtocols(ctx.db)}:{ok:true,protocol:createPairProtocol(ctx.db,body)}),
+  'research.pair': ctx => handle(ctx,['GET'],()=>({ok:true,protocol:getPairProtocol(ctx.db,ctx.params.id)})),
+  'research.analyses': ctx => handle(ctx,['GET'],()=>({ok:true,items:listAnalyses(ctx.db)})),
+  'research.analysis': ctx => handle(ctx,['GET'],()=>({ok:true,analysis:getAnalysis(ctx.db,ctx.params.id)})),
+  'research.memoryApprovals': ctx => handle(ctx, ['GET','POST'], body => ctx.req.method === 'GET' ? {ok:true,items:listMemoryApprovals(ctx.db)} : {ok:true,approval:approveMemory(ctx.db,body)}),
+  'research.memorySnapshots': ctx => handle(ctx, ['GET','POST'], body => ctx.req.method === 'GET' ? {ok:true,items:listMemorySnapshots(ctx.db)} : {ok:true,snapshot:createMemorySnapshot(ctx.db,body)}),
+  'research.memorySnapshot': ctx => handle(ctx, ['GET'], () => ({ok:true,snapshot:getMemorySnapshot(ctx.db,ctx.params.id)})),
+  'research.relationships': ctx => handle(ctx, ['GET', 'POST'], body => ctx.req.method === 'GET' ? { ok: true, items: listRelationshipSnapshots(ctx.db) } : { ok: true, snapshot: importRelationships(ctx.db, body) }),
+  'research.relationshipSnapshot': ctx => handle(ctx, ['GET'], () => ({ ok: true, snapshot: getRelationshipSnapshot(ctx.db, ctx.params.id) })),
+  'research.relationshipQuery': ctx => handle(ctx, ['POST'], body => ({ ok: true, result: queryRelationships(ctx.db, ctx.params.id, body) })),
   'research.contractJobs': ctx => handle(ctx, ['GET', 'POST'], async body => {
     if (ctx.req.method === 'GET') return { ok: true, items: listContractJobs(ctx.db) };
     const job = createContractJob(ctx.db, body);
@@ -93,7 +138,7 @@ export const handlers = {
     if (body.parentId && !getExperiment(ctx.db, body.parentId)) return fail(404, 'Parent experiment not found.');
     const dataset = body.datasetId ? getDataset(ctx.db, body.datasetId) : null;
     if (body.datasetId && !dataset) return fail(404, 'Dataset version not found.');
-    const checked = cleanSpec(dataset ? { source: 'dataset', datasetId: dataset.id, rules: body.rules } : body.spec);
+    const checked = cleanSpec(dataset ? { source: 'dataset', datasetId: dataset.id, rules: body.rules, relationship: body.relationship ?? body.spec?.relationship } : body.spec);
     if (!checked.ok) return fail(400, checked.error);
     running = true;
     try {

@@ -44,7 +44,8 @@ export const dataText = (raw) => stableJson(raw, VOLATILE);
 export function answerIdentity(asked, { model = "", pinned = false } = {}) {
   const a = asked || {};
   return stableJson({
-    v: 2,
+    v: 3,
+    memory: a.memory || null,
     q: normalizeQuestion(a.question),
     history: (a.history || []).map((t) => [t.role, String(t.content || "").replace(/\s+/g, " ").trim()]),
     context: a.context || null,

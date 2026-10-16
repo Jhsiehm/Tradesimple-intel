@@ -1,3 +1,4 @@
+import { preserveSourceDocument } from './domain/source-documents.mjs';
 import { fetchText } from "./lib/http.mjs";
 import { usaspendingSearch } from "./feeds/usaspending.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
@@ -46,7 +47,7 @@ function placeFilter(code) {
  * Contract actions filtered by ticker (parent UEIs), place of performance (district or state), or member
  * (their district, or their state for senators). Every row links to its USAspending award page.
  */
-export async function contractFeed(db, params) {
+export async function contractFeed(db, params, { search = usaspendingSearch } = {}) {
   const sort = params.sort === "largest" ? "largest" : "recent";
   const days = Math.min(365, Math.max(7, Number(params.days) || 90));
   const filters = { award_type_codes: CONTRACT_TYPES };
@@ -84,19 +85,22 @@ export async function contractFeed(db, params) {
   if (hit) return { ...hit, items: keyed(hit.items || []), scope };
   const t0 = Date.now();
   let body;
+  const request = { filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" };
   try {
-    body = await usaspendingSearch("spending_by_transaction", { filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" }, { timeoutMs: 45000, retries: 1, priority: true });
+    body = await search("spending_by_transaction", request, { timeoutMs: 45000, retries: 1, priority: true });
   } catch (err) {
     const stale = readStale(db, key);
     if (stale) return { ...stale.value, items: keyed(stale.value.items || []), scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
     return { ok: false, source: "USAspending.gov prime contract transactions", asOf: new Date().toISOString(), latency: LATENCY, error: `Contract feed: ${err.message}. Try again, or narrow the window.`, scope, items: [] };
   }
   if (body?.detail) return { ok: false, error: String(body.detail).slice(0, 200), items: [] };
+  const sourceDocument = preserveSourceDocument(db, { url: 'https://api.usaspending.gov/api/v2/search/spending_by_transaction/', content: JSON.stringify({ request, response: body }), mediaType: 'application/json' });
   const parents = parentIndex(db);
   const items = keyed((body.results || []).map((r) => {
     const pop = r["Primary Place of Performance"] || {};
     const district = pop.state_code && pop.congressional_code ? `${pop.state_code}-${pop.congressional_code}` : pop.state_code || "";
     return {
+      sourceDocument,
       award: r["Award ID"],
       recipient: r["Recipient Name"] || "",
       uei: r["Recipient UEI"] || "",
