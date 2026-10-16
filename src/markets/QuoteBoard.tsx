@@ -144,9 +144,9 @@ export function QuoteBoard({ onOpen, onMap }: { onOpen: (symbol: string) => void
           <em>AS OF</em> {when(board?.asOf)}
           <em>NOTE</em> {board?.latency || "Delayed quotes."}
         </p>
-      </header>
-      <div className="scope toggle" aria-label="Quote pages"><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button><span>{rows.length ? `${page * 100 + 1}–${Math.min(rows.length, (page + 1) * 100)} of ${rows.length}` : "No matching quotes"}</span><button disabled={(page + 1) * 100 >= rows.length} onClick={() => setPage(p => p + 1)}>Next</button></div>
+      <div className="board-title" aria-label="Quote pages"><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button><span>{rows.length ? `${page * 100 + 1}–${Math.min(rows.length, (page + 1) * 100)} of ${rows.length}` : "No matching quotes"}</span><button disabled={(page + 1) * 100 >= rows.length} onClick={() => setPage(p => p + 1)}>Next</button></div>
       {error ? <p className="tape-empty">{error}</p> : null}
+      </header>
       <div className="board-scroll">
         <table>
           <thead>
