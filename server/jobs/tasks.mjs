@@ -46,6 +46,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
   function boot() {
     const caught = [];
     const t = now();
+    store.recoverAttempts(db,p=>alive(p,pid),t);
     for (const task of store.listTasks(db)) {
       const interrupted = task.running && store.clearDeadLease(db, task.id, (p) => alive(p, pid));
       const plan = bootPlan({ enabled: task.enabled, schedule: task.schedule, nextRun: task.nextRun, interrupted }, t);
@@ -116,7 +117,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
   async function perform(task, trigger) {
     const startedAt = now();
     if (!store.claimTask(db, task.id, { now: startedAt, pid })) return { ok: false, busy: true };
-    let run = null;
+    let run = null, attempt = null;
     try {
       const cap = dailyCap(env);
       if (runsToday(store.countedStarts(db, startedAt), startedAt) >= cap) {
@@ -124,13 +125,16 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
       } else if (task.kind === "prompt" && !askConfig(env).configured) {
         run = skip(task, startedAt, "not-configured", "Ask is not configured — add a key to .env.local", "This task asks the model; backtest tasks still run without a key.");
       } else {
+        attempt=store.reserveAttempt(db,task,{startedAt,pid,trigger,cap});
+        if(!attempt){run=skip(task,startedAt,"budget",`Daily cap of ${cap} scheduled runs reached`,"Another process reserved the remaining capacity.");return {ok:true,run};}
         const r = task.kind === "backtest" ? await runBacktests(task, startedAt) : await runAskPrompt(task, startedAt);
         if (r.skipped) run = skip(task, startedAt, "not-configured", r.error || "Ask is not configured", "");
-        else if (store.getTask(db, task.id)) run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), counted: true, ...r, meta: { ...r.meta, trigger } });
+        else if (store.getTask(db, task.id)) run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), counted: true, ...r, meta: { ...r.meta, trigger, attemptId:attempt.id } });
       }
     } catch (err) {
-      run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), status: "error", counted: true, severity: "routine", title: `${task.title} · failed`, summary: err?.message || "Run failed.", source: "TradeSimple scheduler", asOf: iso(startedAt), latency: "", meta: { trigger } });
+      run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), status: "error", counted: true, severity: "routine", title: `${task.title} · failed`, summary: err?.message || "Run failed.", source: "TradeSimple scheduler", asOf: iso(startedAt), latency: "", meta: { trigger, ...(attempt?{attemptId:attempt.id}:{}) } });
     } finally {
+      if(attempt)store.completeAttempt(db,attempt.id,{status:'finished',finishedAt:now(),run:run?store.getRun(db,run.id,true):null,reason:run?'':'No result row was stored; the task was removed or a repeated skip was suppressed.'});
       const cur = store.getTask(db, task.id);
       if (cur) {
         const t = now();
@@ -150,7 +154,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
     queued.add(id);
     const done = chain.then(async () => {
       const fresh = store.getTask(db, id);
-      return fresh ? perform(fresh, trigger) : { ok: false, gone: true };
+      return fresh ? (trigger==='schedule'&&!fresh.enabled?{ok:false,paused:true}:trigger==='schedule'&&(fresh.nextRun==null||fresh.nextRun>now())?{ok:false,notDue:true}:perform(fresh, trigger)) : { ok: false, gone: true };
     }).finally(() => queued.delete(id));
     chain = done.catch(() => null);
     return { ok: true, done };

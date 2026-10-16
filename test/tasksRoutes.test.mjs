@@ -1,3 +1,4 @@
+import * as taskStore from '../server/domain/tasks/store.mjs';
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
@@ -100,4 +101,16 @@ test("asking Ask to schedule something answers with a draft and no model call", 
   assert.equal(done.task.useWatchlist, true);
   assert.match(done.answer, /Schedule it/);
   assert.equal(done.usage.tokens, 0);
+});
+
+
+test('durable task attempts are inspectable after task deletion and are read-only',async()=>{
+ const made=await send('POST','/api/tasks',TASK),task=taskStore.getTask(db,made.body.task.id);
+ const attempt=taskStore.reserveAttempt(db,task,{startedAt:Date.now(),pid:9999,trigger:'manual',cap:100});
+ taskStore.completeAttempt(db,attempt.id,{status:'interrupted',finishedAt:Date.now(),reason:'Synthetic interruption'});
+ await send('DELETE',`/api/tasks/${task.id}`);
+ const list=await send('GET','/api/tasks/attempts');assert.equal(list.status,200);assert.ok(list.body.items.some(a=>a.id===attempt.id&&a.status==='interrupted'));
+ const read=await send('GET',`/api/tasks/attempts/${attempt.id}`);assert.equal(read.body.attempt.task.title,task.title);assert.equal(read.body.attempt.completion.reason,'Synthetic interruption');
+ assert.equal((await send('POST',`/api/tasks/attempts/${attempt.id}`,{})).status,405);
+ assert.equal((await send('GET','/api/tasks/attempts/ta_deadbeef')).status,404);
 });

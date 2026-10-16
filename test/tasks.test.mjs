@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {createResearchBackup,verifyResearchBackup} from '../server/domain/research-backup.mjs';
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
@@ -290,4 +294,49 @@ test("deleting a task removes its runs; a manual run keeps the scheduled slot", 
   assert.equal(store.getTask(h.db, task.id).nextRun, h.clock.t + 3_600_000);
   assert.equal(store.deleteTask(h.db, task.id), true);
   assert.equal(store.runsSince(h.db, 0).length, 0);
+});
+
+test('daily reservations count in-flight runs across schedulers and survive task deletion',async()=>{
+ let release;const gate=new Promise(r=>{release=r;});
+ const h=harness({env:{TASKS_MAX_RUNS_PER_DAY:'1'},backtest:async()=>{await gate;return fakeRun();}}),a=addTask(h.db),b=addTask(h.db,{title:'Other task'});
+ const first=h.s.enqueue(a.id,'manual');await new Promise(r=>setImmediate(r));
+ const other=harness({db:h.db,pid:5151,env:{TASKS_MAX_RUNS_PER_DAY:'1'},alive:()=>true});
+ await other.s.enqueue(b.id,'manual').done;assert.equal(other.calls.length,0);assert.equal(store.lastRunOf(h.db,b.id).status,'skipped');
+ assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
+ const pending=store.listAttempts(h.db)[0];assert.equal(pending.completion,null);assert.equal(pending.task.title,a.title);
+ release();await first.done;const finished=store.getAttempt(h.db,pending.id);assert.equal(finished.completion.status,'finished');assert.equal(finished.completion.run.status,'ok');assert.ok(finished.completion.run.result);
+ store.deleteTask(h.db,a.id);store.deleteTask(h.db,b.id);
+ const c=addTask(h.db);await other.s.enqueue(c.id,'manual').done;assert.equal(other.calls.length,0);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);assert.equal(store.getAttempt(h.db,pending.id).completion.run.status,'ok');
+ assert.throws(()=>h.db.exec('DELETE FROM research.task_attempts'),/immutable/);
+});
+test('scheduled work paused while queued never starts; manual invocation remains explicit',async()=>{
+ let release;const gate=new Promise(r=>{release=r;});let calls=0;
+ const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),a=addTask(h.db),b=addTask(h.db,{title:'Queued task'});
+ const first=h.s.enqueue(a.id,'manual'),second=h.s.enqueue(b.id,'schedule');
+ store.updateTask(h.db,b.id,{enabled:false},{now:h.clock.t,nextRun:null});release();await first.done;
+ assert.equal((await second.done).paused,true);assert.equal(calls,1);assert.equal(store.lastRunOf(h.db,b.id),null);
+ await h.s.enqueue(b.id,'manual').done;assert.equal(calls,2);
+});
+test('dead execution attempts are preserved as interrupted and still consume their original daily slot',()=>{
+ const h=harness({env:{TASKS_MAX_RUNS_PER_DAY:'1'}}),task=addTask(h.db);
+ const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'schedule',cap:1});assert.ok(attempt);
+ store.claimTask(h.db,task.id,{now:h.clock.t,pid:9999});h.s.boot();
+ const recovered=store.getAttempt(h.db,attempt.id);assert.equal(recovered.completion.status,'interrupted');assert.equal(recovered.completion.run,null);
+ assert.equal(store.getTask(h.db,task.id).running,false);assert.equal(store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:4242,trigger:'manual',cap:1}),null);
+ assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t),0);
+});
+
+
+test('independent cache connections share durable reservations and backup preserves the journal',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-attempts-'));let a=new DatabaseSync(path.join(dir,'first-cache.sqlite')),b=new DatabaseSync(path.join(dir,'second-cache.sqlite'));
+ try{
+  const clock={t:at('2026-10-09T14:00:00Z')},one=addTask(a,{},clock),two=addTask(b,{title:'Second process task'},clock);
+  const attempt=store.reserveAttempt(a,one,{startedAt:clock.t,pid:4242,trigger:'manual',cap:1});assert.ok(attempt);
+  assert.equal(store.reserveAttempt(b,two,{startedAt:clock.t,pid:5151,trigger:'manual',cap:1}),null);
+  store.deleteTask(a,one.id);a.close();a=null;b.close();b=null;
+  a=new DatabaseSync(path.join(dir,'replacement-cache.sqlite'));assert.equal(store.countedStarts(a,clock.t).length,1);
+  assert.equal(store.getAttempt(a,attempt.id).task.title,one.title);store.recoverAttempts(a,()=>false,clock.t+1000);
+  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));assert.equal(backup.counts.task_attempts,1);assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_completions,1);
+  assert.equal(store.getAttempt(a,attempt.id).completion.status,'interrupted');
+ }finally{a?.close();b?.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

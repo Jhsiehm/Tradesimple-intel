@@ -17,12 +17,16 @@ function inspect(file) {
     if (tables.some(t => !present.includes(t))) throw new Error('Missing required research tables.');
     const counts = {};
     for (const table of present) counts[table] = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get().n;
-    for (const table of ['runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans'].filter(t => present.includes(t))) {
+    for (const table of ['runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans', 'task_attempts', 'task_completions'].filter(t => present.includes(t))) {
       for (const row of db.prepare(`SELECT body, body_hash FROM ${table}`).iterate()) {
         if (hashOf(row.body) !== row.body_hash) throw new Error(`${table} checksum mismatch.`);
         const body = JSON.parse(row.body);
         if (table === 'runs' && hashOf(body.inputs) !== body.inputHash) throw new Error('Run input checksum mismatch.');
       }
+    }
+    if(present.includes('task_completions'))for(const row of db.prepare('SELECT attempt_id,body FROM task_completions').iterate()){
+      const completion=JSON.parse(row.body),saved=db.prepare('SELECT body FROM task_attempts WHERE id=?').get(row.attempt_id);
+      if(!saved||completion.attemptId!==row.attempt_id||completion.attemptHash!==hashOf(JSON.parse(saved.body)))throw Error('Task completion attempt reference mismatch.');
     }
     for(const row of db.prepare('SELECT body FROM notebook_revisions').iterate()){
       const notebook=JSON.parse(row.body);

@@ -53,6 +53,8 @@ const askDone = (answer, ms) => ({
 });
 
 export const handlers = {
+  "tasks.attempts": ({db,req})=>method(req)!=='GET'?bad(405,'Use GET.'):({ok:true,items:store.listAttempts(db).map(a=>({id:a.id,taskId:a.taskId,title:a.task.title,kind:a.task.kind,startedAt:iso(a.startedAt),trigger:a.trigger,status:a.completion?.status||'incomplete',outcome:a.completion?.run?.status||null})),note:'Durable admitted attempts count before execution, including interrupted attempts. Task definitions and recent alerts remain in the cache database.'}),
+  "tasks.attempt": ({db,req,params})=>{if(method(req)!=='GET')return bad(405,'Use GET.');const attempt=store.getAttempt(db,params.id);return attempt?{ok:true,attempt}:bad(404,'Task attempt not found.');},
   tasks: async ({ db, req }) => {
     if (method(req) === "GET") {
       return {

@@ -1,3 +1,5 @@
+import {researchStore,hashOf,newId} from '../research-store.mjs';
+import {nyDate} from '../../../shared/dates.mjs';
 /**
  * Scheduled research tasks and their runs, in the server's cache database (data/cache.sqlite or INTEL_CACHE, never
  * committed). A run row keeps the full stored result so Alerts can open it in Ask without running it again.
@@ -8,6 +10,7 @@ const KEEP_RUNS = 60;
 
 function ensure(db) {
   if (ready.has(db)) return;
+  researchStore(db);
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -38,6 +41,10 @@ function ensure(db) {
     CREATE INDEX IF NOT EXISTS task_runs_task ON task_runs (task_id, started_at);
     CREATE INDEX IF NOT EXISTS task_runs_started ON task_runs (started_at);
   `);
+  db.exec(`CREATE TABLE IF NOT EXISTS research.task_attempts (id TEXT PRIMARY KEY,task_id TEXT NOT NULL,day TEXT NOT NULL,started_at INTEGER NOT NULL,pid INTEGER NOT NULL,body_hash TEXT NOT NULL,body TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS research.task_attempts_day ON task_attempts(day);
+    CREATE TABLE IF NOT EXISTS research.task_completions (attempt_id TEXT PRIMARY KEY,body_hash TEXT NOT NULL,body TEXT NOT NULL);`);
+  for(const table of ['task_attempts','task_completions'])for(const op of ['UPDATE','DELETE'])db.exec(`CREATE TRIGGER IF NOT EXISTS research.${table}_${op.toLowerCase()} BEFORE ${op} ON ${table} BEGIN SELECT RAISE(ABORT,'Task attempt records are immutable'); END;`);
   ready.add(db);
 }
 
@@ -182,5 +189,34 @@ export function runsSince(db, since, limit = 200) {
 /** Start times of runs that count against the daily cap, over the last two days (the caller picks today's in ET). */
 export function countedStarts(db, now) {
   ensure(db);
-  return db.prepare("SELECT started_at FROM task_runs WHERE counted = 1 AND started_at >= ?").all(now - 2 * 86_400_000).map((r) => r.started_at);
+  return [...legacyCountedStarts(db,now),...db.prepare('SELECT started_at FROM research.task_attempts WHERE started_at >= ?').all(now-2*86_400_000).map(r=>r.started_at)];
+}
+
+function legacyCountedStarts(db,now){return db.prepare("SELECT started_at,meta FROM task_runs WHERE counted=1 AND started_at>=?").all(now-2*86_400_000).filter(r=>!JSON.parse(r.meta||'{}').attemptId).map(r=>r.started_at);}
+function decodeAttempt(row){if(!row)return null;if(hashOf(row.body)!==row.body_hash)throw Error('Task execution checksum mismatch.');return JSON.parse(row.body);}
+export function getAttempt(db,id){ensure(db);const attempt=decodeAttempt(db.prepare('SELECT body,body_hash FROM research.task_attempts WHERE id=?').get(id));if(!attempt)return null;return {...attempt,completion:decodeAttempt(db.prepare('SELECT body,body_hash FROM research.task_completions WHERE attempt_id=?').get(id))};}
+export function listAttempts(db,limit=200){ensure(db);return db.prepare('SELECT id FROM research.task_attempts ORDER BY started_at DESC,id DESC LIMIT ?').all(Math.min(500,Math.max(1,limit))).map(r=>getAttempt(db,r.id));}
+/** A single conditional INSERT reserves capacity across processes before any work starts. */
+export function reserveAttempt(db,task,{startedAt,pid,trigger,cap}){
+ ensure(db);const day=nyDate(startedAt),id=newId('ta');
+ const attempt={schemaVersion:1,id,taskId:task.id,day,startedAt,pid,trigger,task:{id:task.id,...JSON.parse(bodyOf(task)),createdAt:task.createdAt,updatedAt:task.updatedAt}};
+ const encoded=JSON.stringify(attempt),legacy=legacyCountedStarts(db,startedAt).filter(t=>nyDate(t)===day).length;
+ const inserted=db.prepare('INSERT INTO research.task_attempts SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM research.task_attempts WHERE day=?)+? < ?').run(id,task.id,day,startedAt,pid,hashOf(encoded),encoded,day,legacy,cap);
+ return inserted.changes===1?attempt:null;
+}
+export function completeAttempt(db,id,{status,finishedAt,run=null,reason=''}){
+ const attempt=getAttempt(db,id);if(!attempt)throw Error('Task attempt not found.');if(attempt.completion)return attempt;
+ if(!['finished','interrupted'].includes(status))throw Error('Invalid task completion state.');
+ const {completion,...original}=attempt;
+ const record={attemptId:id,attemptHash:hashOf(original),status,finishedAt,run,reason},encoded=JSON.stringify(record);
+ db.prepare('INSERT OR IGNORE INTO research.task_completions VALUES (?,?,?)').run(id,hashOf(encoded),encoded);return getAttempt(db,id);
+}
+export function recoverAttempts(db,alive,now){
+ ensure(db);let recovered=0;
+ const unfinished=db.prepare('SELECT a.id FROM research.task_attempts a LEFT JOIN research.task_completions c ON c.attempt_id=a.id WHERE c.attempt_id IS NULL').all();
+ for(const {id} of unfinished){const attempt=getAttempt(db,id);if(alive(attempt.pid))continue;
+  const saved=db.prepare("SELECT id FROM task_runs WHERE json_extract(meta,'$.attemptId')=? LIMIT 1").get(id);
+  completeAttempt(db,id,{status:saved?'finished':'interrupted',finishedAt:now,run:saved?getRun(db,saved.id,true):null,reason:saved?'Recovered saved result after process interruption.':'Owning process is no longer alive; no terminal result was recorded. The attempt remains charged to its original day.'});recovered++;
+ }
+ return recovered;
 }

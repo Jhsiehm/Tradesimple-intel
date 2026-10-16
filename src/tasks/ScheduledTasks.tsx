@@ -24,7 +24,7 @@ export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[
   return (
     <details className="ask-tasks" open={items.length > 0}>
       <summary>
-        Scheduled <small>{items.length ? `${items.length} task${items.length === 1 ? "" : "s"}` : "none"}{res?.budget ? ` · ${res.budget.usedToday}/${res.budget.perDay} runs today` : ""}{res?.scheduler === "off" ? " · scheduler off" : ""}</small>
+        Scheduled <small>{items.length ? `${items.length} task${items.length === 1 ? "" : "s"}` : "none"}{res?.budget ? ` · ${res.budget.usedToday}/${res.budget.perDay} attempts today` : ""}{res?.scheduler === "off" ? " · scheduler off" : ""}</small>
       </summary>
       {items.length ? (
         <ul>
