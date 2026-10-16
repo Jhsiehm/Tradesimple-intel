@@ -1,0 +1,17 @@
+/* Additive brand vocabulary. No aliases to existing semantic or surface tokens. */
+:root {
+  --tsi-core-midnight: #0B1F1A;
+  --tsi-core-atlas: #1F4D43;
+  --tsi-core-ivory: #EAE4D6;
+  --tsi-core-stone: #C7B8A3;
+  --tsi-core-slate: #899CA3;
+  --tsi-core-brass: #B08D57;
+  --tsi-chroma-blue: #2E7DF6;
+  --tsi-chroma-amber: #FAA340;
+  --tsi-chroma-crimson: #E85553;
+  --tsi-chroma-violet: #986CFF;
+  --tsi-chroma-cyan: #26E0D4;
+  --tsi-chroma-lime: #A6E22E;
+  --tsi-chroma-orange: #FF8A3C;
+  --tsi-chroma-pink: #FF5CAB;
+}
