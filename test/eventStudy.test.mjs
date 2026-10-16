@@ -56,3 +56,48 @@ test('registered event study is immutable, evaluated once and portable with sour
   const evidence=JSON.parse(fs.readFileSync(path.join(dir,'evidence.json'),'utf8'));assert.ok(evidence.runs[experiment.runId]);assert.equal(evidence.datasets[dataset.id].rawContent,dataset.rawContent);
  }finally{db?.close();if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+function modelFixture(){
+ let stock=100,spy=100;const security=[],benchmark=[];
+ for(let i=0;i<100;i++){const x=((i%7)-3)*.003;if(i){spy*=1+x;stock*=1+.001+1.5*x;}const day=dayOf('2025-01-01')+i;security.push([day,stock,stock]);benchmark.push([day,spy,spy]);}
+ return {base:{...base,signals:[{id:'model-event',symbol:'AAPL',side:'buy',signalDate:'2025-03-01',tradeDate:'2025-02-28'}],bars:{AAPL:security},benchBars:{SPY:benchmark}},spec:{from:'2025-03-01',to:'2025-03-02',before:2,after:2,sides:'both',model:'market-model',estimationSessions:30,estimationGap:5}};
+}
+test('market model recovers coefficients from strictly pre-window returns and compares the same cohort',()=>{
+ const fixture=modelFixture(),report=runEventStudy(fixture),event=report.events[0];
+ assert.equal(report.counts.completeEvents,1);near(event.estimation.alpha,.001);near(event.estimation.beta,1.5);near(event.estimation.rSquared,1);near(event.estimation.residualStdDev,0);near(event.car,0);
+ assert.equal(event.estimation.n,30);assert.equal(event.estimation.samples.length,30);assert.equal(dayOf(event.from)-dayOf(event.estimation.to),6);
+ for(const p of event.path){near(p.expectedReturn,.001+1.5*p.benchmarkReturn);near(p.abnormalReturn,0);near(p.marketAdjustedReturn,p.securityReturn-p.benchmarkReturn);}
+ near(report.summary.marketAdjustedMeanCar,event.marketAdjustedCar);assert.ok(Math.abs(event.marketAdjustedCar)>1e-4);
+ // Alter event and gap prices without allowing them to affect fitted coefficients.
+ const changed=structuredClone(fixture),cutoff=dayOf(event.estimation.to);
+ for(const row of changed.base.bars.AAPL)if(row[0]>cutoff){row[1]*=1.2;row[2]*=1.2;}
+ const altered=runEventStudy(changed).events[0];assert.deepEqual(altered.estimation,event.estimation);
+ // Alter a post-anchor close: fitted coefficients stay fixed, measured residual changes.
+ const shock=structuredClone(fixture);shock.base.bars.AAPL.find(b=>b[0]===dayOf(event.anchorDate))[2]*=1.1;
+ const stressed=runEventStudy(shock).events[0];assert.deepEqual(stressed.estimation,event.estimation);assert.notEqual(stressed.path.find(p=>p.offset===0).abnormalReturn,event.path.find(p=>p.offset===0).abnormalReturn);
+});
+test('market model refuses incomplete estimation, degenerate SPY returns and invalid conditions',()=>{
+ const fixture=modelFixture();
+ const missing=structuredClone(fixture);missing.base.bars.AAPL=missing.base.bars.AAPL.filter(b=>b[0]!==dayOf('2025-02-01'));
+ const report=runEventStudy(missing);assert.equal(report.summary,null);assert.equal(report.exclusions['missing-estimation-security-close'],1);
+ const flat=structuredClone(fixture);flat.base.benchBars.SPY=flat.base.benchBars.SPY.map(b=>[b[0],100,100]);assert.equal(runEventStudy(flat).exclusions['unstable-estimation-fit'],1);
+ assert.equal(runEventStudy({...fixture,spec:{...fixture.spec,estimationSessions:120}}).exclusions['incomplete-estimation-calendar'],1);
+ for(const patch of [{estimationSessions:19},{estimationSessions:253},{estimationGap:-1},{estimationGap:1.5},{model:'CAPM'},{model:'market-adjusted',estimationSessions:30}])assert.throws(()=>cleanEventStudy({...fixture.spec,...patch}));
+});
+
+test('registered market model exports estimation evidence and replays without its database',async()=>{
+ const fixture=modelFixture(),dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-market-model-')),prior=process.env.INTEL_CACHE;process.env.INTEL_CACHE=path.join(dir,'cache.sqlite');let db;
+ try{
+  db=openDb(decodeURIComponent(new URL('..',import.meta.url).pathname));
+  const dataset=importDataset(db,{name:'Market model fixture',source:'Synthetic',format:'json',content:JSON.stringify(fixture.base.signals.map(s=>({id:s.id,symbol:s.symbol,side:s.side,eventAt:s.tradeDate,availableAt:s.signalDate})))}).dataset;
+  const run=await runSpec(db,{source:'dataset',datasetId:dataset.id,rules:base.rules},{sourceFn:async()=>datasetSource(dataset),loadBarsFn:async()=>({bars:{AAPL:fixture.base.bars.AAPL,SPY:fixture.base.benchBars.SPY},pending:[],stale:[],cached:2,fetched:0,missing:[],oldestStoredAt:Date.now()})});
+  const experiment=saveExperiment(db,{runId:run.runId,title:'Synthetic model source'});
+  const plan=createEventStudy(db,{title:'Registered market model',hypothesis:'Recover the synthetic relationship',experimentId:experiment.id,spec:fixture.spec});
+  const done=evaluateEventStudy(db,plan.id);near(done.run.result.eventStudy.events[0].estimation.beta,1.5);assert.equal(replayRun(done.run).matches,true);
+  createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.event_study_evaluations,1);
+  fs.writeFileSync(path.join(dir,'run.zip'),exportRun(db,done.run));db.close();db=null;
+  assert.equal(spawnSync('unzip',['-q','run.zip'],{cwd:dir}).status,0);
+  const replay=spawnSync(process.execPath,['replay.mjs'],{cwd:dir,encoding:'utf8'});assert.equal(replay.status,0,replay.stderr);assert.equal(JSON.parse(replay.stdout).matches,true);
+  const saved=JSON.parse(fs.readFileSync(path.join(dir,'run.json'),'utf8'));assert.equal(saved.result.eventStudy.events[0].estimation.samples.length,30);
+ }finally{db?.close();if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;fs.rmSync(dir,{recursive:true,force:true});}
+});
