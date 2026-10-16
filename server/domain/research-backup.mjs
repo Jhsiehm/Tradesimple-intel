@@ -1,3 +1,4 @@
+import {verifyRetrievalRecords} from './connector-retrievals.mjs';
 import {verifyTaskControls} from './tasks/control.mjs';
 import {verifyAttemptRow,verifyCompletion,verifyStopRequest} from './tasks/integrity.mjs';
 import {verifyObservationDerivation,verifyObservationComposition} from './research-observations.mjs';
@@ -19,7 +20,7 @@ function inspect(file) {
     if (tables.some(t => !present.includes(t))) throw new Error('Missing required research tables.');
     const counts = {};
     for (const table of present) counts[table] = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get().n;
-    for (const table of ['runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans', 'task_attempts', 'task_completions', 'task_stop_requests'].filter(t => present.includes(t))) {
+    for (const table of ['connector_retrievals','connector_pages','connector_results','runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans', 'task_attempts', 'task_completions', 'task_stop_requests'].filter(t => present.includes(t))) {
       for (const row of db.prepare(`SELECT body, body_hash FROM ${table}`).iterate()) {
         if (hashOf(row.body) !== row.body_hash) throw new Error(`${table} checksum mismatch.`);
         const body = JSON.parse(row.body);
@@ -61,6 +62,16 @@ function inspect(file) {
       if(evaluation){const saved=db.prepare('SELECT body FROM runs WHERE id=?').get(evaluation.run_id);const run=saved&&JSON.parse(saved.body);if(!run||run.inputs.kind!=='stress'||run.engineId!==plan.engineId||hashOf(run.inputs.base)!==source.inputHash||hashOf(run.inputs.scenarios)!==hashOf(plan.scenarios)||hashOf(run.provenance.plan)!==hashOf(plan))throw Error('Stress evaluation reference mismatch.');}
     }
     if(present.includes('stress_evaluations')&&db.prepare('SELECT 1 FROM stress_evaluations e LEFT JOIN stress_plans p ON p.id=e.plan_id LEFT JOIN runs r ON r.id=e.run_id WHERE p.id IS NULL OR r.id IS NULL LIMIT 1').get())throw Error('Missing stress evaluation reference.');
+    if(present.includes('connector_retrievals')){
+      for(const row of db.prepare('SELECT id,body FROM connector_retrievals').iterate()){
+        const job=JSON.parse(row.body);
+        const pages=db.prepare('SELECT body FROM connector_pages WHERE retrieval_id=? ORDER BY page').all(row.id).map(r=>JSON.parse(r.body));
+        const result=db.prepare('SELECT body FROM connector_results WHERE retrieval_id=?').get(row.id);
+        if(job.id!==row.id)throw Error('Connector retrieval identity mismatch.');
+        verifyRetrievalRecords(job,pages,result?JSON.parse(result.body):null);
+      }
+      for(const table of ['connector_pages','connector_results'])if(db.prepare(`SELECT 1 FROM ${table} p LEFT JOIN connector_retrievals j ON j.id=p.retrieval_id WHERE j.id IS NULL LIMIT 1`).get())throw Error('Orphaned connector checkpoint.');
+    }
     if (present.includes('memory_approvals')) for (const row of db.prepare('SELECT body FROM memory_approvals').iterate()) {
       const approval=JSON.parse(row.body);
       const notebook=db.prepare('SELECT body FROM notebook_revisions WHERE notebook_id=? AND revision=?').get(approval.notebookId,approval.revision);

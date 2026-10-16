@@ -131,7 +131,7 @@ test('offline archive contains its engine and validates checksums before replay'
 const config = { RESEARCH_API_CONNECTORS: JSON.stringify({ fixture: { url: 'https://example.org/records', tokenEnv: 'FIXTURE_TOKEN' } }), FIXTURE_TOKEN: 'a-secret-fixture' };
 test('API connector pins vetted public DNS, uses server credential and returns JSON for normal validation', async () => {
   let calls = 0;
-  assert.deepEqual(listConnectors(config), [{ id: 'fixture', label: 'fixture' }]);
+  assert.deepEqual(listConnectors(config), [{ id: 'fixture', label: 'fixture', resumable: false }]);
   const out = await readConnector('fixture', { env: config, lookup: async () => [{ address: '93.184.216.34', family: 4 }], request: async (url, options) => { calls++; assert.equal(url.protocol, 'https:'); assert.equal(options.addresses[0].address, '93.184.216.34'); assert.equal(options.headers.authorization, 'Bearer a-secret-fixture'); return new Response('[{"id":"one"}]'); } });
   assert.equal(calls, 1); assert.equal(out.format, 'json'); assert.equal(out.source, 'API connector: fixture'); assert.ok(!JSON.stringify(out).includes(config.FIXTURE_TOKEN));
 });

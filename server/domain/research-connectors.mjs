@@ -12,9 +12,9 @@ function configs(env) {
   return entries;
 }
 export function listConnectors(env = process.env) {
-  return Object.keys(configs(env)).map(id => ({ id, label: id }));
+  return Object.keys(configs(env)).map(id => ({ id, label: id, resumable: Boolean(configs(env)[id]?.pagination) }));
 }
-export async function readConnector(id, { env = process.env, lookup = dns.lookup, request = fetchPinnedResponse } = {}) {
+function connectorConfig(id, env) {
   const entries = configs(env);
   const c = Object.hasOwn(entries, id) ? entries[id] : null;
   if (!c || typeof c.url !== 'string') throw new Error('Choose a configured API connector.');
@@ -28,6 +28,14 @@ export async function readConnector(id, { env = process.env, lookup = dns.lookup
     if(pagination.nextCursorField===pagination.itemsField)throw Error('Connector item and cursor fields must differ.');
     if(!Number.isInteger(pagination.maxPages)||pagination.maxPages<1||pagination.maxPages>20)throw Error('Connector maxPages must be between 1 and 20.');
   }
+  return {c,url,pagination};
+}
+export function connectorDescriptor(id,env=process.env){
+ const {c,url,pagination}=connectorConfig(id,env);
+ return {endpoint:url.href,pagination:pagination?Object.fromEntries(['cursorParam','nextCursorField','itemsField','maxPages'].map(k=>[k,pagination[k]])):null,credentialSlot:c.tokenEnv||null};
+}
+export async function readConnector(id, { env = process.env, lookup = dns.lookup, request = fetchPinnedResponse, onPage } = {}) {
+  const {c,url,pagination}=connectorConfig(id,env);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
@@ -58,6 +66,8 @@ export async function readConnector(id, { env = process.env, lookup = dns.lookup
       if(items.length+parsed[pagination.itemsField].length>ROW_LIMIT)throw Error('Connector exceeds 5,000 rows; partial imports are refused.');
       items.push(...parsed[pagination.itemsField]);
       pages.push({page:page+1,retrievedAt:new Date().toISOString(),requestCursorHash:cursor===null?null:digest(cursor),responseHash:digest(content),rawContent:content,rows:parsed[pagination.itemsField].length});
+      if(next!==null&&next!==''&&seen.has(next))throw Error('Connector repeated a pagination cursor; partial imports are refused.');
+      if(onPage){const retained=await onPage(pages.at(-1));if(retained)pages[pages.length-1]=retained;}
       if(next===null||next===''){
         const evidence={schemaVersion:1,connector:id,endpoint:url.href,pagination:Object.fromEntries(['cursorParam','nextCursorField','itemsField','maxPages'].map(k=>[k,pagination[k]])),complete:true,coverage:'Pagination completed; historical completeness is not independently verified.',pages};
         const combined=JSON.stringify({items,connectorEvidence:evidence});

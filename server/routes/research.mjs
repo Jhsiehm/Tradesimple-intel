@@ -1,3 +1,4 @@
+import {createRetrieval,listRetrievals,getRetrieval,resumeRetrieval} from '../domain/connector-retrievals.mjs';
 import {exportAnalysis} from '../domain/analysis-archive.mjs';
 import {exportNotebook} from '../domain/notebook-archive.mjs';
 import {createEventStudy,getEventStudy,listEventStudies,evaluateEventStudy} from '../domain/event-studies.mjs';
@@ -75,6 +76,9 @@ export const handlers = {
   }),
   'research.pairs': ctx => handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPairProtocols(ctx.db)}:{ok:true,protocol:createPairProtocol(ctx.db,body)}),
   'research.pair': ctx => handle(ctx,['GET'],()=>({ok:true,protocol:getPairProtocol(ctx.db,ctx.params.id)})),
+  'research.retrievals': ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listRetrievals(ctx.db)}:{ok:true,job:createRetrieval(ctx.db,body.connector)}),
+  'research.retrieval': ctx=>handle(ctx,['GET'],()=>({ok:true,job:getRetrieval(ctx.db,ctx.params.id)})),
+  'research.retrievalResume': ctx=>handle(ctx,['POST'],async()=>({ok:true,...await resumeRetrieval(ctx.db,ctx.params.id)})),
   'research.analyses': ctx => handle(ctx,['GET'],()=>({ok:true,items:listAnalyses(ctx.db)})),
   'research.analysisExport': ctx => handle(ctx,['GET'],()=>{const bytes=exportAnalysis(ctx.db,ctx.params.id);ctx.res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${ctx.params.id}.zip"`,'Cache-Control':'no-store'});ctx.res.end(bytes);}),
   'research.analysis': ctx => handle(ctx,['GET'],()=>({ok:true,analysis:getAnalysis(ctx.db,ctx.params.id)})),

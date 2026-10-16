@@ -1,3 +1,4 @@
+import {ConnectorRetrievals} from './ConnectorRetrievals';
 import { useEffect, useRef, useState } from 'react';
 import { DEMO, post } from '../lib/api';
 import { message, read, write, type Dataset, type DatasetSummary, type Preview, type EventRow } from './api';
@@ -9,14 +10,14 @@ export function EventTable({ events }: { events: EventRow[] }) {
 }
 export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void }) {
   const [kind, setKind] = useState<'signals' | 'observations'>('signals');
-  const [datasets, setDatasets] = useState<DatasetSummary[]>([]), [connectors, setConnectors] = useState<{ id: string; label: string }[]>([]);
+  const [datasets, setDatasets] = useState<DatasetSummary[]>([]), [connectors, setConnectors] = useState<{ id: string; label: string; resumable?: boolean }[]>([]);
   const [name, setName] = useState(''), [source, setSource] = useState(''), [content, setContent] = useState(''), [format, setFormat] = useState('csv'), [connector, setConnector] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({}), [preview, setPreview] = useState<Preview | null>(null), [selected, setSelected] = useState<Dataset | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const selectedHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (selected) selectedHeading.current?.focus(); }, [selected?.id]);
   const revision = useRef(0), selectedRequest = useRef(0);
-  const load = async () => { const out = await read<{ items: DatasetSummary[]; connectors: { id: string; label: string }[] }>('datasets'); setDatasets(out.items || []); setConnectors(out.connectors || []); };
+  const load = async () => { const out = await read<{ items: DatasetSummary[]; connectors: { id: string; label: string; resumable?: boolean }[] }>('datasets'); setDatasets(out.items || []); setConnectors(out.connectors || []); };
   useEffect(() => { void load().catch(e => setError(message(e))); }, []);
   const change = () => { revision.current++; setPreview(null); setNotice(''); setError(''); };
   const inspect = async (id: string) => { const ticket = ++selectedRequest.current; try { const out = await read<{ dataset: Dataset }>(`datasets/${id}`); if (ticket === selectedRequest.current) setSelected(out.dataset); } catch (e) { if (ticket === selectedRequest.current) setError(message(e)); } };
@@ -40,6 +41,7 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
     <h2>Data Hub</h2><p className="research-lead">Bring your evidence together. Check it, save a version, then test an idea.</p><div className="data-kind" aria-label="Data type"><button className="panels-btn" aria-pressed={kind === 'signals'} onClick={() => setKind('signals')}><strong>Transaction signals</strong><span>Trades and dated buy / sell events</span></button><button className="panels-btn" aria-pressed={kind === 'observations'} onClick={() => setKind('observations')}><strong>Numeric observations</strong><span>Measurements and historical forecasts</span></button></div>
     <div hidden={kind !== 'observations'}><ObservationHub onRun={onRun} /></div><div hidden={kind !== 'signals'} className="research-content">
     <p>Use public-availability dates and registered tickers. Files stay on this server. Limit: 5,000 rows / 2 MiB.</p>
+    <ConnectorRetrievals connectors={connectors} disabled={busy || DEMO} onUse={result=>{change();setContent(result.content);setFormat(result.format);setSource(result.source);setConnector('');}} />
     <details><summary>Supported tickers and source coverage</summary><UniverseCoverage /></details>
     <details open={!selected} className="data-import"><summary>Add transaction data</summary>
     <fieldset className="research-form" disabled={busy || DEMO}>

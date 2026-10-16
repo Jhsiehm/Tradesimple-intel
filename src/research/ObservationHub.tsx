@@ -1,3 +1,4 @@
+import {ConnectorRetrievals} from './ConnectorRetrievals';
 import { useEffect, useRef, useState } from 'react';
 import { post } from '../lib/api';
 import { message, read, write, type DatasetSummary } from './api';
@@ -14,7 +15,7 @@ function ObservationTable({ rows }: { rows: Observation[] }) {
 }
 export function ObservationHub({ onRun }: { onRun: (dataset: DatasetSummary) => void }) {
   const [items, setItems] = useState<Summary[]>([]), [selected, setSelected] = useState<Snapshot | null>(null);
-  const [connectors, setConnectors] = useState<{ id: string; label: string }[]>([]), [connector, setConnector] = useState('');
+  const [connectors, setConnectors] = useState<{ id: string; label: string; resumable?: boolean }[]>([]), [connector, setConnector] = useState('');
   const [draft, setDraft] = useState({ name: '', source: '', ownership: '', license: '', format: 'csv', content: '' });
   const [mapping, setMapping] = useState<Record<string, string>>({}), [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState('');
@@ -26,7 +27,7 @@ export function ObservationHub({ onRun }: { onRun: (dataset: DatasetSummary) => 
   const selectedHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (selected) selectedHeading.current?.focus(); }, [selected?.id]);
   const revision = useRef(0);
-  const load = async () => { const out = await read<{ items: Summary[]; connectors: { id: string; label: string }[] }>('observations'); setItems(out.items); setConnectors(out.connectors || []); };
+  const load = async () => { const out = await read<{ items: Summary[]; connectors: { id: string; label: string; resumable?: boolean }[] }>('observations'); setItems(out.items); setConnectors(out.connectors || []); };
   useEffect(() => { void load().catch(e => setError(message(e))).finally(() => setLoading(false)); }, []);
   const changed = () => { revision.current++; setPreview(null); setError(''); setNotice(''); };
   const edit = (key: keyof typeof draft, value: string) => { changed(); setDraft(d => ({ ...d, [key]: value })); };
@@ -44,6 +45,7 @@ export function ObservationHub({ onRun }: { onRun: (dataset: DatasetSummary) => 
   const derive = async () => { if (!selected) return; setBusy(true); setError(''); setNotice(''); setNotice(''); try { const out = await write<{ dataset: DatasetSummary; transformation: { selected: number; signals: number } }>(`observations/${selected.id}/derive`, { name, observationType, metric, unit, operator, threshold: Number(threshold), side, bindings: Object.fromEntries(entities.map(entity => [entity, (bindings[entity] || '').split(',').map(s => s.trim()).filter(Boolean)])) }); setDerived(out.dataset); setNotice(`Saved ${out.transformation.signals} signal${out.transformation.signals === 1 ? '' : 's'} from ${out.transformation.selected} matching observation${out.transformation.selected === 1 ? '' : 's'}. The source snapshot and transformation are preserved.`); } catch (e) { setError(message(e)); } finally { setBusy(false); } };
   return <div className="research-content observation-hub">
     <p>Turn measurements or forecasts into testable signals. Keep event and publication dates separate. Limit: 5,000 rows / 2 MiB.</p>
+    <ConnectorRetrievals connectors={connectors} disabled={busy} onUse={result=>{changed();setDraft(d=>({...d,...result}));setConnector('');}} />
     <details open={!selected} className="data-import"><summary>Add measurements or forecasts</summary>
     <fieldset className="research-form" disabled={busy}><legend>Import observations</legend>
       <div className="research-mapping"><label>Observation dataset name<input value={draft.name} maxLength={120} onChange={e => edit('name', e.target.value)} /></label><label>Source label<input value={draft.source} maxLength={300} onChange={e => edit('source', e.target.value)} /></label><label>Ownership label<input value={draft.ownership} maxLength={300} onChange={e => edit('ownership', e.target.value)} /></label></div>
