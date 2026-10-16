@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:hot": "node scripts/dev.mjs --hot",
@@ -19,7 +21,9 @@
     "warm": "node scripts/warm.mjs",
     "insiders:backfill": "node scripts/insiders-backfill.mjs",
     "auth:hash": "node scripts/auth-hash.mjs",
-    "start:prod": "NODE_ENV=production node server/index.mjs"
+    "start:prod": "NODE_ENV=production node server/index.mjs",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"server/**/*.mjs\" \"shared/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"test/**/*.mjs\" vite.config.ts",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"server/**/*.mjs\" \"shared/**/*.{mjs,mts}\" \"scripts/**/*.mjs\" \"test/**/*.mjs\" vite.config.ts"
   },
   "dependencies": {
     "katex": "^0.19.0",
@@ -34,6 +38,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "prettier": "3.6.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"
   }
