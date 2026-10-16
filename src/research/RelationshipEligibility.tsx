@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cleanSpec, type RelationshipPolicy } from '../../shared/backtestSpec.mjs';
 import { read, message } from './api';
-export const emptyRelationshipDraft = { relationshipSnapshot: '', relationshipPredicate: 'owns', relationshipFollowing: '', relationshipObject: '', relationshipSubjects: '' };
+export const emptyRelationshipDraft = { relationshipSnapshot: '', relationshipPredicate: 'owns', relationshipFollowing: '', relationshipObject: '', relationshipSubjects: '', relationshipMinWeight: '' };
 const predicates = ['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'];
 export type RelationshipDraft = typeof emptyRelationshipDraft;
 export function parseRelationshipDraft(draft: RelationshipDraft): { policy?: RelationshipPolicy; error?: string } {
@@ -9,7 +9,7 @@ export function parseRelationshipDraft(draft: RelationshipDraft): { policy?: Rel
   let subjects: unknown;
   try { subjects = JSON.parse(draft.relationshipSubjects); }
   catch { return { error: 'Enter ticker-to-entity mappings as a JSON object, such as {"AAPL":"company:your-verified-id"}.' }; }
-  const checked = cleanSpec({ source: 'congress', relationship: { snapshotId: draft.relationshipSnapshot, predicate: draft.relationshipPredicate, object: draft.relationshipObject.trim(), path: [draft.relationshipPredicate, ...(draft.relationshipFollowing || '').split(',').filter(Boolean)], subjects } });
+  const checked = cleanSpec({ source: 'congress', relationship: { snapshotId: draft.relationshipSnapshot, predicate: draft.relationshipPredicate, object: draft.relationshipObject.trim(), ...(draft.relationshipMinWeight?.trim()?{minPathWeight:Number(draft.relationshipMinWeight)}:{}), path: [draft.relationshipPredicate, ...(draft.relationshipFollowing || '').split(',').filter(Boolean)], subjects } });
   return checked.ok ? { policy: checked.spec.relationship } : { error: checked.error };
 }
 export function RelationshipEligibility({ value, onChange }: { value: RelationshipDraft; onChange: (next: RelationshipDraft) => void }) {
@@ -32,6 +32,8 @@ export function RelationshipEligibility({ value, onChange }: { value: Relationsh
       {following.map((predicate, index) => <label key={index}>Then follow · step {index + 2}<select value={predicate} onChange={e => update('relationshipFollowing', following.map((p, i) => i === index ? e.target.value : p).join(','))}>{predicates.map(p => <option key={p}>{p}</option>)}</select></label>)}
       <div className="research-actions"><button type="button" className="panels-btn" disabled={following.length >= 3} onClick={() => update('relationshipFollowing', [...following, 'located-in'].join(','))}>Add relationship step</button>{following.length > 0 && <button type="button" className="panels-btn" onClick={() => update('relationshipFollowing', following.slice(0, -1).join(','))}>Remove last step</button>}</div>
       <p>Follow the mapped entity through {[value.relationshipPredicate, ...following].join(' → ')} to the required object below. For example, owns → located-in can connect a company to a facility’s jurisdiction. Intermediate entities come from the selected snapshot.</p>
+      <label>Minimum path weight (optional, 0–1)<input type="number" min="0" max="1" step="any" value={value.relationshipMinWeight || ''} onChange={e=>update('relationshipMinWeight',e.target.value)} placeholder="No weight filter" /></label>
+      {value.relationshipMinWeight?.trim()&&<p>Every edge must have an explicit weight. We multiply weights along each path and test the strongest fully weighted path. Alternative paths are not added together; this does not set trade sizes.</p>}
       <label>Required object ID<input value={value.relationshipObject} onChange={e => update('relationshipObject', e.target.value)} placeholder="facility:your-evidence-backed-id" /></label>
       <label>Ticker-to-entity mappings (JSON)<textarea value={value.relationshipSubjects} spellCheck={false} onChange={e => update('relationshipSubjects', e.target.value)} placeholder={'{"AAPL":"company:your-verified-id"}'} /></label>
       <p>Use exact uppercase tickers and subject IDs from your snapshot. Mappings and publication dates are researcher assertions. The complete snapshot and per-signal decisions are frozen with the run.</p>

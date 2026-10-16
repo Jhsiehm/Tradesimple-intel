@@ -128,3 +128,51 @@ test('multi-edge exposure uses a common historical cutoff and retains its eviden
   for(const path of [[],['located-in'],['owns','unknown'],['owns','owns','owns','owns','owns']]) assert.equal(cleanSpec({source:'congress',relationship:{...pathPolicy,path}}).ok,false);
  }finally{db.close();}
 });
+
+function weightedFixture(db){
+ const edge=(id,subject,predicate,object,weight,availableAt='2024-01-10')=>({id,relationshipId:id,subject,predicate,object,effectiveFrom:'2024-01-01',availableAt,sourceUrl:'https://example.org/weight',...(weight===undefined?{}:{exposureWeight:weight,weightBasis:'Synthetic normalized exposure assumption'})});
+ const rows=[edge('a','company:test','owns','facility:one',.3),edge('b','company:test','owns','facility:two',.8),edge('c','facility:one','located-in','jurisdiction:US-NY',.9),edge('d','facility:two','located-in','jurisdiction:US-NY',.5),edge('unknown','company:test','owns','facility:unknown',undefined),edge('unknown-end','facility:unknown','located-in','jurisdiction:US-NY',1)];
+ rows.push({...rows[1],id:'b-correction',availableAt:'2024-02-01',exposureWeight:.1});
+ const snapshot=importRelationships(db,{name:'Weighted historical paths',rows});
+ const policy={snapshotId:snapshot.id,predicate:'owns',path:['owns','located-in'],object:'jurisdiction:US-NY',subjects:{AAPL:'company:test'},minPathWeight:.3};
+ return {snapshot,policy,rows};
+}
+test('weighted paths choose the strongest known product without summing or inventing missing weights',()=>{
+ const {db,signals}=setup();try{
+  const {snapshot,policy,rows}=weightedFixture(db);assert.equal(snapshot.schemaVersion,2);
+  const out=relationshipEligibility(db,signals,policy);
+  assert.deepEqual(out.signals.map(s=>s.id),['eligible']);
+  assert.deepEqual(out.report.decisions.map(d=>d.reason),['no-known-weighted-match','eligible','insufficient-path-weight','unmapped-symbol']);
+  assert.equal(out.report.decisions[1].pathWeight,.4);assert.deepEqual(out.report.decisions[1].assertionIds,['b','d']);
+  assert.equal(out.report.decisions[2].pathWeight,.27);assert.deepEqual(out.report.decisions[2].assertionIds,['a','c']);
+  const high=relationshipEligibility(db,[signals[1]],{...policy,minPathWeight:.5});assert.equal(high.signals.length,0,'alternative paths are not added, unknown edge is not one');
+  const unknown=importRelationships(db,{name:'Unknown weights only',rows:rows.filter(r=>r.id.startsWith('unknown'))});
+  assert.equal(relationshipEligibility(db,[signals[1]],{...policy,snapshotId:unknown.id,minPathWeight:0}).signals.length,0);
+  const zero=importRelationships(db,{name:'Explicit zero weights',rows:rows.filter(r=>['a','c'].includes(r.id)).map(r=>({...r,exposureWeight:0}))});
+  assert.equal(relationshipEligibility(db,[signals[1]],{...policy,snapshotId:zero.id,minPathWeight:0}).report.decisions[0].pathWeight,0);
+  for(const exposureWeight of [-1,1.1,NaN,'0.5',null])assert.throws(()=>importRelationships(db,{name:'Invalid weight',rows:[{...rows[0],exposureWeight}]}),/exposureWeight/);
+  assert.throws(()=>importRelationships(db,{name:'Unexplained',rows:[{...rows[0],weightBasis:''}]}),/weightBasis/);
+  for(const minPathWeight of [-1,1.1,NaN,'0.5',null])assert.equal(cleanSpec({source:'congress',relationship:{...policy,minPathWeight}}).ok,false);
+  assert.deepEqual(decodeSpec(encodeSpec({source:'congress',relationship:policy})).relationship,cleanSpec({source:'congress',relationship:policy}).spec.relationship);
+ }finally{db.close();}
+});
+test('weighted experiment freezes its witness, rejects audit tampering and replays its exported calculation',async()=>{
+ const {db,signals}=setup(),dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-weighted-'));let closed=false;
+ try{
+  const {policy}=weightedFixture(db);
+  const bars=Array.from({length:90},(_,i)=>[dayOf('2024-01-01')+i,100+i,100+i]);
+  const result=await runSpec(db,{source:'congress',relationship:policy,rules:{holdDays:10}},{sourceFn:async()=>({signals,records:[],context:{notes:[]},feeds:[]}),loadBarsFn:async()=>({bars:{AAPL:bars,SPY:bars},pending:[],missing:[],stale:[],cached:2,fetched:0}),now:Date.parse('2024-05-01T00:00:00Z')});
+  const run=getRun(db,result.runId);assert.equal(result.ok,true);
+  assert.equal(requireAuditedSource(run).relationshipAudit.eligible,1);
+  assert.deepEqual(run.inputs.signals.map(s=>s.id),['eligible']);
+  const forged=structuredClone(run);forged.provenance.relationship.decisions.find(d=>d.reason==='eligible').pathWeight=.99;
+  assert.throws(()=>requireAuditedSource(forged),/weighted relationship witness/);
+  const lowered=structuredClone(run);lowered.provenance.relationship.policy.minPathWeight=0;
+  assert.throws(()=>requireAuditedSource(lowered),/weighted relationship policy/);
+  const removed=structuredClone(run);delete removed.provenance.relationship.policy.minPathWeight;assert.throws(()=>requireAuditedSource(removed),/weighted relationship policy/);
+  fs.writeFileSync(path.join(dir,'run.zip'),exportRun(db,run));db.close();closed=true;
+  assert.equal(spawnSync('unzip',['-q','run.zip'],{cwd:dir}).status,0);
+  const replay=spawnSync(process.execPath,['replay.mjs'],{cwd:dir,encoding:'utf8',timeout:30000});assert.equal(replay.status,0,replay.stderr);assert.equal(JSON.parse(replay.stdout).matches,true);
+  const saved=JSON.parse(fs.readFileSync(path.join(dir,'run.json'),'utf8'));assert.equal(saved.provenance.relationship.policy.minPathWeight,.3);assert.equal(saved.provenance.relationship.decisions[1].pathWeight,.4);
+ }finally{if(!closed)db.close();fs.rmSync(dir,{recursive:true,force:true});}
+});

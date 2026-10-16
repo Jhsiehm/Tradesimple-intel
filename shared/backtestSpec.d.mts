@@ -37,7 +37,7 @@ export type BacktestFilters = {
   clusterMin: number;
   awardWithinDays: number;
 };
-export type RelationshipPolicy = { snapshotId: string; predicate: string; path?: string[]; object: string; subjects: Record<string, string> };
+export type RelationshipPolicy = { minPathWeight?: number; snapshotId: string; predicate: string; path?: string[]; object: string; subjects: Record<string, string> };
 export type BacktestSpec = { relationship?: RelationshipPolicy; source: BacktestSource; datasetId?: string; filters: BacktestFilters; rules: BacktestRules };
 
 export const SOURCES: BacktestSource[];

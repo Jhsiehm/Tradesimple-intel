@@ -62,14 +62,18 @@ export function importRelationships(db, body, { now = new Date().toISOString() }
       const document = getSourceDocument(db, documentHash);
       if (document.url !== raw.sourceUrl) error('Archived evidence URL does not match sourceUrl.');
     }
-    return { id, relationshipId, subject: raw.subject, predicate: raw.predicate, object: raw.object, effectiveFrom, effectiveTo, availableAt: available.value, availabilityPrecision: available.precision, status, sourceUrl: raw.sourceUrl, documentHash, availabilityBasis: 'researcher-asserted; not independently verified' };
+    const weighted = raw.exposureWeight !== undefined;
+    if (weighted && (typeof raw.exposureWeight !== 'number' || !Number.isFinite(raw.exposureWeight) || raw.exposureWeight < 0 || raw.exposureWeight > 1)) error('exposureWeight must be a number from 0 to 1.');
+    if (weighted && (typeof raw.weightBasis !== 'string' || !raw.weightBasis.trim() || raw.weightBasis.length > 1000)) error('Explain the asserted weightBasis in 1–1,000 characters.');
+    if (!weighted && raw.weightBasis !== undefined) error('weightBasis requires an explicit exposureWeight.');
+    return { ...(weighted ? {exposureWeight:raw.exposureWeight,weightBasis:raw.weightBasis.trim()} : {}), id, relationshipId, subject: raw.subject, predicate: raw.predicate, object: raw.object, effectiveFrom, effectiveTo, availableAt: available.value, availabilityPrecision: available.precision, status, sourceUrl: raw.sourceUrl, documentHash, availabilityBasis: 'researcher-asserted; not independently verified' };
   }).sort((a,b) => a.id.localeCompare(b.id));
   ensure(db);
   const contentHash = hashOf(rows);
   const existing = db.prepare('SELECT id FROM research.relationship_snapshots WHERE name=? AND content_hash=?').get(name, contentHash);
   if (existing) return getRelationshipSnapshot(db, existing.id);
   const version = db.prepare('SELECT COALESCE(MAX(version),0)+1 AS n FROM research.relationship_snapshots WHERE name=?').get(name).n;
-  const snapshot = { id: newId('rel'), schemaVersion: 1, name, version, createdAt: now, contentHash, rows, caveats };
+  const snapshot = { id: newId('rel'), schemaVersion: rows.some(r=>r.exposureWeight!==undefined)?2:1, name, version, createdAt: now, contentHash, rows, caveats };
   const text = JSON.stringify(snapshot);
   db.prepare('INSERT INTO research.relationship_snapshots VALUES (?,?,?,?,?,?,?)').run(snapshot.id,name,version,now,contentHash,hashOf(text),text);
   return snapshot;
@@ -120,7 +124,9 @@ export function resolveRelationshipPath(snapshot, {subject, policy, effectiveAt,
   const path = policy.path || [policy.predicate];
   if (!Array.isArray(path) || !path.length || path.length > 4 || path[0] !== policy.predicate || path.some(p=>!predicates.has(p))) throw new Error('Invalid relationship path.');
   if (!entityPattern.test(subject) || !entityPattern.test(policy.object)) throw new Error('Relationship path requires typed endpoints.');
-  let frontier = new Map([[subject,{nodes:[subject],assertionIds:[]}]]);
+  const weighted = policy.minPathWeight !== undefined;
+  if (weighted && (typeof policy.minPathWeight !== 'number' || !Number.isFinite(policy.minPathWeight) || policy.minPathWeight<0 || policy.minPathWeight>1)) throw Error('Minimum path weight must be between 0 and 1.');
+  let frontier = new Map([[subject,{nodes:[subject],assertionIds:[],...(weighted?{weight:1}:{})}]]);
   const ambiguous = [];
   for (let step=0;step<path.length;step++) {
     // Resolve this predicate once, then index by subject to bound work by snapshot size.
@@ -134,14 +140,16 @@ export function resolveRelationshipPath(snapshot, {subject, policy, effectiveAt,
     for (const conflict of lookup.ambiguous) if (conflict.assertionIds.some(id=>frontier.has(assertionSubjects.get(id)))) ambiguous.push({...conflict,step:step+1,predicate:path[step]});
     const next = new Map();
     for (const [entity,witness] of frontier) for (const row of bySubject.get(entity) || []) {
-      // Keep one deterministic witness per endpoint; do not enumerate exponential path combinations.
-      if (!next.has(row.object)) next.set(row.object,{nodes:[...witness.nodes,row.object],assertionIds:[...witness.assertionIds,row.id]});
+      // Nonnegative products allow retaining only the strongest fully weighted prefix.
+      if(weighted && (typeof row.exposureWeight!=='number' || !Number.isFinite(row.exposureWeight) || row.exposureWeight<0 || row.exposureWeight>1)) continue;
+      const weight=weighted?witness.weight*row.exposureWeight:undefined;
+      if (!next.has(row.object) || (weighted && weight>next.get(row.object).weight)) next.set(row.object,{nodes:[...witness.nodes,row.object],assertionIds:[...witness.assertionIds,row.id],...(weighted?{weight}:{})});
     }
     frontier=next;
     if (!frontier.size) break;
   }
   const witness=frontier.get(policy.object);
-  return {matched:Boolean(witness),witness:witness || null,ambiguous};
+  return {matched:Boolean(witness)&&(!weighted||witness.weight>=policy.minPathWeight),witness:witness || null,ambiguous};
 }
 
 /** Eligibility is evaluated at each signal's public day, before entry and before caps. */
@@ -156,9 +164,9 @@ export function relationshipEligibility(db, signals, policy) {
       if (!cache.has(key)) cache.set(key, resolveRelationshipPath(snapshot, {subject,policy,effectiveAt:signal.signalDate,knownAt:signal.signalDate}));
       lookup = cache.get(key);
     }
-    const reason = !subject ? 'unmapped-symbol' : lookup.ambiguous.length ? 'ambiguous-relationship' : !lookup.matched ? 'no-known-effective-match' : 'eligible';
+    const reason = !subject ? 'unmapped-symbol' : lookup.ambiguous.length ? 'ambiguous-relationship' : !lookup.matched ? (policy.minPathWeight!==undefined?(lookup.witness?'insufficient-path-weight':'no-known-weighted-match'):'no-known-effective-match') : 'eligible';
     if (reason === 'eligible') kept.push(signal);
-    decisions.push({signalId:signal.id,symbol:signal.symbol,subject:subject || null,effectiveAt:signal.signalDate,knownAt:signal.signalDate,reason,assertionIds:lookup?.witness?.assertionIds || [],path:lookup?.witness?.nodes || [],ambiguous:lookup?.ambiguous || []});
+    decisions.push({...(policy.minPathWeight!==undefined?{pathWeight:lookup?.witness?.weight??null}:{}),signalId:signal.id,symbol:signal.symbol,subject:subject || null,effectiveAt:signal.signalDate,knownAt:signal.signalDate,reason,assertionIds:lookup?.witness?.assertionIds || [],path:lookup?.witness?.nodes || [],ambiguous:lookup?.ambiguous || []});
   }
-  return {signals:kept, report:{schemaVersion:2,policy,snapshot,received:signals.length,eligible:kept.length,excluded:signals.length-kept.length,decisions,caveats:[...snapshot.caveats,'Symbol-to-subject mappings are explicitly supplied by the researcher; historical identity validity is not independently verified.','Eligibility uses the end of the signal publication day, with entry on a later trading day.','Paths are directed and limited to four edges. Each edge uses the same dates. Any ambiguous revision on a visited branch excludes the signal; one deterministic witness per endpoint is retained.']}};
+  return {signals:kept, report:{schemaVersion:policy.minPathWeight!==undefined?3:2,policy,snapshot,received:signals.length,eligible:kept.length,excluded:signals.length-kept.length,decisions,caveats:[...snapshot.caveats,...(policy.minPathWeight!==undefined?['Path weight multiplies explicitly asserted edge weights; missing weights never default to one. The strongest fully weighted path is compared to the threshold, without summing alternative paths. Weights and their compatibility are research assumptions, not verified ownership, aggregate exposure or position sizing.']:[]),'Symbol-to-subject mappings are explicitly supplied by the researcher; historical identity validity is not independently verified.','Eligibility uses the end of the signal publication day, with entry on a later trading day.','Paths are directed and limited to four edges. Each edge uses the same dates. Any ambiguous revision on a visited branch excludes the signal; one deterministic witness per endpoint is retained.']}};
 }

@@ -38,11 +38,16 @@ export function requireAuditedSource(run) {
   if (relationship) {
     const {snapshot,policy,decisions} = relationship;
     if (!snapshot || hashOf(snapshot.rows) !== snapshot.contentHash || snapshot.id !== policy?.snapshotId || relationship.received !== integrity.accepted || relationship.excluded !== relationship.received - relationship.eligible || !Array.isArray(decisions) || decisions.length !== relationship.received || decisions.filter(d=>d.reason === 'eligible').length !== signals.length) throw new Error('Source relationship audit is inconsistent.');
+    if ((relationship.schemaVersion>=3||policy.minPathWeight!==undefined||run.result.spec.relationship?.minPathWeight!==undefined)&&hashOf(policy)!==hashOf(run.result.spec.relationship)) throw Error('Source weighted relationship policy is inconsistent.');
     for (const signal of signals) {
       const subject = policy.subjects?.[signal.symbol];
       if (!subject) throw new Error('Source relationship identity mapping is missing.');
       const lookup = resolveRelationshipPath(snapshot,{subject,policy,effectiveAt:signal.signalDate,knownAt:signal.signalDate});
       if (lookup.ambiguous.length || !lookup.matched) throw new Error('Source contains a relationship-ineligible signal.');
+      if(policy.minPathWeight!==undefined){
+        const decision=decisions.find(d=>d.signalId===signal.id);
+        if(hashOf(policy)!==hashOf(run.result.spec.relationship)||!decision||decision.reason!=='eligible'||decision.pathWeight!==lookup.witness.weight||hashOf(decision.assertionIds)!==hashOf(lookup.witness.assertionIds)||hashOf(decision.path)!==hashOf(lookup.witness.nodes)) throw Error('Source weighted relationship witness is inconsistent.');
+      }
     }
   }
   const checked = auditSignals(signals, { source: run.result.spec.source, now: integrity.evaluatedAt });

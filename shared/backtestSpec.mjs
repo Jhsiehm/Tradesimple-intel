@@ -162,10 +162,11 @@ export function cleanSpec(raw) {
       return { ok: false, error: 'Relationship eligibility requires a saved snapshot, predicate, typed object and explicit symbol-to-subject mappings.' };
     if (r.path != null && (!Array.isArray(r.path) || r.path.length < 1 || r.path.length > 4 || r.path[0] !== r.predicate || r.path.some(p => !['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'].includes(p))))
       return { ok: false, error: 'A relationship path must contain 1–4 supported predicates, starting with the selected relationship.' };
+    if (r.minPathWeight !== undefined && (typeof r.minPathWeight !== 'number' || !Number.isFinite(r.minPathWeight) || r.minPathWeight<0 || r.minPathWeight>1)) return {ok:false,error:'Minimum path weight must be a number from 0 to 1.'};
     const entries = Object.entries(r.subjects);
     if (!entries.length || entries.length > 1500 || entries.some(([symbol, subject]) => !SYMBOL.test(symbol) || typeof subject !== 'string' || !entity.test(subject)))
       return { ok: false, error: 'Provide 1–1,500 exact ticker-to-entity mappings for relationship eligibility.' };
-    spec.relationship = { snapshotId: r.snapshotId, predicate: r.predicate, object: r.object, ...(r.path?.length > 1 ? {path: [...r.path]} : {}), subjects: Object.fromEntries(entries.sort(([a],[b]) => a.localeCompare(b))) };
+    spec.relationship = { ...(r.minPathWeight!==undefined?{minPathWeight:r.minPathWeight}:{}), snapshotId: r.snapshotId, predicate: r.predicate, object: r.object, ...(r.path?.length > 1 ? {path: [...r.path]} : {}), subjects: Object.fromEntries(entries.sort(([a],[b]) => a.localeCompare(b))) };
   }
   if (source === "lobbying" && !spec.filters.tickers.length) {
     return { ok: false, error: "Lobbying spikes are read per ticker. Add up to 40 tickers from data/tickers.json." };
@@ -247,7 +248,7 @@ export function describeSpec(spec) {
     `${SOURCE_LABEL[spec.source]}${who ? ` · ${who}` : ""} · ${side}`,
     f.tickers.length ? `tickers ${f.tickers.slice(0, 6).join(", ")}${f.tickers.length > 6 ? "…" : ""}` : "",
     f.sector,
-    spec.relationship ? `relationship ${(spec.relationship.path || [spec.relationship.predicate]).join(" → ")} ${spec.relationship.object} at signal publication (snapshot ${spec.relationship.snapshotId})` : "",
+    spec.relationship ? `relationship ${(spec.relationship.path || [spec.relationship.predicate]).join(" → ")} ${spec.relationship.object} at signal publication${spec.relationship.minPathWeight!==undefined?` with minimum path weight ${spec.relationship.minPathWeight}`:''} (snapshot ${spec.relationship.snapshotId})` : "",
     f.minAmount ? `≥ ${fmtUsd(f.minAmount)}` : "",
     f.maxAmount ? `< ${fmtUsd(f.maxAmount)}` : "",
     f.maxLagDays ? `filed within ${f.maxLagDays} d of the trade` : "",
