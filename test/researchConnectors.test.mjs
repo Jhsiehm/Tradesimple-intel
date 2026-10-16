@@ -43,3 +43,24 @@ test('later connector pages cannot bypass redirect or credential protections',as
  }
  await assert.rejects(readConnector('weather',{env:config({pagination:{...pagination,maxPages:100}}),lookup,request:async()=>assert.fail('invalid configuration must not connect')}),/maxPages/);
 });
+test('imported API provenance rejects invalid identity and retrieval instants even when page hashes match',async()=>{
+ const result=await readConnector('weather',{env:config(),lookup,request:async()=>new Response(JSON.stringify({records:[row('a',1)],next:null}))});
+ const original=JSON.parse(result.content);
+ for(const change of [
+  p=>{delete p.connectorEvidence.pages[0].retrievedAt;},
+  p=>{p.connectorEvidence.pages[0].retrievedAt='2025-02-30T00:00:00.000Z';},
+  p=>{p.connectorEvidence.pages[0].retrievedAt='2025-01-01';},
+  p=>{p.connectorEvidence.pages[0].retrievedAt=0;},
+  p=>{p.connectorEvidence.connector='';},
+  p=>{p.connectorEvidence.endpoint='https://user:secret@example.org/history';},
+  p=>{p.connectorEvidence.endpoint='http://example.org/history';},
+  p=>{p.connectorEvidence.endpoint='https://example.org/history?token=secret';},
+  p=>{p.connectorEvidence.pagination.maxPages=0;},
+  p=>{const raw=JSON.stringify({records:[null],next:null});p.items=[null];Object.assign(p.connectorEvidence.pages[0],{rawContent:raw,responseHash:hashOf(raw)});}
+ ]){
+  const payload=structuredClone(original);change(payload);
+  assert.throws(()=>verifyConnectorEvidence(payload),/evidence is inconsistent/);
+  assert.throws(()=>prepareObservations({name:'Invalid provenance',ownership:'Fixture',license:'Fixture',...result,content:JSON.stringify(payload)}),/evidence is inconsistent/);
+ }
+ assert.doesNotThrow(()=>verifyConnectorEvidence(original));
+});

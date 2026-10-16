@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {createRetrieval,getRetrieval,resumeRetrieval} from '../server/domain/connector-retrievals.mjs';
+import {createRetrieval,getRetrieval,resumeRetrieval,verifyRetrievalRecords} from '../server/domain/connector-retrievals.mjs';
 import {createResearchBackup,verifyResearchBackup,restoreResearchBackup} from '../server/domain/research-backup.mjs';
 import {prepareObservations} from '../server/domain/research-observations.mjs';
 const pagination={cursorParam:'cursor',nextCursorField:'next',itemsField:'records',maxPages:3};
@@ -60,4 +60,15 @@ test('competing connections never overwrite one another’s checkpoints',async()
   assert.equal(JSON.parse(getRetrieval(a,job.id).result.content).items[0].id,'winner');
   assert.equal(a.prepare('SELECT count(*) AS n FROM research.connector_pages').get().n,1);
  }finally{a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('partial retrieval validation rejects malformed provenance without needing a completed result',async()=>{
+ const db=new DatabaseSync(':memory:');try{
+  const job=createRetrieval(db,'fixture',{env});let calls=0;
+  await resumeRetrieval(db,job.id,{env,lookup,request:async()=>{if(calls++)throw Error('offline');return new Response(JSON.stringify({records:[row('a')],next:'more'}));}});
+  const pages=db.prepare('SELECT body FROM research.connector_pages').all().map(r=>JSON.parse(r.body));
+  assert.doesNotThrow(()=>verifyRetrievalRecords(job,pages,null));
+  for(const patch of [{createdAt:'yesterday'},{configurationHash:'wrong'},{connector:''},{endpoint:'https://example.org/data#fragment'},{pagination:{...pagination,itemsField:'records.nested'}}])assert.throws(()=>verifyRetrievalRecords({...job,...patch},pages,null),/metadata|pagination/);
+  for(const retrievedAt of [undefined,0,'2025-02-30T00:00:00.000Z','2025-01-01'])assert.throws(()=>verifyRetrievalRecords(job,[{...pages[0],retrievedAt}],null),/checkpoint/);
+ }finally{db.close();}
 });

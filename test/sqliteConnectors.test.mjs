@@ -19,6 +19,10 @@ test('SQLite connector feeds normal observation validation with bounded provenan
   const result=await readConnector('measurements',{env,lookup:()=>assert.fail('database reads must not resolve DNS'),request:()=>assert.fail('database reads must not use HTTP')});
   assert.ok(!JSON.stringify(result).includes(file));assert.ok(!result.content.includes('SELECT'));
   const json=JSON.parse(result.content);assert.equal(json.items[0].value,-4);assert.equal(json.databaseEvidence.rows,1);assert.doesNotThrow(()=>verifyConnectorEvidence(json));
+  for(const patch of [{retrievedAt:'2025-02-30T00:00:00.000Z'},{retrievedAt:0},{completedAt:'2025-01-01'},{retrievedAt:'2025-01-02T00:00:00.000Z',completedAt:'2025-01-01T00:00:00.000Z'}]){
+   const altered=structuredClone(json);Object.assign(altered.databaseEvidence,patch);
+   assert.throws(()=>verifyConnectorEvidence(altered),/Database evidence/);
+  }
   const body={name:'Database observations',ownership:'Local owner',license:'Synthetic only',...result};assert.ok(prepareObservations(body).ok);
   const saved=importObservations(db,body).snapshot;assert.equal(getObservations(db,saved.id).rawContent,result.content);
   const source=db.prepare('PRAGMA database_list').all().find(r=>r.name==='research').file;createResearchBackup(source,path.join(dir,'backup'));verifyResearchBackup(path.join(dir,'backup'));

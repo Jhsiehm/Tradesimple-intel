@@ -1,4 +1,4 @@
-import {verifyConnectorEvidence} from './research-connector-evidence.mjs';
+import {verifyConnectorEvidence,validConnectorTimestamp,validConnectorEndpoint,validConnectorPagination} from './research-connector-evidence.mjs';
 /** Durable bounded retrievals. Cached pages are revalidated through the normal connector reader. */
 import {researchStore,hashOf,newId} from './research-store.mjs';
 import {connectorDescriptor,readConnector} from './research-connectors.mjs';
@@ -24,11 +24,11 @@ export function createRetrieval(db,connector,{env=process.env}={}){
  return getRetrieval(db,job.id);
 }
 export function verifyRetrievalRecords(job,pages,result){
- if(!/^retrieval_[a-f0-9]+$/.test(job.id)||typeof job.connector!=='string'||typeof job.configurationHash!=='string'||pages.length>20)throw Error('Connector retrieval metadata is invalid.');
- if(!job.pagination||!Number.isInteger(job.pagination.maxPages)||job.pagination.maxPages<1||job.pagination.maxPages>20||pages.length>job.pagination.maxPages)throw Error('Connector checkpoint pagination is invalid.');
+ if(!/^retrieval_[a-f0-9]+$/.test(job.id)||typeof job.connector!=='string'||!job.connector||!validConnectorTimestamp(job.createdAt)||!validConnectorEndpoint(job.endpoint)||typeof job.configurationHash!=='string'||!/^[a-f0-9]{64}$/.test(job.configurationHash)||pages.length>20)throw Error('Connector retrieval metadata is invalid.');
+ if(!validConnectorPagination(job.pagination)||pages.length>job.pagination.maxPages)throw Error('Connector checkpoint pagination is invalid.');
  let bytes=0,cursor=null;const seen=new Set();
  for(const [i,page] of pages.entries()){
-  if(page.page!==i+1||typeof page.rawContent!=='string'||hashOf(page.rawContent)!==page.responseHash||!Number.isInteger(page.rows)||page.rows<0)throw Error('Connector checkpoint order or checksum mismatch.');
+  if(!validConnectorTimestamp(page.retrievedAt)||page.page!==i+1||typeof page.rawContent!=='string'||hashOf(page.rawContent)!==page.responseHash||!Number.isInteger(page.rows)||page.rows<0)throw Error('Connector checkpoint order or checksum mismatch.');
   const raw=JSON.parse(page.rawContent),rows=raw[job.pagination.itemsField],next=raw[job.pagination.nextCursorField];
   if(page.requestCursorHash!==(cursor===null?null:hashOf(cursor))||!Array.isArray(rows)||rows.some(r=>!r||typeof r!=='object'||Array.isArray(r))||rows.length!==page.rows||next!==null&&(typeof next!=='string'||next.length>2048)||i<pages.length-1&&(next===null||next==='')||typeof next==='string'&&next&&seen.has(next))throw Error('Connector checkpoint cursor chain mismatch.');
   if(next)seen.add(next);cursor=next;bytes+=Buffer.byteLength(page.rawContent);
