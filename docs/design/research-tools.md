@@ -56,3 +56,9 @@ Reduced-motion preferences disable the workspace's animations and transitions. S
 ## Verification boundary
 
 Implementation checks reported for this pass include 892 passing tests, a successful build, navigation through all eleven tools at 1280px desktop and 390px mobile widths without document overflow, and a completed synthetic forecast derivation in the final mobile layout. The selected heading received focus, the save confirmation appeared, and switching data kinds retained the derived result. These are engineering checks, not user testing or validation of research conclusions.
+
+## Feedback and disclosure follow-up
+
+Notebook evidence and follow-ups use collapsible sections with attachment and open-task counts. Contract evidence keeps coverage, timing assumptions and warnings visible while monthly mappings and transaction previews are expandable. Job selection is disabled during requests to prevent overlapping selections.
+
+Initial loading indicators now cover relationship selectors, relationships, event studies, stress tests, memory, paired research, notebooks and contract retrievals. Notebook and memory updates show request-driven activity; active contract retrievals show the recorded completed-partition count without estimating percent completion or remaining time. Notebook and contract empty states wait for initial loading to finish.

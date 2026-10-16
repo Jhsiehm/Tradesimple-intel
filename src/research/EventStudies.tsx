@@ -18,7 +18,7 @@ export function EventStudies(){
  const valid=validModel&&experimentId&&title.trim()&&hypothesis.trim()&&spec.from&&spec.to&&spec.from<=spec.to&&Number.isInteger(spec.before)&&spec.before>=0&&spec.before<=20&&Number.isInteger(spec.after)&&spec.after>=0&&spec.after<=60;
  return <section className="research-content">
   <h2>Event studies</h2><p>Inspect how security returns differ from SPY around public disclosures. Register a fixed window before calculating it. This is a descriptive study of previously observed data, not evidence of causality or a new holdout test.</p>
-  {loading&&<p role="status">Loading source experiments and studies…</p>}
+  {loading&&<p role="status" className="research-working">Loading source experiments and studies…</p>}
   <details open={!selected}><summary>Register an event study</summary><fieldset className="research-form" disabled={busy||loading}><legend>Study conditions</legend>
    <label>Source experiment<select value={experimentId} onChange={e=>setExperimentId(e.target.value)}><option value="">Choose a completed experiment</option>{experiments.map(e=><option value={e.id} key={e.id}>{e.title}</option>)}</select></label>
    <p>The source must use SPY and current timing checks. Original signal selection and price coverage stay frozen. No additional history is fetched.</p>

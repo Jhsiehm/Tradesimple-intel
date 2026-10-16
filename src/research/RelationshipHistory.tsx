@@ -54,7 +54,7 @@ export function RelationshipHistory() {
   return <section className="research-content relationship-history">
     <div><h2>Relationship history</h2><p>Inspect ownership, operations and exposure using what was known at a particular date.</p></div>
     <p className="bt-note">These are researcher-supplied assertions. Evidence links and archived documents do not independently verify a claim. This lookup does not change backtest eligibility or current ticker mappings.</p>
-    {loading && <p role="status">Loading relationship snapshots…</p>}
+    {loading && <p role="status" className="research-working">Loading relationship snapshots…</p>}
     {error && <p className="bt-note warn" role="alert">{error}</p>}
     {notice && <p className="bt-note" role="status">{notice}</p>}
     <details open={!loading && !items.length ? true : undefined}>

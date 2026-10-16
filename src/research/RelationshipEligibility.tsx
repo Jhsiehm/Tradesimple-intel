@@ -22,7 +22,7 @@ export function RelationshipEligibility({ value, onChange }: { value: Relationsh
   return <details className="relationship-eligibility" open={value.relationshipSnapshot ? true : undefined}>
     <summary>Relationship eligibility (optional)</summary>
     <p>Require a direct relationship or a chain of up to four relationships. Every step must be effective and known by the same signal’s public date. Missing mappings, missing relationships and conflicting revisions exclude the signal.</p>
-    {loading && <p role="status">Loading relationship versions…</p>}
+    {loading && <p role="status" className="research-working">Loading relationship versions…</p>}
     {error && <p role="alert">{error}</p>}
     <label>Relationship snapshot<select value={value.relationshipSnapshot} onChange={e => update('relationshipSnapshot', e.target.value)}><option value="">No relationship restriction</option>{value.relationshipSnapshot && !items.some(s => s.id === value.relationshipSnapshot) && <option value={value.relationshipSnapshot}>Selected version · {value.relationshipSnapshot}</option>}{items.map(s => <option key={s.id} value={s.id}>{s.name} · v{s.version}</option>)}</select></label>
     <button type="button" className="panels-btn" disabled={loading} onClick={() => void load()}>Refresh relationship versions</button>
