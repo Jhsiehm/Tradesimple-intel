@@ -1,3 +1,4 @@
+import {verifyAttemptRow,verifyCompletion} from './integrity.mjs';
 import {researchStore,hashOf,newId} from '../research-store.mjs';
 import {nyDate} from '../../../shared/dates.mjs';
 /**
@@ -194,7 +195,11 @@ export function countedStarts(db, now) {
 
 function legacyCountedStarts(db,now){return db.prepare("SELECT started_at,meta FROM task_runs WHERE counted=1 AND started_at>=?").all(now-2*86_400_000).filter(r=>!JSON.parse(r.meta||'{}').attemptId).map(r=>r.started_at);}
 function decodeAttempt(row){if(!row)return null;if(hashOf(row.body)!==row.body_hash)throw Error('Task execution checksum mismatch.');return JSON.parse(row.body);}
-export function getAttempt(db,id){ensure(db);const attempt=decodeAttempt(db.prepare('SELECT body,body_hash FROM research.task_attempts WHERE id=?').get(id));if(!attempt)return null;return {...attempt,completion:decodeAttempt(db.prepare('SELECT body,body_hash FROM research.task_completions WHERE attempt_id=?').get(id))};}
+export function getAttempt(db,id){
+ ensure(db);const attempt=verifyAttemptRow(db.prepare('SELECT * FROM research.task_attempts WHERE id=?').get(id));if(!attempt)return null;
+ const completion=decodeAttempt(db.prepare('SELECT body,body_hash FROM research.task_completions WHERE attempt_id=?').get(id));
+ return {...attempt,completion:completion?verifyCompletion(completion,attempt):null};
+}
 export function listAttempts(db,limit=200){ensure(db);return db.prepare('SELECT id FROM research.task_attempts ORDER BY started_at DESC,id DESC LIMIT ?').all(Math.min(500,Math.max(1,limit))).map(r=>getAttempt(db,r.id));}
 /** A single conditional INSERT reserves capacity across processes before any work starts. */
 export function reserveAttempt(db,task,{startedAt,pid,trigger,cap}){
@@ -209,6 +214,7 @@ export function completeAttempt(db,id,{status,finishedAt,run=null,reason=''}){
  if(!['finished','interrupted'].includes(status))throw Error('Invalid task completion state.');
  const {completion,...original}=attempt;
  const record={attemptId:id,attemptHash:hashOf(original),status,finishedAt,run,reason},encoded=JSON.stringify(record);
+ verifyCompletion(record,original);
  db.prepare('INSERT OR IGNORE INTO research.task_completions VALUES (?,?,?)').run(id,hashOf(encoded),encoded);return getAttempt(db,id);
 }
 export function recoverAttempts(db,alive,now){

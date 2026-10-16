@@ -217,3 +217,9 @@ Scheduled work now reserves its daily capacity atomically in the research databa
 Read-only inspection is available through `GET /api/tasks/attempts` and `GET /api/tasks/attempts/:id`. Research backups validate attempt/completion hashes and completion references. The budget interface now labels usage as attempts. Task definitions and recent alerts still reside in the cache database; this does not add mid-run resume, distributed cancellation, team authorization or trading execution. Previously deleted historical usage cannot be recovered.
 
 Verification: all 881 automated tests passed, production typecheck/build passed, and Git whitespace checks passed. Synthetic tests cover in-flight capacity, independent database connections, task deletion, interrupted-process recovery, queued pause behavior, read-only inspection and backup preservation. A fresh fetch showed no divergence from GitHub main before integration.
+
+### Task journal recovery integrity
+
+Task inspection and backup validation now cross-check attempt identity, task snapshot identity, indexed start time/process/budget day and the New York day derived from the preserved timestamp. Completion records must reference the exact admitted attempt and hash; a stored result must belong to the same task and start time, and any attempt ID on the result must match. Interrupted completions cannot contain a result. Invalid completion writes fail before insertion.
+
+All 884 tests and the production build passed. Added synthetic coverage proves live attempts are left untouched, a crash after saving a result recovers that exact result without double-counting capacity, mismatched results cannot be attached, and a changed budget index is rejected both during inspection and backup creation. These checks detect inconsistent stored records; they are not cryptographic signatures against coordinated replacement of the entire database.

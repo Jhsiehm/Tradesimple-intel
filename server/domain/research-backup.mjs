@@ -1,3 +1,4 @@
+import {verifyAttemptRow,verifyCompletion} from './tasks/integrity.mjs';
 import {verifyObservationDerivation,verifyObservationComposition} from './research-observations.mjs';
 import {verifyAnalysisRows} from './research-analysis.mjs';
 /** Portable research snapshots. Restores create a new database and never overwrite a live one. */
@@ -24,9 +25,11 @@ function inspect(file) {
         if (table === 'runs' && hashOf(body.inputs) !== body.inputHash) throw new Error('Run input checksum mismatch.');
       }
     }
+    if(present.includes('task_attempts'))for(const row of db.prepare('SELECT * FROM task_attempts').iterate())verifyAttemptRow(row);
     if(present.includes('task_completions'))for(const row of db.prepare('SELECT attempt_id,body FROM task_completions').iterate()){
-      const completion=JSON.parse(row.body),saved=db.prepare('SELECT body FROM task_attempts WHERE id=?').get(row.attempt_id);
-      if(!saved||completion.attemptId!==row.attempt_id||completion.attemptHash!==hashOf(JSON.parse(saved.body)))throw Error('Task completion attempt reference mismatch.');
+      const completion=JSON.parse(row.body),saved=db.prepare('SELECT * FROM task_attempts WHERE id=?').get(row.attempt_id);
+      if(completion.attemptId!==row.attempt_id)throw Error('Task completion attempt reference mismatch.');
+      verifyCompletion(completion,verifyAttemptRow(saved));
     }
     for(const row of db.prepare('SELECT body FROM notebook_revisions').iterate()){
       const notebook=JSON.parse(row.body);

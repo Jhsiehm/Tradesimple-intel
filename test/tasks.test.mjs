@@ -340,3 +340,40 @@ test('independent cache connections share durable reservations and backup preser
   assert.equal(store.getAttempt(a,attempt.id).completion.status,'interrupted');
  }finally{a?.close();b?.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('recovery leaves live work alone and retains the exact saved result after a crash',()=>{
+ const h=harness(),task=addTask(h.db);
+ const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
+ assert.equal(store.recoverAttempts(h.db,()=>true,h.clock.t+100),0);
+ assert.equal(store.getAttempt(h.db,attempt.id).completion,null);
+ const run=store.addRun(h.db,{taskId:task.id,startedAt:h.clock.t,finishedAt:h.clock.t+50,status:'ok',counted:true,meta:{attemptId:attempt.id},result:{synthetic:'retained result'}});
+ assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t+100),1);
+ const completion=store.getAttempt(h.db,attempt.id).completion;
+ assert.equal(completion.status,'finished');assert.equal(completion.run.id,run.id);
+ assert.deepEqual(completion.run.result,{synthetic:'retained result'});
+ assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
+ assert.equal(store.recoverAttempts(h.db,()=>false,h.clock.t+200),0);
+});
+
+test('completion refuses a result from another task or another admission',()=>{
+ const h=harness(),task=addTask(h.db),other=addTask(h.db,{title:'Other'});
+ const attempt=store.reserveAttempt(h.db,task,{startedAt:h.clock.t,pid:9999,trigger:'manual',cap:10});
+ const result={taskId:task.id,startedAt:h.clock.t,status:'ok',meta:{attemptId:attempt.id}};
+ for(const run of [{...result,taskId:other.id},{...result,startedAt:h.clock.t-1},{...result,meta:{attemptId:'ta_wrong'}}]){
+  assert.throws(()=>store.completeAttempt(h.db,attempt.id,{status:'finished',finishedAt:h.clock.t+1,run}),/result reference mismatch/);
+  assert.equal(store.getAttempt(h.db,attempt.id).completion,null);
+ }
+ assert.throws(()=>store.completeAttempt(h.db,attempt.id,{status:'interrupted',finishedAt:h.clock.t+1,run:result}),/result reference mismatch/);
+});
+
+test('backup and live inspection reject budget columns inconsistent with the preserved attempt',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-attempt-integrity-')),db=new DatabaseSync(path.join(dir,'cache.sqlite'));
+ try{
+  const task=addTask(db),attempt=store.reserveAttempt(db,task,{startedAt:at('2026-10-09T14:00:00Z'),pid:9999,trigger:'manual',cap:10});
+  db.exec('DROP TRIGGER research.task_attempts_update');
+  db.prepare('UPDATE research.task_attempts SET day=? WHERE id=?').run('2026-10-08',attempt.id);
+  assert.throws(()=>store.getAttempt(db,attempt.id),/budget day mismatch/);
+  assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup')),/budget day mismatch/);
+  assert.equal(fs.existsSync(path.join(dir,'backup')),false);
+ }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
