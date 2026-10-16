@@ -1,3 +1,4 @@
+import {taskControl,setTaskControl,taskControlHistory} from '../server/domain/tasks/control.mjs';
 import * as taskStore from '../server/domain/tasks/store.mjs';
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
@@ -54,7 +55,7 @@ test("create, list, patch, run now, open the stored result, delete", async () =>
   assert.ok(Date.parse(t.nextRun) > Date.now());
 
   const list = await send("GET", "/api/tasks");
-  assert.deepEqual(Object.keys(list.body).sort(), ["asOf", "budget", "items", "latency", "ok", "scheduler", "source"]);
+  assert.deepEqual(Object.keys(list.body).sort(), ["asOf", "budget", "control", "items", "latency", "ok", "scheduler", "source"]);
   assert.equal(list.body.items.length, 1);
   assert.equal(list.body.budget.perDay, 20);
 
@@ -113,4 +114,19 @@ test('durable task attempts are inspectable after task deletion and are read-onl
  const read=await send('GET',`/api/tasks/attempts/${attempt.id}`);assert.equal(read.body.attempt.task.title,task.title);assert.equal(read.body.attempt.completion.reason,'Synthetic interruption');
  assert.equal((await send('POST',`/api/tasks/attempts/${attempt.id}`,{})).status,405);
  assert.equal((await send('GET','/api/tasks/attempts/ta_deadbeef')).status,404);
+});
+
+test('admission pause requires a reason and current revision, is origin guarded and blocks run-now',async()=>{
+ const initial=await send('GET','/api/tasks/control');assert.equal(initial.body.control.revision,0);
+ assert.equal((await send('POST','/api/tasks/control',{paused:true,baseRevision:0,reason:''})).status,400);
+ assert.equal((await send('POST','/api/tasks/control',{paused:true,baseRevision:0,reason:'Pause'},{origin:'https://evil.example'})).status,403);
+ const paused=await send('POST','/api/tasks/control',{paused:true,baseRevision:0,reason:'Synthetic control check',actor:'forged'});
+ assert.equal(paused.body.control.actor,'local-owner');assert.equal(paused.body.control.paused,true);
+ const made=await send('POST','/api/tasks',TASK);
+ assert.equal((await send('POST',`/api/tasks/${made.body.task.id}/run`,{})).status,409);
+ assert.equal((await send('GET','/api/tasks')).body.control.paused,true);
+ assert.equal((await send('POST','/api/tasks/control',{paused:false,baseRevision:0,reason:'Stale resume'})).status,409);
+ const resumed=await send('POST','/api/tasks/control',{paused:false,baseRevision:1,reason:'Check complete'});assert.equal(resumed.body.control.paused,false);
+ assert.equal((await send('GET','/api/tasks/control')).body.history.length,2);
+ await send('DELETE',`/api/tasks/${made.body.task.id}`);
 });

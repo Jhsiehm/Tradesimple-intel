@@ -1,3 +1,4 @@
+import {taskControl,setTaskControl,taskControlHistory} from '../server/domain/tasks/control.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -376,4 +377,34 @@ test('backup and live inspection reject budget columns inconsistent with the pre
   assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup')),/budget day mismatch/);
   assert.equal(fs.existsSync(path.join(dir,'backup')),false);
  }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('global admission pause blocks queued, scheduled and manual starts without cancelling admitted work',async()=>{
+ let release;const gate=new Promise(r=>{release=r;});let calls=0;
+ const h=harness({backtest:async()=>{calls++;await gate;return fakeRun();}}),one=addTask(h.db),two=addTask(h.db,{title:'Waiting'});
+ const first=h.s.enqueue(one.id,'manual');await new Promise(r=>setImmediate(r));
+ const second=h.s.enqueue(two.id,'manual');const next=store.getTask(h.db,two.id).nextRun;
+ const stopped=setTaskControl(h.db,{paused:true,baseRevision:0,reason:'Inspect upstream data'});
+ assert.equal(stopped.actor,'local-owner');assert.equal(h.s.enqueue(two.id,'manual').status,409);assert.equal(await h.s.tick(),0);
+ assert.equal(store.reserveAttempt(h.db,two,{startedAt:h.clock.t,pid:5151,trigger:'manual',cap:100}),null);
+ release();await first.done;assert.equal((await second.done).paused,true);assert.equal(calls,1);
+ assert.equal(store.getTask(h.db,two.id).nextRun,next);assert.equal(store.countedStarts(h.db,h.clock.t).length,1);
+ assert.equal(store.listAttempts(h.db)[0].completion.status,'finished');
+ assert.throws(()=>setTaskControl(h.db,{paused:false,baseRevision:0,reason:'Stale screen'}),/changed elsewhere/);
+ setTaskControl(h.db,{paused:false,baseRevision:1,reason:'Inspection complete'});await h.s.enqueue(two.id,'manual').done;assert.equal(calls,2);
+ assert.deepEqual(taskControlHistory(h.db).map(c=>c.paused),[false,true]);
+ assert.throws(()=>h.db.exec('DELETE FROM research.task_controls'),/immutable/);
+});
+
+test('admission control is shared by independent connections and survives backup',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-task-control-'));const a=new DatabaseSync(path.join(dir,'a.sqlite')),b=new DatabaseSync(path.join(dir,'b.sqlite'));
+ try{
+  const task=addTask(b);setTaskControl(a,{paused:true,baseRevision:0,reason:'Synthetic maintenance',actor:'forged'});
+  assert.equal(taskControl(b).paused,true);assert.equal(taskControl(b).actor,'local-owner');
+  assert.equal(store.reserveAttempt(b,task,{startedAt:Date.now(),pid:5151,trigger:'schedule',cap:20}),null);
+  const backup=createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'backup'));assert.equal(backup.counts.task_controls,1);
+  assert.equal(verifyResearchBackup(path.join(dir,'backup')).counts.task_controls,1);
+  b.exec('DROP TRIGGER research.task_controls_update');b.exec('UPDATE research.task_controls SET paused=0');
+  assert.throws(()=>createResearchBackup(path.join(dir,'research.sqlite'),path.join(dir,'invalid')),/checksum or identity/);
+ }finally{a.close();b.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

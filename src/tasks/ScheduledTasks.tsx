@@ -1,3 +1,4 @@
+import { TaskAdmission } from "./TaskAdmission";
 import { useState } from "react";
 import type { Turn } from "../ask/types";
 import { openStored, removeTask, runNow, setEnabled, type TaskView } from "./api";
@@ -22,10 +23,11 @@ export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[
   };
 
   return (
-    <details className="ask-tasks" open={items.length > 0}>
+    <details className="ask-tasks" open={items.length > 0 || Boolean(res?.control)}>
       <summary>
-        Scheduled <small>{items.length ? `${items.length} task${items.length === 1 ? "" : "s"}` : "none"}{res?.budget ? ` · ${res.budget.usedToday}/${res.budget.perDay} attempts today` : ""}{res?.scheduler === "off" ? " · scheduler off" : ""}</small>
+        Scheduled <small>{items.length ? `${items.length} task${items.length === 1 ? "" : "s"}` : "none"}{res?.budget ? ` · ${res.budget.usedToday}/${res.budget.perDay} attempts today` : ""}{res?.control?.paused ? " · executions paused" : ""}{res?.scheduler === "off" ? " · scheduler off" : ""}</small>
       </summary>
+      {res?.control && <TaskAdmission control={res.control} />}
       {items.length ? (
         <ul>
           {items.map((t) => (
@@ -39,7 +41,7 @@ export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[
               <p className="tk-meta">
                 {t.every} · {t.kind === "backtest" ? "backtest, no model call" : "Ask prompt"}{t.watch ? ` · ${t.watch.symbols.length} watched tickers` : ""}
                 <br />
-                {t.running ? <span className="tk-running"><span className="st-spin" aria-hidden /> running</span> : <>next {t.enabled ? et(t.nextRun) : "paused"}</>}
+                {t.running ? <span className="tk-running"><span className="st-spin" aria-hidden /> running</span> : <>next {res?.control?.paused ? "blocked by execution pause" : t.enabled ? et(t.nextRun) : "paused"}</>}
               </p>
               {t.last ? (
                 <button type="button" className={`tk-last sev-${t.last.severity}${t.last.status === "ok" ? "" : " tk-bad"}`} onClick={() => void open(t)} title={`${t.last.source} · as of ${t.last.asOf}`}>
@@ -47,7 +49,7 @@ export function ScheduledTasks({ openTurns, active }: { openTurns: (turns: Turn[
                 </button>
               ) : <p className="tk-meta">No run yet.</p>}
               <p className="tk-actions">
-                <button type="button" className="link" disabled={t.running} onClick={() => void act(runNow(t.id))}>Run now</button>
+                <button type="button" className="link" disabled={t.running || res?.control?.paused} onClick={() => void act(runNow(t.id))}>Run now</button>
                 {confirm === t.id
                   ? <><button type="button" className="link tk-del" onClick={() => { setConfirm(""); void act(removeTask(t.id)); }}>Delete it and its results</button> <button type="button" className="link" onClick={() => setConfirm("")}>Keep</button></>
                   : <button type="button" className="link" disabled={t.running} onClick={() => setConfirm(t.id)}>Delete</button>}

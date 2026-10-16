@@ -1,3 +1,4 @@
+import {taskControl} from '../domain/tasks/control.mjs';
 import { nyDate } from "../../shared/dates.mjs";
 import { backtestSummary, bootPlan, newSignalCount, nextRunAfter, researchSeverity, runsToday, specForRun } from "../../shared/taskSchedule.mjs";
 import { SOURCE_LABEL } from "../../shared/backtestSpec.mjs";
@@ -114,10 +115,12 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
     };
   }
 
+  const pausedResult=()=>({ok:false,status:409,paused:true,error:"New task executions are paused. Resume admission in Scheduled controls first."});
   async function perform(task, trigger) {
+    if(taskControl(db).paused)return pausedResult();
     const startedAt = now();
     if (!store.claimTask(db, task.id, { now: startedAt, pid })) return { ok: false, busy: true };
-    let run = null, attempt = null;
+    let run = null, attempt = null, admissionPaused = false;
     try {
       const cap = dailyCap(env);
       if (runsToday(store.countedStarts(db, startedAt), startedAt) >= cap) {
@@ -126,7 +129,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
         run = skip(task, startedAt, "not-configured", "Ask is not configured — add a key to .env.local", "This task asks the model; backtest tasks still run without a key.");
       } else {
         attempt=store.reserveAttempt(db,task,{startedAt,pid,trigger,cap});
-        if(!attempt){run=skip(task,startedAt,"budget",`Daily cap of ${cap} scheduled runs reached`,"Another process reserved the remaining capacity.");return {ok:true,run};}
+        if(!attempt){if(taskControl(db).paused){admissionPaused=true;return pausedResult();}run=skip(task,startedAt,"budget",`Daily cap of ${cap} scheduled runs reached`,"Another process reserved the remaining capacity.");return {ok:true,run};}
         const r = task.kind === "backtest" ? await runBacktests(task, startedAt) : await runAskPrompt(task, startedAt);
         if (r.skipped) run = skip(task, startedAt, "not-configured", r.error || "Ask is not configured", "");
         else if (store.getTask(db, task.id)) run = store.addRun(db, { taskId: task.id, startedAt, finishedAt: now(), counted: true, ...r, meta: { ...r.meta, trigger, attemptId:attempt.id } });
@@ -139,7 +142,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
       if (cur) {
         const t = now();
         const keep = trigger === "manual" && cur.nextRun != null && cur.nextRun > t;
-        store.releaseTask(db, task.id, { lastRun: startedAt, nextRun: cur.enabled ? (keep ? cur.nextRun : nextRunAfter(cur.schedule, t)) : null });
+        store.releaseTask(db, task.id, admissionPaused?{lastRun:null,nextRun:cur.nextRun}:{ lastRun: startedAt, nextRun: cur.enabled ? (keep ? cur.nextRun : nextRunAfter(cur.schedule, t)) : null });
       }
     }
     if (run) log(`task ${task.id} ${trigger}: ${run.status} · ${run.summary.slice(0, 120)}`);
@@ -148,6 +151,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
 
   /** Queues one run; resolves when it finishes. Refused while the same task is queued or running. */
   function enqueue(id, trigger) {
+    if(taskControl(db).paused)return pausedResult();
     const task = store.getTask(db, id);
     if (!task) return { ok: false, status: 404, error: "No such task." };
     if (queued.has(id) || task.running) return { ok: false, status: 409, error: "This task is already running." };
@@ -161,7 +165,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
   }
 
   async function tick() {
-    if (ticking) return 0;
+    if (ticking||taskControl(db).paused) return 0;
     ticking = true;
     let n = 0;
     try {
@@ -169,7 +173,7 @@ export function createTaskScheduler({ db, env = process.env, now = Date.now, pid
       const due = store.listTasks(db).filter((x) => x.enabled && x.nextRun != null && x.nextRun <= t && !x.running && !queued.has(x.id)).sort((a, b) => a.nextRun - b.nextRun);
       for (const task of due) {
         const q = enqueue(task.id, "schedule");
-        if (q.ok) { await q.done; n += 1; }
+        if (q.ok) { const result=await q.done; if(result.ok)n += 1; }
       }
     } finally {
       ticking = false;

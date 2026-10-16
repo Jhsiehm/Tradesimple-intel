@@ -1,3 +1,4 @@
+import {verifyTaskControls} from './tasks/control.mjs';
 import {verifyAttemptRow,verifyCompletion} from './tasks/integrity.mjs';
 import {verifyObservationDerivation,verifyObservationComposition} from './research-observations.mjs';
 import {verifyAnalysisRows} from './research-analysis.mjs';
@@ -25,6 +26,7 @@ function inspect(file) {
         if (table === 'runs' && hashOf(body.inputs) !== body.inputHash) throw new Error('Run input checksum mismatch.');
       }
     }
+    if(present.includes('task_controls'))verifyTaskControls(db.prepare('SELECT * FROM task_controls ORDER BY revision').all());
     if(present.includes('task_attempts'))for(const row of db.prepare('SELECT * FROM task_attempts').iterate())verifyAttemptRow(row);
     if(present.includes('task_completions'))for(const row of db.prepare('SELECT attempt_id,body FROM task_completions').iterate()){
       const completion=JSON.parse(row.body),saved=db.prepare('SELECT * FROM task_attempts WHERE id=?').get(row.attempt_id);

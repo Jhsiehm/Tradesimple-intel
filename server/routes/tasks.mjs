@@ -1,3 +1,4 @@
+import {taskControl,taskControlHistory,setTaskControl} from '../domain/tasks/control.mjs';
 import { reply } from "../router.mjs";
 import { readJson } from "../lib/body.mjs";
 import { nyDate } from "../../shared/dates.mjs";
@@ -53,6 +54,12 @@ const askDone = (answer, ms) => ({
 });
 
 export const handlers = {
+  "tasks.control": async ({db,req})=>{
+    if(method(req)==='GET')return {ok:true,control:taskControl(db),history:taskControlHistory(db)};
+    if(method(req)!=='POST')return bad(405,'Use GET or POST.');
+    const b=await body(req);if(!b.ok)return b.res;
+    try{return {ok:true,control:setTaskControl(db,b.value)};}catch(error){return bad(error.status||400,error.message);}
+  },
   "tasks.attempts": ({db,req})=>method(req)!=='GET'?bad(405,'Use GET.'):({ok:true,items:store.listAttempts(db).map(a=>({id:a.id,taskId:a.taskId,title:a.task.title,kind:a.task.kind,startedAt:iso(a.startedAt),trigger:a.trigger,status:a.completion?.status||'incomplete',outcome:a.completion?.run?.status||null})),note:'Durable admitted attempts count before execution, including interrupted attempts. Task definitions and recent alerts remain in the cache database.'}),
   "tasks.attempt": ({db,req,params})=>{if(method(req)!=='GET')return bad(405,'Use GET.');const attempt=store.getAttempt(db,params.id);return attempt?{ok:true,attempt}:bad(404,'Task attempt not found.');},
   tasks: async ({ db, req }) => {
@@ -62,6 +69,7 @@ export const handlers = {
         asOf: new Date().toISOString(),
         scheduler: schedulerOn() ? "on" : "off",
         budget: budget(db),
+        control: taskControl(db),
         items: store.listTasks(db).map((t) => view(db, t)),
         source: "Scheduled research tasks (this server's cache database)",
         latency: "Checked every 30 s; a due task starts within a minute. Results post to Alerts."

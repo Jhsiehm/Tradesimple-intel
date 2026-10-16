@@ -25,3 +25,13 @@
 .tk-pick input[type="number"] { width: 4.5em; }
 .tk-pick .ask-fault { flex-basis: 100%; margin: 4px 0 0; }
 .tk-saved { margin: 6px 0 0; font-size: 12px; color: var(--dim); }
+
+.tk-admission { margin: 16px 0; padding: 12px 0; border-block: 1px solid var(--line); font-size: 13px; line-height: 1.5; }
+.tk-admission p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.tk-admission form { display: grid; gap: 8px; margin: 12px 0; }
+.tk-admission textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; }
+.tk-admission button { justify-self: start; min-height: 36px; padding: 6px 12px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.tk-admission button:hover:not(:disabled) { border-color: var(--ink); }
+.tk-admission button:disabled { opacity: .5; cursor: not-allowed; }
+.tk-admission :is(button, textarea, a):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.tk-admission a { color: var(--ink); text-underline-offset: 3px; }

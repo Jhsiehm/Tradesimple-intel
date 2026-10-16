@@ -1,3 +1,4 @@
+import {ensureTaskControl} from './control.mjs';
 import {verifyAttemptRow,verifyCompletion} from './integrity.mjs';
 import {researchStore,hashOf,newId} from '../research-store.mjs';
 import {nyDate} from '../../../shared/dates.mjs';
@@ -12,6 +13,7 @@ const KEEP_RUNS = 60;
 function ensure(db) {
   if (ready.has(db)) return;
   researchStore(db);
+  ensureTaskControl(db);
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -206,7 +208,7 @@ export function reserveAttempt(db,task,{startedAt,pid,trigger,cap}){
  ensure(db);const day=nyDate(startedAt),id=newId('ta');
  const attempt={schemaVersion:1,id,taskId:task.id,day,startedAt,pid,trigger,task:{id:task.id,...JSON.parse(bodyOf(task)),createdAt:task.createdAt,updatedAt:task.updatedAt}};
  const encoded=JSON.stringify(attempt),legacy=legacyCountedStarts(db,startedAt).filter(t=>nyDate(t)===day).length;
- const inserted=db.prepare('INSERT INTO research.task_attempts SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM research.task_attempts WHERE day=?)+? < ?').run(id,task.id,day,startedAt,pid,hashOf(encoded),encoded,day,legacy,cap);
+ const inserted=db.prepare('INSERT INTO research.task_attempts SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM research.task_attempts WHERE day=?)+? < ? AND COALESCE((SELECT paused FROM research.task_controls ORDER BY revision DESC LIMIT 1),0)=0').run(id,task.id,day,startedAt,pid,hashOf(encoded),encoded,day,legacy,cap);
  return inserted.changes===1?attempt:null;
 }
 export function completeAttempt(db,id,{status,finishedAt,run=null,reason=''}){

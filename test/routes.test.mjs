@@ -45,6 +45,7 @@ after(async () => {
 
 /** [sample url, status, keys] — keys are the sorted top-level JSON keys, or a content type for non-JSON. */
 export const SMOKE = [
+  ["/api/tasks/control", 200, "control,history,ok"],
   ["/api/tasks/attempts", 200, "items,note,ok"],
   ["/api/tasks/attempts/ta_deadbeef", 404, "error,missing,ok"],
   ["/api/research/event-studies", 200, "items,ok"],
@@ -104,7 +105,7 @@ export const SMOKE = [
   ["/api/backtest/search", 200, "defaults,ok,state"],
   ["/api/backtest/search?id=nope", 404, "error,missing,ok"],
   ["/api/ask", 200, "configured,limits,missing,model,models,notice,ok,provider,small,sourcing,spend,strong,styles,tools,web"],
-  ["/api/tasks", 200, "asOf,budget,items,latency,ok,scheduler,source"],
+  ["/api/tasks", 200, "asOf,budget,control,items,latency,ok,scheduler,source"],
   ["/api/tasks/runs/rn_none", 404, "error,missing,ok"],
   ["/api/tasks/tk_none/run", 405, "error,missing,ok"],
   ["/api/tasks/tk_none", 404, "error,missing,ok"],

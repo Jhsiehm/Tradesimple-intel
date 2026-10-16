@@ -30,7 +30,8 @@ export type TaskView = {
   last: { id: string; status: "ok" | "error" | "skipped"; severity: string; title: string; summary: string; at: string; source: string; asOf: string } | null;
 };
 
-export type TasksRes = { ok: boolean; asOf?: string; scheduler?: "on" | "off"; budget?: { perDay: number; usedToday: number }; items: TaskView[]; source?: string; latency?: string; error?: string };
+export type TaskControl = { revision: number; paused: boolean; reason: string; createdAt: string | null; actor: string | null };
+export type TasksRes = { ok: boolean; asOf?: string; control?: TaskControl; scheduler?: "on" | "off"; budget?: { perDay: number; usedToday: number }; items: TaskView[]; source?: string; latency?: string; error?: string };
 type Out = { ok: boolean; error?: string; task?: TaskView };
 
 /** Fired after any change so every Scheduled list refreshes. */
@@ -76,4 +77,10 @@ export async function loadResult(runId: string): Promise<Turn | null> {
   if (!run) return null;
   if (run.result) return { ...run.result, notes: [...(run.result.notes || [])] };
   return { id: runId, question: run.title, at: run.startedAt, text: run.summary, steps: [], phase: "error", notes: [], done: null, clarify: null, error: run.summary, model: "", context: "" };
+}
+
+export async function setAdmission(paused: boolean, baseRevision: number, reason: string) {
+  const out = await post<Out>("/api/tasks/control", { paused, baseRevision, reason });
+  changed();
+  return out;
 }
