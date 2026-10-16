@@ -6,7 +6,7 @@ This ledger tracks the full October 2026 executive blueprint. Completed slices d
 
 Acceptance: import → experiment → comparison → notebook → export → offline replay succeeds in the browser; live-source failures recover; database backups restore successfully.
 
-Existing automated replay, persistence and workflow tests provide partial evidence. Browser acceptance and live provider validation remain open. An online backup/verify/restore command now exists; its integration test restores an open WAL database and replays the saved calculation. A temporary backup and restore of the local research database also passed (5 experiments, 7 runs, 3,003 evidence records); live application cutover and recovery-time validation remain open. Universe-related changes are owned by the other chat.
+Existing automated replay, persistence and workflow tests provide partial evidence. Browser acceptance and live provider validation remain open. An online backup/verify/restore command now exists; its integration test restores an open WAL database and replays the saved calculation. A temporary backup and restore of the local research database also passed (5 experiments, 7 runs, 3,003 evidence records); live application cutover and recovery-time validation remain open.
 
 ## Stage 2: historical integrity — in progress
 
