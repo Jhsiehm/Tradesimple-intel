@@ -136,3 +136,87 @@ test('legacy locked plans remain readable but cannot newly evaluate an unaudited
     assert.equal(getPlan(db, legacy.id).evaluated, false);
   } finally { db.close(); }
 });
+
+test('any-source agreement emits chronological deduplicated union with only then-eligible witnesses', () => {
+  const ss = sources(); ss[0].signals = [sig('a1', '2025-01-05'), sig('a2', '2025-01-08')];
+  ss[1].signals = [sig('b1', '2025-01-08'), sig('b2', '2025-01-20')];
+  const out = combineSignals(ss, [0, 1], { ...spec(), confirmation: 'any' });
+  assert.deepEqual(out.signals.map(s => s.signalDate), ['2025-01-05', '2025-01-08', '2025-01-20']);
+  assert.deepEqual(out.signals.map(s => s.evidence.map(e => e.source)), [['a'], ['a', 'b'], ['b']]);
+  assert.deepEqual(combineSignals(ss.map(s => ({ ...s, signals: [...s.signals].reverse() })), [0, 1], { ...spec(), confirmation: 'any' }), out);
+});
+
+test('two-of-three agreement waits for quorum, retains every eligible witness and expires votes', () => {
+  const ss = [
+    { id: 'a', signals: [sig('a', '2025-01-01')] },
+    { id: 'b', signals: [sig('b', '2025-01-03'), sig('b-later', '2025-01-20')] },
+    { id: 'c', signals: [sig('c', '2025-01-04'), sig('c-later', '2025-01-21')] },
+  ];
+  const opts = { ...spec(), confirmation: 'at-least', minSources: 2 };
+  const out = combineSignals(ss, [0, 1, 2], opts);
+  assert.deepEqual(out.signals.map(s => s.signalDate), ['2025-01-03', '2025-01-04', '2025-01-21']);
+  assert.deepEqual(out.signals.map(s => s.evidence.length), [2, 3, 2]);
+  assert.ok(out.signals.every(s => s.evidence.every(e => e.publicDate <= s.signalDate)));
+  ss[2].signals = ss[2].signals.map(s => ({ ...s, side: 'sell' }));
+  assert.deepEqual(combineSignals(ss, [0, 1, 2], { ...opts, sides: 'both' }).signals.map(s => s.signalDate), ['2025-01-03']);
+});
+
+test('fixed agreement thresholds survive ablation while single baselines remain independent', () => {
+  const i = input(); i.spec = { ...i.spec, confirmation: 'at-least', minSources: 2 };
+  let p = runConvergence(i).periods.development;
+  assert.equal(p.variants.length, 5);
+  assert.ok(p.variants.filter(v => v.id.startsWith('single:')).every(v => v.counts.decisions > 0));
+  assert.ok(p.variants.filter(v => v.id.startsWith('without:')).every(v => v.counts.decisions === 0));
+  assert.ok(p.ablations.every(a => a.withoutVariant.startsWith('without:') && a.withoutTrades === 0));
+  i.sources.push({ id: 'c', label: 'C', signals: [sig('c1', '2025-01-09')] });
+  p = runConvergence(i).periods.development;
+  assert.ok(p.variants.filter(v => v.id.startsWith('without:')).every(v => v.counts.decisions > 0));
+  i.spec.minSources = 3;
+  assert.ok(runConvergence(i).periods.development.variants.filter(v => v.id.startsWith('without:')).every(v => v.counts.decisions === 0));
+});
+
+test('agreement validation rejects unknown policies, invalid thresholds and impossible registrations', () => {
+  for (const change of [{ confirmation: 'or' }, { confirmation: 'any', minSources: 2 }, { confirmation: 'at-least' }, { confirmation: 'at-least', minSources: '2' }, { confirmation: 'at-least', minSources: 1 }, { confirmation: 'at-least', minSources: 2.5 }]) {
+    assert.throws(() => cleanConvergence({ ...spec(), ...change }), /agreement|Minimum/);
+    assert.throws(() => combineSignals(sources(), [0, 1], { ...spec(), ...change }), /agreement|Minimum/);
+  }
+  const i = input(); i.spec = { ...i.spec, confirmation: 'at-least', minSources: 3 };
+  assert.throws(() => runConvergence(i), /exceeds/);
+  const db = dbAt();
+  try { assert.throws(() => createPlan(db, { title: 'Impossible quorum', experimentIds: fixtures(db), spec: i.spec }), /exceeds/); assert.equal(listPlans(db).length, 0); }
+  finally { db.close(); }
+});
+
+test('omitting agreement preserves all-source decisions and new policies cannot leak holdout into development', () => {
+  const i = input(); const explicit = runConvergence(i); delete i.spec.confirmation;
+  assert.deepEqual(runConvergence(i), explicit);
+  for (const policy of [{ confirmation: 'any' }, { confirmation: 'at-least', minSources: 2 }]) {
+    const j = input(); j.spec = { ...j.spec, ...policy }; const before = runConvergence(j).periods.development;
+    j.sources[0].signals.push(sig('future', '2025-04-20')); j.bars.AAPL = j.bars.AAPL.map(b => b[0] >= dayOf(j.spec.split) ? [b[0], 500, 600] : b);
+    assert.deepEqual(runConvergence(j).periods.development, before);
+  }
+});
+
+test('agreement policies are frozen, evaluate once, and replay from exported original engines', () => {
+  const db = dbAt();
+  try {
+    const experimentIds = fixtures(db);
+    for (const policy of [{ confirmation: 'any' }, { confirmation: 'at-least', minSources: 2 }]) {
+      const request = { ...spec(), ...policy };
+      const p = createPlan(db, { title: `Policy ${policy.confirmation}`, experimentIds, spec: request });
+      request.confirmation = 'all'; delete request.minSources;
+      assert.equal(getPlan(db, p.id).spec.confirmation, policy.confirmation);
+      const done = evaluatePlan(db, p.id), run = getRun(db, done.runId);
+      assert.equal(evaluatePlan(db, p.id).runId, done.runId);
+      assert.equal(replayRun(run).matches, true);
+      assert.equal(run.inputs.spec.confirmation, policy.confirmation);
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsi-agreement-'));
+      try {
+        fs.writeFileSync(path.join(dir, 'run.zip'), exportRun(db, run));
+        assert.equal(spawnSync('unzip', ['-q', 'run.zip'], { cwd: dir }).status, 0);
+        const replay = spawnSync(process.execPath, ['replay.mjs'], { cwd: dir, encoding: 'utf8' });
+        assert.equal(replay.status, 0, replay.stderr); assert.equal(JSON.parse(replay.stdout).matches, true);
+      } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    }
+  } finally { db.close(); }
+});

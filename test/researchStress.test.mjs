@@ -96,3 +96,16 @@ test('Convergence stress refuses unopened holdouts and exports all original sour
   const evidence=JSON.parse(fs.readFileSync(path.join(dir,'evidence.json'),'utf8'));assert.equal(Object.keys(evidence.datasets).length,2);assert.equal(Object.keys(evidence.runs).length,4);
  }finally{db?.close();if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('source outages preserve any-source and fixed-quorum agreement rules',()=>{
+ for(const policy of [{confirmation:'any'},{confirmation:'at-least',minSources:2}]){
+  const base=multiBase();base.spec={...base.spec,...policy};
+  const report=runStress({base,scenarios:[{id:'lost-a',label:'A unavailable',missingPct:100,sourceIds:['a']}]});
+  for(const period of ['development','holdout']){
+   const variants=report.scenarios[0].result.periods[period].variants,combined=variants.find(v=>v.id==='combined'),single=variants.find(v=>v.id==='single:1');
+   assert.equal(combined.counts.decisions,policy.confirmation==='any'?single.counts.decisions:0);
+   assert.ok(single.counts.decisions>0);
+   if(policy.confirmation==='at-least')assert.ok(variants.filter(v=>v.id.startsWith('without:')).every(v=>v.counts.decisions===0));
+  }
+ }
+});
