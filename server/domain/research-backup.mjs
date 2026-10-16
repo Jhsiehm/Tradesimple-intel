@@ -65,6 +65,18 @@ function inspect(file) {
       const approval=JSON.parse(row.body);
       const notebook=db.prepare('SELECT body FROM notebook_revisions WHERE notebook_id=? AND revision=?').get(approval.notebookId,approval.revision);
       if (!notebook || hashOf(JSON.parse(notebook.body))!==approval.notebookHash) throw new Error('Memory approval notebook reference mismatch.');
+      if(approval.supersedesApprovalId){
+        const priorRow=db.prepare('SELECT body FROM memory_approvals WHERE id=?').get(approval.supersedesApprovalId);
+        const prior=priorRow&&JSON.parse(priorRow.body);
+        const revocations=db.prepare('SELECT body FROM memory_approvals WHERE notebook_id=? AND revision=?').all(approval.notebookId,prior?.revision??0).map(r=>JSON.parse(r.body));
+        if(approval.action!=='approve'||!prior||prior.action!=='approve'||prior.notebookId!==approval.notebookId||prior.revision>=approval.revision||!revocations.some(r=>r.action==='revoke'&&r.previousId===prior.id&&r.replacementApprovalId===approval.id&&r.createdAt===approval.createdAt))throw Error('Memory replacement reference mismatch.');
+      }
+      if(approval.replacementApprovalId){
+        const replacementRow=db.prepare('SELECT body FROM memory_approvals WHERE id=?').get(approval.replacementApprovalId);
+        const replacement=replacementRow&&JSON.parse(replacementRow.body);
+        if(approval.action!=='revoke'||!replacement||replacement.action!=='approve'||replacement.notebookId!==approval.notebookId||replacement.supersedesApprovalId!==approval.previousId||replacement.createdAt!==approval.createdAt)throw Error('Memory revocation replacement mismatch.');
+      }
+
     }
     if (present.includes('memory_snapshots')) for (const row of db.prepare('SELECT body FROM memory_snapshots').iterate()) {
       const snapshot=JSON.parse(row.body);

@@ -59,3 +59,35 @@ test('isolated snapshots contain no memory and malformed or unapproved selection
   assert.equal(listMemorySnapshots(db).length,1);assert.deepEqual(listMemoryApprovals(db),[]);
  }finally{db.close();}
 });
+
+test('explicit supersession atomically retires only the chosen older revision',()=>{
+ const db=new DatabaseSync(':memory:');try{
+  const n=saveNotebook(db,finding),at=Date.now()+1000;
+  const first=approveMemory(db,{notebookId:n.id,revision:1,action:'approve',reason:'Original review'},{now:time(at)});
+  const frozen=createMemorySnapshot(db,{mode:'context-aware',knownAt:time(at),approvalIds:[first.id]},{now:time(at)});
+  saveNotebook(db,{...finding,baseRevision:1,conclusion:'Revised finding'},n.id);
+  const replacement=approveMemory(db,{notebookId:n.id,revision:2,action:'approve',reason:'Corrected evidence',supersedesApprovalId:first.id,expectedPreviousId:null},{now:time(at+1)});
+  assert.equal(replacement.supersedesApprovalId,first.id);
+  const revoked=listMemoryApprovals(db).find(a=>a.revision===1);
+  assert.equal(revoked.action,'revoke');assert.equal(revoked.previousId,first.id);assert.equal(revoked.replacementApprovalId,replacement.id);
+  assert.throws(()=>usableMemorySnapshot(db,frozen.id),/revoked or superseded/);
+  assert.deepEqual(getMemorySnapshot(db,frozen.id),frozen);
+  assert.equal(createMemorySnapshot(db,{mode:'context-aware',knownAt:time(at+1),approvalIds:[replacement.id]},{now:time(at+1)}).records[0].notebook.revision,2);
+  assert.throws(()=>approveMemory(db,{notebookId:n.id,revision:2,action:'approve',reason:'Stale retry',supersedesApprovalId:first.id},{now:time(at+2)}),/changed/);
+  assert.throws(()=>approveMemory(db,{notebookId:n.id,revision:2,action:'revoke',reason:'Stale view',expectedPreviousId:null},{now:time(at+2)}),/changed/);
+  assert.equal(listMemoryApprovals(db).filter(a=>a.action==='approve').length,1);
+ }finally{db.close();}
+});
+test('replacement failure rolls back the new approval and refuses cross-notebook or backward replacement',()=>{
+ const db=new DatabaseSync(':memory:');try{
+  const n=saveNotebook(db,finding),other=saveNotebook(db,finding),at=Date.now()+1000;
+  const first=approveMemory(db,{notebookId:n.id,revision:1,action:'approve',reason:'Original review'},{now:time(at+100)});
+  saveNotebook(db,{...finding,baseRevision:1},n.id);
+  const body={notebookId:n.id,revision:2,action:'approve',reason:'Replacement',supersedesApprovalId:first.id};
+  // New revision inserts first; retiring the old approval fails its chronological check.
+  assert.throws(()=>approveMemory(db,body,{now:time(at)}),/chronological/);
+  assert.deepEqual(listMemoryApprovals(db),[first]);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM research.memory_approvals').get().n,1);
+  for(const invalid of [{...body,notebookId:other.id},{...body,revision:1},{...body,action:'revoke'}])assert.throws(()=>approveMemory(db,invalid,{now:time(at+200)}),/same notebook|Only an approval/);
+ }finally{db.close();}
+});

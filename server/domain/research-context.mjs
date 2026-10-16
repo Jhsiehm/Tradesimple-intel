@@ -29,7 +29,7 @@ export function listMemoryApprovals(db) {
   ensure(db);
   return db.prepare('SELECT a.body,a.body_hash FROM research.memory_approvals a JOIN (SELECT notebook_id,revision,MAX(sequence) AS seq FROM research.memory_approvals GROUP BY notebook_id,revision) b ON a.sequence=b.seq ORDER BY a.sequence DESC').all().map(decode);
 }
-export function approveMemory(db,body,{now=new Date().toISOString()}={}) {
+function recordApproval(db,body,{now=new Date().toISOString(),links={}}={}) {
   ensure(db); now=instant(now);
   if (body?.scope != null && body.scope !== scope) throw new Error('Only local-owner memory is supported; project/team permissions are not implemented.');
   if (!['approve','revoke'].includes(body?.action)) throw new Error('Choose approve or revoke.');
@@ -39,13 +39,34 @@ export function approveMemory(db,body,{now=new Date().toISOString()}={}) {
   if (!notebook) throw new Error('Notebook revision not found.');
   if (Date.parse(notebook.createdAt)>Date.parse(now)) throw new Error('Approval cannot precede notebook creation.');
   const previous=latest(db,notebook.id,notebook.revision);
+  if (Object.hasOwn(body,'expectedPreviousId') && body.expectedPreviousId !== (previous?.id || null)) throw new Error('Approval changed. Refresh and review the current state.');
   if (previous && Date.parse(previous.createdAt)>Date.parse(now)) throw new Error('Approval events must be chronological.');
   if (body.action==='approve' && (notebook.status==='draft' || !notebook.conclusion || !notebook.decision)) throw new Error('Classify the finding and record its conclusion and rationale before approval.');
   if (body.action==='revoke' && previous?.action!=='approve') throw new Error('This revision has no active approval to revoke.');
-  const event={id:newId('ma'),schemaVersion:1,scope,actor:'local-owner',action:body.action,notebookId:notebook.id,revision:notebook.revision,notebookHash:hashOf(notebook),title:notebook.title,reason:body.reason.trim(),createdAt:now,previousId:previous?.id || null};
+  const event={id:newId('ma'),schemaVersion:1,scope,actor:'local-owner',action:body.action,notebookId:notebook.id,revision:notebook.revision,notebookHash:hashOf(notebook),title:notebook.title,reason:body.reason.trim(),createdAt:now,previousId:previous?.id || null,...links};
   const encoded=JSON.stringify(event);
   db.prepare('INSERT INTO research.memory_approvals(id,notebook_id,revision,created_at,body_hash,body) VALUES (?,?,?,?,?,?)').run(event.id,event.notebookId,event.revision,now,hashOf(encoded),encoded);
   return event;
+}
+/** Replace a specific earlier approval in the same transaction as the new approval. */
+export function approveMemory(db,body,options={}) {
+  ensure(db);
+  const now=options.now || new Date().toISOString();
+  db.exec('SAVEPOINT memory_replacement');
+  try {
+    if (!body?.supersedesApprovalId) { const result=recordApproval(db,body,{now});db.exec('RELEASE memory_replacement');return result; }
+    if (body.action!=='approve' || typeof body.supersedesApprovalId!=='string') throw new Error('Only an approval can replace an earlier approval.');
+    const prior=decode(db.prepare('SELECT body,body_hash FROM research.memory_approvals WHERE id=?').get(body.supersedesApprovalId));
+    if (prior.action!=='approve' || latest(db,prior.notebookId,prior.revision)?.id!==prior.id) throw new Error('Earlier approval changed. Refresh before replacing it.');
+    if (prior.notebookId!==body.notebookId || prior.revision>=body.revision) throw new Error('Replace an earlier revision of the same notebook.');
+    if (latest(db,body.notebookId,body.revision)?.action==='approve') throw new Error('Target revision is already approved. Revoke earlier approvals separately.');
+    const replacement=recordApproval(db,body,{now,links:{supersedesApprovalId:prior.id}});
+    recordApproval(db,{notebookId:prior.notebookId,revision:prior.revision,action:'revoke',reason:body.reason,expectedPreviousId:prior.id},{now,links:{replacementApprovalId:replacement.id}});
+    db.exec('RELEASE memory_replacement');
+    return replacement;
+  } catch(error) {
+    db.exec('ROLLBACK TO memory_replacement');db.exec('RELEASE memory_replacement');throw error;
+  }
 }
 export function createMemorySnapshot(db,body,{now=new Date().toISOString()}={}) {
   ensure(db); now=instant(now);

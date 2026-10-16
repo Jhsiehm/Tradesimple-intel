@@ -110,3 +110,25 @@ test('backup refuses a notebook whose evidence pin disagrees with its run',()=>{
   assert.throws(()=>saveNotebook(db,{...forged,baseRevision:1},note.id),/pinned checksum/);
  }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('memory replacement links survive backup and reject a missing paired revocation',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tsi-memory-replacement-'));
+ const db=new DatabaseSync(path.join(dir,'cache.sqlite'));
+ try{
+  const note=saveNotebook(db,{title:'Original',hypothesis:'Test',conclusion:'Uncertain',decision:'Review',status:'inconclusive',tags:[],evidence:[],followups:[]});
+  const first=approveMemory(db,{notebookId:note.id,revision:1,action:'approve',reason:'Review'});
+  saveNotebook(db,{...note,baseRevision:1,conclusion:'Revised'},note.id);
+  approveMemory(db,{notebookId:note.id,revision:2,action:'approve',reason:'Replace old interpretation',supersedesApprovalId:first.id});
+  const source=db.prepare('PRAGMA database_list').all().find(r=>r.name==='research').file;
+  const backup=path.join(dir,'valid');createResearchBackup(source,backup);verifyResearchBackup(backup);
+  const recovered=path.join(dir,'recovered.sqlite');restoreResearchBackup(backup,recovered);
+  const check=new DatabaseSync(recovered,{readOnly:true});
+  try{assert.equal(check.prepare('SELECT count(*) AS n FROM memory_approvals').get().n,3);}finally{check.close();}
+  // Model semantic corruption with recalculated row checksums, not just byte damage.
+  db.exec('DROP TRIGGER research.memory_approvals_update');
+  const row=db.prepare('SELECT id,body FROM research.memory_approvals ORDER BY sequence DESC LIMIT 1').get();
+  const revoked=JSON.parse(row.body);delete revoked.replacementApprovalId;const body=JSON.stringify(revoked);
+  db.prepare('UPDATE research.memory_approvals SET body=?,body_hash=? WHERE id=?').run(body,hashOf(body),row.id);
+  assert.throws(()=>createResearchBackup(source,path.join(dir,'invalid')),/replacement reference mismatch/);
+ }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
