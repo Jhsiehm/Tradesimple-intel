@@ -1,3 +1,4 @@
+import {createPaperAccount,getPaperAccount,listPaperAccounts,recordPaperAction} from '../domain/paper-ledger.mjs';
 import {createRetrieval,listRetrievals,getRetrieval,resumeRetrieval} from '../domain/connector-retrievals.mjs';
 import {exportAnalysis} from '../domain/analysis-archive.mjs';
 import {exportNotebook} from '../domain/notebook-archive.mjs';
@@ -50,6 +51,10 @@ async function handle(ctx, methods, fn) {
   } catch (err) { return fail(400, err.message); }
 }
 export const handlers = {
+  'research.paperAccounts':ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listPaperAccounts(ctx.db)}:{ok:true,ledger:createPaperAccount(ctx.db,body)}),
+  'research.paperAccount':ctx=>handle(ctx,['GET'],()=>({ok:true,ledger:getPaperAccount(ctx.db,ctx.params.id)})),
+  'research.paperAction':ctx=>handle(ctx,['POST'],body=>({ok:true,ledger:recordPaperAction(ctx.db,ctx.params.id,body)})),
+  'research.paperExport':ctx=>handle(ctx,['GET'],()=>{const ledger=getPaperAccount(ctx.db,ctx.params.id);ctx.res.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="${ctx.params.id}.json"`,'Cache-Control':'no-store'});ctx.res.end(JSON.stringify({format:'tradesimple-manual-paper-v1',...ledger,notice:'Manual simulation at asserted prices. No broker orders, verified market fills or marked-to-market valuations.'},null,2));}),
   'research.eventStudies': ctx=>handle(ctx,['GET','POST'],body=>ctx.req.method==='GET'?{ok:true,items:listEventStudies(ctx.db)}:{ok:true,plan:createEventStudy(ctx.db,body)}),
   'research.eventStudy': ctx=>handle(ctx,['GET'],()=>({ok:true,plan:getEventStudy(ctx.db,ctx.params.id)})),
   'research.eventStudyEvaluate': ctx=>handle(ctx,['POST'],()=>({ok:true,plan:evaluateEventStudy(ctx.db,ctx.params.id)})),

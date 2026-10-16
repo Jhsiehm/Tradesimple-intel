@@ -1,3 +1,4 @@
+import {verifyPaperLedger} from './paper-ledger.mjs';
 import {verifyRetrievalRecords} from './connector-retrievals.mjs';
 import {verifyTaskControls} from './tasks/control.mjs';
 import {verifyAttemptRow,verifyCompletion,verifyStopRequest} from './tasks/integrity.mjs';
@@ -20,12 +21,22 @@ function inspect(file) {
     if (tables.some(t => !present.includes(t))) throw new Error('Missing required research tables.');
     const counts = {};
     for (const table of present) counts[table] = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get().n;
-    for (const table of ['connector_retrievals','connector_pages','connector_results','runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans', 'task_attempts', 'task_completions', 'task_stop_requests'].filter(t => present.includes(t))) {
+    for (const table of ['paper_accounts','paper_events','connector_retrievals','connector_pages','connector_results','runs', 'datasets', 'notebook_revisions', 'convergence_plans', 'source_documents', 'relationship_snapshots', 'memory_approvals', 'memory_snapshots', 'pair_protocols', 'pair_executions', 'pair_results', 'pair_evaluations', 'observation_snapshots', 'stress_plans', 'event_study_plans', 'task_attempts', 'task_completions', 'task_stop_requests'].filter(t => present.includes(t))) {
       for (const row of db.prepare(`SELECT body, body_hash FROM ${table}`).iterate()) {
         if (hashOf(row.body) !== row.body_hash) throw new Error(`${table} checksum mismatch.`);
         const body = JSON.parse(row.body);
         if (table === 'runs' && hashOf(body.inputs) !== body.inputHash) throw new Error('Run input checksum mismatch.');
       }
+    }
+    if(present.includes('paper_accounts')||present.includes('paper_events')){
+      if(!present.includes('paper_accounts')||!present.includes('paper_events'))throw Error('Paper event table missing.');
+      for(const row of db.prepare('SELECT * FROM paper_accounts').iterate()){
+        const account=JSON.parse(row.body),source=db.prepare('SELECT body FROM runs WHERE id=?').get(account.sourceRunId);
+        if(account.id!==row.id||!source||JSON.parse(source.body).inputHash!==account.sourceInputHash||db.prepare('SELECT run_id FROM experiments WHERE id=?').get(account.experimentId)?.run_id!==account.sourceRunId)throw Error('Paper source reference mismatch.');
+        const events=db.prepare('SELECT * FROM paper_events WHERE account_id=? ORDER BY sequence').all(account.id).map(row=>{const event=JSON.parse(row.body);if(event.sequence!==row.sequence||event.requestId!==row.request_id)throw Error('Paper event index mismatch.');return event;});
+        verifyPaperLedger(account,events);
+      }
+      if(db.prepare('SELECT 1 FROM paper_events e LEFT JOIN paper_accounts a ON a.id=e.account_id WHERE a.id IS NULL LIMIT 1').get())throw Error('Paper event account missing.');
     }
     if(present.includes('task_controls'))verifyTaskControls(db.prepare('SELECT * FROM task_controls ORDER BY revision').all());
     if(present.includes('task_attempts'))for(const row of db.prepare('SELECT * FROM task_attempts').iterate())verifyAttemptRow(row);

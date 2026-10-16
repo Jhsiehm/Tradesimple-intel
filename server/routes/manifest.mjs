@@ -6,6 +6,10 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  {id:'research.paperAccounts',path:'/api/research/paper'},
+  {id:'research.paperAccount',path:'/api/research/paper/:id(paper_[a-f0-9]+)'},
+  {id:'research.paperAction',path:'/api/research/paper/:id(paper_[a-f0-9]+)/actions'},
+  {id:'research.paperExport',path:'/api/research/paper/:id(paper_[a-f0-9]+)/export'},
   {id:'research.stressPlans',path:'/api/research/stress'},
   {id:'research.stressPlan',path:'/api/research/stress/:id(stress_[a-f0-9]+)'},
   {id:'research.stressEvaluate',path:'/api/research/stress/:id(stress_[a-f0-9]+)/evaluate'},
