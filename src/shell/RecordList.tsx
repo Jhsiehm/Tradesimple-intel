@@ -21,7 +21,15 @@ export function RecordList({ items, selectedId, onSelect, empty }: Props) {
           onClick={() => onSelect(item.id)}
           style={item.tint ? { borderLeftColor: item.id === selectedId ? undefined : item.tint } : undefined}
         >
-          <span className="idx">{item.icon ? <span style={{ color: item.tint }}><Icon name={item.icon} /></span> : String(index + 1).padStart(2, "0")}</span>
+          <span className="idx">
+            {item.icon ? (
+              <span style={{ color: item.tint }}>
+                <Icon name={item.icon} />
+              </span>
+            ) : (
+              String(index + 1).padStart(2, "0")
+            )}
+          </span>
           <span>
             <span className={item.tone ? `title tone-${item.tone}` : "title"}>{item.title}</span>
             <small>{item.meta}</small>

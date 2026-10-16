@@ -1,8 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  filterToolDefs, isModeStatement, layerPrompts, modeSystemNote, parseSourcing, parseStyle, resolveModes,
-  sourcingClarify, stylePrompt, toolsForSourcing, wantsOutsideWorld, WEB_TOOLS
+  filterToolDefs,
+  isModeStatement,
+  layerPrompts,
+  modeSystemNote,
+  parseSourcing,
+  parseStyle,
+  resolveModes,
+  sourcingClarify,
+  stylePrompt,
+  toolsForSourcing,
+  wantsOutsideWorld,
+  WEB_TOOLS,
 } from "../shared/askModes.mjs";
 import { summarizeNews, summarizeSatellite } from "../server/ai/signals.mjs";
 import { privateAddress, webPage } from "../server/feeds/web.mjs";
@@ -15,7 +25,11 @@ test("parseSourcing: platform / web / both from plain words", () => {
   assert.equal(parseSourcing("web only please"), "web");
   assert.equal(parseSourcing("use TradeSimple and the web"), "both");
   assert.equal(parseSourcing("also search the web"), "both");
-  assert.equal(parseSourcing("Use in-app and the web: what did the ECB decide?"), "both", "the phrase the sheet and coverage note suggest");
+  assert.equal(
+    parseSourcing("Use in-app and the web: what did the ECB decide?"),
+    "both",
+    "the phrase the sheet and coverage note suggest",
+  );
   assert.equal(parseSourcing("in-app + web"), "both");
   assert.equal(parseSourcing("use the in-app feeds and the open web"), "both");
   assert.equal(parseSourcing("what did Pelosi file?"), "");
@@ -66,7 +80,12 @@ test("toolsForSourcing gates web tools; platform keeps news and satellite", () =
   assert.ok(both.has("news") && both.has("web_search"));
   const defs = toolDefs("platform");
   assert.ok(defs.every((t) => !WEB_TOOLS.has(t.name)));
-  assert.ok(filterToolDefs(TOOLS.map((t) => ({ name: t.name })), "web").every((t) => WEB_TOOLS.has(t.name) || t.name === "propose_theory"));
+  assert.ok(
+    filterToolDefs(
+      TOOLS.map((t) => ({ name: t.name })),
+      "web",
+    ).every((t) => WEB_TOOLS.has(t.name) || t.name === "propose_theory"),
+  );
 });
 
 test("layer and style prompts inject into the system note", () => {
@@ -84,9 +103,24 @@ test("layer and style prompts inject into the system note", () => {
 });
 
 test("SSRF helpers refuse loopback, link-local, private, mapped and non-IP hosts", async () => {
-  for (const ip of ["127.0.0.1", "10.0.0.1", "169.254.169.254", "::1", "::ffff:127.0.0.1", "::ffff:10.1.2.3", "not-an-ip", ""]) assert.equal(privateAddress(ip), true, ip);
+  for (const ip of [
+    "127.0.0.1",
+    "10.0.0.1",
+    "169.254.169.254",
+    "::1",
+    "::ffff:127.0.0.1",
+    "::ffff:10.1.2.3",
+    "not-an-ip",
+    "",
+  ])
+    assert.equal(privateAddress(ip), true, ip);
   for (const ip of ["8.8.8.8", "::ffff:8.8.8.8"]) assert.equal(privateAddress(ip), false, ip);
-  const never = { lookup: async () => [{ address: "93.184.216.34" }], fetcher: async () => { throw new Error("must not fetch"); } };
+  const never = {
+    lookup: async () => [{ address: "93.184.216.34" }],
+    fetcher: async () => {
+      throw new Error("must not fetch");
+    },
+  };
   for (const url of ["http://127.0.0.1/secret", "http://localhost/x", `https://example.com/${"a".repeat(2100)}`]) {
     assert.ok((await webPage(url, never)).error, url);
   }
@@ -100,23 +134,59 @@ test("runTool refuses web tools when sourcing is platform", async () => {
 
 test("summarizeNews filters and caps; summarizeSatellite drops tile templates", () => {
   const wire = {
-    ok: true, source: "2 RSS wires", asOf: "2026-10-09T12:00:00Z", latency: "5 min",
+    ok: true,
+    source: "2 RSS wires",
+    asOf: "2026-10-09T12:00:00Z",
+    latency: "5 min",
     feeds: [{ id: "reuters", name: "Reuters", desk: "world", region: "global", ok: true, count: 2 }],
     items: [
-      { title: "NVDA rises", source: "Reuters", desk: "markets", region: "", published: "2026-10-09", link: "https://r.example/1", symbols: ["NVDA"], summary: "chip demand" },
-      { title: "Oil sinks", source: "Reuters", desk: "world", region: "mena", published: "2026-10-08", link: "https://r.example/2", symbols: [], summary: "glut" }
-    ]
+      {
+        title: "NVDA rises",
+        source: "Reuters",
+        desk: "markets",
+        region: "",
+        published: "2026-10-09",
+        link: "https://r.example/1",
+        symbols: ["NVDA"],
+        summary: "chip demand",
+      },
+      {
+        title: "Oil sinks",
+        source: "Reuters",
+        desk: "world",
+        region: "mena",
+        published: "2026-10-08",
+        link: "https://r.example/2",
+        symbols: [],
+        summary: "glut",
+      },
+    ],
   };
   const hit = summarizeNews(wire, { q: "nvda", limit: 5 });
   assert.equal(hit.items.length, 1);
   assert.equal(hit.items[0].title, "NVDA rises");
   const desk = summarizeNews(wire, { desk: "world" });
   assert.equal(desk.items.length, 1);
-  const sat = summarizeSatellite({
-    ok: true, source: "NASA GIBS", asOf: "2026-10-09T12:00:00Z", latency: "1h", gap: "No Meteosat",
-    layers: [{ id: "GOES-East", name: "GOES-East", covers: "Americas", ranges: [{ end: Date.parse("2026-10-09T11:00:00Z") }], template: "https://gibs/…/{z}/{y}/{x}.png" }],
-    daily: { name: "VIIRS", complete: "2026-10-08", end: "2026-10-09" }
-  }, { layers: { sat: { source: "Esri", asOf: "mixed" }, daily: { source: "VIIRS", asOf: "2026-10-08" } } });
+  const sat = summarizeSatellite(
+    {
+      ok: true,
+      source: "NASA GIBS",
+      asOf: "2026-10-09T12:00:00Z",
+      latency: "1h",
+      gap: "No Meteosat",
+      layers: [
+        {
+          id: "GOES-East",
+          name: "GOES-East",
+          covers: "Americas",
+          ranges: [{ end: Date.parse("2026-10-09T11:00:00Z") }],
+          template: "https://gibs/…/{z}/{y}/{x}.png",
+        },
+      ],
+      daily: { name: "VIIRS", complete: "2026-10-08", end: "2026-10-09" },
+    },
+    { layers: { sat: { source: "Esri", asOf: "mixed" }, daily: { source: "VIIRS", asOf: "2026-10-08" } } },
+  );
   assert.equal(sat.live[0].name, "GOES-East");
   assert.ok(!JSON.stringify(sat).includes("{z}/{y}/{x}"));
   assert.match(sat.gap, /Meteosat/);

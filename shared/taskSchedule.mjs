@@ -12,12 +12,28 @@ export const HOUR_STEPS = [1, 2, 3, 4, 6, 8, 12];
 export const TASK_LIMITS = { title: 80, prompt: 800, specs: 4, tickers: 40, perUser: 30 };
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const ET = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short" });
+const ET = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  hourCycle: "h23",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  weekday: "short",
+});
 
 /** Wall-clock parts in New York at `ms`: y, m (1-12), d, hh, mm, wd (0 = Sunday), date (YYYY-MM-DD). */
 export function etParts(ms) {
   const p = Object.fromEntries(ET.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
-  const out = { y: Number(p.year), m: Number(p.month), d: Number(p.day), hh: Number(p.hour) % 24, mm: Number(p.minute), wd: WEEKDAYS.indexOf(p.weekday) };
+  const out = {
+    y: Number(p.year),
+    m: Number(p.month),
+    d: Number(p.day),
+    hh: Number(p.hour) % 24,
+    mm: Number(p.minute),
+    wd: WEEKDAYS.indexOf(p.weekday),
+  };
   return { ...out, date: `${p.year}-${p.month}-${p.day}` };
 }
 
@@ -27,10 +43,12 @@ export function etParts(ms) {
  */
 export function etToUtc(y, m, d, hh, mm) {
   const guess = Date.UTC(y, m - 1, d, hh, mm);
-  const exact = [4, 5].map((h) => guess + h * HOUR_MS).filter((t) => {
-    const p = etParts(t);
-    return p.d === d && p.hh === hh && p.mm === mm;
-  });
+  const exact = [4, 5]
+    .map((h) => guess + h * HOUR_MS)
+    .filter((t) => {
+      const p = etParts(t);
+      return p.d === d && p.hh === hh && p.mm === mm;
+    });
   return exact.length ? Math.min(...exact) : guess + 5 * HOUR_MS;
 }
 
@@ -44,12 +62,17 @@ export function cleanSchedule(raw) {
   const weekdays = raw.weekdays === true;
   if (raw.kind === "daily") {
     const m = String(raw.time || "").match(/^(\d{1,2}):(\d{2})$/);
-    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return { ok: false, error: "time must be HH:MM (24-hour, Eastern)." };
+    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59)
+      return { ok: false, error: "time must be HH:MM (24-hour, Eastern)." };
     return { ok: true, schedule: { kind: "daily", time: `${m[1].padStart(2, "0")}:${m[2]}`, weekdays } };
   }
   if (raw.kind === "hours" || raw.kind === "hourly") {
     const hours = raw.kind === "hourly" ? 1 : Number(raw.hours);
-    if (!HOUR_STEPS.includes(hours)) return { ok: false, error: `hours must be one of ${HOUR_STEPS.join(", ")} (so runs land on the same clock hours every day).` };
+    if (!HOUR_STEPS.includes(hours))
+      return {
+        ok: false,
+        error: `hours must be one of ${HOUR_STEPS.join(", ")} (so runs land on the same clock hours every day).`,
+      };
     return { ok: true, schedule: { kind: "hours", hours, weekdays } };
   }
   return { ok: false, error: "schedule.kind must be daily or hours." };
@@ -109,9 +132,11 @@ export function runsToday(startedAt, now) {
 /* ---------- "every morning at 8, …" ---------- */
 
 const PART_HOUR = { morning: 8, afternoon: 13, evening: 18, night: 21 };
-const DAILY = /\b(?:every|each)\s+(?:weekday\s+|business\s+day\s+|trading\s+day\s+)?(morning|afternoon|evening|night|day|weekday|business day|trading day)\b|\bdaily\b|\b(?:on\s+)?weekdays\b|\bmonday (?:through|to|-) friday\b/i;
+const DAILY =
+  /\b(?:every|each)\s+(?:weekday\s+|business\s+day\s+|trading\s+day\s+)?(morning|afternoon|evening|night|day|weekday|business day|trading day)\b|\bdaily\b|\b(?:on\s+)?weekdays\b|\bmonday (?:through|to|-) friday\b/i;
 const HOURS = /\b(?:every|each)\s+(\d{1,2})\s*(?:hours?|hrs?)\b|\bhourly\b|\b(?:every|each)\s+hour\b/i;
-const AT = /\bat\s+(noon|midnight|(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?)(?:\s*(?:et|eastern(?: time)?|ny time))?\b/i;
+const AT =
+  /\bat\s+(noon|midnight|(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?)(?:\s*(?:et|eastern(?: time)?|ny time))?\b/i;
 
 /** The schedule a sentence asks for and the sentence without it, or null when it asks for none. */
 export function parseSchedule(text) {
@@ -138,7 +163,12 @@ export function parseSchedule(text) {
         const mer = (at[4] || "").toLowerCase();
         if (mer.startsWith("p") && hh < 12) hh += 12;
         else if (mer.startsWith("a") && hh === 12) hh = 0;
-        else if (!mer && hh < 12 && (["afternoon", "evening", "night"].includes(part) || (hh <= 6 && part !== "morning"))) hh += 12;
+        else if (
+          !mer &&
+          hh < 12 &&
+          (["afternoon", "evening", "night"].includes(part) || (hh <= 6 && part !== "morning"))
+        )
+          hh += 12;
       }
       rest = rest.replace(at[0], " ");
     }
@@ -160,12 +190,17 @@ export function parseSchedule(text) {
 /** Asks for a recurring run ("every morning", "every 4 hours", "run this daily"), not just a question with "daily" in it. */
 export function isScheduleRequest(text) {
   const s = String(text || "");
-  return /\b(?:every|each)\s+(?:weekday\s+)?(?:morning|afternoon|evening|night|day|weekday|business day|trading day|hour|\d{1,2}\s*(?:hours?|hrs?))\b/i.test(s)
-    || /\b(?:run|check|do|repeat|schedule|send|post|rerun|re-run)\b[^.?!]*\b(?:daily|hourly|on weekdays)\b/i.test(s)
-    || /^\s*(?:daily|hourly|weekdays)\b/i.test(s);
+  return (
+    /\b(?:every|each)\s+(?:weekday\s+)?(?:morning|afternoon|evening|night|day|weekday|business day|trading day|hour|\d{1,2}\s*(?:hours?|hrs?))\b/i.test(
+      s,
+    ) ||
+    /\b(?:run|check|do|repeat|schedule|send|post|rerun|re-run)\b[^.?!]*\b(?:daily|hourly|on weekdays)\b/i.test(s) ||
+    /^\s*(?:daily|hourly|weekdays)\b/i.test(s)
+  );
 }
 
-const BACK_REF = /^(?:run\s+)?(?:this|that|it|the same(?: thing| one)?|again|this (?:backtest|question|one|answer|search)|that (?:backtest|question|one|answer|search))?$/i;
+const BACK_REF =
+  /^(?:run\s+)?(?:this|that|it|the same(?: thing| one)?|again|this (?:backtest|question|one|answer|search)|that (?:backtest|question|one|answer|search))?$/i;
 
 /**
  * A task draft from an Ask question such as "every morning at 8, check new insider buys on my watchlist and backtest them".
@@ -180,26 +215,83 @@ export function draftFromQuestion({ question, today, prefs = null, priors = [], 
   const rest = parsed.rest;
   const base = { schedule: parsed.schedule, enabled: true, thresholds: { excessPct: null, newSignals: null } };
   if (BACK_REF.test(rest)) {
-    if (priors.length) return { ok: true, draft: { ...base, kind: "backtest", title: titleOf(describeSpec(priors.at(-1))), prompt: "", specs: priors.slice(-TASK_LIMITS.specs), window: null, useWatchlist: false } };
-    if (lastQuestion) return { ok: true, draft: { ...base, kind: "prompt", title: titleOf(lastQuestion), prompt: lastQuestion.slice(0, TASK_LIMITS.prompt), specs: [], window: null, useWatchlist: false } };
-    return { ok: false, error: "Say what to run on that schedule, or ask a question first and then say “run this every morning”." };
+    if (priors.length)
+      return {
+        ok: true,
+        draft: {
+          ...base,
+          kind: "backtest",
+          title: titleOf(describeSpec(priors.at(-1))),
+          prompt: "",
+          specs: priors.slice(-TASK_LIMITS.specs),
+          window: null,
+          useWatchlist: false,
+        },
+      };
+    if (lastQuestion)
+      return {
+        ok: true,
+        draft: {
+          ...base,
+          kind: "prompt",
+          title: titleOf(lastQuestion),
+          prompt: lastQuestion.slice(0, TASK_LIMITS.prompt),
+          specs: [],
+          window: null,
+          useWatchlist: false,
+        },
+      };
+    return {
+      ok: false,
+      error: "Say what to run on that schedule, or ask a question first and then say “run this every morning”.",
+    };
   }
   const useWatchlist = /\b(?:my )?watch ?list\b|\bwatched\b|\bmy (?:tickers|stocks)\b/i.test(rest);
-  if (!wantsBacktest(rest)) return { ok: true, draft: { ...base, kind: "prompt", title: titleOf(rest), prompt: rest.slice(0, TASK_LIMITS.prompt), specs: [], window: null, useWatchlist } };
+  if (!wantsBacktest(rest))
+    return {
+      ok: true,
+      draft: {
+        ...base,
+        kind: "prompt",
+        title: titleOf(rest),
+        prompt: rest.slice(0, TASK_LIMITS.prompt),
+        specs: [],
+        window: null,
+        useWatchlist,
+      },
+    };
   const hints = questionHints(rest, today);
   const fixedTo = hints.fields["filters.to"] === today && hints.fields["filters.from"];
   const win = /\bnew\b|\bsince (?:the )?last (?:run|time|check)\b|\blatest\b/i.test(rest)
     ? { sinceLast: true, days: 30 }
-    : fixedTo ? { sinceLast: false, days: Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${fixedTo}T00:00:00Z`)) / DAY_MS) } : null;
+    : fixedTo
+      ? {
+          sinceLast: false,
+          days: Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${fixedTo}T00:00:00Z`)) / DAY_MS),
+        }
+      : null;
   const specs = hints.sources.slice(0, TASK_LIMITS.specs).map((source) => {
     const built = buildSpec({ question: rest, today, prefs }).spec;
     return win ? { ...built, source, rules: { ...built.rules, openTrades: "mark" } } : { ...built, source };
   });
-  return { ok: true, draft: { ...base, kind: "backtest", title: titleOf(rest), prompt: rest.slice(0, TASK_LIMITS.prompt), specs, window: win, useWatchlist } };
+  return {
+    ok: true,
+    draft: {
+      ...base,
+      kind: "backtest",
+      title: titleOf(rest),
+      prompt: rest.slice(0, TASK_LIMITS.prompt),
+      specs,
+      window: win,
+      useWatchlist,
+    },
+  };
 }
 
 const titleOf = (s) => {
-  const t = String(s || "").replace(/\s+/g, " ").trim();
+  const t = String(s || "")
+    .replace(/\s+/g, " ")
+    .trim();
   return (t.charAt(0).toUpperCase() + t.slice(1)).slice(0, TASK_LIMITS.title) || "Research task";
 };
 
@@ -218,14 +310,25 @@ export function cleanTaskInput(raw) {
   if (!kind) return { ok: false, error: "kind must be backtest or prompt." };
   const sched = cleanSchedule(raw.schedule);
   if (!sched.ok) return sched;
-  const prompt = String(raw.prompt || "").replace(/\s+/g, " ").trim().slice(0, TASK_LIMITS.prompt);
-  const symbols = [...new Set((Array.isArray(raw.watch?.symbols) ? raw.watch.symbols : []).map((s) => String(s).toUpperCase().trim()).filter((s) => SYMBOL.test(s)))].slice(0, TASK_LIMITS.tickers);
+  const prompt = String(raw.prompt || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, TASK_LIMITS.prompt);
+  const symbols = [
+    ...new Set(
+      (Array.isArray(raw.watch?.symbols) ? raw.watch.symbols : [])
+        .map((s) => String(s).toUpperCase().trim())
+        .filter((s) => SYMBOL.test(s)),
+    ),
+  ].slice(0, TASK_LIMITS.tickers);
   const useWatchlist = raw.useWatchlist === true;
-  if (useWatchlist && !symbols.length) return { ok: false, error: "This task reads your watchlist, and it has no tickers. Star a ticker first." };
+  if (useWatchlist && !symbols.length)
+    return { ok: false, error: "This task reads your watchlist, and it has no tickers. Star a ticker first." };
   let specs = [];
   if (kind === "backtest") {
     for (const s of (Array.isArray(raw.specs) ? raw.specs : []).slice(0, TASK_LIMITS.specs)) {
-      const withWatch = useWatchlist && s && typeof s === "object" ? { ...s, filters: { ...(s.filters || {}), tickers: symbols } } : s;
+      const withWatch =
+        useWatchlist && s && typeof s === "object" ? { ...s, filters: { ...(s.filters || {}), tickers: symbols } } : s;
       const c = cleanSpec(withWatch);
       if (!c.ok) return { ok: false, error: c.error };
       specs.push(c.spec);
@@ -234,7 +337,8 @@ export function cleanTaskInput(raw) {
   } else if (!prompt) return { ok: false, error: "A prompt task needs a prompt." };
   const w = raw.window && typeof raw.window === "object" ? raw.window : null;
   const days = num(w?.days);
-  const win = w && days != null ? { sinceLast: w.sinceLast === true, days: Math.min(730, Math.max(1, Math.round(days))) } : null;
+  const win =
+    w && days != null ? { sinceLast: w.sinceLast === true, days: Math.min(730, Math.max(1, Math.round(days))) } : null;
   const t = raw.thresholds && typeof raw.thresholds === "object" ? raw.thresholds : {};
   return {
     ok: true,
@@ -246,9 +350,12 @@ export function cleanTaskInput(raw) {
       window: kind === "backtest" ? win : null,
       schedule: sched.schedule,
       enabled: raw.enabled !== false,
-      thresholds: { excessPct: num(t.excessPct), newSignals: num(t.newSignals) == null ? null : Math.max(1, Math.round(num(t.newSignals))) },
-      watch: useWatchlist ? { symbols } : null
-    }
+      thresholds: {
+        excessPct: num(t.excessPct),
+        newSignals: num(t.newSignals) == null ? null : Math.max(1, Math.round(num(t.newSignals))),
+      },
+      watch: useWatchlist ? { symbols } : null,
+    },
   };
 }
 
@@ -265,9 +372,13 @@ export function cleanTaskPatch(raw) {
   }
   if ("thresholds" in raw) {
     const t = raw.thresholds && typeof raw.thresholds === "object" ? raw.thresholds : {};
-    out.thresholds = { excessPct: num(t.excessPct), newSignals: num(t.newSignals) == null ? null : Math.max(1, Math.round(num(t.newSignals))) };
+    out.thresholds = {
+      excessPct: num(t.excessPct),
+      newSignals: num(t.newSignals) == null ? null : Math.max(1, Math.round(num(t.newSignals))),
+    };
   }
-  if (!Object.keys(out).length) return { ok: false, error: "Nothing to change: send enabled, title, schedule, or thresholds." };
+  if (!Object.keys(out).length)
+    return { ok: false, error: "Nothing to change: send enabled, title, schedule, or thresholds." };
   return { ok: true, patch: out };
 }
 
@@ -304,9 +415,12 @@ export function backtestSummary(run, fresh = null) {
  */
 export function researchSeverity({ excess = null, fresh = null }, thresholds = {}) {
   const why = [];
-  if (thresholds.excessPct != null && excess != null && excess * 100 >= thresholds.excessPct) why.push(`excess ${pts(excess)} ≥ ${thresholds.excessPct}%`);
-  if (thresholds.newSignals != null && fresh != null && fresh >= thresholds.newSignals) why.push(`${fresh} new signals ≥ ${thresholds.newSignals}`);
+  if (thresholds.excessPct != null && excess != null && excess * 100 >= thresholds.excessPct)
+    why.push(`excess ${pts(excess)} ≥ ${thresholds.excessPct}%`);
+  if (thresholds.newSignals != null && fresh != null && fresh >= thresholds.newSignals)
+    why.push(`${fresh} new signals ≥ ${thresholds.newSignals}`);
   return { severity: why.length ? "elevated" : "routine", why };
 }
 
-export const RESEARCH_RULE = "Scheduled research is ROUTINE unless a threshold you set on the task is crossed (excess return, or new signals since the last run); then ELEVATED.";
+export const RESEARCH_RULE =
+  "Scheduled research is ROUTINE unless a threshold you set on the task is crossed (excess return, or new signals since the last run); then ELEVATED.";

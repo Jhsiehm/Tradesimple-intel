@@ -26,7 +26,11 @@ test("every icon name has path data in exactly one domain file, and nothing extr
     }
   }
   assert.equal(ICON_NAMES.length, names.size, "duplicate names in ICON_NAMES");
-  assert.deepEqual(ICON_NAMES.filter((n) => !seen.has(n)), [], "names without path data");
+  assert.deepEqual(
+    ICON_NAMES.filter((n) => !seen.has(n)),
+    [],
+    "names without path data",
+  );
 });
 
 test("path data is well formed and stays on the 16×16 grid", () => {
@@ -66,7 +70,9 @@ test("every wired icon uses a valid name", () => {
       ...[...text.matchAll(/<IconLabel\b[^>]*?\bicon="([^"]+)"/g)].map((m) => m[1]),
       ...[...text.matchAll(/\bicon:\s*"([^"]+)"/g)].map((m) => m[1]),
       // Conditional names: the result literals of name={a ? "x" : "y"} / icon={…}, not the tested values.
-      ...[...text.matchAll(/<(?:Icon\b[^>]*?\bname|IconLabel\b[^>]*?\bicon)=\{([^}]*)\}/g)].flatMap((m) => [...m[1].matchAll(/(?:^|[?:])\s*"([^"]+)"/g)].map((x) => x[1]))
+      ...[...text.matchAll(/<(?:Icon\b[^>]*?\bname|IconLabel\b[^>]*?\bicon)=\{([^}]*)\}/g)].flatMap((m) =>
+        [...m[1].matchAll(/(?:^|[?:])\s*"([^"]+)"/g)].map((x) => x[1]),
+      ),
     ];
     for (const n of used) {
       wired++;
@@ -78,7 +84,24 @@ test("every wired icon uses a valid name", () => {
 });
 
 test("command bar codes map to icons", () => {
-  for (const code of ["WEEK", "LEAD", "CTR", "LMT DES", "LMT GP", "TX-12 REP", "P000197 TL", "ALRT", "HQ", "NVDA HQ", "CAL", "BACK", "RCNT", "BT", "ASK", "ZZZZ"]) {
+  for (const code of [
+    "WEEK",
+    "LEAD",
+    "CTR",
+    "LMT DES",
+    "LMT GP",
+    "TX-12 REP",
+    "P000197 TL",
+    "ALRT",
+    "HQ",
+    "NVDA HQ",
+    "CAL",
+    "BACK",
+    "RCNT",
+    "BT",
+    "ASK",
+    "ZZZZ",
+  ]) {
     assert.ok(names.has(commandIcon(code)), `${code} → ${commandIcon(code)}`);
   }
   assert.equal(commandIcon("LMT CTR"), "contracts");

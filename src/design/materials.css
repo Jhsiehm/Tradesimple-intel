@@ -6,52 +6,100 @@
   --tsi-sand-end: #738c76;
   --tsi-sand-mid: var(--tsi-core-atlas);
 }
-.tsi-material > * { position: relative; z-index: 1; }
-.tsi-material::before, .tsi-material::after {
-  content: ""; position: absolute; inset: 0; z-index: 0;
-  pointer-events: none; border-radius: inherit;
+.tsi-material > * {
+  position: relative;
+  z-index: 1;
 }
-.tsi-material::before { background: none; }
+.tsi-material::before,
+.tsi-material::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.tsi-material::before {
+  background: none;
+}
 .tsi-material--sandy::before {
-  background: linear-gradient(var(--tsi-material-direction), var(--tsi-surface-deep) 3%, var(--tsi-sand-mid) 51%, var(--tsi-sand-end) 100%);
+  background: linear-gradient(
+    var(--tsi-material-direction),
+    var(--tsi-surface-deep) 3%,
+    var(--tsi-sand-mid) 51%,
+    var(--tsi-sand-end) 100%
+  );
 }
 .tsi-material--grain::after {
-  background: url('./assets/grain.png') repeat;
+  background: url("./assets/grain.png") repeat;
   background-size: 256px 256px;
   opacity: var(--tsi-grain-opacity);
   mix-blend-mode: soft-light;
 }
 .tsi-material--sandy.tsi-material--grain::after {
-  background-image: url('./assets/grain.png'), url('./assets/pigment.png');
-  background-size: 256px 256px, 320px 320px;
+  background-image: url("./assets/grain.png"), url("./assets/pigment.png");
+  background-size:
+    256px 256px,
+    320px 320px;
   background-blend-mode: soft-light;
 }
 .tsi-material--halftone::after {
-  background-image: radial-gradient(circle, var(--tsi-core-ivory) .55px, transparent .85px);
+  background-image: radial-gradient(circle, var(--tsi-core-ivory) 0.55px, transparent 0.85px);
   background-size: 5px 5px;
-  opacity: .09;
+  opacity: 0.09;
 }
 .tsi-material--archive::after {
-  background-image: url('./assets/grain.png'), url('./assets/wear.svg');
-  background-size: 256px 256px, 420px 280px;
+  background-image: url("./assets/grain.png"), url("./assets/wear.svg");
+  background-size:
+    256px 256px,
+    420px 280px;
   background-blend-mode: soft-light;
   opacity: var(--tsi-wear-opacity);
   mix-blend-mode: soft-light;
 }
-.tsi-sand--sage { --tsi-sand-end: #738c76; }
-.tsi-sand--ivory { --tsi-sand-end: var(--tsi-core-ivory); --tsi-sand-mid: #536757; }
-.tsi-sand--blue { --tsi-sand-end: var(--tsi-chroma-blue); --tsi-sand-mid: #193d49; }
-.tsi-sand--crimson { --tsi-sand-end: var(--tsi-chroma-crimson); --tsi-sand-mid: #3b3230; }
-.tsi-sand--violet { --tsi-sand-end: var(--tsi-chroma-violet); --tsi-sand-mid: #343a4d; }
+.tsi-sand--sage {
+  --tsi-sand-end: #738c76;
+}
+.tsi-sand--ivory {
+  --tsi-sand-end: var(--tsi-core-ivory);
+  --tsi-sand-mid: #536757;
+}
+.tsi-sand--blue {
+  --tsi-sand-end: var(--tsi-chroma-blue);
+  --tsi-sand-mid: #193d49;
+}
+.tsi-sand--crimson {
+  --tsi-sand-end: var(--tsi-chroma-crimson);
+  --tsi-sand-mid: #3b3230;
+}
+.tsi-sand--violet {
+  --tsi-sand-end: var(--tsi-chroma-violet);
+  --tsi-sand-mid: #343a4d;
+}
 /* Put controls, data, and text on an opaque clean backing when they overlap a gradient. */
-.tsi-material-content { background: var(--tsi-surface-deep); color: var(--tsi-text); }
+.tsi-material-content {
+  background: var(--tsi-surface-deep);
+  color: var(--tsi-text);
+}
 @media (max-width: 600px) {
-  .tsi-material { --tsi-grain-opacity: .09; --tsi-wear-opacity: .07; }
+  .tsi-material {
+    --tsi-grain-opacity: 0.09;
+    --tsi-wear-opacity: 0.07;
+  }
 }
 @media (forced-colors: active) {
-  .tsi-material::before, .tsi-material::after { display: none; }
-  .tsi-material-content { background: Canvas; color: CanvasText; }
+  .tsi-material::before,
+  .tsi-material::after {
+    display: none;
+  }
+  .tsi-material-content {
+    background: Canvas;
+    color: CanvasText;
+  }
 }
 @media print {
-  .tsi-material::before, .tsi-material::after { display: none; }
+  .tsi-material::before,
+  .tsi-material::after {
+    display: none;
+  }
 }

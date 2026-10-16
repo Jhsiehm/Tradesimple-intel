@@ -25,8 +25,11 @@ export function secDownload(url, file, { timeoutMs = 10 * 60_000 } = {}) {
 
 /** Daily-index files listed for one quarter (names like form.20261001.idx). */
 export async function dailyIndexNames(year, qtr) {
-  const body = await secJson(`https://www.sec.gov/Archives/edgar/daily-index/${year}/QTR${qtr}/index.json`, { timeoutMs: 30000 });
+  const body = await secJson(`https://www.sec.gov/Archives/edgar/daily-index/${year}/QTR${qtr}/index.json`, {
+    timeoutMs: 30000,
+  });
   return (body?.directory?.item || []).map((i) => i.name).filter((n) => /^form\.\d{8}\.idx$/.test(n));
 }
 
-export const dailyFormIdx = (year, qtr, name) => secText(`https://www.sec.gov/Archives/edgar/daily-index/${year}/QTR${qtr}/${name}`, { timeoutMs: 60000 });
+export const dailyFormIdx = (year, qtr, name) =>
+  secText(`https://www.sec.gov/Archives/edgar/daily-index/${year}/QTR${qtr}/${name}`, { timeoutMs: 60000 });

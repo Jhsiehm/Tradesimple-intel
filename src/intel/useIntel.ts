@@ -13,7 +13,16 @@ export function scopeOf(value: string): IntelScope {
   return ALL_SCOPE;
 }
 
-export type IntelKind = { id: EventKind; label: string; source: string; asOf: string; latency: string; total: number; note?: string; error?: string };
+export type IntelKind = {
+  id: EventKind;
+  label: string;
+  source: string;
+  asOf: string;
+  latency: string;
+  total: number;
+  note?: string;
+  error?: string;
+};
 export type IntelEvent = { d: number; k: EventKind; label: string; action?: string; link?: string };
 export type IntelPlace = { lon: number; lat: number; label: string; kind: "member" | "hq" | "agency"; action: string };
 export type Coverage = { total: number; placed: number; noFrom: number; noTo: number };
@@ -58,7 +67,12 @@ export type CaseFile = {
   latency?: string;
 };
 
-const scopeQuery = (scope: IntelScope) => (scope.kind === "member" ? `?member=${scope.id}` : scope.kind === "symbol" ? `?symbol=${encodeURIComponent(scope.id)}` : "");
+const scopeQuery = (scope: IntelScope) =>
+  scope.kind === "member"
+    ? `?member=${scope.id}`
+    : scope.kind === "symbol"
+      ? `?symbol=${encodeURIComponent(scope.id)}`
+      : "";
 
 /** Scrubber lanes and arc links for one scope; refetches once while USAspending is still filling the contract lane. */
 export function useIntelScope(scope: IntelScope, enabled: boolean) {
@@ -78,11 +92,18 @@ export function useIntelScope(scope: IntelScope, enabled: boolean) {
           setData(body);
           if (body.partial && retry) timer = window.setTimeout(() => load(false), 20000);
         })
-        .catch((err: Error) => { if (!cancel) setData({ ok: false, error: err.message } as IntelData); })
-        .finally(() => { if (!cancel) setLoading(false); });
+        .catch((err: Error) => {
+          if (!cancel) setData({ ok: false, error: err.message } as IntelData);
+        })
+        .finally(() => {
+          if (!cancel) setLoading(false);
+        });
     };
     load(true);
-    return () => { cancel = true; window.clearTimeout(timer); };
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
     // The key string stands in for the scope object.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled]);
@@ -97,7 +118,10 @@ const caseMemo = new Map<string, { at: number; body: CaseFile }>();
 /** Least-recently-used: a read moves the key to the back, a write past the cap drops the front. */
 function memoGet(key: string) {
   const hit = caseMemo.get(key);
-  if (hit) { caseMemo.delete(key); caseMemo.set(key, hit); }
+  if (hit) {
+    caseMemo.delete(key);
+    caseMemo.set(key, hit);
+  }
   return hit;
 }
 function memoSet(key: string, body: CaseFile) {
@@ -110,9 +134,15 @@ function memoSet(key: string, body: CaseFile) {
 export function useCaseFile(key: string | undefined) {
   const [body, setBody] = useState<CaseFile | null>(() => (key && memoGet(key)?.body) || null);
   useEffect(() => {
-    if (!key) { setBody(null); return; }
+    if (!key) {
+      setBody(null);
+      return;
+    }
     const hit = memoGet(key);
-    if (hit && Date.now() - hit.at < 5 * 60 * 1000) { setBody(hit.body); return; }
+    if (hit && Date.now() - hit.at < 5 * 60 * 1000) {
+      setBody(hit.body);
+      return;
+    }
     let cancel = false;
     setBody(null);
     const [kind, ...rest] = key.split(":");
@@ -122,8 +152,12 @@ export function useCaseFile(key: string | undefined) {
         if (res.ok && !res.stats.some((s) => /still answering/.test(s.note || ""))) memoSet(key, res);
         setBody(res);
       })
-      .catch((err: Error) => { if (!cancel) setBody({ ok: false, error: err.message } as CaseFile); });
-    return () => { cancel = true; };
+      .catch((err: Error) => {
+        if (!cancel) setBody({ ok: false, error: err.message } as CaseFile);
+      });
+    return () => {
+      cancel = true;
+    };
   }, [key]);
   return body;
 }

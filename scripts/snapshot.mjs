@@ -27,7 +27,12 @@ const BASE = arg("base", "http://127.0.0.1:8787");
 const MEMBERS = limit(arg("members", "all"));
 const TICKERS = limit(arg("tickers", "all"));
 const ALL_SPANS = ["1m", "5m", "15m", "1h", "1d", "6mo", "1y", "5y"];
-const SPANS = arg("spans", "1d,6mo,1y,5y") === "all" ? ALL_SPANS : arg("spans", "1d,6mo,1y,5y").split(",").filter((s) => ALL_SPANS.includes(s));
+const SPANS =
+  arg("spans", "1d,6mo,1y,5y") === "all"
+    ? ALL_SPANS
+    : arg("spans", "1d,6mo,1y,5y")
+        .split(",")
+        .filter((s) => ALL_SPANS.includes(s));
 const CONTRACTS = arg("contracts", "all");
 const RESUME = process.argv.includes("--resume");
 const OUT = path.join(root, "demo", "snapshot");
@@ -36,7 +41,9 @@ const PARTIAL = path.join(root, "demo", "snapshot.partial");
 const secrets = (() => {
   const file = path.join(root, ".env.local");
   if (!fs.existsSync(file)) return [];
-  return fs.readFileSync(file, "utf8").split("\n")
+  return fs
+    .readFileSync(file, "utf8")
+    .split("\n")
     .map((line) => line.match(/^\s*[A-Z0-9_]+\s*=\s*"?([^"\n]+)"?\s*$/)?.[1]?.trim())
     .filter((v) => v && v.length >= 12);
 })();
@@ -47,7 +54,8 @@ fs.mkdirSync(PARTIAL, { recursive: true });
 /** Routes written so far → byte size. Bodies are kept only for the list routes the snapshot enumerates. */
 const written = new Map();
 const bodies = new Map();
-const KEEP = /^\/api\/(tickers|congress\/(roster|bills|committees(\/[A-Za-z0-9]+)?|votes\?.*|feed|leaders)|markets\/(politicians|supply)|strait\/theaters)$/;
+const KEEP =
+  /^\/api\/(tickers|congress\/(roster|bills|committees(\/[A-Za-z0-9]+)?|votes\?.*|feed|leaders)|markets\/(politicians|supply)|strait\/theaters)$/;
 let failed = 0;
 let skipped = 0;
 let bytes = 0;
@@ -109,13 +117,15 @@ async function pool(items, size, fn) {
   const queue = [...items];
   let done = 0;
   const total = items.length;
-  await Promise.all(Array.from({ length: Math.min(size, items.length) }, async () => {
-    while (queue.length) {
-      await fn(queue.shift());
-      done += 1;
-      if (total >= 50 && done % 50 === 0) console.log(`  ${done}/${total}`);
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: Math.min(size, items.length) }, async () => {
+      while (queue.length) {
+        await fn(queue.shift());
+        done += 1;
+        if (total >= 50 && done % 50 === 0) console.log(`  ${done}/${total}`);
+      }
+    }),
+  );
 }
 
 /** Minimum spacing between Yahoo-backed requests from this script (charts and dossier quotes). Free for routes already on disk. */
@@ -129,11 +139,16 @@ async function yahooSlot(route, ms = 350) {
 }
 
 const okBody = (body) => body && body.ok !== false;
-const phase = (name) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${name} · ${written.size} routes · ${(bytes / 1e6).toFixed(1)} MB`);
+const phase = (name) =>
+  console.log(
+    `[${new Date().toISOString().slice(11, 19)}] ${name} · ${written.size} routes · ${(bytes / 1e6).toFixed(1)} MB`,
+  );
 
 const fixed = snapshotSamples();
 
-console.log(`snapshot from ${BASE} · members ${arg("members", "all")} · tickers ${arg("tickers", "all")} · spans ${SPANS.join(",")} · contracts ${CONTRACTS}${RESUME ? " · resume" : ""}`);
+console.log(
+  `snapshot from ${BASE} · members ${arg("members", "all")} · tickers ${arg("tickers", "all")} · spans ${SPANS.join(",")} · contracts ${CONTRACTS}${RESUME ? " · resume" : ""}`,
+);
 await pool(fixed, 4, (r) => grab(r));
 if (!written.has("/api/health")) {
   console.error(`no API at ${BASE}; leaving demo/snapshot untouched`);
@@ -141,8 +156,13 @@ if (!written.has("/api/health")) {
 }
 
 phase("air, votes, bills, committees");
-await pool(bodies.get("/api/strait/theaters")?.items || [], 2, (t) => grab(`/api/air?theater=${encodeURIComponent(t.id)}`));
-const votes = [...(bodies.get("/api/congress/votes?chamber=house")?.items || []), ...(bodies.get("/api/congress/votes?chamber=senate")?.items || [])];
+await pool(bodies.get("/api/strait/theaters")?.items || [], 2, (t) =>
+  grab(`/api/air?theater=${encodeURIComponent(t.id)}`),
+);
+const votes = [
+  ...(bodies.get("/api/congress/votes?chamber=house")?.items || []),
+  ...(bodies.get("/api/congress/votes?chamber=senate")?.items || []),
+];
 await pool(votes, 4, (v) => grab(`/api/congress/votes/${v.chamber}/${v.congress}/${v.session}/${v.roll}`));
 await pool(bodies.get("/api/congress/bills")?.items || [], 4, async (b) => {
   const id = encodeURIComponent(b.id);
@@ -162,10 +182,14 @@ for (const t of trades) if (t.bioguide) counts.set(t.bioguide, (counts.get(t.bio
 const traders = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
 const feed = bodies.get("/api/congress/feed") || {};
 const lead = bodies.get("/api/congress/leaders") || {};
-const featured = [feed.latest, feed.late, feed.biggest, lead.excessTop, lead.excessBottom, lead.late].flatMap((list) => list || []).map((t) => t.bioguide).filter(Boolean);
-const members = MEMBERS === Infinity
-  ? [...new Set([...traders, ...featured, ...roster.map((m) => m.bioguide)])]
-  : [...new Set([...traders.slice(0, MEMBERS), ...featured])];
+const featured = [feed.latest, feed.late, feed.biggest, lead.excessTop, lead.excessBottom, lead.late]
+  .flatMap((list) => list || [])
+  .map((t) => t.bioguide)
+  .filter(Boolean);
+const members =
+  MEMBERS === Infinity
+    ? [...new Set([...traders, ...featured, ...roster.map((m) => m.bioguide)])]
+    : [...new Set([...traders.slice(0, MEMBERS), ...featured])];
 
 phase(`members (${members.length})`);
 await pool(members, 3, async (id) => {
@@ -173,7 +197,11 @@ await pool(members, 3, async (id) => {
   await grab(`/api/congress/member/${id}/trades`);
   await grab(`/api/congress/member/${id}/timeline`);
 });
-await pool(roster.filter((m) => !members.includes(m.bioguide)), 4, (m) => grab(`/api/congress/member/${m.bioguide}?chamber=${m.chamber}`));
+await pool(
+  roster.filter((m) => !members.includes(m.bioguide)),
+  4,
+  (m) => grab(`/api/congress/member/${m.bioguide}?chamber=${m.chamber}`),
+);
 
 const tickerRows = bodies.get("/api/tickers")?.items || bodies.get("/api/tickers")?.tickers || [];
 const joined = new Set(tickerRows.map((t) => t.symbol));
@@ -193,7 +221,9 @@ await pool(symbols, 2, async (s) => {
     await grab(route, { accept: okBody, retryMs: 8000 });
   }
 });
-await pool(bodies.get("/api/markets/supply")?.items || [], 4, (s) => grab(`/api/markets/supply/${encodeURIComponent(s)}`));
+await pool(bodies.get("/api/markets/supply")?.items || [], 4, (s) =>
+  grab(`/api/markets/supply/${encodeURIComponent(s)}`),
+);
 
 phase("contracts");
 const contractNotes = [];
@@ -205,22 +235,34 @@ if (CONTRACTS !== "none") {
   }
 }
 if (CONTRACTS === "all") {
-  const code = (m) => (m.chamber === "senate" || !m.district || m.district === "0" ? m.state : `${m.state}-${String(m.district).padStart(2, "0")}`);
+  const code = (m) =>
+    m.chamber === "senate" || !m.district || m.district === "0"
+      ? m.state
+      : `${m.state}-${String(m.district).padStart(2, "0")}`;
   const scoped = [
     ...roster.map((m) => `member=${m.bioguide}`),
     ...[...new Set(roster.map(code))].map((c) => `place=${c}`),
     ...[...new Set(roster.map((m) => m.state))].map((s) => `place=${s}`),
-    ...symbols.map((s) => `symbol=${encodeURIComponent(s)}`)
+    ...symbols.map((s) => `symbol=${encodeURIComponent(s)}`),
   ];
   let streak = 0;
   let stopped = 0;
   let missing = 0;
   await pool([...new Set(scoped)], 2, async (q) => {
-    if (streak >= 8) { stopped += 1; return; }
+    if (streak >= 8) {
+      stopped += 1;
+      return;
+    }
     const body = await grab(`/api/contracts/feed?sort=recent&days=30&${q}`, { accept: okBody, timeoutMs: 120_000 });
-    if (!body || body.rejected) { streak += 1; missing += 1; } else streak = 0;
+    if (!body || body.rejected) {
+      streak += 1;
+      missing += 1;
+    } else streak = 0;
   });
-  if (missing || stopped) contractNotes.push(`${missing} scoped contract feeds failed${stopped ? `; stopped after 8 failures in a row, ${stopped} not tried` : ""}`);
+  if (missing || stopped)
+    contractNotes.push(
+      `${missing} scoped contract feeds failed${stopped ? `; stopped after 8 failures in a row, ${stopped} not tried` : ""}`,
+    );
   console.log(contractNotes.at(-1) || `scoped contract feeds: ${scoped.length}`);
 }
 
@@ -237,10 +279,12 @@ const manifest = {
   contracts: CONTRACTS,
   contractNotes,
   failed,
-  rejected: skipped
+  rejected: skipped,
 };
 fs.writeFileSync(path.join(PARTIAL, "manifest.json"), JSON.stringify(manifest, null, 1));
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.renameSync(PARTIAL, OUT);
 phase("done");
-console.log(`wrote ${written.size} routes (${(bytes / 1e6).toFixed(1)} MB) to demo/snapshot · ${members.length} members · ${symbols.length} tickers · ${failed} failed · ${skipped} rejected`);
+console.log(
+  `wrote ${written.size} routes (${(bytes / 1e6).toFixed(1)} MB) to demo/snapshot · ${members.length} members · ${symbols.length} tickers · ${failed} failed · ${skipped} rejected`,
+);

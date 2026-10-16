@@ -11,7 +11,7 @@ export async function memberIndex(db) {
         name: m.name || "",
         state: m.state,
         district: m.district == null ? "" : String(m.district),
-        party: m.partyName || m.party || ""
+        party: m.partyName || m.party || "",
       });
     }
     if (members.length < 250) break;

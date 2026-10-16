@@ -32,25 +32,44 @@ const r4 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10_0
 export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed }) {
   const run = runBacktest({ signals: variant.signals, bars, benchBars, rules: variant.spec.rules });
   const s = run.stats;
-  const base = { id: variant.id, dim: variant.dim, label: variant.label, spec: variant.spec, signals: variant.signals.length, n: s?.trades || 0 };
+  const base = {
+    id: variant.id,
+    dim: variant.dim,
+    label: variant.label,
+    spec: variant.spec,
+    signals: variant.signals.length,
+    n: s?.trades || 0,
+  };
   if (!s) return { ...base, stats: null };
   const reality = realityCheck({ trades: run.trades, bars, benchBars, rules: run.rules, seed, placebo: false });
   const ex = run.trades.map((t) => t.excess);
-  const byWeek = conservativeT(clusteredT(ex, run.trades.map((t) => weekOf(dayOf(t.entry)))));
+  const byWeek = conservativeT(
+    clusteredT(
+      ex,
+      run.trades.map((t) => weekOf(dayOf(t.entry))),
+    ),
+  );
   const members = reality.cluster?.members || 0;
   const useMember = members >= SEARCH.minMembersForMemberCluster && reality.cluster?.pOne != null;
   return {
     ...base,
     stats: {
-      avgExcess: s.avgExcess, avgTrade: s.avgTrade, excessTotal: s.excessTotal, total: s.total, benchmarkTotal: s.benchmarkTotal,
-      hitRate: s.hitRate, beatRate: s.beatRate, from: s.from, to: s.to
+      avgExcess: s.avgExcess,
+      avgTrade: s.avgTrade,
+      excessTotal: s.excessTotal,
+      total: s.total,
+      benchmarkTotal: s.benchmarkTotal,
+      hitRate: s.hitRate,
+      beatRate: s.beatRate,
+      from: s.from,
+      to: s.to,
     },
     ci: reality.bootstrap?.meanExcess || null,
     members,
     nEff: reality.cluster?.nEff ?? null,
     t: useMember ? reality.cluster.t : r4(byWeek?.t),
     p: useMember ? reality.cluster.pOne : r4(byWeek?.pOne),
-    pBasis: useMember ? "member" : "week"
+    pBasis: useMember ? "member" : "week",
   };
 }
 
@@ -61,10 +80,22 @@ export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed 
 export function rankFindings(rows, { minTrades = SEARCH.minTrades, fdr = SEARCH.fdr } = {}) {
   const tested = rows.filter((r) => r.stats && r.n >= minTrades && r.p != null);
   const q = bhQValues(tested.map((r) => r.p));
-  const ranked = tested.map((r, i) => ({ ...r, q: r4(q[i]), passes: q[i] <= fdr && (r.stats.avgExcess ?? 0) > 0 }))
-    .sort((a, b) => (b.stats.avgExcess ?? -Infinity) - (a.stats.avgExcess ?? -Infinity) || String(a.id).localeCompare(String(b.id)));
-  const untested = rows.filter((r) => !tested.includes(r)).map((r) => ({ id: r.id, dim: r.dim, label: r.label, n: r.n, signals: r.signals }));
-  return { built: rows.length, tested: tested.length, passing: ranked.filter((r) => r.passes).length, findings: ranked, untested };
+  const ranked = tested
+    .map((r, i) => ({ ...r, q: r4(q[i]), passes: q[i] <= fdr && (r.stats.avgExcess ?? 0) > 0 }))
+    .sort(
+      (a, b) =>
+        (b.stats.avgExcess ?? -Infinity) - (a.stats.avgExcess ?? -Infinity) || String(a.id).localeCompare(String(b.id)),
+    );
+  const untested = rows
+    .filter((r) => !tested.includes(r))
+    .map((r) => ({ id: r.id, dim: r.dim, label: r.label, n: r.n, signals: r.signals }));
+  return {
+    built: rows.length,
+    tested: tested.length,
+    passing: ranked.filter((r) => r.passes).length,
+    findings: ranked,
+    untested,
+  };
 }
 
 /** The warning shown with every search, with the counts filled in. */
@@ -76,7 +107,7 @@ export function searchWarning({ built, tested, passing }, { minTrades = SEARCH.m
     passing
       ? `${passing} pass a false discovery rate of ${fdr * 100}% (Benjamini–Hochberg q ≤ ${fdr}); expect about ${expectedFalse} of those to be false anyway.`
       : `None pass a false discovery rate of ${fdr * 100}% (Benjamini–Hochberg q ≤ ${fdr}).`,
-    "Variants overlap (the same trades sit in many), all are in-sample on one period, and a pass is a lead to check out of sample, not an edge."
+    "Variants overlap (the same trades sit in many), all are in-sample on one period, and a pass is a lead to check out of sample, not an edge.",
   ].join(" ");
 }
 
@@ -84,7 +115,16 @@ export function searchWarning({ built, tested, passing }, { minTrades = SEARCH.m
  * Evaluate every variant, rank, then run the full check (with placebo) on the top `top` rows. `onProgress(done, total)`
  * is called after each variant. Deterministic for a given seed.
  */
-export function evaluateVariants({ variants, bars, benchBars, minTrades = SEARCH.minTrades, fdr = SEARCH.fdr, top = SEARCH.top, seed = REALITY.seed, onProgress = () => {} }) {
+export function evaluateVariants({
+  variants,
+  bars,
+  benchBars,
+  minTrades = SEARCH.minTrades,
+  fdr = SEARCH.fdr,
+  top = SEARCH.top,
+  seed = REALITY.seed,
+  onProgress = () => {},
+}) {
   const rows = [];
   const total = variants.length + top;
   variants.forEach((variant, i) => {

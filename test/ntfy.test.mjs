@@ -6,7 +6,17 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EventEmitter } from "node:events";
-import { buildMessage, envSettings, inQuiet, maskTopic, mergeSettings, parseQuiet, publicSettings, shouldNotify, topicFrom } from "../shared/notify.mjs";
+import {
+  buildMessage,
+  envSettings,
+  inQuiet,
+  maskTopic,
+  mergeSettings,
+  parseQuiet,
+  publicSettings,
+  shouldNotify,
+  topicFrom,
+} from "../shared/notify.mjs";
 import { createNotifier, startNotify } from "../server/domain/notify/index.mjs";
 import { openDb } from "../server/lib/db.mjs";
 
@@ -21,7 +31,12 @@ function tempDb() {
   const db = openDb(root);
   if (prev == null) delete process.env.INTEL_CACHE;
   else process.env.INTEL_CACHE = prev;
-  return { db, cleanup: () => { for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true }); } };
+  return {
+    db,
+    cleanup: () => {
+      for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true });
+    },
+  };
 }
 
 /** A fake ntfy server that records every publish; `status` sets the next answers. */
@@ -32,13 +47,24 @@ async function fakeNtfy() {
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
-      got.push({ method: req.method, url: req.url, auth: req.headers.authorization || "", type: req.headers["content-type"], body: JSON.parse(body || "{}") });
+      got.push({
+        method: req.method,
+        url: req.url,
+        auth: req.headers.authorization || "",
+        type: req.headers["content-type"],
+        body: JSON.parse(body || "{}"),
+      });
       res.writeHead(state.status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(state.status === 200 ? { id: `m${got.length}`, event: "message" } : { error: "nope" }));
     });
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
-  return { got, state, url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) };
+  return {
+    got,
+    state,
+    url: `http://127.0.0.1:${server.address().port}`,
+    close: () => new Promise((r) => server.close(r)),
+  };
 }
 
 const row = (id, extra = {}) => ({
@@ -50,12 +76,23 @@ const row = (id, extra = {}) => ({
   source: "SEC EDGAR Form 4",
   link: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000001/0001045810-26-000001-index.htm",
   pins: [{ kind: "symbol", id: "NVDA", label: "NVDA" }],
-  live: { symbol: "NVDA", eventAt: "2026-10-08", publishedAt: "2026-10-09T14:20:00Z", detection: "detected 41s after it was published", backfill: false },
-  ...extra
+  live: {
+    symbol: "NVDA",
+    eventAt: "2026-10-08",
+    publishedAt: "2026-10-09T14:20:00Z",
+    detection: "detected 41s after it was published",
+    backfill: false,
+  },
+  ...extra,
 });
 
 test("settings from env: defaults, quiet hours, click URL from the hosted origin", () => {
-  const s = envSettings({ NTFY_TOPIC: TOPIC, NTFY_QUIET: "22:00-07:00", PUBLIC_ORIGIN: "https://intel.example.com/", PUBLIC_URL: "https://demo.example.com" });
+  const s = envSettings({
+    NTFY_TOPIC: TOPIC,
+    NTFY_QUIET: "22:00-07:00",
+    PUBLIC_ORIGIN: "https://intel.example.com/",
+    PUBLIC_URL: "https://demo.example.com",
+  });
   assert.equal(s.server, "https://ntfy.sh");
   assert.equal(s.minSeverity, "elevated");
   assert.deepEqual(s.quiet, { start: 1320, end: 420 });
@@ -90,7 +127,10 @@ test("which rows qualify: severity floor, kind toggles, quiet hours in New York 
   assert.equal(inQuiet(NOW, s.quiet), false);
   assert.equal(shouldNotify(row("e"), s, night).why, "quiet hours");
   assert.equal(shouldNotify(row("f", { severity: "high" }), s, night).send, true, "HIGH passes quiet hours by default");
-  assert.equal(shouldNotify(row("g", { severity: "high" }), mergeSettings(s, { quietHigh: false }), night).why, "quiet hours");
+  assert.equal(
+    shouldNotify(row("g", { severity: "high" }), mergeSettings(s, { quietHigh: false }), night).why,
+    "quiet hours",
+  );
   assert.equal(shouldNotify(row("h"), mergeSettings(s, { enabled: false }), NOW).why, "phone notifications are off");
   assert.equal(shouldNotify(row("i"), mergeSettings(envSettings({}), { enabled: true }), NOW).why, "no NTFY_TOPIC");
 });
@@ -142,9 +182,16 @@ test("notifier: hourly limit holds the rest and the next message says how many",
   const { db, cleanup } = tempDb();
   try {
     let t = NOW;
-    const n = createNotifier(db, { env: { NTFY_TOPIC: TOPIC, NTFY_SERVER: fake.url, NTFY_MAX_PER_HOUR: "2" }, now: () => t, log: () => {} });
+    const n = createNotifier(db, {
+      env: { NTFY_TOPIC: TOPIC, NTFY_SERVER: fake.url, NTFY_MAX_PER_HOUR: "2" },
+      now: () => t,
+      log: () => {},
+    });
     const results = await Promise.all(["a", "b", "c", "d"].map((id) => n.handle(row(id))));
-    assert.deepEqual(results.map((r) => r.sent), [true, true, false, false]);
+    assert.deepEqual(
+      results.map((r) => r.sent),
+      [true, true, false, false],
+    );
     assert.equal(results[2].why, "hourly limit");
     assert.equal(n.view().held, 2);
     t += 61 * 60_000;

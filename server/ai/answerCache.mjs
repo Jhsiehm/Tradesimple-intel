@@ -12,7 +12,9 @@ const KEEP_MS = 24 * 3_600_000;
 
 function ensure(db) {
   if (ready.has(db)) return;
-  db.exec("CREATE TABLE IF NOT EXISTS ask_answers (key TEXT PRIMARY KEY, at INTEGER NOT NULL, model TEXT NOT NULL, body TEXT NOT NULL)");
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS ask_answers (key TEXT PRIMARY KEY, at INTEGER NOT NULL, model TEXT NOT NULL, body TEXT NOT NULL)",
+  );
   ready.add(db);
 }
 
@@ -32,15 +34,20 @@ export function findAnswer(db, key, now, ttlMs) {
   ensure(db);
   const row = db.prepare("SELECT at, model, body FROM ask_answers WHERE key = ?").get(key);
   if (!row || now - row.at > ttlMs) return null;
-  try { return { at: row.at, model: row.model, ...JSON.parse(row.body) }; } catch { return null; }
+  try {
+    return { at: row.at, model: row.model, ...JSON.parse(row.body) };
+  } catch {
+    return null;
+  }
 }
 
 /** Stores `{ events, calls: [{ tool, args, hash }] }` and drops entries older than a day. */
 export function keepAnswer(db, key, { at, model, events, calls }) {
   if (!usable(db)) return;
   ensure(db);
-  db.prepare("INSERT INTO ask_answers (key, at, model, body) VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET at = excluded.at, model = excluded.model, body = excluded.body")
-    .run(key, at, String(model || ""), JSON.stringify({ events, calls }));
+  db.prepare(
+    "INSERT INTO ask_answers (key, at, model, body) VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET at = excluded.at, model = excluded.model, body = excluded.body",
+  ).run(key, at, String(model || ""), JSON.stringify({ events, calls }));
   db.prepare("DELETE FROM ask_answers WHERE at < ?").run(at - KEEP_MS);
 }
 

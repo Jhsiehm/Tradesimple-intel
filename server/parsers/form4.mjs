@@ -7,9 +7,13 @@
  */
 export function parseForm4(xml) {
   const owner = xmlVal(xml, "rptOwnerName");
-  const title = xmlVal(xml, "officerTitle") || (xmlVal(xml, "isDirector") === "1" || xmlVal(xml, "isDirector") === "true" ? "Director" : "") || (xmlVal(xml, "isTenPercentOwner") === "1" ? "10% owner" : "");
+  const title =
+    xmlVal(xml, "officerTitle") ||
+    (xmlVal(xml, "isDirector") === "1" || xmlVal(xml, "isDirector") === "true" ? "Director" : "") ||
+    (xmlVal(xml, "isTenPercentOwner") === "1" ? "10% owner" : "");
   const planNotes = new Set();
-  for (const m of xml.matchAll(/<footnote\s+id="([^"]+)"\s*>([\s\S]*?)<\/footnote>/g)) if (/10b5-1/i.test(m[2])) planNotes.add(m[1]);
+  for (const m of xml.matchAll(/<footnote\s+id="([^"]+)"\s*>([\s\S]*?)<\/footnote>/g))
+    if (/10b5-1/i.test(m[2])) planNotes.add(m[1]);
   const box = xmlVal(xml, "aff10b5One");
   const checked = box === "1" || box === "true";
   const lines = (xml.match(/<nonDerivativeTransaction>[\s\S]*?<\/nonDerivativeTransaction>/g) || []).map((block) => ({
@@ -19,13 +23,24 @@ export function parseForm4(xml) {
     price: Number(xmlVal(block, "transactionPricePerShare")) || null,
     ad: xmlVal(block, "transactionAcquiredDisposedCode"),
     owned: Number(xmlVal(block, "sharesOwnedFollowingTransaction")) || null,
-    plan: planNotes.size ? [...block.matchAll(/<footnoteId\s+id="([^"]+)"/g)].some((m) => planNotes.has(m[1])) : checked
+    plan: planNotes.size
+      ? [...block.matchAll(/<footnoteId\s+id="([^"]+)"/g)].some((m) => planNotes.has(m[1]))
+      : checked,
   }));
-  return { owner: titleCase(owner), title, plan10b5: checked || planNotes.size > 0, issuerCik: xmlVal(xml, "issuerCik").replace(/\D/g, ""), issuerSymbol: xmlVal(xml, "issuerTradingSymbol").toUpperCase(), lines };
+  return {
+    owner: titleCase(owner),
+    title,
+    plan10b5: checked || planNotes.size > 0,
+    issuerCik: xmlVal(xml, "issuerCik").replace(/\D/g, ""),
+    issuerSymbol: xmlVal(xml, "issuerTradingSymbol").toUpperCase(),
+    lines,
+  };
 }
 
 function xmlVal(xml, name) {
-  const m = new RegExp(`<${name}>\\s*(?:<value>)?\\s*([^<]*?)\\s*(?:</value>)?\\s*(?:<footnoteId[^>]*/>\\s*)*</${name}>`).exec(xml);
+  const m = new RegExp(
+    `<${name}>\\s*(?:<value>)?\\s*([^<]*?)\\s*(?:</value>)?\\s*(?:<footnoteId[^>]*/>\\s*)*</${name}>`,
+  ).exec(xml);
   return m ? decodeXml(m[1].trim()) : "";
 }
 
@@ -39,5 +54,8 @@ function decodeXml(value) {
 }
 
 export function titleCase(value) {
-  return String(value || "").toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase()).replace(/\b(Llc|Lp|Inc|Ltd|Plc)\b/g, (s) => s.toUpperCase());
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (c) => c.toUpperCase())
+    .replace(/\b(Llc|Lp|Inc|Ltd|Plc)\b/g, (s) => s.toUpperCase());
 }

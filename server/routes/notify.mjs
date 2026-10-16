@@ -13,7 +13,8 @@ export const handlers = {
     if (method(req) !== "PUT") return bad(405, "Use GET or PUT.");
     const b = await readJson(req, 4 * 1024);
     if (!b.ok) return bad(b.status, b.error);
-    if (!b.value || typeof b.value !== "object" || Array.isArray(b.value)) return bad(400, "Body must be an object: { enabled, minSeverity, kinds, quiet, quietHigh }.");
+    if (!b.value || typeof b.value !== "object" || Array.isArray(b.value))
+      return bad(400, "Body must be an object: { enabled, minSeverity, kinds, quiet, quietHigh }.");
     return n.save(b.value);
   },
 
@@ -22,5 +23,5 @@ export const handlers = {
     if (method(req) !== "POST") return bad(405, "Use POST.");
     const out = await notifierFor(db).test();
     return out.ok ? out : bad(out.status || 502, out.error);
-  }
+  },
 };

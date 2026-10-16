@@ -13,9 +13,18 @@ export const taskModel = (cfg, env = process.env) => String(env.ASK_STRONG_MODEL
  * One scheduled free-form prompt through the same pipeline as POST /api/ask, with no browser on the other end: the
  * events are folded into a stored turn. Chips are settled with defaults (`acceptDefaults`) since nobody can pick one.
  */
-export async function runPromptTask({ db, task, env = process.env, now = Date.now, signal, makeProvider = (cfg) => createProvider(cfg, askKey(cfg, env)), execute = runTool }) {
+export async function runPromptTask({
+  db,
+  task,
+  env = process.env,
+  now = Date.now,
+  signal,
+  makeProvider = (cfg) => createProvider(cfg, askKey(cfg, env)),
+  execute = runTool,
+}) {
   const cfg = askConfig(env);
-  if (!cfg.configured) return { ok: false, skipped: true, error: cfg.error || "Ask is not configured — add a key to .env.local" };
+  if (!cfg.configured)
+    return { ok: false, skipped: true, error: cfg.error || "Ask is not configured — add a key to .env.local" };
   // Scheduled runs count toward the monthly Ask budget and follow its fallback and hard stop.
   const spend = spendState(db, env, now(), cfg.provider);
   if (spend?.level === "stop") return { ok: false, skipped: true, error: spend.note };
@@ -23,7 +32,14 @@ export async function runPromptTask({ db, task, env = process.env, now = Date.no
   const startedAt = now();
   const turn = { ...blankTurn(task.prompt, startedAt), model };
   if (spend?.note) collectEvent(turn, { type: "plan_note", note: spend.note });
-  askLog({ event: "task_ask", task: task.id, question: task.prompt.slice(0, 160), provider: cfg.provider, model, budget: spend?.level || "" });
+  askLog({
+    event: "task_ask",
+    task: task.id,
+    question: task.prompt.slice(0, 160),
+    provider: cfg.provider,
+    model,
+    budget: spend?.level || "",
+  });
   try {
     await runAsk({
       question: task.prompt,
@@ -36,12 +52,19 @@ export async function runPromptTask({ db, task, env = process.env, now = Date.no
       acceptDefaults: true,
       signal,
       log: askLog,
-      now
+      now,
     });
   } catch (err) {
     collectEvent(turn, { type: "error", error: err?.message || "Ask failed." });
   }
-  if (turn.phase !== "done" && turn.phase !== "error") collectEvent(turn, { type: "error", error: "The answer stopped before it finished." });
+  if (turn.phase !== "done" && turn.phase !== "error")
+    collectEvent(turn, { type: "error", error: "The answer stopped before it finished." });
   const finishedAt = now();
-  return { ok: turn.phase === "done", error: turn.error, turn, model, ...promptLabels(turn, { startedAt, finishedAt, model }) };
+  return {
+    ok: turn.phase === "done",
+    error: turn.error,
+    turn,
+    model,
+    ...promptLabels(turn, { startedAt, finishedAt, model }),
+  };
 }

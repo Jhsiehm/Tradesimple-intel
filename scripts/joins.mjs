@@ -32,9 +32,11 @@ async function json(url, headers = {}, tries = 3) {
 
 async function pool(list, size, fn) {
   let next = 0;
-  await Promise.all(Array.from({ length: size }, async () => {
-    while (next < list.length) await fn(list[next++]);
-  }));
+  await Promise.all(
+    Array.from({ length: size }, async () => {
+      while (next < list.length) await fn(list[next++]);
+    }),
+  );
 }
 
 async function secProfile(cik) {
@@ -44,7 +46,8 @@ async function secProfile(cik) {
 }
 
 async function district(address) {
-  if (!address?.street1 || address.isForeignLocation === 1 || !/^[A-Z]{2}$/.test(address.stateOrCountry || "")) return null;
+  if (!address?.street1 || address.isForeignLocation === 1 || !/^[A-Z]{2}$/.test(address.stateOrCountry || ""))
+    return null;
   const streets = [address.street1, address.street2].filter(Boolean);
   for (const street of streets) {
     const url = new URL("https://geocoding.geo.census.gov/geocoder/geographies/address");
@@ -55,7 +58,7 @@ async function district(address) {
       zip: String(address.zipCode || "").slice(0, 5),
       benchmark: "Public_AR_Current",
       vintage: "ACS2025_Current",
-      format: "json"
+      format: "json",
     });
     const body = await json(url);
     const match = body?.result?.addressMatches?.[0];
@@ -68,7 +71,7 @@ async function district(address) {
       atLarge: cd && !code ? cd.BASENAME : null,
       lat: Number(match.coordinates.y.toFixed(4)),
       lon: Number(match.coordinates.x.toFixed(4)),
-      matched: match.matchedAddress
+      matched: match.matchedAddress,
     };
   }
   return null;
@@ -93,14 +96,22 @@ async function pacIndex() {
   const year = new Date().getUTCFullYear();
   const cycle = year % 2 ? year + 1 : year;
   const lines = [];
-  for (const cy of [cycle, cycle - 2]) lines.push(...(await fecBulk(`cm${String(cy).slice(2)}`, cy, "cm.txt")).split("\n"));
+  for (const cy of [cycle, cycle - 2])
+    lines.push(...(await fecBulk(`cm${String(cy).slice(2)}`, cy, "cm.txt")).split("\n"));
   return pacsByOrg(lines);
 }
 
 async function marketCaps() {
-  const body = await json("https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true", { "User-Agent": "Mozilla/5.0", Accept: "application/json" });
+  const body = await json("https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true", {
+    "User-Agent": "Mozilla/5.0",
+    Accept: "application/json",
+  });
   const caps = new Map();
-  for (const r of body?.data?.rows || []) caps.set(String(r.symbol).trim().replace(/[/.^]/g, "-"), Number(String(r.marketCap || "").replace(/[$,]/g, "")) || 0);
+  for (const r of body?.data?.rows || [])
+    caps.set(
+      String(r.symbol).trim().replace(/[/.^]/g, "-"),
+      Number(String(r.marketCap || "").replace(/[$,]/g, "")) || 0,
+    );
   return caps;
 }
 
@@ -112,7 +123,12 @@ const queue = rows
   .filter((r) => r.cik)
   .sort((a, b) => (caps.get(b.symbol) || 0) - (caps.get(a.symbol) || 0))
   .slice(0, COUNT);
-console.log(`Deriving joins for ${queue.length} names (${queue.slice(0, 8).map((r) => r.symbol).join(", ")}…)`);
+console.log(
+  `Deriving joins for ${queue.length} names (${queue
+    .slice(0, 8)
+    .map((r) => r.symbol)
+    .join(", ")}…)`,
+);
 
 const pacs = await pacIndex();
 console.log(`FEC committee master: ${pacs.size} corporate connected orgs`);
@@ -130,7 +146,8 @@ await pool(queue, 3, async (row) => {
     row.lat = geo.lat;
     row.lon = geo.lon;
   }
-  if (sec.address?.stateOrCountry && /^[A-Z]{2}$/.test(sec.address.stateOrCountry)) row.state = sec.address.stateOrCountry;
+  if (sec.address?.stateOrCountry && /^[A-Z]{2}$/.test(sec.address.stateOrCountry))
+    row.state = sec.address.stateOrCountry;
   row.ldaClients = clients;
   row.recipients = (targets.length ? targets : [norm(sec.name)]).map((t) => t.replace(/ AND /g, " & "));
   row.pacs = pacIds;
@@ -139,13 +156,25 @@ await pool(queue, 3, async (row) => {
     auto: true,
     derived: today,
     secName: sec.name,
-    district: geo?.code ? `SEC business address → Census geocoder (${geo.matched}) → 119th CD` : geo?.atLarge ? `${geo.atLarge}; no voting seat joined` : sec.address?.isForeignLocation === 1 || !/^[A-Z]{2}$/.test(sec.address?.stateOrCountry || "") ? "SEC business address is outside the US" : "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
-    lda: clients.length ? `LDA client names equal to "${targets.join('" / "')}" after suffix stripping` : "No exact LDA client name match",
-    pacs: pacIds.length ? "FEC committee master: connected organization equals company name (corporate SSF)" : "No FEC connected-organization match",
-    recipients: "SEC conformed and index names without corporate suffix (USAspending text search)"
+    district: geo?.code
+      ? `SEC business address → Census geocoder (${geo.matched}) → 119th CD`
+      : geo?.atLarge
+        ? `${geo.atLarge}; no voting seat joined`
+        : sec.address?.isForeignLocation === 1 || !/^[A-Z]{2}$/.test(sec.address?.stateOrCountry || "")
+          ? "SEC business address is outside the US"
+          : "Census geocoder has no street match for the SEC business address (campus or P.O. box); left empty",
+    lda: clients.length
+      ? `LDA client names equal to "${targets.join('" / "')}" after suffix stripping`
+      : "No exact LDA client name match",
+    pacs: pacIds.length
+      ? "FEC committee master: connected organization equals company name (corporate SSF)"
+      : "No FEC connected-organization match",
+    recipients: "SEC conformed and index names without corporate suffix (USAspending text search)",
   };
   done += 1;
-  console.log(`  ${String(done).padStart(3)} ${row.symbol.padEnd(6)} ${row.districts[0] || "—"}  lda:${clients.length}  pacs:${pacIds.length}  ${sec.name}`);
+  console.log(
+    `  ${String(done).padStart(3)} ${row.symbol.padEnd(6)} ${row.districts[0] || "—"}  lda:${clients.length}  pacs:${pacIds.length}  ${sec.name}`,
+  );
 });
 
 const curatedByCik = new Map(rows.filter((r) => r.core && !r.joinBasis?.auto).map((r) => [r.cik, r]));
@@ -161,7 +190,15 @@ for (const row of rows) {
     lon: twin.lon,
     pacs: twin.pacs,
     core: true,
-    joinBasis: { auto: true, derived: today, shareClassOf: twin.symbol, district: `Same SEC CIK as ${twin.symbol}; joins copied`, lda: `Same as ${twin.symbol}`, pacs: `Same as ${twin.symbol}`, recipients: `Same as ${twin.symbol}` }
+    joinBasis: {
+      auto: true,
+      derived: today,
+      shareClassOf: twin.symbol,
+      district: `Same SEC CIK as ${twin.symbol}; joins copied`,
+      lda: `Same as ${twin.symbol}`,
+      pacs: `Same as ${twin.symbol}`,
+      recipients: `Same as ${twin.symbol}`,
+    },
   });
   console.log(`  ${row.symbol}: share class of ${twin.symbol} (CIK ${row.cik})`);
 }
@@ -169,4 +206,6 @@ for (const row of rows) {
 rows.sort((a, b) => Number(b.core) - Number(a.core) || a.symbol.localeCompare(b.symbol));
 fs.writeFileSync(FILE, `${JSON.stringify(rows, null, 2)}\n`);
 const auto = rows.filter((r) => r.joinBasis?.auto);
-console.log(`${rows.filter((r) => r.core).length} full-join rows (${auto.length} derived) · districts ${auto.filter((r) => r.districts.length).length} · LDA ${auto.filter((r) => r.ldaClients.length).length} · PACs ${auto.filter((r) => r.pacs.length).length}`);
+console.log(
+  `${rows.filter((r) => r.core).length} full-join rows (${auto.length} derived) · districts ${auto.filter((r) => r.districts.length).length} · LDA ${auto.filter((r) => r.ldaClients.length).length} · PACs ${auto.filter((r) => r.pacs.length).length}`,
+);

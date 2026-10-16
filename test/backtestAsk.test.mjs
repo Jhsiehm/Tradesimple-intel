@@ -1,8 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildSpec, clarifyQuestions, cleanPrefs, describeValue, isFollowUp, isPrefClear, isPrefStatement, mergePrefs,
-  parsePrefs, provenanceLine, questionHints, questionSources, specDiff, wantsBacktest, PREFS_VERSION
+  buildSpec,
+  clarifyQuestions,
+  cleanPrefs,
+  describeValue,
+  isFollowUp,
+  isPrefClear,
+  isPrefStatement,
+  mergePrefs,
+  parsePrefs,
+  provenanceLine,
+  questionHints,
+  questionSources,
+  specDiff,
+  wantsBacktest,
+  PREFS_VERSION,
 } from "../shared/backtestAsk.mjs";
 import { cleanSpec } from "../shared/backtestSpec.mjs";
 import { congressSignals, contractSignals, form4Signals } from "../server/domain/backtest/signals.mjs";
@@ -10,7 +23,11 @@ import { congressSignals, contractSignals, form4Signals } from "../server/domain
 const TODAY = "2026-10-09";
 
 test("plain words set hold, benchmark, sides, costs, 10b5-1, hearing window, lag", () => {
-  assert.deepEqual(parsePrefs("I usually want 90-day holds vs SPY, buys only"), { "rules.holdDays": 90, "rules.benchmark": "SPY", "rules.sides": "buy" });
+  assert.deepEqual(parsePrefs("I usually want 90-day holds vs SPY, buys only"), {
+    "rules.holdDays": 90,
+    "rules.benchmark": "SPY",
+    "rules.sides": "buy",
+  });
   assert.equal(parsePrefs("hold 30 days instead")["rules.holdDays"], 30);
   assert.equal(parsePrefs("hold for a year")["rules.holdDays"], 365);
   assert.equal(parsePrefs("2 week hold")["rules.holdDays"], 14);
@@ -33,7 +50,11 @@ test("preference statements and clears are told apart from questions", () => {
 });
 
 test("prefs are versioned, cleaned, and merged; bad values drop", () => {
-  const p = cleanPrefs({ v: PREFS_VERSION, values: { "rules.holdDays": 90, "rules.benchmark": "NOPE", "rules.evil": 1, "filters.include10b51": true }, updated: "x" });
+  const p = cleanPrefs({
+    v: PREFS_VERSION,
+    values: { "rules.holdDays": 90, "rules.benchmark": "NOPE", "rules.evil": 1, "filters.include10b51": true },
+    updated: "x",
+  });
   assert.deepEqual(p.values, { "rules.holdDays": 90, "filters.include10b51": true });
   assert.deepEqual(cleanPrefs({ v: 0, values: { "rules.holdDays": 90 } }).values, {});
   assert.deepEqual(cleanPrefs(null).values, {});
@@ -44,7 +65,11 @@ test("prefs are versioned, cleaned, and merged; bad values drop", () => {
 });
 
 test("questions name sources and windows", () => {
-  assert.deepEqual(questionSources("backtest the last 30 days from all data sources"), ["congress", "form4", "contracts"]);
+  assert.deepEqual(questionSources("backtest the last 30 days from all data sources"), [
+    "congress",
+    "form4",
+    "contracts",
+  ]);
   assert.deepEqual(questionSources("backtest insider buys"), ["form4"]);
   assert.deepEqual(questionSources("backtest contract awards"), ["contracts"]);
   assert.deepEqual(questionSources("backtest it"), ["congress"]);
@@ -61,7 +86,12 @@ test("questions name sources and windows", () => {
 
 test("spec order: defaults ← preferences ← question ← picks, each labeled", () => {
   const prefs = { v: 1, values: { "rules.holdDays": 90, "rules.benchmark": "SECTOR" } };
-  const plan = buildSpec({ question: "backtest congress buys, hold 30 days", today: TODAY, prefs, answers: { "rules.sides": "both" } });
+  const plan = buildSpec({
+    question: "backtest congress buys, hold 30 days",
+    today: TODAY,
+    prefs,
+    answers: { "rules.sides": "both" },
+  });
   assert.equal(plan.spec.rules.holdDays, 30);
   assert.equal(plan.from["rules.holdDays"], "question");
   assert.equal(plan.spec.rules.benchmark, "SECTOR");
@@ -94,40 +124,111 @@ test("follow-ups change the previous run and diff against it", () => {
 
 test("chips only for result-changing fields nothing settles", () => {
   const q = clarifyQuestions({ question: "backtest congress buys", today: TODAY });
-  assert.deepEqual(q.map((x) => x.path), ["rules.holdDays", "rules.benchmark"]);
-  assert.deepEqual(q[0].chips.map((c) => c.value), [30, 90, 365]);
+  assert.deepEqual(
+    q.map((x) => x.path),
+    ["rules.holdDays", "rules.benchmark"],
+  );
+  assert.deepEqual(
+    q[0].chips.map((c) => c.value),
+    [30, 90, 365],
+  );
   assert.equal(q[0].fallback, 90);
-  assert.deepEqual(clarifyQuestions({ question: "backtest congress buys", today: TODAY, prefs: { v: 1, values: { "rules.holdDays": 90, "rules.benchmark": "SPY" } } }), []);
+  assert.deepEqual(
+    clarifyQuestions({
+      question: "backtest congress buys",
+      today: TODAY,
+      prefs: { v: 1, values: { "rules.holdDays": 90, "rules.benchmark": "SPY" } },
+    }),
+    [],
+  );
   assert.deepEqual(clarifyQuestions({ question: "backtest congress buys, 30-day hold vs SPY", today: TODAY }), []);
   assert.deepEqual(clarifyQuestions({ question: "backtest congress buys", today: TODAY, acceptDefaults: true }), []);
   assert.deepEqual(clarifyQuestions({ question: "what did Pelosi buy?", today: TODAY }), []);
   const last30 = clarifyQuestions({ question: "backtest the last 30 days from all data sources", today: TODAY });
-  assert.deepEqual(last30.map((x) => x.path), ["rules.benchmark"]);
-  const committee = clarifyQuestions({ question: "backtest Armed Services members, hold 90 days vs SPY", today: TODAY });
-  assert.deepEqual(committee.map((x) => x.path), ["filters.nearHearingDays"]);
-  assert.deepEqual(clarifyQuestions({ question: "backtest insider buys, hold 90 days vs SPY", today: TODAY }).map((x) => x.path), ["filters.include10b51"]);
-  assert.deepEqual(clarifyQuestions({ question: "backtest contract awards, hold 90 days vs SPY", today: TODAY }).map((x) => x.path), ["filters.contractLagDays"]);
+  assert.deepEqual(
+    last30.map((x) => x.path),
+    ["rules.benchmark"],
+  );
+  const committee = clarifyQuestions({
+    question: "backtest Armed Services members, hold 90 days vs SPY",
+    today: TODAY,
+  });
+  assert.deepEqual(
+    committee.map((x) => x.path),
+    ["filters.nearHearingDays"],
+  );
+  assert.deepEqual(
+    clarifyQuestions({ question: "backtest insider buys, hold 90 days vs SPY", today: TODAY }).map((x) => x.path),
+    ["filters.include10b51"],
+  );
+  assert.deepEqual(
+    clarifyQuestions({ question: "backtest contract awards, hold 90 days vs SPY", today: TODAY }).map((x) => x.path),
+    ["filters.contractLagDays"],
+  );
   const prior = buildSpec({ question: "backtest congress buys", today: TODAY }).spec;
   assert.deepEqual(clarifyQuestions({ question: "hold 30 days instead", prior, today: TODAY }), []);
-  assert.deepEqual(clarifyQuestions({ question: "backtest congress buys", today: TODAY, answers: { "rules.holdDays": 30, "rules.benchmark": "SPY" } }), []);
+  assert.deepEqual(
+    clarifyQuestions({
+      question: "backtest congress buys",
+      today: TODAY,
+      answers: { "rules.holdDays": 30, "rules.benchmark": "SPY" },
+    }),
+    [],
+  );
   assert.equal(wantsBacktest("How would Pelosi's buys have done?"), true);
 });
 
 test("new filters change signals: exclude members, 10b5-1, contract lag", () => {
   const f = (x) => cleanSpec({ source: "congress", filters: x }).spec.filters;
   const trades = [
-    { id: "a", side: "buy", symbol: "NVDA", inJoin: true, filed: "2026-01-10", traded: "2026-01-02", person: "Gilbert Cisneros", bioguide: "C001123" },
-    { id: "b", side: "buy", symbol: "NVDA", inJoin: true, filed: "2026-01-10", traded: "2026-01-02", person: "Nancy Pelosi", bioguide: "P000197" }
+    {
+      id: "a",
+      side: "buy",
+      symbol: "NVDA",
+      inJoin: true,
+      filed: "2026-01-10",
+      traded: "2026-01-02",
+      person: "Gilbert Cisneros",
+      bioguide: "C001123",
+    },
+    {
+      id: "b",
+      side: "buy",
+      symbol: "NVDA",
+      inJoin: true,
+      filed: "2026-01-10",
+      traded: "2026-01-02",
+      person: "Nancy Pelosi",
+      bioguide: "P000197",
+    },
   ];
   const sec = () => "Information Technology";
   assert.equal(congressSignals({ trades, filters: f({}), sectorOf: sec }).signals.length, 2);
   const out = congressSignals({ trades, filters: f({ excludeMembers: ["cisneros"] }), sectorOf: sec });
-  assert.deepEqual(out.signals.map((s) => s.id), ["b"]);
+  assert.deepEqual(
+    out.signals.map((s) => s.id),
+    ["b"],
+  );
   assert.equal(out.dropped.excludedMember, 1);
-  const rows = [{ id: "p", side: "buy", code: "P", plan: true, filed: "2026-01-10", traded: "2026-01-08", symbol: "NVDA", person: "X", value: 1 }];
+  const rows = [
+    {
+      id: "p",
+      side: "buy",
+      code: "P",
+      plan: true,
+      filed: "2026-01-10",
+      traded: "2026-01-08",
+      symbol: "NVDA",
+      person: "X",
+      value: 1,
+    },
+  ];
   assert.equal(form4Signals({ rows, filters: f({}), sectorOf: sec }).signals.length, 0);
   assert.equal(form4Signals({ rows, filters: f({ include10b51: true }), sectorOf: sec }).signals.length, 1);
   const awards = [{ id: "c", symbol: "LMT", agency: "Department of Defense", date: "2026-01-01", amount: 1e6 }];
   assert.equal(contractSignals({ rows: awards, filters: f({}), sectorOf: sec }).signals[0].signalDate, "2026-04-01");
-  assert.equal(contractSignals({ rows: awards, filters: f({ contractLagDays: 1 }), sectorOf: sec }).signals[0].signalDate, "2026-01-02");
+  assert.equal(
+    contractSignals({ rows: awards, filters: f({ contractLagDays: 1 }), sectorOf: sec }).signals[0].signalDate,
+    "2026-01-02",
+  );
 });

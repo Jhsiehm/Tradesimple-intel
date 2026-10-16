@@ -8,5 +8,8 @@ export function secCurrentAtom(type, { start = 0, count, timeoutMs = 15000 } = {
 
 /** The SGML header page of one filing (period of report, items), through the shared SEC gate. */
 export function secIndexHeaders(cik, accession, { timeoutMs = 15000 } = {}) {
-  return secText(`https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession.replace(/-/g, "")}/${accession}-index-headers.html`, { timeoutMs });
+  return secText(
+    `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession.replace(/-/g, "")}/${accession}-index-headers.html`,
+    { timeoutMs },
+  );
 }

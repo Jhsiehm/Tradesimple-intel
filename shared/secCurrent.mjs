@@ -11,8 +11,20 @@
 export const CURRENT_FEEDS = [
   { id: "form4", type: "4", forms: ["4", "4/A"], role: "Issuer", label: "Form 4" },
   { id: "8k", type: "8-K", forms: ["8-K", "8-K/A"], role: "Filer", label: "8-K" },
-  { id: "13d", type: "SCHEDULE 13D", forms: ["SCHEDULE 13D", "SCHEDULE 13D/A", "SC 13D", "SC 13D/A"], role: "Subject", label: "13D" },
-  { id: "13g", type: "SCHEDULE 13G", forms: ["SCHEDULE 13G", "SCHEDULE 13G/A", "SC 13G", "SC 13G/A"], role: "Subject", label: "13G" }
+  {
+    id: "13d",
+    type: "SCHEDULE 13D",
+    forms: ["SCHEDULE 13D", "SCHEDULE 13D/A", "SC 13D", "SC 13D/A"],
+    role: "Subject",
+    label: "13D",
+  },
+  {
+    id: "13g",
+    type: "SCHEDULE 13G",
+    forms: ["SCHEDULE 13G", "SCHEDULE 13G/A", "SC 13G", "SC 13G/A"],
+    role: "Subject",
+    label: "13G",
+  },
 ];
 
 export const CURRENT_PAGE = 100;
@@ -20,16 +32,26 @@ export const CURRENT_PAGE = 100;
 export const CURRENT_MAX_PAGES = 3;
 
 export function currentUrl(type, { start = 0, count = CURRENT_PAGE } = {}) {
-  const q = new URLSearchParams({ action: "getcurrent", type, company: "", dateb: "", owner: "include", start: String(start), count: String(count), output: "atom" });
+  const q = new URLSearchParams({
+    action: "getcurrent",
+    type,
+    company: "",
+    dateb: "",
+    owner: "include",
+    start: String(start),
+    count: String(count),
+    output: "atom",
+  });
   return `https://www.sec.gov/cgi-bin/browse-edgar?${q}`;
 }
 
-const decode = (s) => String(s || "")
-  .replace(/&lt;/g, "<")
-  .replace(/&gt;/g, ">")
-  .replace(/&quot;/g, '"')
-  .replace(/&#39;|&apos;/g, "'")
-  .replace(/&amp;/g, "&");
+const decode = (s) =>
+  String(s || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&");
 
 const tag = (xml, name) => {
   const m = new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)</${name}>`).exec(xml);
@@ -56,7 +78,10 @@ export function parseCurrentAtom(xml) {
     const title = decode(tag(e, "title"));
     const t = /^(.+?) - (.*) \((\d{10})\) \(([^)]+)\)\s*$/.exec(title);
     const accession = /accession-number=(\d{10}-\d{2}-\d{6})/.exec(e)?.[1] || "";
-    if (!t || !accession) { skipped += 1; continue; }
+    if (!t || !accession) {
+      skipped += 1;
+      continue;
+    }
     const summary = decode(tag(e, "summary"));
     const term = /<category\b[^>]*\bterm="([^"]+)"/.exec(e)?.[1];
     entries.push({
@@ -68,7 +93,7 @@ export function parseCurrentAtom(xml) {
       acceptedAt: isoOf(tag(e, "updated")),
       filed: /Filed:<\/b>\s*(\d{4}-\d{2}-\d{2})/.exec(summary)?.[1] || "",
       link: /<link\b[^>]*\bhref="([^"]+)"/.exec(e)?.[1] || "",
-      items: [...summary.matchAll(/Item (\d+\.\d+)/g)].map((x) => x[1])
+      items: [...summary.matchAll(/Item (\d+\.\d+)/g)].map((x) => x[1]),
     });
   }
   return { updated: isoOf(tag(head, "updated")), entries, skipped };
@@ -81,7 +106,19 @@ export function groupFilings(entries, forms) {
   for (const e of entries) {
     if (!want.has(e.form)) continue;
     let f = out.get(e.accession);
-    if (!f) out.set(e.accession, (f = { accession: e.accession, form: e.form, acceptedAt: e.acceptedAt, filed: e.filed, link: e.link, items: e.items, parties: [] }));
+    if (!f)
+      out.set(
+        e.accession,
+        (f = {
+          accession: e.accession,
+          form: e.form,
+          acceptedAt: e.acceptedAt,
+          filed: e.filed,
+          link: e.link,
+          items: e.items,
+          parties: [],
+        }),
+      );
     f.parties.push({ cik: e.cik, name: e.name, role: e.role });
     if (!f.items.length && e.items.length) f.items = e.items;
   }
@@ -155,6 +192,8 @@ export function latencyNote(stats) {
 
 /** `<PERIOD>` (YYYYMMDD) from an EDGAR -index-headers.html page, as YYYY-MM-DD; "" when absent. */
 export function headerPeriod(html) {
-  const m = /<PERIOD>\s*(\d{4})(\d{2})(\d{2})/.exec(String(html || "")) || /CONFORMED PERIOD OF REPORT:\s*(\d{4})(\d{2})(\d{2})/.exec(String(html || ""));
+  const m =
+    /<PERIOD>\s*(\d{4})(\d{2})(\d{2})/.exec(String(html || "")) ||
+    /CONFORMED PERIOD OF REPORT:\s*(\d{4})(\d{2})(\d{2})/.exec(String(html || ""));
   return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
 }

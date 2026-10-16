@@ -24,12 +24,26 @@ const VIA = { openrouter: "OpenRouter web search", tavily: "Tavily search API", 
 /** `{ provider, keyName, via, error }`; provider "" when nothing is configured. Never holds the key. */
 export function webConfig(env = process.env) {
   const asked = clean(env.WEB_SEARCH_PROVIDER).toLowerCase();
-  if (asked === "off" || asked === "none") return { provider: "", keyName: "", via: "", error: "Web search is turned off (WEB_SEARCH_PROVIDER=off)." };
-  if (asked && !KEYS[asked]) return { provider: "", keyName: "", via: "", error: `WEB_SEARCH_PROVIDER must be one of ${Object.keys(KEYS).join(", ")}, or off.` };
+  if (asked === "off" || asked === "none")
+    return { provider: "", keyName: "", via: "", error: "Web search is turned off (WEB_SEARCH_PROVIDER=off)." };
+  if (asked && !KEYS[asked])
+    return {
+      provider: "",
+      keyName: "",
+      via: "",
+      error: `WEB_SEARCH_PROVIDER must be one of ${Object.keys(KEYS).join(", ")}, or off.`,
+    };
   const order = asked ? [asked] : ["openrouter", "tavily", "brave"];
   const provider = order.find((p) => clean(env[KEYS[p]])) || "";
   if (!provider) {
-    return { provider: "", keyName: "", via: "", error: asked ? `Web search is not configured: WEB_SEARCH_PROVIDER=${asked} needs ${KEYS[asked]} in .env.local.` : "Web search is not configured: add OPENROUTER_API_KEY (uses OpenRouter's web plugin), TAVILY_API_KEY, or BRAVE_API_KEY to .env.local." };
+    return {
+      provider: "",
+      keyName: "",
+      via: "",
+      error: asked
+        ? `Web search is not configured: WEB_SEARCH_PROVIDER=${asked} needs ${KEYS[asked]} in .env.local.`
+        : "Web search is not configured: add OPENROUTER_API_KEY (uses OpenRouter's web plugin), TAVILY_API_KEY, or BRAVE_API_KEY to .env.local.",
+    };
   }
   return { provider, keyName: KEYS[provider], via: VIA[provider], error: "" };
 }
@@ -47,50 +61,138 @@ export function openrouterResults(body) {
   }
   return out;
 }
-export const tavilyResults = (body) => (body?.results || []).map((r) => ({ url: r.url, title: clean(r.title).slice(0, 200), snippet: snip(r.content), ...(r.published_date ? { published: r.published_date } : {}) }));
-export const braveResults = (body) => (body?.web?.results || []).map((r) => ({ url: r.url, title: htmlToText(r.title, 200), snippet: snip(htmlToText([r.description, ...(r.extra_snippets || [])].join(" "))), ...(r.page_age ? { published: r.page_age } : {}) }));
+export const tavilyResults = (body) =>
+  (body?.results || []).map((r) => ({
+    url: r.url,
+    title: clean(r.title).slice(0, 200),
+    snippet: snip(r.content),
+    ...(r.published_date ? { published: r.published_date } : {}),
+  }));
+export const braveResults = (body) =>
+  (body?.web?.results || []).map((r) => ({
+    url: r.url,
+    title: htmlToText(r.title, 200),
+    snippet: snip(htmlToText([r.description, ...(r.extra_snippets || [])].join(" "))),
+    ...(r.page_age ? { published: r.page_age } : {}),
+  }));
 
 /** `{ results, spend }`; `spend` is what the search is billed on (see webSearchCost in shared/spend.mjs). */
 async function search(cfg, key, query, max, timeoutMs, fetcher, env) {
   if (cfg.provider === "openrouter") {
     const model = clean(env.WEB_SEARCH_MODEL) || "openai/gpt-4o-mini";
-    const body = await fetcher("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${key}`, "X-Title": "TradeSimple Intel" },
-      body: JSON.stringify({ model, max_tokens: 60, plugins: [{ id: "web", max_results: max }], usage: { include: true }, messages: [{ role: "user", content: `Search the web for: ${query}` }] })
-    }, timeoutMs);
+    const body = await fetcher(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key}`, "X-Title": "TradeSimple Intel" },
+        body: JSON.stringify({
+          model,
+          max_tokens: 60,
+          plugins: [{ id: "web", max_results: max }],
+          usage: { include: true },
+          messages: [{ role: "user", content: `Search the web for: ${query}` }],
+        }),
+      },
+      timeoutMs,
+    );
     const results = openrouterResults(body);
     const u = body?.usage || {};
-    return { results, spend: { provider: "openrouter", model, results: results.length || max, input: u.prompt_tokens || 0, output: u.completion_tokens || 0, ...(typeof u.cost === "number" ? { cost: u.cost } : {}) } };
+    return {
+      results,
+      spend: {
+        provider: "openrouter",
+        model,
+        results: results.length || max,
+        input: u.prompt_tokens || 0,
+        output: u.completion_tokens || 0,
+        ...(typeof u.cost === "number" ? { cost: u.cost } : {}),
+      },
+    };
   }
   if (cfg.provider === "tavily") {
-    const body = await fetcher("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ query, max_results: max, search_depth: "basic" }) }, timeoutMs);
+    const body = await fetcher(
+      "https://api.tavily.com/search",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+        body: JSON.stringify({ query, max_results: max, search_depth: "basic" }),
+      },
+      timeoutMs,
+    );
     return { results: tavilyResults(body), spend: { provider: "tavily" } };
   }
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", query);
   url.searchParams.set("count", String(max));
-  return { results: braveResults(await fetcher(url, { headers: { Accept: "application/json", "X-Subscription-Token": key } }, timeoutMs)), spend: { provider: "brave" } };
+  return {
+    results: braveResults(
+      await fetcher(url, { headers: { Accept: "application/json", "X-Subscription-Token": key } }, timeoutMs),
+    ),
+    spend: { provider: "brave" },
+  };
 }
 
 /**
  * `{ ok, query, results: [{ url, title, snippet, published? }], via, retrievedAt, source, asOf, latency }`, or
  * `{ ok: false, error }`. `fetcher(url, options, timeoutMs)` is injectable for tests.
  */
-export async function webSearch(query, { env = process.env, max = WEB_CAPS.results, timeoutMs = 20_000, fetcher = fetchJson, now = () => Date.now() } = {}) {
+export async function webSearch(
+  query,
+  { env = process.env, max = WEB_CAPS.results, timeoutMs = 20_000, fetcher = fetchJson, now = () => Date.now() } = {},
+) {
   const q = clean(query).slice(0, 200);
   if (!q) return { ok: false, error: "web_search needs a query." };
   const cfg = webConfig(env);
-  if (!cfg.provider) return { ok: false, notConfigured: true, error: cfg.error, source: "web search (not configured)", asOf: "", latency: "" };
+  if (!cfg.provider)
+    return {
+      ok: false,
+      notConfigured: true,
+      error: cfg.error,
+      source: "web search (not configured)",
+      asOf: "",
+      latency: "",
+    };
   const started = now();
   try {
-    const found = await search(cfg, clean(env[cfg.keyName]), q, Math.min(max, WEB_CAPS.results), timeoutMs, fetcher, env);
+    const found = await search(
+      cfg,
+      clean(env[cfg.keyName]),
+      q,
+      Math.min(max, WEB_CAPS.results),
+      timeoutMs,
+      fetcher,
+      env,
+    );
     const results = found.results.filter((r) => /^https?:\/\//.test(r.url)).slice(0, WEB_CAPS.results);
     const retrievedAt = new Date(now()).toISOString();
-    if (!results.length) return { ok: false, error: `The web search for "${q}" returned no pages.`, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `${now() - started} ms`, spend: found.spend };
-    return { ok: true, query: q, results, via: cfg.via, retrievedAt, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: retrievedAt, latency: `Searched in ${now() - started} ms; result pages are as published, not verified by the app.`, spend: found.spend };
+    if (!results.length)
+      return {
+        ok: false,
+        error: `The web search for "${q}" returned no pages.`,
+        source: `${cfg.via} (web, not a TradeSimple feed)`,
+        asOf: retrievedAt,
+        latency: `${now() - started} ms`,
+        spend: found.spend,
+      };
+    return {
+      ok: true,
+      query: q,
+      results,
+      via: cfg.via,
+      retrievedAt,
+      source: `${cfg.via} (web, not a TradeSimple feed)`,
+      asOf: retrievedAt,
+      latency: `Searched in ${now() - started} ms; result pages are as published, not verified by the app.`,
+      spend: found.spend,
+    };
   } catch (err) {
-    return { ok: false, error: `Web search failed (${cfg.via}): ${err?.status ? `HTTP ${err.status}` : err?.message || "error"}.`, source: `${cfg.via} (web, not a TradeSimple feed)`, asOf: "", latency: "" };
+    return {
+      ok: false,
+      error: `Web search failed (${cfg.via}): ${err?.status ? `HTTP ${err.status}` : err?.message || "error"}.`,
+      source: `${cfg.via} (web, not a TradeSimple feed)`,
+      asOf: "",
+      latency: "",
+    };
   }
 }
 
@@ -99,7 +201,16 @@ export function privateAddress(ip) {
   if (!net.isIP(String(ip || ""))) return true;
   if (net.isIPv4(ip)) {
     const [a, b] = ip.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b < 128) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b < 32) || (a === 192 && b === 168) || a >= 224;
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b < 128) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b < 32) ||
+      (a === 192 && b === 168) ||
+      a >= 224
+    );
   }
   const s = ip.toLowerCase();
   if (s.startsWith("::ffff:")) return net.isIPv4(s.slice(7)) ? privateAddress(s.slice(7)) : true;
@@ -109,13 +220,19 @@ export function privateAddress(ip) {
 async function publicUrl(raw, lookup) {
   let u;
   if (String(raw || "").length > 2000) return { error: "URL too long." };
-  try { u = new URL(String(raw || "")); } catch { return { error: "Not a URL." }; }
+  try {
+    u = new URL(String(raw || ""));
+  } catch {
+    return { error: "Not a URL." };
+  }
   if (!/^https?:$/.test(u.protocol)) return { error: "Only http and https pages can be read." };
   if (u.username || u.password) return { error: "URLs with credentials are not read." };
   if (u.port && !["80", "443"].includes(u.port)) return { error: "Only the standard web ports are read." };
   const host = u.hostname.replace(/^\[|\]$/g, "");
   if (/^(localhost|.*\.local|.*\.internal|.*\.localhost)$/i.test(host)) return { error: "Local hosts are not read." };
-  const addrs = net.isIP(host) ? [{ address: host }] : await lookup(host, { all: true, verbatim: true }).catch(() => []);
+  const addrs = net.isIP(host)
+    ? [{ address: host }]
+    : await lookup(host, { all: true, verbatim: true }).catch(() => []);
   if (!addrs.length) return { error: `Could not resolve ${host}.` };
   if (addrs.some((a) => privateAddress(a.address))) return { error: "Private and loopback addresses are not read." };
   return { url: u, addresses: addrs };
@@ -129,7 +246,9 @@ function abortable(promise, signal) {
     const abort = () => reject(signal.reason);
     signal.addEventListener("abort", abort, { once: true });
     if (signal.aborted) abort();
-    Promise.resolve(promise).then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+    Promise.resolve(promise)
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener("abort", abort));
   });
 }
 
@@ -158,7 +277,10 @@ async function pageText(res, signal) {
  * One public page as text, at most 2 MB decoded / WEB_CAPS.pageChars. Each redirect is validated and its DNS
  * results pinned to the socket; at most 3 redirects. The timeout covers DNS, headers and all response bodies.
  */
-export async function webPage(rawUrl, { fetcher = fetchPinnedResponse, lookup = dns.lookup, now = () => Date.now(), timeoutMs = 12_000 } = {}) {
+export async function webPage(
+  rawUrl,
+  { fetcher = fetchPinnedResponse, lookup = dns.lookup, now = () => Date.now(), timeoutMs = 12_000 } = {},
+) {
   const started = now();
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(new DOMException("Page fetch timed out.", "TimeoutError")), timeoutMs);
@@ -167,8 +289,16 @@ export async function webPage(rawUrl, { fetcher = fetchPinnedResponse, lookup = 
     for (let hop = 0; hop < 4; hop++) {
       const checked = await abortable(publicUrl(target, lookup), ctl.signal);
       if (checked.error) return { ok: false, error: checked.error, url: String(target).slice(0, 300) };
-      const res = await fetcher(checked.url, { addresses: checked.addresses, signal: ctl.signal,
-        redirect: "manual", headers: { "User-Agent": BROWSER_UA, Accept: "text/html,text/plain;q=0.9" } }, timeoutMs);
+      const res = await fetcher(
+        checked.url,
+        {
+          addresses: checked.addresses,
+          signal: ctl.signal,
+          redirect: "manual",
+          headers: { "User-Agent": BROWSER_UA, Accept: "text/html,text/plain;q=0.9" },
+        },
+        timeoutMs,
+      );
       try {
         if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
           target = new URL(res.headers.get("location"), checked.url).href;
@@ -176,17 +306,29 @@ export async function webPage(rawUrl, { fetcher = fetchPinnedResponse, lookup = 
         }
         if (!res.ok) return { ok: false, error: `Page fetch failed: HTTP ${res.status}.`, url: checked.url.href };
         const type = res.headers.get("content-type") || "";
-        if (!/text\/(html|plain)|application\/xhtml/.test(type)) return { ok: false, error: `Not a text page (${type || "unknown type"}).`, url: checked.url.href };
+        if (!/text\/(html|plain)|application\/xhtml/.test(type))
+          return { ok: false, error: `Not a text page (${type || "unknown type"}).`, url: checked.url.href };
         const html = await pageText(res, ctl.signal);
         const retrievedAt = new Date(now()).toISOString();
-        return { ok: true, url: checked.url.href, title: titleOf(html), text: /html/.test(type) ? htmlToText(html) : htmlToText(html.replace(/</g, "&lt;")), retrievedAt, fetchMs: now() - started };
+        return {
+          ok: true,
+          url: checked.url.href,
+          title: titleOf(html),
+          text: /html/.test(type) ? htmlToText(html) : htmlToText(html.replace(/</g, "&lt;")),
+          retrievedAt,
+          fetchMs: now() - started,
+        };
       } finally {
         if (res.body && !res.body.locked) void res.body.cancel().catch(() => {});
       }
     }
     return { ok: false, error: "Too many redirects.", url: String(rawUrl).slice(0, 300) };
   } catch (err) {
-    return { ok: false, error: `Page fetch failed: ${ctl.signal.aborted ? "timed out" : err?.message || "error"}.`, url: String(target).slice(0, 300) };
+    return {
+      ok: false,
+      error: `Page fetch failed: ${ctl.signal.aborted ? "timed out" : err?.message || "error"}.`,
+      url: String(target).slice(0, 300),
+    };
   } finally {
     clearTimeout(timer);
     ctl.abort();

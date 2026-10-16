@@ -18,11 +18,21 @@ const TOP_CAPS = [
   [/^api_markets_insiders\.json$/, { items: 800 }],
   [/^api_congress_member_[A-Z]\d{6}_trades\.json$/, { items: 150 }],
   [/^api_calendar_pacs\.json$/, { rows: 300 }],
-  [/^api_news\.json$/, { items: 300 }]
+  [/^api_news\.json$/, { items: 300 }],
 ];
 const STRING_CAP = 280;
 /** Nested display lists that can be shortened, with their caps. Everything else (vote positions, price series, committee members, hearings) is kept whole. */
-const CAPPED = new Map([["scheduled", 20], ["awards", 25], ["items", 25], ["insiders", 25], ["recent", 5], ["top", 6], ["bills", 25], ["recentBuyers", 3], ["recentSellers", 3]]);
+const CAPPED = new Map([
+  ["scheduled", 20],
+  ["awards", 25],
+  ["items", 25],
+  ["insiders", 25],
+  ["recent", 5],
+  ["top", 6],
+  ["bills", 25],
+  ["recentBuyers", 3],
+  ["recentSellers", 3],
+]);
 
 export function trimText(value, cap = STRING_CAP) {
   return typeof value === "string" && value.length > cap ? `${value.slice(0, cap - 1)}…` : value;
@@ -66,17 +76,21 @@ function trimTimeline(body) {
     ...body,
     trades: (body.trades || []).map(({ asset, ...t }) => ({
       ...t,
-      near: t.near ? { ...t.near, title: trimText(t.near.title, 100), link: undefined } : null
+      near: t.near ? { ...t.near, title: trimText(t.near.title, 100), link: undefined } : null,
     })),
     votes: (body.votes || []).map((v) => ({ ...v, question: trimText(v.question, 90) })),
-    committees: (body.committees || []).map((l) => ({ ...l, hearings: l.hearings.map((h) => ({ ...h, title: trimText(h.title, 120) })) }))
+    committees: (body.committees || []).map((l) => ({
+      ...l,
+      hearings: l.hearings.map((h) => ({ ...h, title: trimText(h.title, 120) })),
+    })),
   };
 }
 
 /** PAC calendar: every member keeps their top donors but only the five latest receipts. */
 function trimPacs(body) {
   const members = {};
-  for (const [id, m] of Object.entries(body.members || {})) members[id] = { ...m, recent: (m.recent || []).slice(0, 5) };
+  for (const [id, m] of Object.entries(body.members || {}))
+    members[id] = { ...m, recent: (m.recent || []).slice(0, 5) };
   return { ...body, members };
 }
 
@@ -97,7 +111,9 @@ function trimLite(file, body) {
   next = trimDeep(next, 0, dropped);
   if (Object.keys(dropped).length) {
     next.demoTrim = dropped;
-    const note = `Demo copy: long lists shortened (${Object.entries(dropped).map(([k, n]) => `${n} ${k} rows dropped`).join(", ")}); the live API returns them all.`;
+    const note = `Demo copy: long lists shortened (${Object.entries(dropped)
+      .map(([k, n]) => `${n} ${k} rows dropped`)
+      .join(", ")}); the live API returns them all.`;
     next.latency = next.latency ? `${next.latency} ${note}` : note;
   }
   return next;

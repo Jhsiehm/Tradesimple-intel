@@ -7,7 +7,9 @@ import { KEY } from "../server/lib/cacheKeys.mjs";
 
 function memDb() {
   const db = new DatabaseSync(":memory:");
-  db.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, stored_at INTEGER NOT NULL, ttl_ms INTEGER NOT NULL)");
+  db.exec(
+    "CREATE TABLE cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, stored_at INTEGER NOT NULL, ttl_ms INTEGER NOT NULL)",
+  );
   return db;
 }
 const timeout = () => Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
@@ -15,7 +17,10 @@ const timeout = () => Object.assign(new Error("This operation was aborted"), { n
 test("throughCache stores a success and serves it without calling load again", async () => {
   const db = memDb();
   let calls = 0;
-  const load = async () => { calls += 1; return { n: calls }; };
+  const load = async () => {
+    calls += 1;
+    return { n: calls };
+  };
   assert.deepEqual(await throughCache(db, "k", { ttlMs: 60000, downMs: 60000, load }), { value: { n: 1 } });
   assert.deepEqual(await throughCache(db, "k", { ttlMs: 60000, downMs: 60000, load }), { value: { n: 1 } });
   assert.equal(calls, 1);
@@ -24,7 +29,10 @@ test("throughCache stores a success and serves it without calling load again", a
 test("a failure is remembered for downMs: later callers skip the wait and get no value without a stored copy", async () => {
   const db = memDb();
   let calls = 0;
-  const load = async () => { calls += 1; throw timeout(); };
+  const load = async () => {
+    calls += 1;
+    throw timeout();
+  };
   const a = await throughCache(db, "k", { ttlMs: 60000, downMs: 6 * 3600000, timeoutMs: 45000, load });
   assert.equal(a.value, null);
   assert.equal(a.down.why, "timed out after 45 s");
@@ -37,7 +45,13 @@ test("a failure is remembered for downMs: later callers skip the wait and get no
 test("on failure an expired copy is served as stale with its stored time", async () => {
   const db = memDb();
   writeCache(db, "k", { filings: [1] }, -1);
-  const res = await throughCache(db, "k", { ttlMs: 60000, downMs: 60000, load: async () => { throw Object.assign(new Error("HTTP 503"), { status: 503 }); } });
+  const res = await throughCache(db, "k", {
+    ttlMs: 60000,
+    downMs: 60000,
+    load: async () => {
+      throw Object.assign(new Error("HTTP 503"), { status: 503 });
+    },
+  });
   assert.deepEqual(res.value, { filings: [1] });
   assert.ok(res.staleAt);
   assert.equal(res.down.why, "returned HTTP 503");

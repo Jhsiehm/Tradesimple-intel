@@ -8,7 +8,10 @@ export type Reused = { at: number; model: string };
 export declare function normalizeQuestion(q: string): string;
 export declare function stableJson(value: unknown, drop?: RegExp | null): string;
 export declare function dataText(raw: unknown): string;
-export declare function answerIdentity(asked: Record<string, unknown> | null | undefined, opts?: { model?: string; pinned?: boolean }): string;
+export declare function answerIdentity(
+  asked: Record<string, unknown> | null | undefined,
+  opts?: { model?: string; pinned?: boolean },
+): string;
 export declare function noReuseReason(events: AskEvent[], calls: { tool: string }[]): string;
 export declare function replayEvents(events: AskEvent[], reused: Reused): AskEvent[];
 export declare function reusedLabel(at: number): string;

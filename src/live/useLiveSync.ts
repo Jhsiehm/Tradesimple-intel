@@ -14,9 +14,15 @@ export function useLiveSync(symbols: string[]) {
   const sent = useRef<string | null>(null);
   have.current = live.symbols.join(",");
   useEffect(() => {
-    if (live.link !== "open") { sent.current = null; return; }
+    if (live.link !== "open") {
+      sent.current = null;
+      return;
+    }
     const changed = sent.current !== null && sent.current !== want;
-    if (want === have.current || (!changed && !want)) { sent.current = want; return; }
+    if (want === have.current || (!changed && !want)) {
+      sent.current = want;
+      return;
+    }
     sent.current = want;
     void putSymbols(want ? want.split(",") : []);
   }, [want, live.link]);

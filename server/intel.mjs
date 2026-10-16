@@ -22,11 +22,14 @@ let geo = null;
 
 /** Area-weighted centroid of a feature's largest polygon; good enough to anchor an arc on a district or state. */
 export function centroidOf(geometry) {
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.type === "MultiPolygon" ? geometry.coordinates : [];
+  const polys =
+    geometry.type === "Polygon" ? [geometry.coordinates] : geometry.type === "MultiPolygon" ? geometry.coordinates : [];
   let best = null;
   for (const poly of polys) {
     const ring = poly[0] || [];
-    let a = 0, cx = 0, cy = 0;
+    let a = 0,
+      cx = 0,
+      cy = 0;
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const cross = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
       a += cross;
@@ -71,7 +74,9 @@ export function memberAnchor({ chamber, state, district }, g = places()) {
     const code = seatCode(/^\d+$/.test(String(district || "")) ? `${state}-${district}` : district);
     if (code && g.districts.has(code)) return { at: g.districts.get(code), where: code };
   }
-  const postal = String(state || district || "").slice(0, 2).toUpperCase();
+  const postal = String(state || district || "")
+    .slice(0, 2)
+    .toUpperCase();
   return g.states.has(postal) ? { at: g.states.get(postal), where: postal } : null;
 }
 
@@ -98,22 +103,42 @@ export function buildLinks({ trades = [], contracts = [], pacs = [], hq = [], pe
     return placeIdx.get(key);
   };
   const act = (a) => {
-    if (!actionIdx.has(a)) { actionIdx.set(a, actions.length); actions.push(a); }
+    if (!actionIdx.has(a)) {
+      actionIdx.set(a, actions.length);
+      actions.push(a);
+    }
     return actionIdx.get(a);
   };
-  const hqPlace = (symbol) => place(`hq:${symbol}`, () => {
-    const h = hqBy.get(symbol);
-    return h ? { lon: h.lon, lat: h.lat, label: `${symbol} HQ · ${title(h.city)}, ${h.state}`, kind: "hq", action: `hq:${symbol}` } : null;
-  });
-  const memberPlace = (m) => place(`m:${m.bioguide || m.person}`, () => {
-    const anchor = memberAnchor(m, g);
-    if (!anchor) return null;
-    return { lon: anchor.at[0], lat: anchor.at[1], label: `${honor(m.chamber)} ${m.name || m.person}${m.party ? ` (${m.party}-${anchor.where})` : ` · ${anchor.where}`}`, kind: "member", action: m.bioguide ? `member:${m.bioguide}` : "" };
-  });
-  const agencyPlace = (name) => place(`ag:${name}`, () => {
-    const a = g.agencyBy.get(name);
-    return a ? { lon: a.lon, lat: a.lat, label: `${a.short} HQ · ${a.address}`, kind: "agency", action: "" } : null;
-  });
+  const hqPlace = (symbol) =>
+    place(`hq:${symbol}`, () => {
+      const h = hqBy.get(symbol);
+      return h
+        ? {
+            lon: h.lon,
+            lat: h.lat,
+            label: `${symbol} HQ · ${title(h.city)}, ${h.state}`,
+            kind: "hq",
+            action: `hq:${symbol}`,
+          }
+        : null;
+    });
+  const memberPlace = (m) =>
+    place(`m:${m.bioguide || m.person}`, () => {
+      const anchor = memberAnchor(m, g);
+      if (!anchor) return null;
+      return {
+        lon: anchor.at[0],
+        lat: anchor.at[1],
+        label: `${honor(m.chamber)} ${m.name || m.person}${m.party ? ` (${m.party}-${anchor.where})` : ` · ${anchor.where}`}`,
+        kind: "member",
+        action: m.bioguide ? `member:${m.bioguide}` : "",
+      };
+    });
+  const agencyPlace = (name) =>
+    place(`ag:${name}`, () => {
+      const a = g.agencyBy.get(name);
+      return a ? { lon: a.lon, lat: a.lat, label: `${a.short} HQ · ${a.address}`, kind: "agency", action: "" } : null;
+    });
   const links = [];
   const misses = [];
   const coverage = Object.fromEntries(ARC_KINDS.map((k) => [k, { total: 0, placed: 0, noFrom: 0, noTo: 0 }]));
@@ -121,8 +146,14 @@ export function buildLinks({ trades = [], contracts = [], pacs = [], hq = [], pe
     const c = coverage[kind];
     c.total += 1;
     if (f < 0 || t < 0) misses.push([dayNum(date), ARC_KINDS.indexOf(kind)]);
-    if (f < 0) { c.noFrom += 1; return; }
-    if (t < 0) { c.noTo += 1; return; }
+    if (f < 0) {
+      c.noFrom += 1;
+      return;
+    }
+    if (t < 0) {
+      c.noTo += 1;
+      return;
+    }
     c.placed += 1;
     links.push([dayNum(date), ARC_KINDS.indexOf(kind), f, t, Math.round(amount || 0), act(action)]);
   };
@@ -146,26 +177,42 @@ export function buildLinks({ trades = [], contracts = [], pacs = [], hq = [], pe
 }
 
 function title(s) {
-  return String(s || "").toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }
 
 /** Waits up to `ms` for slow upstreams; the fetch keeps running and lands in the cache for the next call. */
 function within(promise, ms, fallback) {
-  return Promise.race([promise.catch(() => fallback), new Promise((resolve) => setTimeout(() => resolve({ ...fallback, slow: true }), ms).unref?.())]);
+  return Promise.race([
+    promise.catch(() => fallback),
+    new Promise((resolve) => setTimeout(() => resolve({ ...fallback, slow: true }), ms).unref?.()),
+  ]);
 }
 
 async function contractRows(db, scope) {
   const empty = { ok: false, items: [] };
-  const feeds = scope.kind === "member"
-    ? [contractFeed(db, { member: scope.id, days: 365, sort: "largest" })]
-    : scope.kind === "symbol"
-      ? [contractFeed(db, { symbol: scope.id, days: 365, sort: "largest" }), contractFeed(db, { symbol: scope.id, days: 90, sort: "recent" })]
-      : [contractFeed(db, { days: 365, sort: "largest" }), contractFeed(db, { days: 90, sort: "recent" })];
+  const feeds =
+    scope.kind === "member"
+      ? [contractFeed(db, { member: scope.id, days: 365, sort: "largest" })]
+      : scope.kind === "symbol"
+        ? [
+            contractFeed(db, { symbol: scope.id, days: 365, sort: "largest" }),
+            contractFeed(db, { symbol: scope.id, days: 90, sort: "recent" }),
+          ]
+        : [contractFeed(db, { days: 365, sort: "largest" }), contractFeed(db, { days: 90, sort: "recent" })];
   const res = await Promise.all(feeds.map((f) => within(f, CONTRACT_WAIT, empty)));
   const seen = new Set();
   const items = res.flatMap((r) => r.items || []).filter((r) => !seen.has(r.id) && seen.add(r.id));
   const first = res.find((r) => r.ok) || res[0];
-  return { items, slow: res.some((r) => r.slow), source: first?.source || "USAspending.gov prime contract transactions", asOf: first?.asOf || "", latency: first?.latency || "", error: res.every((r) => !r.ok) ? (first?.error || "USAspending did not answer") : "" };
+  return {
+    items,
+    slow: res.some((r) => r.slow),
+    source: first?.source || "USAspending.gov prime contract transactions",
+    asOf: first?.asOf || "",
+    latency: first?.latency || "",
+    error: res.every((r) => !r.ok) ? first?.error || "USAspending did not answer" : "",
+  };
 }
 
 const memo = new Map();
@@ -177,8 +224,13 @@ const memo = new Map();
 export async function intelScope(db, params) {
   const member = String(params.get("member") || "").toUpperCase();
   const symbol = String(params.get("symbol") || "").toUpperCase();
-  const scope = /^[A-Z]\d{6}$/.test(member) ? { kind: "member", id: member } : /^[A-Z.\-]{1,8}$/.test(symbol) ? { kind: "symbol", id: symbol } : { kind: "all", id: "" };
-  if (scope.kind === "symbol" && !tickerBySymbol(db, scope.id)) return { ok: false, error: "Ticker is not in data/tickers.json" };
+  const scope = /^[A-Z]\d{6}$/.test(member)
+    ? { kind: "member", id: member }
+    : /^[A-Z.\-]{1,8}$/.test(symbol)
+      ? { kind: "symbol", id: symbol }
+      : { kind: "all", id: "" };
+  if (scope.kind === "symbol" && !tickerBySymbol(db, scope.id))
+    return { ok: false, error: "Ticker is not in data/tickers.json" };
   const key = `${scope.kind}:${scope.id}`;
   const hit = memo.get(key);
   if (hit && Date.now() - hit.at < 10 * MINUTE && !hit.body.partial) return hit.body;
@@ -190,7 +242,7 @@ export async function intelScope(db, params) {
     roster(db).catch(() => ({ items: [] })),
     within(pacData(db), 5000, { rows: [] }),
     contractRows(db, scope),
-    scope.kind === "member" ? memberCommittees(db, scope.id).catch(() => []) : []
+    scope.kind === "member" ? memberCommittees(db, scope.id).catch(() => []) : [],
   ]);
   const person = scope.kind === "member" ? (people.items || []).find((p) => p.bioguide === scope.id) : null;
   if (scope.kind === "member" && !person) return { ok: false, error: "Member is not in the current roster" };
@@ -198,34 +250,77 @@ export async function intelScope(db, params) {
   if (scope.kind === "member") trades = trades.filter((t) => t.bioguide === scope.id);
   if (scope.kind === "symbol") trades = trades.filter((t) => t.symbol === scope.id);
   const traded = new Set(trades.map((t) => t.symbol).filter(Boolean));
-  const insiders = (insiderRes.items || []).filter((f) => f.traded >= FROM && (scope.kind === "all" || (scope.kind === "symbol" ? f.symbol === scope.id : traded.has(f.symbol))));
+  const insiders = (insiderRes.items || []).filter(
+    (f) =>
+      f.traded >= FROM &&
+      (scope.kind === "all" || (scope.kind === "symbol" ? f.symbol === scope.id : traded.has(f.symbol))),
+  );
   const lanes = new Set(seats.map((s) => laneOf(s.id)));
-  const meetings = indexedMeetings().filter((m) => !/cancel|postpon/i.test(m.status) && (scope.kind !== "member" || m.codes.some((c) => lanes.has(laneOf(c)))));
+  const meetings = indexedMeetings().filter(
+    (m) => !/cancel|postpon/i.test(m.status) && (scope.kind !== "member" || m.codes.some((c) => lanes.has(laneOf(c)))),
+  );
   const chambers = scope.kind === "member" ? [person.chamber === "senate" ? "senate" : "house"] : ["house", "senate"];
-  const rolls = chambers.flatMap((c) => indexedVotes(c).map((v) => ({ ...v, chamber: c }))).filter((v) => scope.kind !== "member" || v.casts[scope.id]);
+  const rolls = chambers
+    .flatMap((c) => indexedVotes(c).map((v) => ({ ...v, chamber: c })))
+    .filter((v) => scope.kind !== "member" || v.casts[scope.id]);
   let pacs = (pacRes.rows || []).filter((r) => r.kind === "contribution" && r.bioguide && r.date >= FROM);
   if (scope.kind === "member") pacs = pacs.filter((r) => r.bioguide === scope.id);
   if (scope.kind === "symbol") pacs = pacs.filter((r) => r.symbol === scope.id);
 
   const events = [
-    ...trades.map((t) => ({ kind: "trade", date: t.traded, label: `${t.person} ${t.side === "buy" ? "bought" : t.side === "sell" ? "sold" : "traded"} ${t.symbol || t.asset} · ${t.amount}`, action: t.symbol ? `pos:${t.symbol}` : t.bioguide ? `member:${t.bioguide}` : "", link: t.link })),
-    ...meetings.map((m) => ({ kind: "hearing", date: m.date, label: `${m.chamber === "senate" ? "Senate" : "House"} · ${m.title}`, link: m.link })),
-    ...rolls.map((v) => ({ kind: "roll", date: v.date, label: `${v.chamber === "senate" ? "Senate" : "House"} roll · ${v.question}${v.bill ? ` · ${v.bill}` : ""}${scope.kind === "member" ? ` · voted ${{ Y: "Yea", N: "Nay", P: "Present", "-": "not voting" }[v.casts[scope.id]]}` : ""}`, action: `vote:${v.id}` })),
-    ...contracts.items.map((c) => ({ kind: "contract", date: c.date, label: `${c.agency.replace(/^Department of (the )?/, "")} → ${c.recipient}${c.symbol ? ` (${c.symbol})` : ""} · $${Math.round(c.amount).toLocaleString("en-US")}`, action: c.symbol ? `contracts:symbol:${c.symbol}` : "", link: c.link })),
-    ...insiders.map((f) => ({ kind: "form4", date: f.traded, label: `Form 4 · ${f.symbol} · ${f.person} ${f.side === "sell" ? "sold" : f.side === "buy" ? "bought" : f.code}${f.value ? ` $${Math.round(f.value).toLocaleString("en-US")}` : ""}`, action: `pos:${f.symbol}`, link: f.link }))
+    ...trades.map((t) => ({
+      kind: "trade",
+      date: t.traded,
+      label: `${t.person} ${t.side === "buy" ? "bought" : t.side === "sell" ? "sold" : "traded"} ${t.symbol || t.asset} · ${t.amount}`,
+      action: t.symbol ? `pos:${t.symbol}` : t.bioguide ? `member:${t.bioguide}` : "",
+      link: t.link,
+    })),
+    ...meetings.map((m) => ({
+      kind: "hearing",
+      date: m.date,
+      label: `${m.chamber === "senate" ? "Senate" : "House"} · ${m.title}`,
+      link: m.link,
+    })),
+    ...rolls.map((v) => ({
+      kind: "roll",
+      date: v.date,
+      label: `${v.chamber === "senate" ? "Senate" : "House"} roll · ${v.question}${v.bill ? ` · ${v.bill}` : ""}${scope.kind === "member" ? ` · voted ${{ Y: "Yea", N: "Nay", P: "Present", "-": "not voting" }[v.casts[scope.id]]}` : ""}`,
+      action: `vote:${v.id}`,
+    })),
+    ...contracts.items.map((c) => ({
+      kind: "contract",
+      date: c.date,
+      label: `${c.agency.replace(/^Department of (the )?/, "")} → ${c.recipient}${c.symbol ? ` (${c.symbol})` : ""} · $${Math.round(c.amount).toLocaleString("en-US")}`,
+      action: c.symbol ? `contracts:symbol:${c.symbol}` : "",
+      link: c.link,
+    })),
+    ...insiders.map((f) => ({
+      kind: "form4",
+      date: f.traded,
+      label: `Form 4 · ${f.symbol} · ${f.person} ${f.side === "sell" ? "sold" : f.side === "buy" ? "bought" : f.code}${f.value ? ` $${Math.round(f.value).toLocaleString("en-US")}` : ""}`,
+      action: `pos:${f.symbol}`,
+      link: f.link,
+    })),
   ];
   const buckets = bucketDays(events, FROM, today);
   const scoped = scope.kind !== "all";
   const list = events
     .filter((e) => (scoped || e.kind === "contract") && dayNum(e.date) >= buckets.start)
-    .map((e) => ({ d: dayNum(e.date) - buckets.start, k: e.kind, label: e.label, action: e.action || undefined, link: e.link || undefined }))
+    .map((e) => ({
+      d: dayNum(e.date) - buckets.start,
+      k: e.kind,
+      label: e.label,
+      action: e.action || undefined,
+      link: e.link || undefined,
+    }))
     .sort((a, b) => b.d - a.d)
     .slice(0, 1500);
   const hq = hqAll(db);
   const arcs = buildLinks({ trades, contracts: contracts.items, pacs, hq: hq.items, people: people.items || [] });
   arcs.links = arcs.links.map((l) => [l[0] - buckets.start, ...l.slice(1)]);
   const missCount = new Map();
-  for (const [d, k] of arcs.misses) missCount.set(`${d - buckets.start}:${k}`, (missCount.get(`${d - buckets.start}:${k}`) || 0) + 1);
+  for (const [d, k] of arcs.misses)
+    missCount.set(`${d - buckets.start}:${k}`, (missCount.get(`${d - buckets.start}:${k}`) || 0) + 1);
   arcs.misses = [...missCount].map(([key, n]) => [...key.split(":").map(Number), n]);
   const g = places();
   const idx = indexStatus();
@@ -234,24 +329,72 @@ export async function intelScope(db, params) {
     hearing: "As posted by committee clerks; index refreshed every 6 h. Cancelled and postponed meetings dropped.",
     roll: "Roll calls of the 119th Congress; index refreshed every 6 h.",
     contract: contracts.slow ? "USAspending is still answering; the lane fills on the next load." : contracts.latency,
-    form4: "Plotted on the trade date; due 2 business days after the trade."
+    form4: "Plotted on the trade date; due 2 business days after the trade.",
   };
   const body = {
     ok: true,
     asOf: new Date().toISOString(),
     ms: Date.now() - t0,
     partial: contracts.slow,
-    scope: { ...scope, label: scope.kind === "member" ? `${honor(person.chamber)} ${person.name}` : scope.kind === "symbol" ? scope.id : "All Congress" },
+    scope: {
+      ...scope,
+      label:
+        scope.kind === "member"
+          ? `${honor(person.chamber)} ${person.name}`
+          : scope.kind === "symbol"
+            ? scope.id
+            : "All Congress",
+    },
     from: FROM,
     to: today,
     len: buckets.len,
     days: buckets.days,
     kinds: [
-      { id: "trade", label: "Congress trades", source: tradeRes.source || "House Clerk PTR PDFs · Senate eFD PTRs", asOf: tradeRes.asOf || "", latency: latencies.trade, total: trades.length },
-      { id: "hearing", label: scope.kind === "member" ? "Their committee hearings" : "Committee meetings", source: "Congress.gov committee-meeting API", asOf: idx.builtAt || "", latency: latencies.hearing, total: meetings.length },
-      { id: "roll", label: scope.kind === "member" ? "Roll calls they cast" : "House + Senate roll calls", source: "House Clerk EVS · Senate LIS roll call XML", asOf: idx.builtAt || "", latency: latencies.roll, total: rolls.length },
-      { id: "contract", label: "Contract awards", source: contracts.source, asOf: contracts.asOf, latency: latencies.contract, total: contracts.items.length, note: scope.kind === "member" ? "Largest 100 actions performed in their district (state for senators), last 365 days." : "Largest 100 actions in 365 days plus latest 100 in 90 days.", error: contracts.error || undefined },
-      { id: "form4", label: scope.kind === "member" ? "Form 4 on tickers they traded" : "Form 4 insiders", source: insiderRes.source || "SEC EDGAR Form 4", asOf: insiderRes.asOf || "", latency: latencies.form4, total: insiders.length }
+      {
+        id: "trade",
+        label: "Congress trades",
+        source: tradeRes.source || "House Clerk PTR PDFs · Senate eFD PTRs",
+        asOf: tradeRes.asOf || "",
+        latency: latencies.trade,
+        total: trades.length,
+      },
+      {
+        id: "hearing",
+        label: scope.kind === "member" ? "Their committee hearings" : "Committee meetings",
+        source: "Congress.gov committee-meeting API",
+        asOf: idx.builtAt || "",
+        latency: latencies.hearing,
+        total: meetings.length,
+      },
+      {
+        id: "roll",
+        label: scope.kind === "member" ? "Roll calls they cast" : "House + Senate roll calls",
+        source: "House Clerk EVS · Senate LIS roll call XML",
+        asOf: idx.builtAt || "",
+        latency: latencies.roll,
+        total: rolls.length,
+      },
+      {
+        id: "contract",
+        label: "Contract awards",
+        source: contracts.source,
+        asOf: contracts.asOf,
+        latency: latencies.contract,
+        total: contracts.items.length,
+        note:
+          scope.kind === "member"
+            ? "Largest 100 actions performed in their district (state for senators), last 365 days."
+            : "Largest 100 actions in 365 days plus latest 100 in 90 days.",
+        error: contracts.error || undefined,
+      },
+      {
+        id: "form4",
+        label: scope.kind === "member" ? "Form 4 on tickers they traded" : "Form 4 insiders",
+        source: insiderRes.source || "SEC EDGAR Form 4",
+        asOf: insiderRes.asOf || "",
+        latency: latencies.form4,
+        total: insiders.length,
+      },
     ],
     events: list,
     arcs: {
@@ -261,12 +404,29 @@ export async function intelScope(db, params) {
       misses: arcs.misses,
       coverage: arcs.coverage,
       sources: {
-        trade: `Member district (state for senators) → SEC EDGAR HQ · ${tradeRes.source || "House Clerk · Senate eFD"} · as of ${String(tradeRes.asOf || "").slice(0, 16).replace("T", " ")}`,
-        contract: `${g.agencies.source} → contractor HQ via data/tickers.json · USAspending · as of ${String(contracts.asOf || "").slice(0, 16).replace("T", " ")}`,
-        pac: `Corporate PAC (joined ticker's SEC HQ) → member district · ${pacRes.source || "FEC bulk"} · as of ${String(pacRes.asOf || "").slice(0, 16).replace("T", " ")}`
+        trade: `Member district (state for senators) → SEC EDGAR HQ · ${tradeRes.source || "House Clerk · Senate eFD"} · as of ${String(
+          tradeRes.asOf || "",
+        )
+          .slice(0, 16)
+          .replace("T", " ")}`,
+        contract: `${g.agencies.source} → contractor HQ via data/tickers.json · USAspending · as of ${String(
+          contracts.asOf || "",
+        )
+          .slice(0, 16)
+          .replace("T", " ")}`,
+        pac: `Corporate PAC (joined ticker's SEC HQ) → member district · ${pacRes.source || "FEC bulk"} · as of ${String(
+          pacRes.asOf || "",
+        )
+          .slice(0, 16)
+          .replace("T", " ")}`,
       },
-      hq: { source: HQ_SOURCE, asOf: hq.asOf, placed: hq.items.filter((h) => h.lat != null && !h.foreign).length, total: hq.items.length }
-    }
+      hq: {
+        source: HQ_SOURCE,
+        asOf: hq.asOf,
+        placed: hq.items.filter((h) => h.lat != null && !h.foreign).length,
+        total: hq.items.length,
+      },
+    },
   };
   memo.set(key, { at: Date.now(), body });
   if (memo.size > 40) memo.delete(memo.keys().next().value);
@@ -286,14 +446,24 @@ const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 const CONTRACT_PAGE = 100;
 
 async function districtContracts(db, place) {
-  const res = await within(contractFeed(db, { place, days: 90, sort: "largest" }), CONTRACT_WAIT, { ok: false, items: [] });
+  const res = await within(contractFeed(db, { place, days: 90, sort: "largest" }), CONTRACT_WAIT, {
+    ok: false,
+    items: [],
+  });
   return contractTotal(res);
 }
 
 export function contractTotal(res) {
   const items = res.items || [];
   const sum = items.reduce((s, r) => s + (r.amount || 0), 0);
-  return { sum, n: items.length, slow: Boolean(res.slow), ok: Boolean(res.ok), asOf: res.asOf || "", capped: items.length >= CONTRACT_PAGE };
+  return {
+    sum,
+    n: items.length,
+    slow: Boolean(res.slow),
+    ok: Boolean(res.ok),
+    asOf: res.asOf || "",
+    capped: items.length >= CONTRACT_PAGE,
+  };
 }
 
 /** "$41.2M", or "≥ $213.8M" when only the largest page of actions was summed. */
@@ -302,7 +472,12 @@ export function contractAmount(c) {
 }
 
 function contractStat(c, label) {
-  if (!c.ok) return { label, value: "—", note: c.slow ? "USAspending still answering; reopen in a minute." : "USAspending unavailable." };
+  if (!c.ok)
+    return {
+      label,
+      value: "—",
+      note: c.slow ? "USAspending still answering; reopen in a minute." : "USAspending unavailable.",
+    };
   return { label, value: contractAmount(c), note: `${c.capped ? `top ${c.n}` : c.n} actions · USAspending` };
 }
 
@@ -354,13 +529,22 @@ export async function caseFile(db, kind, rawId) {
       sub: `${m.party}-${place} · ${m.chamber === "senate" ? "Senate" : "House"}`,
       signal: { ...sig, rule: "hearing" },
       stats: [
-        { label: `Trades ${year}`, value: String(trades.filter((t) => t.traded.startsWith(year)).length), note: `${trades.length} since Jan 2025` },
-        { label: "Hearing proximity", value: prox?.dayShare == null || !prox.baseline ? "—" : `${pct(prox.dayShare)} / ${pct(prox.baseline)}`, note: `trade days ≤${NEAR_DAYS} d of a hearing / all days` },
-        contractStat(c, `Contracts in ${place} · 90d`)
+        {
+          label: `Trades ${year}`,
+          value: String(trades.filter((t) => t.traded.startsWith(year)).length),
+          note: `${trades.length} since Jan 2025`,
+        },
+        {
+          label: "Hearing proximity",
+          value: prox?.dayShare == null || !prox.baseline ? "—" : `${pct(prox.dayShare)} / ${pct(prox.baseline)}`,
+          note: `trade days ≤${NEAR_DAYS} d of a hearing / all days`,
+        },
+        contractStat(c, `Contracts in ${place} · 90d`),
       ],
       asOf: oldestAsOf(tl?.asOf, c.asOf) || new Date().toISOString(),
       sources: ["House Clerk PTR / Senate eFD", "Congress.gov committee meetings", "USAspending place of performance"],
-      latency: "Trades filed up to 45 days after the trade; hearing index refreshed every 6 h; DoD contract actions reach USAspending about 90 days late."
+      latency:
+        "Trades filed up to 45 days after the trade; hearing index refreshed every 6 h; DoD contract actions reach USAspending about 90 days late.",
     };
   }
   if (kind === "ticker") {
@@ -371,18 +555,33 @@ export async function caseFile(db, kind, rawId) {
     const [tradeRes, insiderRes, hist] = await Promise.all([
       congressTrades(db).catch(() => ({ items: [] })),
       insiderTrades(db).catch(() => ({ items: [] })),
-      contractsFor(db, t, { cachedOnly: true }).catch(() => null)
+      contractsFor(db, t, { cachedOnly: true }).catch(() => null),
     ]);
     const trades = (tradeRes.items || []).filter((r) => r.symbol === t.symbol && r.traded >= since);
-    const sig = activitySignal(trades.map((r) => r.traded), today);
+    const sig = activitySignal(
+      trades.map((r) => r.traded),
+      today,
+    );
     const f4 = (insiderRes.items || []).filter((r) => r.symbol === t.symbol && r.traded >= f4since);
     const fy = hist?.dependence || null;
     const lastYear = hist?.byYear?.at(-1) || null;
-    let contract = fy ? { label: `Obligations FY${fy.fy}`, value: usd(fy.obligations), note: `${pct(fy.share)} of revenue · USAspending` } : lastYear ? { label: `Obligations FY${lastYear.fy}`, value: usd(lastYear.amount), note: "USAspending, parent UEIs" } : null;
+    let contract = fy
+      ? {
+          label: `Obligations FY${fy.fy}`,
+          value: usd(fy.obligations),
+          note: `${pct(fy.share)} of revenue · USAspending`,
+        }
+      : lastYear
+        ? { label: `Obligations FY${lastYear.fy}`, value: usd(lastYear.amount), note: "USAspending, parent UEIs" }
+        : null;
     if (!contract) {
-      if (!(t.contractParents || []).length) contract = { label: "Federal contracts", value: "—", note: "No USAspending parent in data/tickers.json" };
+      if (!(t.contractParents || []).length)
+        contract = { label: "Federal contracts", value: "—", note: "No USAspending parent in data/tickers.json" };
       else {
-        const res = await within(contractFeed(db, { symbol: t.symbol, days: 180, sort: "largest" }), CONTRACT_WAIT, { ok: false, items: [] });
+        const res = await within(contractFeed(db, { symbol: t.symbol, days: 180, sort: "largest" }), CONTRACT_WAIT, {
+          ok: false,
+          items: [],
+        });
         contract = contractStat(contractTotal(res), "Contracts · 180d");
       }
     }
@@ -390,17 +589,24 @@ export async function caseFile(db, kind, rawId) {
       ok: true,
       kind: "ticker",
       subject: "TICKER",
-      headline: trades.length ? `${t.symbol}: ${sig.recent} Congress trade${sig.recent === 1 ? "" : "s"} in 30 days vs ${sig.expected.toFixed(1)} expected` : `${t.symbol}: no Congress trades in 12 months`,
+      headline: trades.length
+        ? `${t.symbol}: ${sig.recent} Congress trade${sig.recent === 1 ? "" : "s"} in 30 days vs ${sig.expected.toFixed(1)} expected`
+        : `${t.symbol}: no Congress trades in 12 months`,
       sub: t.name,
       signal: { level: sig.level, label: sig.label, why: sig.why, rule: "activity" },
       stats: [
-        { label: "Congress trades · 12 mo", value: String(trades.length), note: `${new Set(trades.map((r) => r.bioguide || r.person)).size} members` },
+        {
+          label: "Congress trades · 12 mo",
+          value: String(trades.length),
+          note: `${new Set(trades.map((r) => r.bioguide || r.person)).size} members`,
+        },
         { label: "Form 4 lines · 90d", value: String(f4.length), note: form4Breakdown(f4) },
-        contract
+        contract,
       ],
       asOf: oldestAsOf(tradeRes.asOf, insiderRes.asOf) || new Date().toISOString(),
       sources: ["House Clerk PTR / Senate eFD", "SEC EDGAR Form 4", "USAspending"],
-      latency: "Congress trades filed up to 45 days late; Form 4 due 2 business days after the trade; DoD contract actions reach USAspending about 90 days late."
+      latency:
+        "Congress trades filed up to 45 days late; Form 4 due 2 business days after the trade; DoD contract actions reach USAspending about 90 days late.",
     };
   }
   if (kind === "district") {
@@ -408,11 +614,19 @@ export async function caseFile(db, kind, rawId) {
     if (!code) return { ok: false, error: "District must look like TX-12" };
     const [state, num] = code.split("-");
     const people = await roster(db).catch(() => ({ items: [] }));
-    const rep = people.items.find((p) => p.chamber === "house" && p.state === state && (num === "AL" ? p.district === "0" || p.district === "" : Number(p.district) === Number(num)));
+    const rep = people.items.find(
+      (p) =>
+        p.chamber === "house" &&
+        p.state === state &&
+        (num === "AL" ? p.district === "0" || p.district === "" : Number(p.district) === Number(num)),
+    );
     const hqIndex = hqAll(db);
     const hqAsOf = hqIndex.asOf || "";
     const hqs = hqIndex.items.filter((h) => h.district === code);
-    const [c, repSig] = await Promise.all([districtContracts(db, code === `${state}-AL` ? state : code), rep ? memberSignal(db, rep.bioguide) : null]);
+    const [c, repSig] = await Promise.all([
+      districtContracts(db, code === `${state}-AL` ? state : code),
+      rep ? memberSignal(db, rep.bioguide) : null,
+    ]);
     const trades = repSig?.trades || [];
     const sig = repSig?.sig || { level: "thin", label: "NO MEMBER", why: "No current representative on the roster." };
     return {
@@ -420,16 +634,32 @@ export async function caseFile(db, kind, rawId) {
       kind: "district",
       subject: "DISTRICT",
       headline: `${code}: ${c.ok ? `${contractAmount(c)} in federal contract actions over 90 days${c.capped ? ` (top ${c.n} actions)` : ""}` : "contract total pending"}${rep ? ` · Rep. ${rep.name}: ${proximityPhrase(trades, repSig?.tl?.proximity)}` : ""}`,
-      sub: rep ? `Rep. ${rep.name} (${rep.party}) · signal is the representative's hearing proximity` : "Vacant or not on the roster",
+      sub: rep
+        ? `Rep. ${rep.name} (${rep.party}) · signal is the representative's hearing proximity`
+        : "Vacant or not on the roster",
       signal: { ...sig, rule: "hearing" },
       stats: [
         contractStat(c, "Contract actions · 90d"),
-        { label: "Index HQs here", value: String(hqs.length), note: hqs.length ? hqs.slice(0, 4).map((h) => h.symbol).join(", ") : "SEC business address" },
-        { label: `Rep. trades ${year}`, value: rep ? String(trades.filter((t) => t.traded.startsWith(year)).length) : "—", note: rep ? `${trades.length} since Jan 2025` : "" }
+        {
+          label: "Index HQs here",
+          value: String(hqs.length),
+          note: hqs.length
+            ? hqs
+                .slice(0, 4)
+                .map((h) => h.symbol)
+                .join(", ")
+            : "SEC business address",
+        },
+        {
+          label: `Rep. trades ${year}`,
+          value: rep ? String(trades.filter((t) => t.traded.startsWith(year)).length) : "—",
+          note: rep ? `${trades.length} since Jan 2025` : "",
+        },
       ],
       asOf: oldestAsOf(c.asOf, hqAsOf, repSig?.tl?.asOf) || new Date().toISOString(),
       sources: ["USAspending place of performance", "SEC EDGAR business address", "House Clerk PTR"],
-      latency: "DoD contract actions reach USAspending about 90 days late; HQ is the address last filed with the SEC; trades filed up to 45 days late."
+      latency:
+        "DoD contract actions reach USAspending about 90 days late; HQ is the address last filed with the SEC; trades filed up to 45 days late.",
     };
   }
   return { ok: false, error: "Unknown case kind" };

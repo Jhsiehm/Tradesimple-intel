@@ -4,7 +4,20 @@
  */
 import { titleCase } from "./form4.mjs";
 
-const MONTHS = { JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06", JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12" };
+const MONTHS = {
+  JAN: "01",
+  FEB: "02",
+  MAR: "03",
+  APR: "04",
+  MAY: "05",
+  JUN: "06",
+  JUL: "07",
+  AUG: "08",
+  SEP: "09",
+  OCT: "10",
+  NOV: "11",
+  DEC: "12",
+};
 
 /** "28-SEP-2026" (the data sets' format), "20260928" (daily index) or ISO → "2026-09-28"; anything else → "". */
 export function secDay(value) {
@@ -41,7 +54,10 @@ export function parseDatasetLinks(html, base = "https://www.sec.gov") {
 
 /** A header-keyed reader for one TSV table: `row(line)` → { COLUMN: value }. */
 export function tsvReader(headerLine) {
-  const cols = String(headerLine).replace(/^\uFEFF/, "").split("\t").map((c) => c.trim());
+  const cols = String(headerLine)
+    .replace(/^\uFEFF/, "")
+    .split("\t")
+    .map((c) => c.trim());
   return (line) => {
     const cells = line.split("\t");
     const row = {};
@@ -57,17 +73,24 @@ export function submissionOf(row) {
   return {
     accession: String(row.ACCESSION_NUMBER || "").trim(),
     filed: secDay(row.FILING_DATE),
-    form: String(row.DOCUMENT_TYPE || "").trim().toUpperCase(),
+    form: String(row.DOCUMENT_TYPE || "")
+      .trim()
+      .toUpperCase(),
     issuerCik: Number(row.ISSUERCIK) || 0,
-    issuerSymbol: String(row.ISSUERTRADINGSYMBOL || "").trim().toUpperCase(),
-    checked: truthy(row.AFF10B5ONE)
+    issuerSymbol: String(row.ISSUERTRADINGSYMBOL || "")
+      .trim()
+      .toUpperCase(),
+    checked: truthy(row.AFF10B5ONE),
   };
 }
 
 /** REPORTINGOWNER.tsv row → name and role as parseForm4 reads them (officer title, else Director, else 10% owner). */
 export function ownerOf(row) {
   const rel = String(row.RPTOWNER_RELATIONSHIP || "");
-  const title = String(row.RPTOWNER_TITLE || "").trim() || (/Director/i.test(rel) ? "Director" : "") || (/TenPercentOwner/i.test(rel) ? "10% owner" : "");
+  const title =
+    String(row.RPTOWNER_TITLE || "").trim() ||
+    (/Director/i.test(rel) ? "Director" : "") ||
+    (/TenPercentOwner/i.test(rel) ? "10% owner" : "");
   return { owner: titleCase(String(row.RPTOWNERNAME || "").trim()), title };
 }
 
@@ -77,7 +100,8 @@ export const plansNote = (text) => /10b5-1/i.test(String(text || ""));
 /** Footnote ids a transaction row cites, from every *_FN column ("F1,F3"). */
 export function footnoteIds(row) {
   const ids = [];
-  for (const [k, v] of Object.entries(row)) if (k.endsWith("_FN") && v) for (const id of String(v).split(/[,\s]+/)) if (id) ids.push(id);
+  for (const [k, v] of Object.entries(row))
+    if (k.endsWith("_FN") && v) for (const id of String(v).split(/[,\s]+/)) if (id) ids.push(id);
   return ids;
 }
 
@@ -86,12 +110,14 @@ export function transLineOf(row) {
   return {
     sk: Number(row.NONDERIV_TRANS_SK) || 0,
     date: secDay(row.TRANS_DATE),
-    code: String(row.TRANS_CODE || "").trim().toUpperCase(),
+    code: String(row.TRANS_CODE || "")
+      .trim()
+      .toUpperCase(),
     shares: Number(row.TRANS_SHARES) || 0,
     price: Number(row.TRANS_PRICEPERSHARE) || null,
     ad: String(row.TRANS_ACQUIRED_DISP_CD || "").trim(),
     owned: Number(row.SHRS_OWND_FOLWNG_TRANS) || null,
-    notes: footnoteIds(row)
+    notes: footnoteIds(row),
   };
 }
 
@@ -106,7 +132,12 @@ export function parsedOf(sub, owner, lines, planIds = new Set()) {
     plan10b5: sub.checked || planIds.size > 0,
     issuerCik: String(sub.issuerCik || ""),
     issuerSymbol: sub.issuerSymbol,
-    lines: [...lines].sort((a, b) => a.sk - b.sk).map(({ sk: _sk, notes, ...line }) => ({ ...line, plan: planIds.size ? notes.some((id) => planIds.has(id)) : sub.checked }))
+    lines: [...lines]
+      .sort((a, b) => a.sk - b.sk)
+      .map(({ sk: _sk, notes, ...line }) => ({
+        ...line,
+        plan: planIds.size ? notes.some((id) => planIds.has(id)) : sub.checked,
+      })),
   };
 }
 
@@ -118,11 +149,24 @@ export function parseFormIdx(text, forms = new Set(["4", "4/A"])) {
   const out = [];
   let body = false;
   for (const line of String(text).split(/\r?\n/)) {
-    if (!body) { if (/^-{10,}/.test(line)) body = true; continue; }
+    if (!body) {
+      if (/^-{10,}/.test(line)) body = true;
+      continue;
+    }
     const m = /^(.+?)\s{2,}(.*?)\s+(\d{1,10})\s+(\d{8}|\d{4}-\d{2}-\d{2})\s+(edgar\/\S+)\s*$/.exec(line);
     if (!m || !forms.has(m[1].trim())) continue;
     const file = m[5];
-    out.push({ form: m[1].trim(), company: m[2].trim(), cik: Number(m[3]), filed: secDay(m[4]), file, accession: file.split("/").pop().replace(/\.txt$/, "") });
+    out.push({
+      form: m[1].trim(),
+      company: m[2].trim(),
+      cik: Number(m[3]),
+      filed: secDay(m[4]),
+      file,
+      accession: file
+        .split("/")
+        .pop()
+        .replace(/\.txt$/, ""),
+    });
   }
   return out;
 }

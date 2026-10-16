@@ -23,12 +23,34 @@ export type Spend = {
 };
 
 export declare function priceOf(model: string): { input: number; output: number; known: boolean };
-export declare function callCost(call: { model?: string; input?: number; output?: number; cost?: number | null }): { usd: number; priced: "reported" | "table" | "fallback" };
+export declare function callCost(call: { model?: string; input?: number; output?: number; cost?: number | null }): {
+  usd: number;
+  priced: "reported" | "table" | "fallback";
+};
 export declare const WEB_SEARCH_USD: { openrouterPerResult: number; tavily: number; brave: number };
-export declare function webSearchCost(s: { provider?: string; results?: number; model?: string; input?: number; output?: number; cost?: number | null }): { usd: number; priced: "reported" | "web-estimate" };
+export declare function webSearchCost(s: {
+  provider?: string;
+  results?: number;
+  model?: string;
+  input?: number;
+  output?: number;
+  cost?: number | null;
+}): { usd: number; priced: "reported" | "web-estimate" };
 export declare function monthKey(ms: number): string;
 export declare function resetDay(month: string): string;
-export declare function budgetSettings(env?: Record<string, string | undefined>, provider?: string): { budget: number; hardStop: boolean; cheap: string };
-export declare function budgetLevel(s: { spent?: number; budget?: number; hardStop?: boolean }): { level: BudgetLevel; pct: number };
-export declare function budgetNote(s: { level: BudgetLevel; spent: number; budget: number; cheap?: string; month: string }): string;
+export declare function budgetSettings(
+  env?: Record<string, string | undefined>,
+  provider?: string,
+): { budget: number; hardStop: boolean; cheap: string };
+export declare function budgetLevel(s: { spent?: number; budget?: number; hardStop?: boolean }): {
+  level: BudgetLevel;
+  pct: number;
+};
+export declare function budgetNote(s: {
+  level: BudgetLevel;
+  spent: number;
+  budget: number;
+  cheap?: string;
+  month: string;
+}): string;
 export declare function spendLine(spend: Spend | null | undefined): string;

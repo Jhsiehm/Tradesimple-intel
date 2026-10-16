@@ -5,7 +5,17 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
-import { LIVE_CHECKS, checkOf, dedupeHeadlines, detectionLag, durationLabel, filingLagLabel, liveAlertRow, nextDelay, predatesWatch } from "../shared/live.mjs";
+import {
+  LIVE_CHECKS,
+  checkOf,
+  dedupeHeadlines,
+  detectionLag,
+  durationLabel,
+  filingLagLabel,
+  liveAlertRow,
+  nextDelay,
+  predatesWatch,
+} from "../shared/live.mjs";
 import { openDb } from "../server/lib/db.mjs";
 import { createLivePoller, SEC_COOL_MS } from "../server/jobs/live.mjs";
 import { FORM4_PER_PASS, makeChecks } from "../server/domain/live/checks.mjs";
@@ -23,16 +33,41 @@ function tempDb() {
   const db = openDb(root);
   if (prev == null) delete process.env.INTEL_CACHE;
   else process.env.INTEL_CACHE = prev;
-  return { db, file, cleanup: () => { for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true }); } };
+  return {
+    db,
+    file,
+    cleanup: () => {
+      for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true });
+    },
+  };
 }
 
-const ev = (id, symbol, extra = {}) => ({ id, symbol, source: "news", feed: "Yahoo Finance headline RSS", title: id, publishedAt: new Date(T0 - 60_000).toISOString(), eventAt: "", lag: null, link: `https://example.com/${id}`, ...extra });
+const ev = (id, symbol, extra = {}) => ({
+  id,
+  symbol,
+  source: "news",
+  feed: "Yahoo Finance headline RSS",
+  title: id,
+  publishedAt: new Date(T0 - 60_000).toISOString(),
+  eventAt: "",
+  lag: null,
+  link: `https://example.com/${id}`,
+  ...extra,
+});
 
 /** Checks whose answers the test sets per id; every call is recorded. */
 function fakeChecks() {
   const answers = Object.fromEntries(LIVE_CHECKS.map((c) => [c.id, () => ({ events: [], ok: [], errors: [] })]));
   const calls = [];
-  const checks = Object.fromEntries(LIVE_CHECKS.map((c) => [c.id, async (args) => { calls.push({ id: c.id, ...args, symbols: [...args.symbols] }); return answers[c.id](args); }]));
+  const checks = Object.fromEntries(
+    LIVE_CHECKS.map((c) => [
+      c.id,
+      async (args) => {
+        calls.push({ id: c.id, ...args, symbols: [...args.symbols] });
+        return answers[c.id](args);
+      },
+    ]),
+  );
   return { checks, answers, calls };
 }
 
@@ -56,8 +91,19 @@ test("latency math: filing lag, detection lag by publish precision, durations", 
   assert.equal(filingLagLabel({ source: "congress", lag: 21 }), "filed 21d after the trade");
   assert.equal(filingLagLabel({ source: "whales", lag: 44 }), "filed 44d after quarter end");
   assert.equal(filingLagLabel({ source: "lobbying", lag: 18 }), "posted 18d after the period ended");
-  assert.equal(filingLagLabel({ source: "lobbying", lag: 14, detail: "3rd Quarter - Report · Defense" }), "posted 14d after the period ended");
-  assert.equal(filingLagLabel({ source: "lobbying", lag: 106, detail: "2nd Quarter - Amendment · Taxation/Internal Revenue Code" }), "", "a stored amendment row from before the fix");
+  assert.equal(
+    filingLagLabel({ source: "lobbying", lag: 14, detail: "3rd Quarter - Report · Defense" }),
+    "posted 14d after the period ended",
+  );
+  assert.equal(
+    filingLagLabel({
+      source: "lobbying",
+      lag: 106,
+      detail: "2nd Quarter - Amendment · Taxation/Internal Revenue Code",
+    }),
+    "",
+    "a stored amendment row from before the fix",
+  );
   assert.equal(filingLagLabel({ source: "news", lag: null }), "");
 });
 
@@ -73,7 +119,24 @@ test("backoff doubles from the interval to the cap and honours Retry-After", () 
 });
 
 test("alert rows keep the feed id, map to Alerts kinds and carry severity and lags", () => {
-  const trade = liveAlertRow({ id: "trade:h-1-0", symbol: "NVDA", source: "congress", feed: "Senate eFD PTR", title: "x", who: "Jane Roe", chamber: "senate", side: "buy", amount: 15001, amountLabel: "$15,001 - $50,000", eventAt: "2026-09-18", publishedAt: "2026-10-09", lag: 21 }, { detectedAt: Date.parse("2026-10-09T15:00:00Z"), seq: 7 });
+  const trade = liveAlertRow(
+    {
+      id: "trade:h-1-0",
+      symbol: "NVDA",
+      source: "congress",
+      feed: "Senate eFD PTR",
+      title: "x",
+      who: "Jane Roe",
+      chamber: "senate",
+      side: "buy",
+      amount: 15001,
+      amountLabel: "$15,001 - $50,000",
+      eventAt: "2026-09-18",
+      publishedAt: "2026-10-09",
+      lag: 21,
+    },
+    { detectedAt: Date.parse("2026-10-09T15:00:00Z"), seq: 7 },
+  );
   assert.equal(trade.id, "trade:h-1-0");
   assert.equal(trade.kind, "symbol-trade");
   assert.equal(trade.action, "pos:NVDA");
@@ -83,13 +146,35 @@ test("alert rows keep the feed id, map to Alerts kinds and carry severity and la
   assert.equal(trade.live.filingLagDays, 21);
   assert.equal(trade.live.precision, "day");
   assert.match(trade.detail, /filed 21d after the trade/);
-  const f4 = liveAlertRow({ id: "f4:NVDA:1", symbol: "NVDA", source: "insiders", title: "CEO", amount: 1.5e6, buys: 1, publishedAt: "2026-10-09T20:56:28.000Z", eventAt: "2026-10-08", lag: 1 }, { detectedAt: Date.parse("2026-10-09T20:58:00Z") });
+  const f4 = liveAlertRow(
+    {
+      id: "f4:NVDA:1",
+      symbol: "NVDA",
+      source: "insiders",
+      title: "CEO",
+      amount: 1.5e6,
+      buys: 1,
+      publishedAt: "2026-10-09T20:56:28.000Z",
+      eventAt: "2026-10-08",
+      lag: 1,
+    },
+    { detectedAt: Date.parse("2026-10-09T20:58:00Z") },
+  );
   assert.equal(f4.kind, "form4");
   assert.equal(f4.severity, "high");
   assert.equal(f4.live.detectionLagMs, 92_000);
-  assert.equal(liveAlertRow({ id: "8k:1", symbol: "LMT", source: "filings", title: "8-K", items: ["1.03"] }).severity, "high");
-  assert.equal(liveAlertRow({ id: "8k:2", symbol: "LMT", source: "filings", title: "8-K", items: ["7.01"] }).severity, "routine");
-  assert.equal(liveAlertRow({ id: "contract:1", symbol: "LMT", source: "contracts", title: "DoD", amount: 2e7 }).severity, "elevated");
+  assert.equal(
+    liveAlertRow({ id: "8k:1", symbol: "LMT", source: "filings", title: "8-K", items: ["1.03"] }).severity,
+    "high",
+  );
+  assert.equal(
+    liveAlertRow({ id: "8k:2", symbol: "LMT", source: "filings", title: "8-K", items: ["7.01"] }).severity,
+    "routine",
+  );
+  assert.equal(
+    liveAlertRow({ id: "contract:1", symbol: "LMT", source: "contracts", title: "DoD", amount: 2e7 }).severity,
+    "elevated",
+  );
   assert.equal(liveAlertRow(ev("news:AAPL:1", "AAPL")).kind, "news");
   assert.equal(liveAlertRow(ev("news:AAPL:1", "AAPL")).severity, "routine");
   const keys = Object.keys(trade).sort().join(",");
@@ -100,7 +185,7 @@ test("headlines dedupe on their words and keep the earliest copy", () => {
   const out = dedupeHeadlines([
     { title: "Nvidia beats estimates!", published: "2026-10-09T14:00:00Z", link: "b" },
     { title: "NVIDIA beats estimates", published: "2026-10-09T13:00:00Z", link: "a" },
-    { title: "Something else", published: "2026-10-09T12:00:00Z", link: "c" }
+    { title: "Something else", published: "2026-10-09T12:00:00Z", link: "c" },
   ]);
   assert.deepEqual(out.map((x) => x.link).sort(), ["a", "c"]);
 });
@@ -122,7 +207,10 @@ test("watchlist accepts data/tickers.json symbols only, keeps order, and backfil
     assert.equal(stored.length, 2);
     assert.ok(stored.every((r) => r.backfill));
     assert.ok(f.calls.filter((c) => c.id === "news").every((c) => c.fresh === true));
-    assert.ok(f.calls.filter((c) => c.id === "congress").every((c) => c.fresh === false), "backfill reads the congress cache");
+    assert.ok(
+      f.calls.filter((c) => c.id === "congress").every((c) => c.fresh === false),
+      "backfill reads the congress cache",
+    );
     assert.deepEqual(poller.setList(["LMT", "NVDA"]).symbols, ["LMT", "NVDA"]);
     assert.deepEqual(poller.watched(), ["LMT", "NVDA"]);
   } finally {
@@ -136,7 +224,11 @@ test("new events push once; seen ids and backoff survive a restart", async () =>
     let now = T0;
     const f = fakeChecks();
     let news = [ev("news:NVDA:a", "NVDA")];
-    f.answers.news = ({ symbols }) => ({ events: news.filter((e) => symbols.includes(e.symbol)), ok: symbols, errors: [] });
+    f.answers.news = ({ symbols }) => ({
+      events: news.filter((e) => symbols.includes(e.symbol)),
+      ok: symbols,
+      errors: [],
+    });
     const pushed = [];
     const poller = createLivePoller({ db, checks: f.checks, now: () => now, log: () => {} });
     poller.bus.on("alert", (row) => pushed.push(row));
@@ -147,7 +239,10 @@ test("new events push once; seen ids and backoff survive a restart", async () =>
     news = [ev("news:NVDA:a", "NVDA"), ev("news:NVDA:b", "NVDA")];
     now += 1000;
     await poller.run("news");
-    assert.deepEqual(pushed.map((r) => r.id), ["news:NVDA:b"]);
+    assert.deepEqual(
+      pushed.map((r) => r.id),
+      ["news:NVDA:b"],
+    );
     assert.equal(pushed[0].live.backfill, false);
     assert.equal(pushed[0].live.detectionLagMs, 61_000);
     await poller.run("news");
@@ -166,9 +261,16 @@ test("new events push once; seen ids and backoff survive a restart", async () =>
     assert.equal(again.status().find((s) => s.id === "sec").failures, 1, "failures restored");
     news = [ev("news:NVDA:a", "NVDA"), ev("news:NVDA:b", "NVDA"), ev("news:NVDA:c", "NVDA")];
     await again.run("news");
-    assert.deepEqual(pushed2.map((r) => r.id), ["news:NVDA:c"]);
+    assert.deepEqual(
+      pushed2.map((r) => r.id),
+      ["news:NVDA:c"],
+    );
     assert.ok(again.start());
-    assert.equal(Date.parse(again.status().find((s) => s.id === "sec").nextAt), Date.parse(secState.nextAt), "backoff kept across restart");
+    assert.equal(
+      Date.parse(again.status().find((s) => s.id === "sec").nextAt),
+      Date.parse(secState.nextAt),
+      "backoff kept across restart",
+    );
     again.stop();
     db2.close();
   } finally {
@@ -178,18 +280,38 @@ test("new events push once; seen ids and backoff survive a restart", async () =>
 
 test("records public before the ticker was primed stay backfill when a later pass first reads them", async () => {
   assert.equal(predatesWatch({ publishedAt: "2026-09-25T02:30:07Z" }, T0, "time"), true);
-  assert.equal(predatesWatch({ publishedAt: new Date(T0 - 30 * 60_000).toISOString() }, T0, "time"), false, "within the indexing slack");
+  assert.equal(
+    predatesWatch({ publishedAt: new Date(T0 - 30 * 60_000).toISOString() }, T0, "time"),
+    false,
+    "within the indexing slack",
+  );
   assert.equal(predatesWatch({ publishedAt: "2026-10-08" }, T0, "day"), false);
   assert.equal(predatesWatch({ publishedAt: "2026-10-01" }, T0, "day"), true);
-  assert.equal(predatesWatch({ publishedAt: "", eventAt: "2026-01-01" }, T0, "none"), false, "no publish date: cannot tell");
+  assert.equal(
+    predatesWatch({ publishedAt: "", eventAt: "2026-01-01" }, T0, "none"),
+    false,
+    "no publish date: cannot tell",
+  );
 
   const { db, cleanup } = tempDb();
   try {
     let now = T0;
     const f = fakeChecks();
-    const f4 = (acc, publishedAt) => ({ id: `f4:NVDA:${acc}`, symbol: "NVDA", source: "insiders", title: acc, publishedAt, eventAt: publishedAt.slice(0, 10), lag: 1 });
+    const f4 = (acc, publishedAt) => ({
+      id: `f4:NVDA:${acc}`,
+      symbol: "NVDA",
+      source: "insiders",
+      title: acc,
+      publishedAt,
+      eventAt: publishedAt.slice(0, 10),
+      lag: 1,
+    });
     let events = [f4("new1", new Date(T0 - 120_000).toISOString())];
-    f.answers.sec = ({ symbols }) => ({ events: events.filter((e) => symbols.includes(e.symbol)), ok: symbols, errors: [] });
+    f.answers.sec = ({ symbols }) => ({
+      events: events.filter((e) => symbols.includes(e.symbol)),
+      ok: symbols,
+      errors: [],
+    });
     const pushed = [];
     const poller = createLivePoller({ db, checks: f.checks, now: () => now, log: () => {} });
     poller.bus.on("alert", (row) => pushed.push(row));
@@ -198,7 +320,10 @@ test("records public before the ticker was primed stay backfill when a later pas
     now += 90_000;
     events = [...events, f4("older", "2026-09-04T02:30:44.000Z"), f4("fresh", new Date(now - 20_000).toISOString())];
     await poller.run("sec");
-    assert.deepEqual(pushed.map((r) => r.id), ["f4:NVDA:fresh"]);
+    assert.deepEqual(
+      pushed.map((r) => r.id),
+      ["f4:NVDA:fresh"],
+    );
     assert.equal(store.seenRows(db, { ids: ["f4:NVDA:older"] })[0].backfill, true);
   } finally {
     cleanup();
@@ -212,7 +337,13 @@ test("scheduling: each check runs on its interval, never twice at once, and back
     const f = fakeChecks();
     let release;
     let slow = false;
-    for (const c of LIVE_CHECKS) f.answers[c.id] = ({ symbols }) => (slow && c.id === "sec" ? new Promise((r) => { release = () => r({ events: [], ok: symbols, errors: [] }); }) : { events: [], ok: symbols, errors: [] });
+    for (const c of LIVE_CHECKS)
+      f.answers[c.id] = ({ symbols }) =>
+        slow && c.id === "sec"
+          ? new Promise((r) => {
+              release = () => r({ events: [], ok: symbols, errors: [] });
+            })
+          : { events: [], ok: symbols, errors: [] };
     const poller = createLivePoller({ db, checks: f.checks, now: () => now, log: () => {} });
     poller.setList(["NVDA"]);
     await poller.idle();
@@ -225,11 +356,18 @@ test("scheduling: each check runs on its interval, never twice at once, and back
     now += checkOf("sec").everyMs - 1000;
     poller.tick();
     await poller.idle();
-    assert.deepEqual(f.calls.map((c) => c.id), [], "nothing due before the SEC interval");
+    assert.deepEqual(
+      f.calls.map((c) => c.id),
+      [],
+      "nothing due before the SEC interval",
+    );
     now += 1000;
     poller.tick();
     await poller.idle();
-    assert.deepEqual(f.calls.map((c) => c.id), ["sec"]);
+    assert.deepEqual(
+      f.calls.map((c) => c.id),
+      ["sec"],
+    );
     now += 90_000;
     slow = true;
     f.calls.length = 0;
@@ -245,10 +383,22 @@ test("scheduling: each check runs on its interval, never twice at once, and back
     slow = false;
     f.answers.sec = () => ({ events: [], ok: [], errors: [{ symbol: "NVDA", message: "HTTP 403", status: 403 }] });
     await poller.run("sec");
-    assert.equal(Date.parse(poller.status().find((s) => s.id === "sec").nextAt) - now, SEC_COOL_MS, "SEC rate-limit answer cools down 10 min");
-    f.answers.news = () => ({ events: [], ok: [], errors: [{ symbol: "NVDA", message: "429", status: 429, retryAfterMs: 20 * 60_000 }] });
+    assert.equal(
+      Date.parse(poller.status().find((s) => s.id === "sec").nextAt) - now,
+      SEC_COOL_MS,
+      "SEC rate-limit answer cools down 10 min",
+    );
+    f.answers.news = () => ({
+      events: [],
+      ok: [],
+      errors: [{ symbol: "NVDA", message: "429", status: 429, retryAfterMs: 20 * 60_000 }],
+    });
     await poller.run("news");
-    assert.equal(Date.parse(poller.status().find((s) => s.id === "news").nextAt) - now, 20 * 60_000, "Retry-After honoured");
+    assert.equal(
+      Date.parse(poller.status().find((s) => s.id === "news").nextAt) - now,
+      20 * 60_000,
+      "Retry-After honoured",
+    );
     f.answers.lobbying = () => ({ events: [], ok: [], errors: [], off: "LDA_API_KEY not set in .env.local" });
     await poller.run("lobbying");
     const lda = poller.status().find((s) => s.id === "lobbying");
@@ -275,22 +425,34 @@ test("SEC check: one submissions request per ticker per pass, Form 4 at acceptan
           acceptanceDateTime: forms.map(() => `${filed}T20:56:28.000Z`),
           primaryDocument: forms.map(() => "xslF345X05/doc.xml"),
           reportDate: forms.map(() => filed),
-          items: forms.map((f) => (f === "8-K" ? "1.01,9.01" : ""))
-        }
-      }
+          items: forms.map((f) => (f === "8-K" ? "1.01,9.01" : "")),
+        },
+      },
     };
     const checks = makeChecks({
-      submissions: async (cik) => { subsCalls.push(cik); return body; },
+      submissions: async (cik) => {
+        subsCalls.push(cik);
+        return body;
+      },
       storeSubs: () => {},
       readForm4: async (_db, cik, pick) => {
         form4Calls.push(`${cik}:${pick.accession}`);
         const other = pick.accession.endsWith("000001");
-        return { owner: "Jane Doe", title: "CFO", issuerCik: other ? "999" : "0001045810", lines: [{ code: "P", shares: 100, price: 10, date: filed, owned: 100, plan: false }] };
+        return {
+          owner: "Jane Doe",
+          title: "CFO",
+          issuerCik: other ? "999" : "0001045810",
+          lines: [{ code: "P", shares: 100, price: 10, date: filed, owned: 100, plan: false }],
+        };
       },
-      seen: (_db, id) => id === "f4:NVDA:0000000000-26-000004"
+      seen: (_db, id) => id === "f4:NVDA:0000000000-26-000004",
     });
     const out = await checks.secSweep({ db, symbols: ["NVDA", "LMT"] });
-    assert.deepEqual(subsCalls, ["0001045810", "0000936468"], "one request per ticker, through the SEC feed (8 req/s gate)");
+    assert.deepEqual(
+      subsCalls,
+      ["0001045810", "0000936468"],
+      "one request per ticker, through the SEC feed (8 req/s gate)",
+    );
     assert.ok(form4Calls.length <= FORM4_PER_PASS * 2);
     assert.ok(!form4Calls.includes("0001045810:0000000000-26-000004"), "seen Form 4 is not re-read");
     assert.ok(form4Calls.includes("0000936468:0000000000-26-000004"), "seen ids are per ticker");
@@ -302,7 +464,10 @@ test("SEC check: one submissions request per ticker per pass, Form 4 at acceptan
     assert.equal(nv.filter((e) => e.source === "stakes").length, 1);
     assert.deepEqual(out.ok, ["NVDA", "LMT"]);
     const perSecond = 4 / (checkOf("sec").everyMs / 1000) + 40 / (SWEEP_MS / 1000);
-    assert.ok(perSecond < 1, `4 Atom feeds per pass plus a 40-ticker sweep cost ${perSecond.toFixed(2)} SEC req/s against an 8 req/s gate`);
+    assert.ok(
+      perSecond < 1,
+      `4 Atom feeds per pass plus a 40-ticker sweep cost ${perSecond.toFixed(2)} SEC req/s against an 8 req/s gate`,
+    );
   } finally {
     cleanup();
   }
@@ -315,8 +480,12 @@ test("lobbying without a key is off, news dedupes within a pass", async () => {
       env: {},
       headlines: async () => [
         { title: "Apple unveils thing", link: "https://a.example/1", published: new Date().toISOString() },
-        { title: "APPLE unveils thing", link: "https://b.example/2", published: new Date(Date.now() - 60_000).toISOString() }
-      ]
+        {
+          title: "APPLE unveils thing",
+          link: "https://b.example/2",
+          published: new Date(Date.now() - 60_000).toISOString(),
+        },
+      ],
     });
     const lda = await checks.lobbying({ db, symbols: ["AAPL"] });
     assert.equal(lda.off, "LDA_API_KEY not set in .env.local");
@@ -340,7 +509,10 @@ test("Alerts rows gain live lags; live-only detections are appended once", () =>
     assert.deepEqual(live.map((r) => r.id).sort(), ["f4:NVDA:1", "news:NVDA:z"]);
     const { rows, extra } = mergeLive([{ id: "f4:NVDA:1", kind: "form4", date: "2026-10-09" }], live);
     assert.ok(rows[0].live.detectedAt);
-    assert.deepEqual(extra.map((r) => r.id), ["news:NVDA:z"]);
+    assert.deepEqual(
+      extra.map((r) => r.id),
+      ["news:NVDA:z"],
+    );
     assert.deepEqual(store.freshCounts(db, ["NVDA"]), { NVDA: { insiders: 1, news: 1 } });
     store.markSeen(db, "NVDA", "news", T0 + 1);
     assert.deepEqual(store.freshCounts(db, ["NVDA"]), { NVDA: { insiders: 1 } });

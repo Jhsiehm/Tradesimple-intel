@@ -12,10 +12,10 @@ export default defineConfig({
   build: {
     outDir: demo ? "dist-demo" : "dist",
     // MapLibre alone is ~1 MB minified and loads lazily with the map; the app chunk stays near 330 kB.
-    chunkSizeWarningLimit: 1100
+    chunkSizeWarningLimit: 1100,
   },
   optimizeDeps: {
-    exclude: ["maplibre-gl"]
+    exclude: ["maplibre-gl"],
   },
   server: {
     host: true,
@@ -42,10 +42,10 @@ export default defineConfig({
             res.writeHead(502, { "Content-Type": "application/json", "Cache-Control": "no-store" });
             res.end(JSON.stringify({ ok: false, error, missing: "" }));
           });
-        }
+        },
       },
       "/api": API,
-      "/geo": API
-    }
-  }
+      "/geo": API,
+    },
+  },
 });

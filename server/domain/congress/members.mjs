@@ -23,22 +23,31 @@ export async function memberProfile(db, bioguide, chamber) {
   const history = Array.isArray(member.partyHistory) ? member.partyHistory : member.partyHistory?.item || [];
   const party = normalizeParty(member.partyName || latest.partyName || latest.party || history[0]?.partyName || "");
   const seated = String(latest.chamber || "").toLowerCase();
-  const side = seated.includes("senate") ? "senate" : seated.includes("house") ? "house" : chamber === "senate" ? "senate" : "house";
+  const side = seated.includes("senate")
+    ? "senate"
+    : seated.includes("house")
+      ? "house"
+      : chamber === "senate"
+        ? "senate"
+        : "house";
   const [recent, seats, people, pacs] = await Promise.all([
     recentCasts(db, id, side),
     memberCommittees(db, id).catch(() => []),
     roster(db).catch(() => ({ items: [] })),
-    Promise.race([memberPacs(db, id).catch(() => null), new Promise((r) => setTimeout(() => r(null), 4000))])
+    Promise.race([memberPacs(db, id).catch(() => null), new Promise((r) => setTimeout(() => r(null), 4000))]),
   ]);
   const known = people.items.find((p) => p.bioguide === id) || {};
-  const apiRoles = (Array.isArray(member.leadership) ? member.leadership : []).filter((l) => l.current).map((l) => ({ title: l.type, since: "" }));
+  const apiRoles = (Array.isArray(member.leadership) ? member.leadership : [])
+    .filter((l) => l.current)
+    .map((l) => ({ title: l.type, since: "" }));
   const leadership = known.leadership?.length ? known.leadership : apiRoles;
   const pattern = countVotes(recent.map((row) => ({ vote: row.vote })));
   return {
     ok: true,
     source: "Congress.gov member record",
     asOf: new Date().toISOString(),
-    latency: "Portrait is the official Bioguide photo. The pattern is the latest roll calls on this feed, not a lifetime score.",
+    latency:
+      "Portrait is the official Bioguide photo. The pattern is the latest roll calls on this feed, not a lifetime score.",
     member: {
       bioguide: id,
       name: member.directOrderName || memberName(member),
@@ -57,12 +66,18 @@ export async function memberProfile(db, bioguide, chamber) {
       birthday: known.birthday || member.birthYear || "",
       phone: known.phone || "",
       office: known.office || "",
-      contact: known.contact || ""
+      contact: known.contact || "",
     },
-    pacs: pacs ? { ...pacs, source: "FEC bulk committee-to-candidate file", latency: "Weekly FEC bulk refresh; lag is filing image date minus gift date." } : { loading: true },
+    pacs: pacs
+      ? {
+          ...pacs,
+          source: "FEC bulk committee-to-candidate file",
+          latency: "Weekly FEC bulk refresh; lag is filing image date minus gift date.",
+        }
+      : { loading: true },
     pattern,
     votes: recent,
-    committees: seats
+    committees: seats,
   };
 }
 
@@ -84,7 +99,7 @@ async function recentCasts(db, bioguide, chamber) {
       result: vote.result,
       date: vote.date,
       bill: vote.bill,
-      vote: hit.vote
+      vote: hit.vote,
     });
   }
   return rows;
@@ -98,10 +113,7 @@ export async function compareMembers(db, a, b, chamber) {
     return { ok: false, error: "Unknown member id" };
   }
   const index = await memberIndex(db);
-  const [leftVotes, rightVotes] = await Promise.all([
-    recentCasts(db, leftId, side),
-    recentCasts(db, rightId, side)
-  ]);
+  const [leftVotes, rightVotes] = await Promise.all([recentCasts(db, leftId, side), recentCasts(db, rightId, side)]);
   const other = new Map(rightVotes.map((vote) => [vote.id, vote]));
   const shared = leftVotes.filter((vote) => other.has(vote.id));
   const splits = shared
@@ -113,17 +125,18 @@ export async function compareMembers(db, a, b, chamber) {
       date: vote.date,
       bill: vote.bill,
       a: vote.vote,
-      b: other.get(vote.id).vote
+      b: other.get(vote.id).vote,
     }));
   return {
     ok: true,
     source: side === "senate" ? "Senate.gov LIS" : "Congress.gov roll call",
     asOf: new Date().toISOString(),
-    latency: "Split is only where both members cast a vote on the latest roll calls this feed loaded. Not a lifetime score.",
+    latency:
+      "Split is only where both members cast a vote on the latest roll calls this feed loaded. Not a lifetime score.",
     a: { bioguide: leftId, name: index.get(leftId)?.name || leftId },
     b: { bioguide: rightId, name: index.get(rightId)?.name || rightId },
     shared: shared.length,
-    splits
+    splits,
   };
 }
 
@@ -135,7 +148,9 @@ export async function seatsForCodes(db, codes) {
 export function matchSeats(codes, index) {
   const seats = [];
   for (const code of codes) {
-    const match = String(code || "").toUpperCase().match(/^([A-Z]{2})-(\d+)$/);
+    const match = String(code || "")
+      .toUpperCase()
+      .match(/^([A-Z]{2})-(\d+)$/);
     if (!match) continue;
     const stateName = POSTAL_TO_NAME[match[1]];
     const district = String(Number(match[2]));
@@ -148,7 +163,7 @@ export function matchSeats(codes, index) {
         bioguide,
         name: info.name || bioguide,
         party: info.party || "",
-        district: `${match[1]}-${district}`
+        district: `${match[1]}-${district}`,
       });
     }
     seats.push({ code: `${match[1]}-${district}`, members: found });
@@ -157,15 +172,57 @@ export function matchSeats(codes, index) {
 }
 
 const POSTAL_TO_NAME = {
-  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado",
-  CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia",
-  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky",
-  LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota",
-  MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
-  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
-  OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
-  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia",
-  WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming"
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  DC: "District of Columbia",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
 };
 
 export async function searchMembers(db, q) {
@@ -177,7 +234,7 @@ export async function searchMembers(db, q) {
     district: m.district,
     chamber: m.chamber,
     geoid: m.chamber === "house" ? houseGeoid(m.state, m.district) : null,
-    party: m.party
+    party: m.party,
   }));
   return { ok: true, source: res.source, asOf: res.asOf, latency: res.latency, items };
 }

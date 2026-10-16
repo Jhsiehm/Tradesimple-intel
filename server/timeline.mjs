@@ -1,6 +1,15 @@
 import { fetchText } from "./lib/http.mjs";
 import { readCache, writeCache } from "./lib/db.mjs";
-import { SENATE_HEADERS, SENATE_VOTE, SESSION, cleanText, congressGet, normalizeVote, senateMenuDate, xmlTag } from "./congress.mjs";
+import {
+  SENATE_HEADERS,
+  SENATE_VOTE,
+  SESSION,
+  cleanText,
+  congressGet,
+  normalizeVote,
+  senateMenuDate,
+  xmlTag,
+} from "./congress.mjs";
 import { lisMap, memberCommittees, roster } from "./roster.mjs";
 import { congressTrades } from "./positions.mjs";
 import { memberReturns } from "./returns.mjs";
@@ -22,11 +31,10 @@ const state = {
   votes: { house: [], senate: [] },
   progress: { meetings: { done: 0, total: 0 }, house: { done: 0, total: 0 }, senate: { done: 0, total: 0 } },
   builtAt: null,
-  running: false
+  running: false,
 };
 
 const isPast = (date) => date && date.slice(0, 10) < nyDaysAgo(2);
-
 
 async function listAll(db, path, field) {
   const first = await congressGet(db, `${path}?limit=250`, 6 * 60 * 60 * 1000);
@@ -55,7 +63,7 @@ async function meetingRow(db, chamber, eventId) {
     type: row.type || "",
     status: row.meetingStatus || "",
     codes: (row.committees || []).map((c) => String(c.systemCode || "").toLowerCase()).filter(Boolean),
-    link: `https://www.congress.gov/event/${CONGRESS}th-congress/${chamber}-event/${eventId}`
+    link: `https://www.congress.gov/event/${CONGRESS}th-congress/${chamber}-event/${eventId}`,
   };
   writeCache(db, key, out, isPast(out.date) ? 120 * DAY : DAY);
   return out;
@@ -64,7 +72,9 @@ async function meetingRow(db, chamber, eventId) {
 /** House Clerk EVS roll call XML → { bioguide: "Y" | "N" | "P" | "-" }. */
 export function clerkCasts(xml) {
   const casts = {};
-  for (const m of String(xml || "").matchAll(/<legislator name-id="([A-Z]\d{6})"[^>]*>[^<]*<\/legislator>\s*<vote>([^<]*)<\/vote>/g)) {
+  for (const m of String(xml || "").matchAll(
+    /<legislator name-id="([A-Z]\d{6})"[^>]*>[^<]*<\/legislator>\s*<vote>([^<]*)<\/vote>/g,
+  )) {
     casts[m[1]] = CAST[normalizeVote(m[2])];
   }
   return casts;
@@ -80,10 +90,14 @@ async function houseVotes(db, session, onRow) {
     let row = readCache(db, key);
     if (!row) {
       const year = 2024 + session;
-      const xml = await fetchText(`https://clerk.house.gov/evs/${year}/roll${String(roll).padStart(3, "0")}.xml`).catch(() => "");
+      const xml = await fetchText(`https://clerk.house.gov/evs/${year}/roll${String(roll).padStart(3, "0")}.xml`).catch(
+        () => "",
+      );
       let casts = clerkCasts(xml);
       if (!Object.keys(casts).length) {
-        const res = await congressGet(db, `/house-vote/${CONGRESS}/${session}/${roll}/members?limit=500`, DAY).catch(() => null);
+        const res = await congressGet(db, `/house-vote/${CONGRESS}/${session}/${roll}/members?limit=500`, DAY).catch(
+          () => null,
+        );
         casts = {};
         for (const p of (res?.ok ? (res.body.houseRollCallVoteMemberVotes || res.body).results : null) || []) {
           const id = p.bioguideID || p.bioguideId;
@@ -97,12 +111,15 @@ async function houseVotes(db, session, onRow) {
           question: cleanText(v.voteQuestion) || "Roll call",
           result: v.result || "",
           bill: [v.legislationType, v.legislationNumber].filter(Boolean).join(" "),
-          casts
+          casts,
         };
         writeCache(db, key, row, isPast(row.date) ? 365 * DAY : DAY);
       }
     }
-    if (row) { rows.push(row); onRow(row); }
+    if (row) {
+      rows.push(row);
+      onRow(row);
+    }
     state.progress.house.done += 1;
   });
   return rows;
@@ -112,7 +129,10 @@ async function senateVotes(db, session, onRow) {
   const menuKey = KEY.tlSenateMenu(CONGRESS, session);
   let xml = readCache(db, menuKey)?.xml;
   if (!xml) {
-    xml = await fetchText(`https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_${CONGRESS}_${session}.xml`, SENATE_HEADERS).catch(() => "");
+    xml = await fetchText(
+      `https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_${CONGRESS}_${session}.xml`,
+      SENATE_HEADERS,
+    ).catch(() => "");
     if (xml) writeCache(db, menuKey, { xml }, session === SESSION ? 6 * 60 * 60 * 1000 : 365 * DAY);
   }
   const year = Number(xmlTag(xml, "congress_year")) || 2024 + session;
@@ -138,12 +158,15 @@ async function senateVotes(db, session, onRow) {
           question: cleanText(xmlTag(block, "question") || xmlTag(block, "title")) || `Roll ${roll}`,
           result: cleanText(xmlTag(block, "result")),
           bill: cleanText(xmlTag(block, "issue")),
-          casts
+          casts,
         };
         writeCache(db, key, row, isPast(row.date) ? 365 * DAY : DAY);
       }
     }
-    if (row) { rows.push(row); onRow(row); }
+    if (row) {
+      rows.push(row);
+      onRow(row);
+    }
     state.progress.senate.done += 1;
   });
   return rows;
@@ -157,14 +180,21 @@ export async function buildIndex(db) {
     const sessions = Array.from({ length: SESSION }, (_, i) => i + 1).reverse();
     const votesFor = async (chamber, load) => {
       const rows = [];
-      const onRow = (row) => { rows.push(row); if (rows.length % 25 === 0) state.votes[chamber] = [...rows].sort(byDate); };
+      const onRow = (row) => {
+        rows.push(row);
+        if (rows.length % 25 === 0) state.votes[chamber] = [...rows].sort(byDate);
+      };
       for (const s of sessions) await load(db, s, onRow).catch(() => []);
       state.votes[chamber] = rows.sort(byDate);
     };
     const meetingsAll = async () => {
-      const lists = await Promise.all(["house", "senate"].map(async (chamber) =>
-        (await listAll(db, `/committee-meeting/${CONGRESS}/${chamber}`, "committeeMeetings").catch(() => [])).map((m) => ({ chamber, eventId: m.eventId }))
-      ));
+      const lists = await Promise.all(
+        ["house", "senate"].map(async (chamber) =>
+          (await listAll(db, `/committee-meeting/${CONGRESS}/${chamber}`, "committeeMeetings").catch(() => [])).map(
+            (m) => ({ chamber, eventId: m.eventId }),
+          ),
+        ),
+      );
       const all = lists.flat();
       state.progress.meetings.total = all.length;
       const meetings = [];
@@ -194,12 +224,24 @@ export function indexedMeetings() {
 }
 
 export function indexStatus() {
-  return { builtAt: state.builtAt, running: state.running, house: state.votes.house.length, senate: state.votes.senate.length };
+  return {
+    builtAt: state.builtAt,
+    running: state.running,
+    house: state.votes.house.length,
+    senate: state.votes.senate.length,
+  };
 }
 
 function gaps() {
   const p = state.progress;
-  return p.house.total - state.votes.house.length + p.senate.total - state.votes.senate.length + p.meetings.total - p.meetings.done;
+  return (
+    p.house.total -
+    state.votes.house.length +
+    p.senate.total -
+    state.votes.senate.length +
+    p.meetings.total -
+    p.meetings.done
+  );
 }
 
 /** Rebuild the index; while roll calls or meetings are still missing, retry every 10 minutes. */
@@ -207,7 +249,9 @@ export function refreshTimeline(db) {
   return buildIndex(db)
     .then(() => {
       const missing = gaps();
-      console.log(`timeline index: ${state.meetings.length} meetings, ${state.votes.house.length} house + ${state.votes.senate.length} senate roll calls, ${missing} missing`);
+      console.log(
+        `timeline index: ${state.meetings.length} meetings, ${state.votes.house.length} house + ${state.votes.senate.length} senate roll calls, ${missing} missing`,
+      );
       if (missing > 0) setTimeout(() => refreshTimeline(db), 10 * 60 * 1000).unref();
     })
     .catch((err) => console.error("timeline", err.message));
@@ -221,7 +265,9 @@ const dayNum = (iso) => Math.round(Date.parse(`${String(iso).slice(0, 10)}T00:00
 
 /** Lane key: the four-letter parent committee, so subcommittee hearings land on the parent lane. */
 export function laneOf(code) {
-  return String(code || "").slice(0, 4).toUpperCase();
+  return String(code || "")
+    .slice(0, 4)
+    .toUpperCase();
 }
 
 /**
@@ -242,15 +288,29 @@ export function buildTimeline({ trades, seats, meetings, votes, bioguide, today 
     const hit = [...new Set(m.codes.map(laneOf))].filter((l) => lanes.has(l));
     for (const lane of hit) {
       lanes.get(lane).hearings.push({
-        id: m.id, date: m.date, title: m.title, type: m.type, status: m.status, link: m.link,
-        mine: m.codes.some((c) => c.endsWith("00") ? laneOf(c) === lane : mySubs.has(c))
+        id: m.id,
+        date: m.date,
+        title: m.title,
+        type: m.type,
+        status: m.status,
+        link: m.link,
+        mine: m.codes.some((c) => (c.endsWith("00") ? laneOf(c) === lane : mySubs.has(c))),
       });
     }
   }
-  const allHearings = [...lanes.values()].flatMap((l) => l.hearings.map((h) => ({ ...h, lane: l.id, laneName: l.name })));
+  const allHearings = [...lanes.values()].flatMap((l) =>
+    l.hearings.map((h) => ({ ...h, lane: l.id, laneName: l.name })),
+  );
   const cast = votes
     .filter((v) => v.casts[bioguide])
-    .map((v) => ({ id: v.id, date: v.date, question: v.question, result: v.result, bill: v.bill, vote: UNCAST[v.casts[bioguide]] }));
+    .map((v) => ({
+      id: v.id,
+      date: v.date,
+      question: v.question,
+      result: v.result,
+      bill: v.bill,
+      vote: UNCAST[v.casts[bioguide]],
+    }));
   const tradeRows = trades
     .filter((t) => t.traded)
     .map((t) => {
@@ -259,9 +319,24 @@ export function buildTimeline({ trades, seats, meetings, votes, bioguide, today 
       for (const h of allHearings) {
         if (/cancel|postpon/i.test(h.status)) continue;
         const gap = dayNum(h.date) - d;
-        if (Math.abs(gap) <= NEAR_DAYS && (!near || Math.abs(gap) < Math.abs(near.gap))) near = { id: h.id, date: h.date, title: h.title, lane: h.lane, laneName: h.laneName, link: h.link, gap };
+        if (Math.abs(gap) <= NEAR_DAYS && (!near || Math.abs(gap) < Math.abs(near.gap)))
+          near = { id: h.id, date: h.date, title: h.title, lane: h.lane, laneName: h.laneName, link: h.link, gap };
       }
-      return { id: t.id, symbol: t.symbol, asset: t.asset, side: t.side, type: t.type, owner: t.owner, amount: t.amount, amountLow: t.amountLow, traded: t.traded, filed: t.filed, lag: t.lag, link: t.link, near };
+      return {
+        id: t.id,
+        symbol: t.symbol,
+        asset: t.asset,
+        side: t.side,
+        type: t.type,
+        owner: t.owner,
+        amount: t.amount,
+        amountLow: t.amountLow,
+        traded: t.traded,
+        filed: t.filed,
+        lag: t.lag,
+        link: t.link,
+        near,
+      };
     })
     .sort((a, b) => a.traded.localeCompare(b.traded));
   const dates = [START, ...tradeRows.map((t) => t.traded)].sort();
@@ -271,7 +346,7 @@ export function buildTimeline({ trades, seats, meetings, votes, bioguide, today 
     committees: [...lanes.values()].sort((a, b) => b.hearings.length - a.hearings.length),
     votes: cast,
     nearDays: NEAR_DAYS,
-    proximity: proximity(tradeRows, allHearings, today)
+    proximity: proximity(tradeRows, allHearings, today),
   };
 }
 
@@ -303,7 +378,7 @@ export function proximity(tradeRows, hearings, today) {
     tradeDays: tradeDays.size,
     nearTradeDays: nearTradeDays.size,
     dayShare: tradeDays.size ? nearTradeDays.size / tradeDays.size : null,
-    baseline: nearDays / days
+    baseline: nearDays / days,
   };
 }
 
@@ -315,12 +390,19 @@ export async function memberTimeline(db, bioguide) {
   const [board, seats, people] = await Promise.all([
     congressTrades(db).catch(() => ({ items: [] })),
     memberCommittees(db, id).catch(() => []),
-    roster(db).catch(() => ({ items: [] }))
+    roster(db).catch(() => ({ items: [] })),
   ]);
   const trades = (board.items || []).filter((r) => r.bioguide === id);
   const person = people.items.find((p) => p.bioguide === id) || {};
   const chamber = person.chamber === "senate" ? "senate" : "house";
-  const body = buildTimeline({ trades, seats, meetings: state.meetings, votes: state.votes[chamber], bioguide: id, today: nyDate() });
+  const body = buildTimeline({
+    trades,
+    seats,
+    meetings: state.meetings,
+    votes: state.votes[chamber],
+    bioguide: id,
+    today: nyDate(),
+  });
   const rets = memberReturns(id);
   body.trades = body.trades.map((t) => {
     const r = rets.byTrade.get(t.id);
@@ -329,23 +411,53 @@ export async function memberTimeline(db, bioguide) {
   const p = state.progress;
   return {
     ok: true,
-    member: { bioguide: id, name: person.name || trades[0]?.person || id, party: person.party || "", state: person.state || "", district: person.district || "", chamber },
+    member: {
+      bioguide: id,
+      name: person.name || trades[0]?.person || id,
+      party: person.party || "",
+      state: person.state || "",
+      district: person.district || "",
+      chamber,
+    },
     ...body,
     returns: rets.stats,
     building: state.running || Boolean(board.building),
     coverage: {
-      trades: board.progress ? { from: board.from, building: Boolean(board.building), ...board.progress[chamber], notes: board.errors || [] } : null,
+      trades: board.progress
+        ? { from: board.from, building: Boolean(board.building), ...board.progress[chamber], notes: board.errors || [] }
+        : null,
       meetings: { done: p.meetings.done, total: p.meetings.total },
       votes: { done: state.votes[chamber].length, total: p[chamber].total },
-      builtAt: state.builtAt
+      builtAt: state.builtAt,
     },
     sources: [
-      { label: "Trades", source: "House Clerk PTR PDFs / Senate eFD", latency: "Trade date as disclosed; filed up to 45 days later by law." },
-      { label: "Committees", source: "unitedstates/congress-legislators (current assignments)", latency: "Current roster only; past assignments are not shown." },
-      { label: "Hearings", source: "Congress.gov committee-meeting API", latency: "As posted by committee clerks; refreshed every 6 h." },
-      { label: "Votes", source: chamber === "senate" ? "Senate.gov LIS roll call XML" : "House Clerk EVS roll call XML", latency: "Roll calls of the 119th Congress; refreshed every 6 h." },
-      { label: "Returns", source: `Yahoo Finance daily adjusted closes vs SPY${rets.stats?.lastClose ? ` through ${rets.stats.lastClose}` : ""}`, latency: "Disclosed buys of joined tickers only, equal-weighted, not their actual portfolio. Refreshed every 12 h." }
+      {
+        label: "Trades",
+        source: "House Clerk PTR PDFs / Senate eFD",
+        latency: "Trade date as disclosed; filed up to 45 days later by law.",
+      },
+      {
+        label: "Committees",
+        source: "unitedstates/congress-legislators (current assignments)",
+        latency: "Current roster only; past assignments are not shown.",
+      },
+      {
+        label: "Hearings",
+        source: "Congress.gov committee-meeting API",
+        latency: "As posted by committee clerks; refreshed every 6 h.",
+      },
+      {
+        label: "Votes",
+        source: chamber === "senate" ? "Senate.gov LIS roll call XML" : "House Clerk EVS roll call XML",
+        latency: "Roll calls of the 119th Congress; refreshed every 6 h.",
+      },
+      {
+        label: "Returns",
+        source: `Yahoo Finance daily adjusted closes vs SPY${rets.stats?.lastClose ? ` through ${rets.stats.lastClose}` : ""}`,
+        latency:
+          "Disclosed buys of joined tickers only, equal-weighted, not their actual portfolio. Refreshed every 12 h.",
+      },
     ],
-    asOf: state.builtAt || new Date().toISOString()
+    asOf: state.builtAt || new Date().toISOString(),
   };
 }

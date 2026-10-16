@@ -10,7 +10,10 @@ const EVENT = "intel:watch";
 function read(): Watch {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { symbols: Array.isArray(raw.symbols) ? raw.symbols : [], members: Array.isArray(raw.members) ? raw.members : [] };
+    return {
+      symbols: Array.isArray(raw.symbols) ? raw.symbols : [],
+      members: Array.isArray(raw.members) ? raw.members : [],
+    };
   } catch {
     return { symbols: [], members: [] };
   }
@@ -65,6 +68,6 @@ export function useWatch() {
   return {
     watch,
     hasSymbol: (s: string) => watch.symbols.includes(s.toUpperCase()),
-    hasMember: (id: string) => watch.members.some((m) => m.bioguide === id)
+    hasMember: (id: string) => watch.members.some((m) => m.bioguide === id),
   };
 }

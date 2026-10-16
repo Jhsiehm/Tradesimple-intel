@@ -1,17 +1,17 @@
 /* Additive brand vocabulary. No aliases to existing semantic or surface tokens. */
 :root {
-  --tsi-core-midnight: #0B1F1A;
-  --tsi-core-atlas: #1F4D43;
-  --tsi-core-ivory: #EAE4D6;
-  --tsi-core-stone: #C7B8A3;
-  --tsi-core-slate: #899CA3;
-  --tsi-core-brass: #B08D57;
-  --tsi-chroma-blue: #2E7DF6;
-  --tsi-chroma-amber: #FAA340;
-  --tsi-chroma-crimson: #E85553;
-  --tsi-chroma-violet: #986CFF;
-  --tsi-chroma-cyan: #26E0D4;
-  --tsi-chroma-lime: #A6E22E;
-  --tsi-chroma-orange: #FF8A3C;
-  --tsi-chroma-pink: #FF5CAB;
+  --tsi-core-midnight: #0b1f1a;
+  --tsi-core-atlas: #1f4d43;
+  --tsi-core-ivory: #eae4d6;
+  --tsi-core-stone: #c7b8a3;
+  --tsi-core-slate: #899ca3;
+  --tsi-core-brass: #b08d57;
+  --tsi-chroma-blue: #2e7df6;
+  --tsi-chroma-amber: #faa340;
+  --tsi-chroma-crimson: #e85553;
+  --tsi-chroma-violet: #986cff;
+  --tsi-chroma-cyan: #26e0d4;
+  --tsi-chroma-lime: #a6e22e;
+  --tsi-chroma-orange: #ff8a3c;
+  --tsi-chroma-pink: #ff5cab;
 }

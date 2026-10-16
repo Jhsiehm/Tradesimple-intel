@@ -52,11 +52,13 @@ if (process.stdin.isTTY && (await readHidden("Repeat it: ")) !== password) {
 const lines = [
   "# Sign-in for the hosted copy. Paste into /etc/tradesimple/env on the server (never into git).",
   `INTEL_PASSWORD_HASH=${await hashPassword(password)}`,
-  `INTEL_SESSION_SECRET=${crypto.randomBytes(48).toString("base64url")}`
+  `INTEL_SESSION_SECRET=${crypto.randomBytes(48).toString("base64url")}`,
 ];
 if (process.argv.includes("--totp")) {
   const secret = base32Encode(crypto.randomBytes(20));
   lines.push(`INTEL_TOTP_SECRET=${secret}`);
-  console.error(`Add this to your authenticator app (or type the secret in by hand):\n  otpauth://totp/TradeSimple%20Intel?secret=${secret}&issuer=TradeSimple&digits=6&period=30\n`);
+  console.error(
+    `Add this to your authenticator app (or type the secret in by hand):\n  otpauth://totp/TradeSimple%20Intel?secret=${secret}&issuer=TradeSimple&digits=6&period=30\n`,
+  );
 }
 console.log(lines.join("\n"));

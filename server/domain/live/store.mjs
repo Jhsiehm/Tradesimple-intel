@@ -32,7 +32,10 @@ function ensure(db) {
 
 export function listSymbols(db) {
   ensure(db);
-  return db.prepare("SELECT symbol FROM live_list ORDER BY pos, symbol").all().map((r) => r.symbol);
+  return db
+    .prepare("SELECT symbol FROM live_list ORDER BY pos, symbol")
+    .all()
+    .map((r) => r.symbol);
 }
 
 /** Replaces the list with `symbols` (already validated), keeping first-added times. Returns { added, removed }. */
@@ -48,7 +51,9 @@ export function setSymbols(db, symbols, now = Date.now()) {
       db.prepare("DELETE FROM live_primed WHERE symbol = ?").run(s);
     }
     symbols.forEach((s, i) => {
-      db.prepare("INSERT INTO live_list (symbol, pos, added_at) VALUES (?, ?, ?) ON CONFLICT(symbol) DO UPDATE SET pos = excluded.pos").run(s, i, now);
+      db.prepare(
+        "INSERT INTO live_list (symbol, pos, added_at) VALUES (?, ?, ?) ON CONFLICT(symbol) DO UPDATE SET pos = excluded.pos",
+      ).run(s, i, now);
     });
     for (const s of added) db.prepare("DELETE FROM live_marks WHERE symbol = ?").run(s);
     db.exec("COMMIT");
@@ -62,7 +67,10 @@ export function setSymbols(db, symbols, now = Date.now()) {
 /** Records an event the first time it is seen. True when it was new (the caller pushes it unless it is backfill). */
 export function remember(db, ev, { detectedAt, backfill }) {
   ensure(db);
-  const out = db.prepare("INSERT OR IGNORE INTO live_seen (id, symbol, source, detected_at, backfill, body) VALUES (?, ?, ?, ?, ?, ?)")
+  const out = db
+    .prepare(
+      "INSERT OR IGNORE INTO live_seen (id, symbol, source, detected_at, backfill, body) VALUES (?, ?, ?, ?, ?, ?)",
+    )
     .run(ev.id, ev.symbol, ev.source, detectedAt, backfill ? 1 : 0, JSON.stringify(ev));
   return out.changes > 0 ? Number(out.lastInsertRowid) : 0;
 }
@@ -72,7 +80,12 @@ export function hasSeen(db, id, symbol) {
   return Boolean(db.prepare("SELECT 1 FROM live_seen WHERE id = ? AND symbol = ?").get(id, symbol));
 }
 
-const hydrate = (r) => ({ seq: r.seq, ev: JSON.parse(r.body), detectedAt: r.detected_at, backfill: Boolean(r.backfill) });
+const hydrate = (r) => ({
+  seq: r.seq,
+  ev: JSON.parse(r.body),
+  detectedAt: r.detected_at,
+  backfill: Boolean(r.backfill),
+});
 
 /**
  * Stored detections, newest first. `symbols` limits to those symbols, `after` to push sequence numbers above it,
@@ -93,32 +106,50 @@ export function seenRows(db, { symbols = null, after = 0, since = 0, live = fals
     where.push(`id IN (${ids.map(() => "?").join(",")})`);
     args.push(...ids);
   }
-  return db.prepare(`SELECT * FROM live_seen WHERE ${where.join(" AND ")} ORDER BY seq DESC LIMIT ?`).all(...args, limit).map(hydrate);
+  return db
+    .prepare(`SELECT * FROM live_seen WHERE ${where.join(" AND ")} ORDER BY seq DESC LIMIT ?`)
+    .all(...args, limit)
+    .map(hydrate);
 }
 
 /** `id → { detectedAt, backfill }` for the given ids, for feeds that show detection lag next to their own rows. */
 export function detectedFor(db, ids) {
   const out = new Map();
-  for (const r of seenRows(db, { ids: [...new Set(ids)].slice(0, 500), limit: 500 })) out.set(r.ev.id, { detectedAt: r.detectedAt, backfill: r.backfill });
+  for (const r of seenRows(db, { ids: [...new Set(ids)].slice(0, 500), limit: 500 }))
+    out.set(r.ev.id, { detectedAt: r.detectedAt, backfill: r.backfill });
   return out;
 }
 
 /** symbol → when its first pass for this check finished (ms). */
 export function primedAt(db, checkId) {
   ensure(db);
-  return new Map(db.prepare("SELECT symbol, at FROM live_primed WHERE check_id = ?").all(checkId).map((r) => [r.symbol, r.at]));
+  return new Map(
+    db
+      .prepare("SELECT symbol, at FROM live_primed WHERE check_id = ?")
+      .all(checkId)
+      .map((r) => [r.symbol, r.at]),
+  );
 }
 
 export function prime(db, checkId, symbols, now = Date.now()) {
   ensure(db);
-  for (const s of symbols) db.prepare("INSERT OR IGNORE INTO live_primed (symbol, check_id, at) VALUES (?, ?, ?)").run(s, checkId, now);
+  for (const s of symbols)
+    db.prepare("INSERT OR IGNORE INTO live_primed (symbol, check_id, at) VALUES (?, ?, ?)").run(s, checkId, now);
 }
 
 /** Marks a symbol's sources (all when `source` is empty) as looked at now. */
 export function markSeen(db, symbol, source = "", now = Date.now()) {
   ensure(db);
-  const sources = source ? [source] : db.prepare("SELECT DISTINCT source FROM live_seen WHERE symbol = ?").all(symbol).map((r) => r.source);
-  for (const s of sources) db.prepare("INSERT INTO live_marks (symbol, source, at) VALUES (?, ?, ?) ON CONFLICT(symbol, source) DO UPDATE SET at = excluded.at").run(symbol, s, now);
+  const sources = source
+    ? [source]
+    : db
+        .prepare("SELECT DISTINCT source FROM live_seen WHERE symbol = ?")
+        .all(symbol)
+        .map((r) => r.source);
+  for (const s of sources)
+    db.prepare(
+      "INSERT INTO live_marks (symbol, source, at) VALUES (?, ?, ?) ON CONFLICT(symbol, source) DO UPDATE SET at = excluded.at",
+    ).run(symbol, s, now);
 }
 
 /** `{ SYMBOL: { source: n } }`: pushed detections since the user last looked at that symbol's source (or since it was added). */
@@ -127,10 +158,18 @@ export function freshCounts(db, symbols) {
   const out = {};
   for (const symbol of symbols) {
     const added = db.prepare("SELECT added_at FROM live_list WHERE symbol = ?").get(symbol)?.added_at || 0;
-    const marks = new Map(db.prepare("SELECT source, at FROM live_marks WHERE symbol = ?").all(symbol).map((r) => [r.source, r.at]));
-    const rows = db.prepare("SELECT source, detected_at FROM live_seen WHERE symbol = ? AND backfill = 0 AND detected_at >= ?").all(symbol, added);
+    const marks = new Map(
+      db
+        .prepare("SELECT source, at FROM live_marks WHERE symbol = ?")
+        .all(symbol)
+        .map((r) => [r.source, r.at]),
+    );
+    const rows = db
+      .prepare("SELECT source, detected_at FROM live_seen WHERE symbol = ? AND backfill = 0 AND detected_at >= ?")
+      .all(symbol, added);
     const counts = {};
-    for (const r of rows) if (r.detected_at > (marks.get(r.source) || 0)) counts[r.source] = (counts[r.source] || 0) + 1;
+    for (const r of rows)
+      if (r.detected_at > (marks.get(r.source) || 0)) counts[r.source] = (counts[r.source] || 0) + 1;
     out[symbol] = counts;
   }
   return out;
@@ -138,12 +177,19 @@ export function freshCounts(db, symbols) {
 
 export function loadStatus(db) {
   ensure(db);
-  return new Map(db.prepare("SELECT check_id, body FROM live_status").all().map((r) => [r.check_id, JSON.parse(r.body)]));
+  return new Map(
+    db
+      .prepare("SELECT check_id, body FROM live_status")
+      .all()
+      .map((r) => [r.check_id, JSON.parse(r.body)]),
+  );
 }
 
 export function saveStatus(db, checkId, body) {
   ensure(db);
-  db.prepare("INSERT INTO live_status (check_id, body) VALUES (?, ?) ON CONFLICT(check_id) DO UPDATE SET body = excluded.body").run(checkId, JSON.stringify(body));
+  db.prepare(
+    "INSERT INTO live_status (check_id, body) VALUES (?, ?) ON CONFLICT(check_id) DO UPDATE SET body = excluded.body",
+  ).run(checkId, JSON.stringify(body));
 }
 
 /** Expires a cache row so the next read refetches (the row stays as the stale copy lib/cache.mjs can fall back to). */

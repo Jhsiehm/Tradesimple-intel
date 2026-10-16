@@ -1,52 +1,399 @@
-import { ActivityFeedback } from './ActivityFeedback';
-import {useEffect,useState} from 'react';
-import type {AskApi} from '../ask/useAsk';
-import type {MemoryRequest} from '../ask/types';
-import {read,write,message} from './api';
-type Notebook={id:string;revision:number;title:string;createdAt:string;status:string;hypothesis:string;conclusion:string;decision:string;evidence:{title:string;runId:string}[]};
-type Approval={id:string;notebookId:string;revision:number;title:string;action:'approve'|'revoke';createdAt:string;reason:string};
-type Snapshot={id:string;mode:'isolated'|'context-aware';knownAt:string;createdAt:string;contentHash:string;records:{approval:Approval;notebook:Notebook}[]};
-type SnapshotSummary=Omit<Snapshot,'records'>&{records:number};
-export function ResearchMemory({ask,onStart,onNotebooks,onPairs,onHistory}:{ask:AskApi;onStart:(question:string,memory:MemoryRequest)=>void;onNotebooks:()=>void;onPairs:()=>void;onHistory:()=>void}) {
- const [notebooks,setNotebooks]=useState<Notebook[]>([]),[approvals,setApprovals]=useState<Approval[]>([]),[snapshots,setSnapshots]=useState<SnapshotSummary[]>([]);
- const [revisions,setRevisions]=useState<Notebook[]>([]),[notebookId,setNotebookId]=useState(''),[revision,setRevision]=useState(0),[reason,setReason]=useState(''),[supersedes,setSupersedes]=useState('');
- const [selected,setSelected]=useState<string[]>([]),[cutoff,setCutoff]=useState(''),[snapshot,setSnapshot]=useState<Snapshot|null>(null);
- const [mode,setMode]=useState<'isolated'|'context-aware'>('isolated'),[question,setQuestion]=useState('');
- const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const refresh=async()=>{const [n,a,s]=await Promise.all([read<{items:Notebook[]}>('notebooks'),read<{items:Approval[]}>('memory/approvals'),read<{items:SnapshotSummary[]}>('memory/snapshots')]);setNotebooks(n.items);setApprovals(a.items);setSnapshots(s.items);setSelected(old=>old.filter(id=>a.items.some(x=>x.id===id&&x.action==='approve')));};
- useEffect(()=>{void refresh().catch(e=>setError(message(e))).finally(()=>setLoading(false));void ask.refreshStatus();},[]);
- const act=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(message(e));}finally{setBusy(false);}};
- const review=revisions.find(n=>n.revision===revision);
- const current=approvals.find(a=>a.notebookId===notebookId&&a.revision===revision);
- const active=approvals.filter(a=>a.action==='approve');
- const usable=snapshot?.mode==='context-aware'&&snapshot.records.every(r=>active.some(a=>a.id===r.approval.id));
- const openNotebook=(id:string)=>act(async()=>{setNotebookId(id);setRevisions([]);setRevision(0);setReason('');setSupersedes('');if(!id)return;const out=await read<{notebook:Notebook;history:Notebook[]}>(`notebooks/${id}`);setRevisions(out.history);setRevision(out.notebook.revision);});
- const approve=(action:'approve'|'revoke')=>act(async()=>{await write('memory/approvals',{notebookId,revision,action,reason,expectedPreviousId:current?.id||null,...(action==='approve'&&supersedes?{supersedesApprovalId:supersedes}:{})});await refresh();setReason('');setSupersedes('');setNotice(`${action==='approve'?'Approved':'Revoked'} revision ${revision}. ${action==='approve'&&supersedes?'Replaced the selected earlier approval. ':''}Earlier snapshots remain inspectable.`);});
- const freeze=()=>act(async()=>{const out=await write<{snapshot:Snapshot}>('memory/snapshots',{mode:'context-aware',knownAt:cutoff.trim()||new Date().toISOString(),approvalIds:selected});setSnapshot(out.snapshot);setMode('context-aware');await refresh();setNotice('Frozen the selected approved revisions. Review the context before starting an analysis.');});
- return <section className="research-content research-memory"><h2>Research memory</h2><div className="research-actions"><button className="panels-btn" onClick={onPairs}>Compare paired research</button><button className="panels-btn" onClick={onHistory}>Inspect execution history</button></div><p>Approve exact notebook revisions for reuse, then freeze the context supplied to an analysis. Approval permits reuse; it does not certify a conclusion as true. This installation has one owner, not team permissions.</p>
- {loading&&<ActivityFeedback className="research-working">Loading findings and approvals…</ActivityFeedback>}{busy&&<ActivityFeedback className="research-working">Updating research memory…</ActivityFeedback>}{error&&<p role="alert" className="bt-note warn">{error}</p>}{notice&&<ActivityFeedback>{notice}</ActivityFeedback>}
- <div className="research-actions"><button className="panels-btn" disabled={busy} onClick={()=>void act(refresh)}>Refresh memory records</button><button className="panels-btn" onClick={onNotebooks}>Open notebooks</button></div>
- <fieldset className="research-form" disabled={busy||loading}><legend>Review a notebook revision</legend>
- <label>Notebook to review<select value={notebookId} onChange={e=>void openNotebook(e.target.value)}><option value="">Choose a notebook</option>{notebooks.map(n=><option key={n.id} value={n.id}>{n.title}</option>)}</select></label>
- {!notebooks.length&&!loading&&<p>No notebooks yet. Save a classified finding with a conclusion and decision rationale in Notebooks.</p>}
- {review&&<><label>Exact revision<select value={revision} onChange={e=>{setRevision(Number(e.target.value));setReason('');setSupersedes('');}}>{revisions.map(n=><option key={n.revision} value={n.revision}>Revision {n.revision} · {n.status} · {n.createdAt}</option>)}</select></label>
- <div className="memory-review"><h3>{review.title}</h3><p>Hypothesis: {review.hypothesis||'Not recorded'}</p><p>Conclusion: {review.conclusion||'Not recorded'}</p><p>Decision: {review.decision||'Not recorded'}</p>{review.evidence.map(e=><p key={e.runId}><a href={`/api/research/runs/${e.runId}/export`}>Inspect frozen evidence: {e.title}</a></p>)}</div>
- <p>{current?`${current.action==='approve'?'Approved':'Revoked'} ${current.createdAt} · ${current.reason}`:'This revision has not been approved.'}</p>
- {current?.action!=='approve'&&active.some(a=>a.notebookId===notebookId&&a.revision<revision)&&<><label>Earlier approval<select value={supersedes} onChange={e=>setSupersedes(e.target.value)}><option value="">Keep earlier approvals active</option>{active.filter(a=>a.notebookId===notebookId&&a.revision<revision).map(a=><option key={a.id} value={a.id}>Replace revision {a.revision} · approved {a.createdAt}</option>)}</select></label>{supersedes&&<p>Approving this revision also revokes the selected earlier approval. Its frozen contexts remain readable but cannot start new analyses. Other approvals stay active.</p>}</>}
- <label>Approval or revocation reason<textarea maxLength={2000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
- <div className="research-actions"><button className="bt-run" disabled={!reason.trim()||review.status==='draft'||!review.conclusion.trim()||!review.decision.trim()||current?.action==='approve'} onClick={()=>void approve('approve')}>{supersedes?'Approve and replace earlier revision':'Approve this revision'}</button><button className="panels-btn" disabled={!reason.trim()||current?.action!=='approve'} onClick={()=>void approve('revoke')}>Revoke this approval</button></div>{review.status==='draft'&&<p>Classify this finding and record its conclusion and rationale in Notebooks before approval.</p>}</>}
- </fieldset>
- <fieldset className="research-form" disabled={busy||loading}><legend>Freeze approved context</legend><p>Select up to 30 approvals. Later notebook edits are excluded. Revoked or superseded approvals cannot be used for a new analysis.</p>
- {!active.length&&<p>No active approvals. Review a finding above first.</p>}{active.map(a=><label className="memory-selection" key={a.id}><input type="checkbox" checked={selected.includes(a.id)} disabled={!selected.includes(a.id)&&selected.length>=30} onChange={e=>setSelected(old=>e.target.checked?[...old,a.id]:old.filter(id=>id!==a.id))}/><span>{a.title} · revision {a.revision}<small>Approved {a.createdAt}</small></span></label>)}
- <label>Known by (UTC timestamp, optional)<input value={cutoff} onChange={e=>setCutoff(e.target.value)} placeholder="Current time when frozen"/></label><details><summary>Using a historical cutoff</summary><p>For an earlier cutoff, use an ISO timestamp ending in Z. Notebook creation, approval and evidence must all precede it.</p></details>
- <button className="bt-run" disabled={!selected.length} onClick={()=>void freeze()}>Freeze selected context</button>
- </fieldset>
- <fieldset className="research-form" disabled={busy||loading||ask.busy}><legend>Start a controlled analysis</legend>
- <label>Memory mode<select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="isolated">Isolated · no saved research</option><option value="context-aware">Context-aware · selected frozen revisions</option></select></label>
- {mode==='context-aware'&&<><label>Frozen context<select value={snapshot?.id||''} onChange={e=>{const id=e.target.value;setSnapshot(null);if(id)void act(async()=>{const out=await read<{snapshot:Snapshot}>(`memory/snapshots/${id}`);setSnapshot(out.snapshot);});}}><option value="">Choose a frozen context</option>{snapshots.filter(s=>s.mode==='context-aware').map(s=><option key={s.id} value={s.id}>{s.createdAt} · {s.records} revisions · cutoff {s.knownAt}</option>)}</select></label>
- {snapshot&&<details><summary>Inspect selected context · {snapshot.records.length} revisions</summary>{snapshot.records.map(r=><div key={r.approval.id}><h3>{r.notebook.title} · revision {r.notebook.revision}</h3><p className="memory-review">{r.notebook.conclusion}</p></div>)}<p className="research-hash">Checksum: {snapshot.contentHash}</p><a href={`/api/research/memory/snapshots/${snapshot.id}`} target="_blank" rel="noreferrer">Open full context JSON</a></details>}{snapshot&&!usable&&<p role="alert">This snapshot contains revoked or superseded approvals. Freeze a new context before running.</p>}</>}
- <label>Fresh research question<textarea value={question} maxLength={800} onChange={e=>setQuestion(e.target.value)}/></label><p>This starts one fresh analysis. Earlier conversation stays visible. The request excludes that conversation, page context, attached chats and saved backtest preferences. Current source and model settings still apply. A memory cutoff does not restrict live external data.</p>
- <button className="bt-run" disabled={!question.trim()||!ask.status?.configured||(mode==='context-aware'&&!usable)} onClick={()=>onStart(question,{mode,...(mode==='context-aware'?{snapshotId:snapshot!.id}:{})})}>Start controlled analysis</button>
- {!ask.status?.configured&&<p>AI execution is unavailable until a provider is configured. Approval and snapshot controls remain usable.</p>}
- </fieldset></section>;
+import { ActivityFeedback } from "./ActivityFeedback";
+import { useEffect, useState } from "react";
+import type { AskApi } from "../ask/useAsk";
+import type { MemoryRequest } from "../ask/types";
+import { read, write, message } from "./api";
+type Notebook = {
+  id: string;
+  revision: number;
+  title: string;
+  createdAt: string;
+  status: string;
+  hypothesis: string;
+  conclusion: string;
+  decision: string;
+  evidence: { title: string; runId: string }[];
+};
+type Approval = {
+  id: string;
+  notebookId: string;
+  revision: number;
+  title: string;
+  action: "approve" | "revoke";
+  createdAt: string;
+  reason: string;
+};
+type Snapshot = {
+  id: string;
+  mode: "isolated" | "context-aware";
+  knownAt: string;
+  createdAt: string;
+  contentHash: string;
+  records: { approval: Approval; notebook: Notebook }[];
+};
+type SnapshotSummary = Omit<Snapshot, "records"> & { records: number };
+export function ResearchMemory({
+  ask,
+  onStart,
+  onNotebooks,
+  onPairs,
+  onHistory,
+}: {
+  ask: AskApi;
+  onStart: (question: string, memory: MemoryRequest) => void;
+  onNotebooks: () => void;
+  onPairs: () => void;
+  onHistory: () => void;
+}) {
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]),
+    [approvals, setApprovals] = useState<Approval[]>([]),
+    [snapshots, setSnapshots] = useState<SnapshotSummary[]>([]);
+  const [revisions, setRevisions] = useState<Notebook[]>([]),
+    [notebookId, setNotebookId] = useState(""),
+    [revision, setRevision] = useState(0),
+    [reason, setReason] = useState(""),
+    [supersedes, setSupersedes] = useState("");
+  const [selected, setSelected] = useState<string[]>([]),
+    [cutoff, setCutoff] = useState(""),
+    [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [mode, setMode] = useState<"isolated" | "context-aware">("isolated"),
+    [question, setQuestion] = useState("");
+  const [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const refresh = async () => {
+    const [n, a, s] = await Promise.all([
+      read<{ items: Notebook[] }>("notebooks"),
+      read<{ items: Approval[] }>("memory/approvals"),
+      read<{ items: SnapshotSummary[] }>("memory/snapshots"),
+    ]);
+    setNotebooks(n.items);
+    setApprovals(a.items);
+    setSnapshots(s.items);
+    setSelected((old) => old.filter((id) => a.items.some((x) => x.id === id && x.action === "approve")));
+  };
+  useEffect(() => {
+    void refresh()
+      .catch((e) => setError(message(e)))
+      .finally(() => setLoading(false));
+    void ask.refreshStatus();
+  }, []);
+  const act = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const review = revisions.find((n) => n.revision === revision);
+  const current = approvals.find((a) => a.notebookId === notebookId && a.revision === revision);
+  const active = approvals.filter((a) => a.action === "approve");
+  const usable =
+    snapshot?.mode === "context-aware" && snapshot.records.every((r) => active.some((a) => a.id === r.approval.id));
+  const openNotebook = (id: string) =>
+    act(async () => {
+      setNotebookId(id);
+      setRevisions([]);
+      setRevision(0);
+      setReason("");
+      setSupersedes("");
+      if (!id) return;
+      const out = await read<{ notebook: Notebook; history: Notebook[] }>(`notebooks/${id}`);
+      setRevisions(out.history);
+      setRevision(out.notebook.revision);
+    });
+  const approve = (action: "approve" | "revoke") =>
+    act(async () => {
+      await write("memory/approvals", {
+        notebookId,
+        revision,
+        action,
+        reason,
+        expectedPreviousId: current?.id || null,
+        ...(action === "approve" && supersedes ? { supersedesApprovalId: supersedes } : {}),
+      });
+      await refresh();
+      setReason("");
+      setSupersedes("");
+      setNotice(
+        `${action === "approve" ? "Approved" : "Revoked"} revision ${revision}. ${action === "approve" && supersedes ? "Replaced the selected earlier approval. " : ""}Earlier snapshots remain inspectable.`,
+      );
+    });
+  const freeze = () =>
+    act(async () => {
+      const out = await write<{ snapshot: Snapshot }>("memory/snapshots", {
+        mode: "context-aware",
+        knownAt: cutoff.trim() || new Date().toISOString(),
+        approvalIds: selected,
+      });
+      setSnapshot(out.snapshot);
+      setMode("context-aware");
+      await refresh();
+      setNotice("Frozen the selected approved revisions. Review the context before starting an analysis.");
+    });
+  return (
+    <section className="research-content research-memory">
+      <h2>Research memory</h2>
+      <div className="research-actions">
+        <button className="panels-btn" onClick={onPairs}>
+          Compare paired research
+        </button>
+        <button className="panels-btn" onClick={onHistory}>
+          Inspect execution history
+        </button>
+      </div>
+      <p>
+        Approve exact notebook revisions for reuse, then freeze the context supplied to an analysis. Approval permits
+        reuse; it does not certify a conclusion as true. This installation has one owner, not team permissions.
+      </p>
+      {loading && <ActivityFeedback className="research-working">Loading findings and approvals…</ActivityFeedback>}
+      {busy && <ActivityFeedback className="research-working">Updating research memory…</ActivityFeedback>}
+      {error && (
+        <p role="alert" className="bt-note warn">
+          {error}
+        </p>
+      )}
+      {notice && <ActivityFeedback>{notice}</ActivityFeedback>}
+      <div className="research-actions">
+        <button className="panels-btn" disabled={busy} onClick={() => void act(refresh)}>
+          Refresh memory records
+        </button>
+        <button className="panels-btn" onClick={onNotebooks}>
+          Open notebooks
+        </button>
+      </div>
+      <fieldset className="research-form" disabled={busy || loading}>
+        <legend>Review a notebook revision</legend>
+        <label>
+          Notebook to review
+          <select value={notebookId} onChange={(e) => void openNotebook(e.target.value)}>
+            <option value="">Choose a notebook</option>
+            {notebooks.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        {!notebooks.length && !loading && (
+          <p>No notebooks yet. Save a classified finding with a conclusion and decision rationale in Notebooks.</p>
+        )}
+        {review && (
+          <>
+            <label>
+              Exact revision
+              <select
+                value={revision}
+                onChange={(e) => {
+                  setRevision(Number(e.target.value));
+                  setReason("");
+                  setSupersedes("");
+                }}
+              >
+                {revisions.map((n) => (
+                  <option key={n.revision} value={n.revision}>
+                    Revision {n.revision} · {n.status} · {n.createdAt}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="memory-review">
+              <h3>{review.title}</h3>
+              <p>Hypothesis: {review.hypothesis || "Not recorded"}</p>
+              <p>Conclusion: {review.conclusion || "Not recorded"}</p>
+              <p>Decision: {review.decision || "Not recorded"}</p>
+              {review.evidence.map((e) => (
+                <p key={e.runId}>
+                  <a href={`/api/research/runs/${e.runId}/export`}>Inspect frozen evidence: {e.title}</a>
+                </p>
+              ))}
+            </div>
+            <p>
+              {current
+                ? `${current.action === "approve" ? "Approved" : "Revoked"} ${current.createdAt} · ${current.reason}`
+                : "This revision has not been approved."}
+            </p>
+            {current?.action !== "approve" &&
+              active.some((a) => a.notebookId === notebookId && a.revision < revision) && (
+                <>
+                  <label>
+                    Earlier approval
+                    <select value={supersedes} onChange={(e) => setSupersedes(e.target.value)}>
+                      <option value="">Keep earlier approvals active</option>
+                      {active
+                        .filter((a) => a.notebookId === notebookId && a.revision < revision)
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            Replace revision {a.revision} · approved {a.createdAt}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {supersedes && (
+                    <p>
+                      Approving this revision also revokes the selected earlier approval. Its frozen contexts remain
+                      readable but cannot start new analyses. Other approvals stay active.
+                    </p>
+                  )}
+                </>
+              )}
+            <label>
+              Approval or revocation reason
+              <textarea maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
+            <div className="research-actions">
+              <button
+                className="bt-run"
+                disabled={
+                  !reason.trim() ||
+                  review.status === "draft" ||
+                  !review.conclusion.trim() ||
+                  !review.decision.trim() ||
+                  current?.action === "approve"
+                }
+                onClick={() => void approve("approve")}
+              >
+                {supersedes ? "Approve and replace earlier revision" : "Approve this revision"}
+              </button>
+              <button
+                className="panels-btn"
+                disabled={!reason.trim() || current?.action !== "approve"}
+                onClick={() => void approve("revoke")}
+              >
+                Revoke this approval
+              </button>
+            </div>
+            {review.status === "draft" && (
+              <p>Classify this finding and record its conclusion and rationale in Notebooks before approval.</p>
+            )}
+          </>
+        )}
+      </fieldset>
+      <fieldset className="research-form" disabled={busy || loading}>
+        <legend>Freeze approved context</legend>
+        <p>
+          Select up to 30 approvals. Later notebook edits are excluded. Revoked or superseded approvals cannot be used
+          for a new analysis.
+        </p>
+        {!active.length && <p>No active approvals. Review a finding above first.</p>}
+        {active.map((a) => (
+          <label className="memory-selection" key={a.id}>
+            <input
+              type="checkbox"
+              checked={selected.includes(a.id)}
+              disabled={!selected.includes(a.id) && selected.length >= 30}
+              onChange={(e) =>
+                setSelected((old) => (e.target.checked ? [...old, a.id] : old.filter((id) => id !== a.id)))
+              }
+            />
+            <span>
+              {a.title} · revision {a.revision}
+              <small>Approved {a.createdAt}</small>
+            </span>
+          </label>
+        ))}
+        <label>
+          Known by (UTC timestamp, optional)
+          <input value={cutoff} onChange={(e) => setCutoff(e.target.value)} placeholder="Current time when frozen" />
+        </label>
+        <details>
+          <summary>Using a historical cutoff</summary>
+          <p>
+            For an earlier cutoff, use an ISO timestamp ending in Z. Notebook creation, approval and evidence must all
+            precede it.
+          </p>
+        </details>
+        <button className="bt-run" disabled={!selected.length} onClick={() => void freeze()}>
+          Freeze selected context
+        </button>
+      </fieldset>
+      <fieldset className="research-form" disabled={busy || loading || ask.busy}>
+        <legend>Start a controlled analysis</legend>
+        <label>
+          Memory mode
+          <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+            <option value="isolated">Isolated · no saved research</option>
+            <option value="context-aware">Context-aware · selected frozen revisions</option>
+          </select>
+        </label>
+        {mode === "context-aware" && (
+          <>
+            <label>
+              Frozen context
+              <select
+                value={snapshot?.id || ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSnapshot(null);
+                  if (id)
+                    void act(async () => {
+                      const out = await read<{ snapshot: Snapshot }>(`memory/snapshots/${id}`);
+                      setSnapshot(out.snapshot);
+                    });
+                }}
+              >
+                <option value="">Choose a frozen context</option>
+                {snapshots
+                  .filter((s) => s.mode === "context-aware")
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.createdAt} · {s.records} revisions · cutoff {s.knownAt}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {snapshot && (
+              <details>
+                <summary>Inspect selected context · {snapshot.records.length} revisions</summary>
+                {snapshot.records.map((r) => (
+                  <div key={r.approval.id}>
+                    <h3>
+                      {r.notebook.title} · revision {r.notebook.revision}
+                    </h3>
+                    <p className="memory-review">{r.notebook.conclusion}</p>
+                  </div>
+                ))}
+                <p className="research-hash">Checksum: {snapshot.contentHash}</p>
+                <a href={`/api/research/memory/snapshots/${snapshot.id}`} target="_blank" rel="noreferrer">
+                  Open full context JSON
+                </a>
+              </details>
+            )}
+            {snapshot && !usable && (
+              <p role="alert">
+                This snapshot contains revoked or superseded approvals. Freeze a new context before running.
+              </p>
+            )}
+          </>
+        )}
+        <label>
+          Fresh research question
+          <textarea value={question} maxLength={800} onChange={(e) => setQuestion(e.target.value)} />
+        </label>
+        <p>
+          This starts one fresh analysis. Earlier conversation stays visible. The request excludes that conversation,
+          page context, attached chats and saved backtest preferences. Current source and model settings still apply. A
+          memory cutoff does not restrict live external data.
+        </p>
+        <button
+          className="bt-run"
+          disabled={!question.trim() || !ask.status?.configured || (mode === "context-aware" && !usable)}
+          onClick={() => onStart(question, { mode, ...(mode === "context-aware" ? { snapshotId: snapshot!.id } : {}) })}
+        >
+          Start controlled analysis
+        </button>
+        {!ask.status?.configured && (
+          <p>
+            AI execution is unavailable until a provider is configured. Approval and snapshot controls remain usable.
+          </p>
+        )}
+      </fieldset>
+    </section>
+  );
 }

@@ -37,8 +37,21 @@ export type BacktestFilters = {
   clusterMin: number;
   awardWithinDays: number;
 };
-export type RelationshipPolicy = { minPathWeight?: number; snapshotId: string; predicate: string; path?: string[]; object: string; subjects: Record<string, string> };
-export type BacktestSpec = { relationship?: RelationshipPolicy; source: BacktestSource; datasetId?: string; filters: BacktestFilters; rules: BacktestRules };
+export type RelationshipPolicy = {
+  minPathWeight?: number;
+  snapshotId: string;
+  predicate: string;
+  path?: string[];
+  object: string;
+  subjects: Record<string, string>;
+};
+export type BacktestSpec = {
+  relationship?: RelationshipPolicy;
+  source: BacktestSource;
+  datasetId?: string;
+  filters: BacktestFilters;
+  rules: BacktestRules;
+};
 
 export const SOURCES: BacktestSource[];
 export const SOURCE_LABEL: Record<BacktestSource, string>;
@@ -46,7 +59,15 @@ export const SECTOR_ETF: Record<string, string>;
 export const SECTOR_ETFS: string[];
 export const BENCHMARKS: string[];
 export const BENCHMARK_LABEL: Record<string, string>;
-export const LIMITS: { holdDays: [number, number]; pct: [number, number]; bps: [number, number]; hearingDays: [number, number]; signals: number; tickers: number; minAmount: number };
+export const LIMITS: {
+  holdDays: [number, number];
+  pct: [number, number];
+  bps: [number, number];
+  hearingDays: [number, number];
+  signals: number;
+  tickers: number;
+  minAmount: number;
+};
 export const DEFAULT_RULES: BacktestRules;
 export const DEFAULT_FILTERS: BacktestFilters;
 export const ROLES: Record<"ceo" | "cfo" | "director", RegExp>;

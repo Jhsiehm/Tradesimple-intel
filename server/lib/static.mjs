@@ -25,7 +25,7 @@ const TYPES = {
   ".ttf": "font/ttf",
   ".txt": "text/plain; charset=utf-8",
   ".map": "application/json",
-  ".wasm": "application/wasm"
+  ".wasm": "application/wasm",
 };
 const TEXT = /^(text\/|application\/(json|geo\+json)|image\/svg)/;
 const HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY" };
@@ -39,7 +39,12 @@ export function staticSite(dir) {
     if (!st?.isFile()) return null;
     const hit = memo.get(file);
     if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit;
-    const entry = { mtimeMs: st.mtimeMs, size: st.size, body: await fs.readFile(file), etag: `"${st.size.toString(36)}-${Math.trunc(st.mtimeMs).toString(36)}"` };
+    const entry = {
+      mtimeMs: st.mtimeMs,
+      size: st.size,
+      body: await fs.readFile(file),
+      etag: `"${st.size.toString(36)}-${Math.trunc(st.mtimeMs).toString(36)}"`,
+    };
     if (memo.size > 500) memo.clear();
     memo.set(file, entry);
     return entry;
@@ -75,7 +80,7 @@ export function staticSite(dir) {
       "Content-Type": type,
       "Cache-Control": immutable ? "public, max-age=31536000, immutable" : "no-cache",
       ETag: entry.etag,
-      Vary: "Accept-Encoding"
+      Vary: "Accept-Encoding",
     };
     if (req.headers["if-none-match"] === entry.etag) {
       res.writeHead(304, headers);

@@ -1,10 +1,47 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  CAP, CATEGORIES, CATEGORY_IDS, DEFAULT_EXPAND, EMPTY_GRAPH, MAX_NODES, NODE_TYPES, addNote, categoriesFor, clampLimit, clampOffset, commit,
-  counts, disclosurePath, dropTheory, edgeKey, gapLabel, groupBy, history, lagMark, mergeExpansion, moveNodes, neighborhood, page, parseNode, putTheory, redo, removeNode, tradeLabel, undo
+  CAP,
+  CATEGORIES,
+  CATEGORY_IDS,
+  DEFAULT_EXPAND,
+  EMPTY_GRAPH,
+  MAX_NODES,
+  NODE_TYPES,
+  addNote,
+  categoriesFor,
+  clampLimit,
+  clampOffset,
+  commit,
+  counts,
+  disclosurePath,
+  dropTheory,
+  edgeKey,
+  gapLabel,
+  groupBy,
+  history,
+  lagMark,
+  mergeExpansion,
+  moveNodes,
+  neighborhood,
+  page,
+  parseNode,
+  putTheory,
+  redo,
+  removeNode,
+  tradeLabel,
+  undo,
 } from "../shared/relations.mjs";
-import { MAX_THEORIES, cleanDoc, decodeShare, encodeShare, mergeDocs, migrate, parseDoc, serialize } from "../shared/theories.mjs";
+import {
+  MAX_THEORIES,
+  cleanDoc,
+  decodeShare,
+  encodeShare,
+  mergeDocs,
+  migrate,
+  parseDoc,
+  serialize,
+} from "../shared/theories.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK, contrast } from "../src/relations/palette.ts";
 import { ICON_NAMES } from "../src/ui/icons/names.ts";
 import { fan } from "../src/relations/layout.ts";
@@ -14,7 +51,7 @@ const src = { source: "S", asOf: "2026-10-01T00:00:00Z", latency: "L" };
 const exp = (origin, pairs) => ({
   node: { id: origin, type: origin.split(":")[0], label: origin },
   nodes: pairs.map(([id]) => ({ id, type: id.split(":")[0], label: id })),
-  edges: pairs.map(([id, cat, n = 1]) => ({ from: origin, to: id, cat, label: cat, n, ...src }))
+  edges: pairs.map(([id, cat, n = 1]) => ({ from: origin, to: id, cat, label: cat, n, ...src })),
 });
 
 test("parseNode accepts known shapes and rejects junk", () => {
@@ -22,13 +59,20 @@ test("parseNode accepts known shapes and rejects junk", () => {
   assert.deepEqual(parseNode("ticker:BRK.B"), { type: "ticker", key: "BRK.B" });
   assert.deepEqual(parseNode("district:CA-11"), { type: "district", key: "CA-11" });
   assert.deepEqual(parseNode("insider:NVDA/Kress Colette"), { type: "insider", key: "NVDA/Kress Colette" });
-  for (const bad of ["", "member:pelosi", "ticker:<script>", "nope:x", "district:California", ":x", "ticker:"]) assert.equal(parseNode(bad), null, bad);
+  for (const bad of ["", "member:pelosi", "ticker:<script>", "nope:x", "district:California", ":x", "ticker:"])
+    assert.equal(parseNode(bad), null, bad);
 });
 
 test("every node type except notes has at least one category, and defaults are offered categories", () => {
-  for (const type of NODE_TYPES.filter((t) => t !== "note" && t !== "firm")) assert.ok(categoriesFor(type).length, type);
+  for (const type of NODE_TYPES.filter((t) => t !== "note" && t !== "firm"))
+    assert.ok(categoriesFor(type).length, type);
   assert.equal(categoriesFor("note").length, 0, "notes are yours; no feed expands them");
-  for (const [type, cats] of Object.entries(DEFAULT_EXPAND)) for (const c of cats) assert.ok(categoriesFor(type).some((x) => x.id === c), `${type}:${c}`);
+  for (const [type, cats] of Object.entries(DEFAULT_EXPAND))
+    for (const c of cats)
+      assert.ok(
+        categoriesFor(type).some((x) => x.id === c),
+        `${type}:${c}`,
+      );
 });
 
 test("expansion caps: limits clamp to the ceiling and pages report more", () => {
@@ -44,24 +88,49 @@ test("expansion caps: limits clamp to the ceiling and pages report more", () => 
 });
 
 test("groupBy collapses rows per neighbor, sums, keeps the latest date, ranks by count", () => {
-  const rows = [{ s: "A", v: 5, d: "2026-01-02" }, { s: "B", v: 100, d: "2026-03-01" }, { s: "A", v: 7, d: "2026-02-01" }, { s: "", v: 1, d: "2026-01-01" }];
+  const rows = [
+    { s: "A", v: 5, d: "2026-01-02" },
+    { s: "B", v: 100, d: "2026-03-01" },
+    { s: "A", v: 7, d: "2026-02-01" },
+    { s: "", v: 1, d: "2026-01-01" },
+  ];
   const g = groupBy(rows, (r) => r.s, { amount: (r) => r.v, date: (r) => r.d });
-  assert.deepEqual(g.map((x) => [x.key, x.n, x.amount, x.last]), [["A", 2, 12, "2026-02-01"], ["B", 1, 100, "2026-03-01"]]);
+  assert.deepEqual(
+    g.map((x) => [x.key, x.n, x.amount, x.last]),
+    [
+      ["A", 2, 12, "2026-02-01"],
+      ["B", 1, 100, "2026-03-01"],
+    ],
+  );
 });
 
 test("merge dedupes nodes and edges across both directions and never moves placed nodes", () => {
   let place = 0;
   const at = () => ({ x: ++place * 10, y: 0 });
-  const a = mergeExpansion(EMPTY_GRAPH, exp("member:P000197", [["ticker:NVDA", "trade", 3], ["ticker:AAPL", "trade", 4]]), at);
+  const a = mergeExpansion(
+    EMPTY_GRAPH,
+    exp("member:P000197", [
+      ["ticker:NVDA", "trade", 3],
+      ["ticker:AAPL", "trade", 4],
+    ]),
+    at,
+  );
   assert.equal(a.graph.nodes.length, 3);
   assert.equal(a.graph.edges.length, 2);
   const nvdaX = a.graph.nodes.find((n) => n.id === "ticker:NVDA").x;
-  const reverse = exp("ticker:NVDA", [["member:P000197", "trade", 5], ["member:F000110", "trade", 47]]);
+  const reverse = exp("ticker:NVDA", [
+    ["member:P000197", "trade", 5],
+    ["member:F000110", "trade", 47],
+  ]);
   reverse.edges = reverse.edges.map((e) => ({ ...e, from: e.to, to: e.from }));
   const b = mergeExpansion(a.graph, reverse, at);
   assert.equal(b.graph.nodes.length, 4, "Pelosi and NVDA are not duplicated");
   assert.equal(b.graph.edges.length, 3, "Pelosi–NVDA trade edge is one edge");
-  assert.equal(b.graph.edges.find((e) => e.id === edgeKey("trade", "member:P000197", "ticker:NVDA")).n, 5, "keeps the larger count");
+  assert.equal(
+    b.graph.edges.find((e) => e.id === edgeKey("trade", "member:P000197", "ticker:NVDA")).n,
+    5,
+    "keeps the larger count",
+  );
   assert.equal(b.graph.nodes.find((n) => n.id === "ticker:NVDA").x, nvdaX, "existing node keeps its place");
   assert.deepEqual(b.added, ["member:F000110"]);
   const same = mergeExpansion(b.graph, exp("member:P000197", [["ticker:NVDA", "committee"]]), at);
@@ -77,15 +146,35 @@ test("merge stops at the canvas ceiling and reports what it dropped", () => {
 });
 
 test("theories stay out of data counts; removing a node drops only its data edges", () => {
-  let g = mergeExpansion(EMPTY_GRAPH, exp("member:P000197", [["ticker:NVDA", "trade"], ["committee:HSAS", "committee"]])).graph;
+  let g = mergeExpansion(
+    EMPTY_GRAPH,
+    exp("member:P000197", [
+      ["ticker:NVDA", "trade"],
+      ["committee:HSAS", "committee"],
+    ]),
+  ).graph;
   g = addNote(g, { id: "note:abc", label: "Dinner", x: 0, y: 0 });
-  g = putTheory(g, { id: "t1", a: { id: "member:P000197", type: "member", label: "P" }, b: { id: "note:abc", type: "note", label: "Dinner" }, label: "met", note: "", confidence: "low", created: "", updated: "" });
+  g = putTheory(g, {
+    id: "t1",
+    a: { id: "member:P000197", type: "member", label: "P" },
+    b: { id: "note:abc", type: "note", label: "Dinner" },
+    label: "met",
+    note: "",
+    confidence: "low",
+    created: "",
+    updated: "",
+  });
   const c = counts(g);
   assert.equal(c.data, 2);
   assert.equal(c.byCat.trade, 1);
   assert.equal(c.theories, 1);
   assert.equal(c.notes, 1);
-  assert.deepEqual([...neighborhood(g, "member:P000197")].sort(), ["committee:HSAS", "member:P000197", "note:abc", "ticker:NVDA"]);
+  assert.deepEqual([...neighborhood(g, "member:P000197")].sort(), [
+    "committee:HSAS",
+    "member:P000197",
+    "note:abc",
+    "ticker:NVDA",
+  ]);
   const r = removeNode(g, "ticker:NVDA");
   assert.equal(r.edges.length, 1);
   assert.equal(r.theories.length, 1);
@@ -113,17 +202,44 @@ test("moving pins; undo and redo walk whole snapshots and cap the history", () =
 test("theory documents: clean, cap, migrate v1, survive junk, import merges, share round-trips", () => {
   assert.deepEqual(parseDoc("not json"), { v: 2, theories: [], notes: [] });
   assert.deepEqual(parseDoc(null), { v: 2, theories: [], notes: [] });
-  const v1 = { v: 1, theories: [{ id: "x", from: "member:P000197", to: "ticker:NVDA" }, { id: "self", from: "a:1", to: "a:1" }] };
+  const v1 = {
+    v: 1,
+    theories: [
+      { id: "x", from: "member:P000197", to: "ticker:NVDA" },
+      { id: "self", from: "a:1", to: "a:1" },
+    ],
+  };
   const m = migrate(v1);
   assert.equal(m.v, 2);
   assert.equal(m.theories.length, 1, "a link to itself is dropped");
   assert.deepEqual(m.theories[0].a, { id: "member:P000197", type: "member", label: "member:P000197" });
   assert.equal(m.theories[0].confidence, "medium");
-  const many = { v: 2, theories: Array.from({ length: MAX_THEORIES + 10 }, (_, i) => ({ id: `t${i}`, a: { id: "a:1" }, b: { id: `b:${i}` } })) };
+  const many = {
+    v: 2,
+    theories: Array.from({ length: MAX_THEORIES + 10 }, (_, i) => ({
+      id: `t${i}`,
+      a: { id: "a:1" },
+      b: { id: `b:${i}` },
+    })),
+  };
   const capped = cleanDoc(many);
   assert.equal(capped.theories.length, MAX_THEORIES);
   assert.equal(capped.theories.at(-1).id, `t${MAX_THEORIES + 9}`, "newest kept");
-  const doc = cleanDoc({ theories: [{ id: "t", a: { id: "member:P000197", label: "Pelosi" }, b: { id: "ticker:NVDA", label: "NVDA" }, label: "x".repeat(500), confidence: "high" }], notes: [{ id: "note:n1", label: "Lunch", kind: "event" }, { id: "evil", label: "x" }] });
+  const doc = cleanDoc({
+    theories: [
+      {
+        id: "t",
+        a: { id: "member:P000197", label: "Pelosi" },
+        b: { id: "ticker:NVDA", label: "NVDA" },
+        label: "x".repeat(500),
+        confidence: "high",
+      },
+    ],
+    notes: [
+      { id: "note:n1", label: "Lunch", kind: "event" },
+      { id: "evil", label: "x" },
+    ],
+  });
   assert.equal(doc.theories[0].label.length, 80);
   assert.equal(doc.notes.length, 1);
   assert.deepEqual(parseDoc(serialize(doc)), doc);
@@ -143,7 +259,10 @@ test("palette covers every category and node type, clears contrast, and keeps th
     assert.ok(look, `category ${id}`);
     assert.ok(icons.has(look.icon), `${id} icon ${look.icon}`);
     assert.ok(Array.isArray(look.dash));
-    assert.ok(contrast(look.color, PANEL) >= 4.5, `${id} ${look.color} contrast ${contrast(look.color, PANEL).toFixed(2)}`);
+    assert.ok(
+      contrast(look.color, PANEL) >= 4.5,
+      `${id} ${look.color} contrast ${contrast(look.color, PANEL).toFixed(2)}`,
+    );
   }
   assert.deepEqual(Object.keys(CATEGORY_LOOK).sort(), [...CATEGORY_IDS].sort());
   for (const type of NODE_TYPES) {
@@ -162,29 +281,63 @@ test("palette covers every category and node type, clears contrast, and keeps th
 
 test("fan aims new nodes into the widest empty angle and keeps clear of nodes already placed", () => {
   const parent = { x: 0, y: 0 };
-  const ring = Array.from({ length: 12 }, (_, i) => ({ x: Math.cos((i / 12) * Math.PI) * 150, y: Math.sin((i / 12) * Math.PI) * 150 }));
+  const ring = Array.from({ length: 12 }, (_, i) => ({
+    x: Math.cos((i / 12) * Math.PI) * 150,
+    y: Math.sin((i / 12) * Math.PI) * 150,
+  }));
   const [lone] = fan(parent, ["a"], ring, ring).values();
   assert.ok(lone.y < -100, "a single new node goes into the empty upper half");
-  const out = fan(parent, Array.from({ length: 30 }, (_, i) => `n${i}`), ring, [parent, ...ring]);
+  const out = fan(
+    parent,
+    Array.from({ length: 30 }, (_, i) => `n${i}`),
+    ring,
+    [parent, ...ring],
+  );
   assert.equal(out.size, 30);
   const placed = [...out.values()];
   for (const p of placed) {
-    for (const q of [parent, ...ring, ...placed]) if (p !== q) assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= 45, "no new node lands on another");
+    for (const q of [parent, ...ring, ...placed])
+      if (p !== q) assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= 45, "no new node lands on another");
   }
 });
 
 test("disclosure path keeps the latest trade per name and only what sits within 14 days", () => {
-  const nvda = { neighbor: "ticker:NVDA", member: "P000197", symbol: "NVDA", side: "sell", amount: "$1,001 - $15,000", traded: "2026-09-03", filed: "2026-09-25", lag: 22, node: { id: "ticker:NVDA", type: "ticker", label: "NVDA" } };
+  const nvda = {
+    neighbor: "ticker:NVDA",
+    member: "P000197",
+    symbol: "NVDA",
+    side: "sell",
+    amount: "$1,001 - $15,000",
+    traded: "2026-09-03",
+    filed: "2026-09-25",
+    lag: 22,
+    node: { id: "ticker:NVDA", type: "ticker", label: "NVDA" },
+  };
   const older = { ...nvda, traded: "2026-01-02", filed: "2026-01-20", lag: 18 };
-  const aapl = { neighbor: "ticker:AAPL", member: "P000197", symbol: "AAPL", side: "buy", amount: "$1,001 - $15,000", traded: "2026-08-01", filed: "2026-08-01", lag: 0, node: { id: "ticker:AAPL", type: "ticker", label: "AAPL" } };
+  const aapl = {
+    neighbor: "ticker:AAPL",
+    member: "P000197",
+    symbol: "AAPL",
+    side: "buy",
+    amount: "$1,001 - $15,000",
+    traded: "2026-08-01",
+    filed: "2026-08-01",
+    lag: 0,
+    node: { id: "ticker:AAPL", type: "ticker", label: "AAPL" },
+  };
   const hearings = [
     { member: "P000197", date: "2026-09-10", id: "hearing:near", title: "Chips" },
     { member: "P000197", date: "2026-06-01", id: "hearing:far", title: "Old" },
-    { member: "OTHER", date: "2026-09-04", id: "hearing:else", title: "Not theirs" }
+    { member: "OTHER", date: "2026-09-04", id: "hearing:else", title: "Not theirs" },
   ];
-  const { rows, more } = disclosurePath([older, nvda, aapl], hearings, [{ symbol: "NVDA", date: "2026-09-20", id: "agency:DOD", label: "Defense" }]);
+  const { rows, more } = disclosurePath([older, nvda, aapl], hearings, [
+    { symbol: "NVDA", date: "2026-09-20", id: "agency:DOD", label: "Defense" },
+  ]);
   assert.equal(more, 0);
-  assert.deepEqual(rows.map((r) => r.trade.symbol), ["NVDA", "AAPL"]);
+  assert.deepEqual(
+    rows.map((r) => r.trade.symbol),
+    ["NVDA", "AAPL"],
+  );
   assert.equal(rows[0].trade.traded, "2026-09-03", "the later NVDA trade is the one on the line");
   assert.equal(rows[0].hearing.item.id, "hearing:near");
   assert.equal(rows[0].hearing.gap, 7);
@@ -193,7 +346,12 @@ test("disclosure path keeps the latest trade per name and only what sits within 
   assert.equal(lagMark(22), "22d");
   assert.match(tradeLabel(rows[0].trade), /Sold \$1,001 - \$15,000 · traded 2026-09-03 · filed 2026-09-25 · 22d later/);
   assert.match(gapLabel(-3, "NVDA", "2026-09-03"), /3d before/);
-  const many = Array.from({ length: 5 }, (_, i) => ({ neighbor: `ticker:T${i}`, member: "P000197", symbol: `T${i}`, traded: `2026-09-0${i + 1}` }));
+  const many = Array.from({ length: 5 }, (_, i) => ({
+    neighbor: `ticker:T${i}`,
+    member: "P000197",
+    symbol: `T${i}`,
+    traded: `2026-09-0${i + 1}`,
+  }));
   assert.equal(disclosurePath(many).more, 1);
 });
 
@@ -202,7 +360,17 @@ test("a filing lag replaces a count-only label on the same pair", () => {
   const marked = {
     node: { id: "member:P000197", type: "member", label: "Pelosi" },
     nodes: [{ id: "ticker:NVDA", type: "ticker", label: "NVDA" }],
-    edges: [{ from: "member:P000197", to: "ticker:NVDA", cat: "trade", label: "Sold · traded 2026-09-03 · filed 2026-09-25 · 22d later", n: 1, mark: "22d", ...src }]
+    edges: [
+      {
+        from: "member:P000197",
+        to: "ticker:NVDA",
+        cat: "trade",
+        label: "Sold · traded 2026-09-03 · filed 2026-09-25 · 22d later",
+        n: 1,
+        mark: "22d",
+        ...src,
+      },
+    ],
   };
   const next = mergeExpansion(first, marked).graph;
   const edge = next.edges.find((e) => e.id === edgeKey("trade", "member:P000197", "ticker:NVDA"));
@@ -214,7 +382,11 @@ test("a filing lag replaces a count-only label on the same pair", () => {
 test("expand and nodeInfo reject bad input before touching any feed", async () => {
   const q = (o) => new URLSearchParams(o);
   assert.equal((await expand(null, q({ node: "member:bad", category: "trade" }))).status, 400);
-  assert.equal((await expand(null, q({ node: "member:P000197", category: "supply" }))).status, 400, "members have no supply chain");
+  assert.equal(
+    (await expand(null, q({ node: "member:P000197", category: "supply" }))).status,
+    400,
+    "members have no supply chain",
+  );
   assert.equal((await expand(null, q({ node: "ticker:NVDA", category: "nope" }))).status, 400);
   assert.equal((await nodeInfo(null, q({ id: "x" }))).status, 400);
   assert.equal((await disclosureExpansion(null, q({ node: "committee:HSAS" }))).status, 400);

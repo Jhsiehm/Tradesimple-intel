@@ -1,14 +1,19 @@
 /** Sign-in and sign-out pages. Self-contained (no app assets load before sign-in), no scripts. */
 
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const esc = (s) =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
 
 export const PAGE_HEADERS = {
   "Content-Type": "text/html; charset=utf-8",
   "Cache-Control": "no-store",
-  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  "Content-Security-Policy":
+    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "same-origin",
-  "X-Frame-Options": "DENY"
+  "X-Frame-Options": "DENY",
 };
 
 function shell(title, inner) {
@@ -32,17 +37,23 @@ button:hover{background:rgba(255,193,74,.08)}
 }
 
 export function loginPage({ next = "/", error = "", totp = false } = {}) {
-  return shell("Sign in", `<h1>TradeSimple Intel</h1><p>Research terminal. Sign in to continue.</p>
+  return shell(
+    "Sign in",
+    `<h1>TradeSimple Intel</h1><p>Research terminal. Sign in to continue.</p>
 <form method="post" action="/login">
 <input type="hidden" name="next" value="${esc(next)}">
 <label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" required autofocus>
 ${totp ? `<label for="code">Authenticator code</label><input id="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>` : ""}
 <button type="submit">Sign in</button>
 ${error ? `<p class="err" role="alert">${esc(error)}</p>` : ""}
-</form>`);
+</form>`,
+  );
 }
 
 export function logoutPage() {
-  return shell("Sign out", `<h1>TradeSimple Intel</h1><p>Sign out of this browser.</p>
-<form method="post" action="/logout"><button type="submit">Sign out</button></form>`);
+  return shell(
+    "Sign out",
+    `<h1>TradeSimple Intel</h1><p>Sign out of this browser.</p>
+<form method="post" action="/logout"><button type="submit">Sign out</button></form>`,
+  );
 }

@@ -1,30 +1,400 @@
-import { ActivityFeedback } from './ActivityFeedback';
-import {useEffect,useRef,useState} from 'react';
-import {read,write,message,type ExperimentSummary} from './api';
-type Account={id:string;title:string;experimentId:string;sourceRunId:string;initialCashCents:number;maxOrderCents:number;maxPositionShares:number};
-type Ledger={account:Account;state:{cashCents:number;positions:Record<string,number>;feesCents:number;fills:number;halted:boolean;sequence:number;head:string};events:{sequence:number;recordedAt:string;action:{kind:string;symbol?:string;side?:string;quantity?:number;priceCents?:number;approvalReason?:string;reason?:string;priceBasis?:string}}[]};
-const dollars=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
-const cents=(value:string)=>/^\d+(\.\d{1,2})?$/.test(value)?Math.round(Number(value)*100):NaN;
-export function PaperTrading(){
- const [accounts,setAccounts]=useState<Account[]>([]),[experiments,setExperiments]=useState<ExperimentSummary[]>([]),[ledger,setLedger]=useState<Ledger|null>(null);
- const [title,setTitle]=useState(''),[experimentId,setExperimentId]=useState(''),[cash,setCash]=useState('100000'),[limit,setLimit]=useState('10000'),[positionLimit,setPositionLimit]=useState('1000');
- const [symbol,setSymbol]=useState(''),[side,setSide]=useState('buy'),[quantity,setQuantity]=useState('1'),[price,setPrice]=useState(''),[fee,setFee]=useState('0'),[basis,setBasis]=useState(''),[reason,setReason]=useState(''),[controlReason,setControlReason]=useState('');
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const attempt=useRef<{body:string;requestId:string}|null>(null);
- const load=async()=>{const [a,e]=await Promise.all([read<{items:Account[]}>('paper'),read<{items:ExperimentSummary[]}>('experiments')]);setAccounts(a.items);setExperiments(e.items.filter(x=>x.status==='complete'));};
- useEffect(()=>{void load().catch(e=>setError(message(e))).finally(()=>setLoading(false));},[]);
- const act=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(message(e));}finally{setBusy(false);}};
- const record=(action:Record<string,unknown>)=>act(async()=>{if(!ledger)return;const body={...action,expectedSequence:ledger.state.sequence},key=JSON.stringify({id:ledger.account.id,...body});if(attempt.current?.body!==key)attempt.current={body:key,requestId:crypto.randomUUID()};const out=await write<{ledger:Ledger}>(`paper/${ledger.account.id}/actions`,{...body,requestId:attempt.current.requestId});setLedger(out.ledger);attempt.current=null;if(action.kind==='fill')setReason('');else setControlReason('');setNotice(action.kind==='fill'?'Approved simulated fill recorded. Cash and shares reconciled from the ledger.':`Paper account ${action.kind==='halt'?'halted':'resumed'}.`);});
- const notional=Number(quantity)*cents(price),total=notional+cents(fee);
- return <section className="research-content"><h2>Paper trading</h2><p>Record manual simulations against a saved experiment. Every fill needs your approval and an entered price assumption. No broker orders are sent; prices and fills are not independently verified.</p>
- <details open={!ledger}><summary>Create a paper account</summary><fieldset className="research-form" disabled={busy||loading}><label>Account name<input maxLength={200} value={title} onChange={e=>setTitle(e.target.value)}/></label><label>Source experiment<select value={experimentId} onChange={e=>setExperimentId(e.target.value)}><option value="">Choose a completed experiment</option>{experiments.map(e=><option key={e.id} value={e.id}>{e.title}</option>)}</select></label><div className="research-mapping"><label>Starting cash (USD)<input inputMode="decimal" value={cash} onChange={e=>setCash(e.target.value)}/></label><label>Maximum order including fees (USD)<input inputMode="decimal" value={limit} onChange={e=>setLimit(e.target.value)}/></label><label>Maximum shares per ticker<input type="number" min={1} max={1000000} value={positionLimit} onChange={e=>setPositionLimit(e.target.value)}/></label></div><p>Limits are fixed for this account. Whole shares, cash-funded buys and sales of existing holdings only. Create a new account for different limits.</p><button className="bt-run" disabled={!title.trim()||!experimentId||!Number.isFinite(cents(cash))||!Number.isFinite(cents(limit))} onClick={()=>void act(async()=>{const out=await write<{ledger:Ledger}>('paper',{title,experimentId,initialCashCents:cents(cash),maxOrderCents:cents(limit),maxPositionShares:Number(positionLimit)});setLedger(out.ledger);await load();setNotice('Paper account created with fixed limits.');})}>Create paper account</button></fieldset></details>
- {loading&&<ActivityFeedback className="research-working">Loading paper accounts and experiments…</ActivityFeedback>}{busy&&<ActivityFeedback className="research-working">Updating the paper ledger…</ActivityFeedback>}{error&&<p role="alert">{error}</p>}{notice&&<ActivityFeedback>{notice}</ActivityFeedback>}
- <div className="data-workbench" data-selected={Boolean(ledger)}><aside className="data-library"><h3>Paper accounts</h3>{!accounts.length?<p>No paper accounts yet.</p>:<div className="research-list">{accounts.map(a=><button className="research-item" key={a.id} disabled={busy} aria-pressed={ledger?.account.id===a.id} onClick={()=>void act(async()=>setLedger((await read<{ledger:Ledger}>(`paper/${a.id}`)).ledger))}><strong>{a.title}</strong><span>Started with {dollars(a.initialCashCents)}</span></button>)}</div>}</aside>
- {ledger&&<section className="research-content research-result" key={ledger.account.id}><h3>{ledger.account.title}</h3><p><strong>{ledger.state.halted?'Halted — fills disabled':'Active paper account'}</strong> · Cash {dollars(ledger.state.cashCents)} · Fees {dollars(ledger.state.feesCents)} · {ledger.state.fills} simulated {ledger.state.fills===1?'fill':'fills'}</p><p>Order limit {dollars(ledger.account.maxOrderCents)} including fees · {ledger.account.maxPositionShares} shares maximum per ticker. Cash is not total equity; positions are not marked to market.</p><div className="research-actions"><button className="panels-btn" disabled={busy} onClick={()=>void act(async()=>{setLedger((await read<{ledger:Ledger}>(`paper/${ledger.account.id}`)).ledger);setNotice('Ledger verified; balances recomputed from every event.');})}>Refresh and reconcile</button><a className="panels-btn" href={`/api/research/paper/${ledger.account.id}/export`}>Export ledger JSON</a><a className="panels-btn" href={`/api/research/paper/${ledger.account.id}/archive`}>Export verifiable archive</a><a className="panels-btn" href={`/api/research/runs/${ledger.account.sourceRunId}/export`}>Export source experiment</a></div>
- <details><summary>Verify an exported account offline</summary><p>Extract the verifiable archive and run <code>node verify.mjs</code> with Node 22.13 or later. It checks every paper event, recomputes balances and replays the bundled source experiment. No app, database, packages or network are needed. It verifies internal consistency, not market prices, actor identity or broker execution.</p></details><h4>Holdings</h4>{Object.keys(ledger.state.positions).length?<div className="research-table"><table><thead><tr><th>Ticker</th><th>Shares</th></tr></thead><tbody>{Object.entries(ledger.state.positions).map(([ticker,shares])=><tr key={ticker}><td>{ticker}</td><td>{shares}</td></tr>)}</tbody></table></div>:<p>No shares held.</p>}
- <fieldset className="research-form" disabled={busy}><legend>Account control</legend><label>Reason to {ledger.state.halted?'resume':'halt'}<input value={controlReason} maxLength={1000} onChange={e=>setControlReason(e.target.value)}/></label><button className="panels-btn" disabled={!controlReason.trim()} onClick={()=>void record({kind:ledger.state.halted?'resume':'halt',reason:controlReason})}>{ledger.state.halted?'Resume paper account':'Halt paper account'}</button><p>Halting blocks all new simulated fills, including sells. It does not liquidate holdings.</p></fieldset>
- <details open={!ledger.state.halted}><summary>Review a simulated fill</summary><fieldset className="research-form" disabled={busy||ledger.state.halted}><div className="research-mapping"><label>Ticker<input value={symbol} onChange={e=>setSymbol(e.target.value.toUpperCase())}/></label><label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="buy">Buy</option><option value="sell">Sell held shares</option></select></label><label>Whole shares<input type="number" min={1} value={quantity} onChange={e=>setQuantity(e.target.value)}/></label><label>Assumed fill price (USD)<input inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value)}/></label><label>Fee (USD)<input inputMode="decimal" value={fee} onChange={e=>setFee(e.target.value)}/></label></div><label>Price assumption or source<input value={basis} maxLength={1000} onChange={e=>setBasis(e.target.value)} placeholder="Describe where this assumed price came from"/></label><label>Approval reason<input value={reason} maxLength={1000} onChange={e=>setReason(e.target.value)}/></label>{Number.isFinite(total)&&<p>Review: {side} {quantity} {symbol||'shares'} at {dollars(cents(price))}. {side==='buy'?'Cash required':'Net proceeds'}: {dollars(side==='buy'?total:notional-cents(fee))}. This records a manual simulation immediately.</p>}<button className="bt-run" disabled={!symbol||!basis.trim()||!reason.trim()||!Number.isFinite(total)||!Number.isInteger(Number(quantity))||Number(quantity)<1} onClick={()=>void record({kind:'fill',symbol,side,quantity:Number(quantity),priceCents:cents(price),feeCents:cents(fee),priceBasis:basis,approvalReason:reason})}>Approve and record simulated fill</button></fieldset></details>
- <details><summary>Activity and approval history · {ledger.state.sequence} events</summary><p>Latest 50 events. Export contains the complete account and hash-linked history. Reconciliation checks internal cash/share arithmetic, not broker records or market prices.</p>{ledger.events.slice(-50).reverse().map(e=><div key={e.sequence}><p><strong>{e.action.kind==='fill'?`${e.action.side} ${e.action.quantity} ${e.action.symbol} at ${dollars(e.action.priceCents!)}`:e.action.kind}</strong> · {e.recordedAt}</p><p>{e.action.approvalReason||e.action.reason}</p>{e.action.priceBasis&&<p>Assumed price basis: {e.action.priceBasis}</p>}</div>)}<p className="research-hash">Ledger checksum: {ledger.state.head}</p></details>
- </section>}
- </div></section>;
+import { ActivityFeedback } from "./ActivityFeedback";
+import { useEffect, useRef, useState } from "react";
+import { read, write, message, type ExperimentSummary } from "./api";
+type Account = {
+  id: string;
+  title: string;
+  experimentId: string;
+  sourceRunId: string;
+  initialCashCents: number;
+  maxOrderCents: number;
+  maxPositionShares: number;
+};
+type Ledger = {
+  account: Account;
+  state: {
+    cashCents: number;
+    positions: Record<string, number>;
+    feesCents: number;
+    fills: number;
+    halted: boolean;
+    sequence: number;
+    head: string;
+  };
+  events: {
+    sequence: number;
+    recordedAt: string;
+    action: {
+      kind: string;
+      symbol?: string;
+      side?: string;
+      quantity?: number;
+      priceCents?: number;
+      approvalReason?: string;
+      reason?: string;
+      priceBasis?: string;
+    };
+  }[];
+};
+const dollars = (cents: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+const cents = (value: string) => (/^\d+(\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : NaN);
+export function PaperTrading() {
+  const [accounts, setAccounts] = useState<Account[]>([]),
+    [experiments, setExperiments] = useState<ExperimentSummary[]>([]),
+    [ledger, setLedger] = useState<Ledger | null>(null);
+  const [title, setTitle] = useState(""),
+    [experimentId, setExperimentId] = useState(""),
+    [cash, setCash] = useState("100000"),
+    [limit, setLimit] = useState("10000"),
+    [positionLimit, setPositionLimit] = useState("1000");
+  const [symbol, setSymbol] = useState(""),
+    [side, setSide] = useState("buy"),
+    [quantity, setQuantity] = useState("1"),
+    [price, setPrice] = useState(""),
+    [fee, setFee] = useState("0"),
+    [basis, setBasis] = useState(""),
+    [reason, setReason] = useState(""),
+    [controlReason, setControlReason] = useState("");
+  const [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const attempt = useRef<{ body: string; requestId: string } | null>(null);
+  const load = async () => {
+    const [a, e] = await Promise.all([
+      read<{ items: Account[] }>("paper"),
+      read<{ items: ExperimentSummary[] }>("experiments"),
+    ]);
+    setAccounts(a.items);
+    setExperiments(e.items.filter((x) => x.status === "complete"));
+  };
+  useEffect(() => {
+    void load()
+      .catch((e) => setError(message(e)))
+      .finally(() => setLoading(false));
+  }, []);
+  const act = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const record = (action: Record<string, unknown>) =>
+    act(async () => {
+      if (!ledger) return;
+      const body = { ...action, expectedSequence: ledger.state.sequence },
+        key = JSON.stringify({ id: ledger.account.id, ...body });
+      if (attempt.current?.body !== key) attempt.current = { body: key, requestId: crypto.randomUUID() };
+      const out = await write<{ ledger: Ledger }>(`paper/${ledger.account.id}/actions`, {
+        ...body,
+        requestId: attempt.current.requestId,
+      });
+      setLedger(out.ledger);
+      attempt.current = null;
+      if (action.kind === "fill") setReason("");
+      else setControlReason("");
+      setNotice(
+        action.kind === "fill"
+          ? "Approved simulated fill recorded. Cash and shares reconciled from the ledger."
+          : `Paper account ${action.kind === "halt" ? "halted" : "resumed"}.`,
+      );
+    });
+  const notional = Number(quantity) * cents(price),
+    total = notional + cents(fee);
+  return (
+    <section className="research-content">
+      <h2>Paper trading</h2>
+      <p>
+        Record manual simulations against a saved experiment. Every fill needs your approval and an entered price
+        assumption. No broker orders are sent; prices and fills are not independently verified.
+      </p>
+      <details open={!ledger}>
+        <summary>Create a paper account</summary>
+        <fieldset className="research-form" disabled={busy || loading}>
+          <label>
+            Account name
+            <input maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+          <label>
+            Source experiment
+            <select value={experimentId} onChange={(e) => setExperimentId(e.target.value)}>
+              <option value="">Choose a completed experiment</option>
+              {experiments.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="research-mapping">
+            <label>
+              Starting cash (USD)
+              <input inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} />
+            </label>
+            <label>
+              Maximum order including fees (USD)
+              <input inputMode="decimal" value={limit} onChange={(e) => setLimit(e.target.value)} />
+            </label>
+            <label>
+              Maximum shares per ticker
+              <input
+                type="number"
+                min={1}
+                max={1000000}
+                value={positionLimit}
+                onChange={(e) => setPositionLimit(e.target.value)}
+              />
+            </label>
+          </div>
+          <p>
+            Limits are fixed for this account. Whole shares, cash-funded buys and sales of existing holdings only.
+            Create a new account for different limits.
+          </p>
+          <button
+            className="bt-run"
+            disabled={!title.trim() || !experimentId || !Number.isFinite(cents(cash)) || !Number.isFinite(cents(limit))}
+            onClick={() =>
+              void act(async () => {
+                const out = await write<{ ledger: Ledger }>("paper", {
+                  title,
+                  experimentId,
+                  initialCashCents: cents(cash),
+                  maxOrderCents: cents(limit),
+                  maxPositionShares: Number(positionLimit),
+                });
+                setLedger(out.ledger);
+                await load();
+                setNotice("Paper account created with fixed limits.");
+              })
+            }
+          >
+            Create paper account
+          </button>
+        </fieldset>
+      </details>
+      {loading && (
+        <ActivityFeedback className="research-working">Loading paper accounts and experiments…</ActivityFeedback>
+      )}
+      {busy && <ActivityFeedback className="research-working">Updating the paper ledger…</ActivityFeedback>}
+      {error && <p role="alert">{error}</p>}
+      {notice && <ActivityFeedback>{notice}</ActivityFeedback>}
+      <div className="data-workbench" data-selected={Boolean(ledger)}>
+        <aside className="data-library">
+          <h3>Paper accounts</h3>
+          {!accounts.length ? (
+            <p>No paper accounts yet.</p>
+          ) : (
+            <div className="research-list">
+              {accounts.map((a) => (
+                <button
+                  className="research-item"
+                  key={a.id}
+                  disabled={busy}
+                  aria-pressed={ledger?.account.id === a.id}
+                  onClick={() =>
+                    void act(async () => setLedger((await read<{ ledger: Ledger }>(`paper/${a.id}`)).ledger))
+                  }
+                >
+                  <strong>{a.title}</strong>
+                  <span>Started with {dollars(a.initialCashCents)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </aside>
+        {ledger && (
+          <section className="research-content research-result" key={ledger.account.id}>
+            <h3>{ledger.account.title}</h3>
+            <p>
+              <strong>{ledger.state.halted ? "Halted — fills disabled" : "Active paper account"}</strong> · Cash{" "}
+              {dollars(ledger.state.cashCents)} · Fees {dollars(ledger.state.feesCents)} · {ledger.state.fills}{" "}
+              simulated {ledger.state.fills === 1 ? "fill" : "fills"}
+            </p>
+            <p>
+              Order limit {dollars(ledger.account.maxOrderCents)} including fees · {ledger.account.maxPositionShares}{" "}
+              shares maximum per ticker. Cash is not total equity; positions are not marked to market.
+            </p>
+            <div className="research-actions">
+              <button
+                className="panels-btn"
+                disabled={busy}
+                onClick={() =>
+                  void act(async () => {
+                    setLedger((await read<{ ledger: Ledger }>(`paper/${ledger.account.id}`)).ledger);
+                    setNotice("Ledger verified; balances recomputed from every event.");
+                  })
+                }
+              >
+                Refresh and reconcile
+              </button>
+              <a className="panels-btn" href={`/api/research/paper/${ledger.account.id}/export`}>
+                Export ledger JSON
+              </a>
+              <a className="panels-btn" href={`/api/research/paper/${ledger.account.id}/archive`}>
+                Export verifiable archive
+              </a>
+              <a className="panels-btn" href={`/api/research/runs/${ledger.account.sourceRunId}/export`}>
+                Export source experiment
+              </a>
+            </div>
+            <details>
+              <summary>Verify an exported account offline</summary>
+              <p>
+                Extract the verifiable archive and run <code>node verify.mjs</code> with Node 22.13 or later. It checks
+                every paper event, recomputes balances and replays the bundled source experiment. No app, database,
+                packages or network are needed. It verifies internal consistency, not market prices, actor identity or
+                broker execution.
+              </p>
+            </details>
+            <h4>Holdings</h4>
+            {Object.keys(ledger.state.positions).length ? (
+              <div className="research-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>Shares</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(ledger.state.positions).map(([ticker, shares]) => (
+                      <tr key={ticker}>
+                        <td>{ticker}</td>
+                        <td>{shares}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p>No shares held.</p>
+            )}
+            <fieldset className="research-form" disabled={busy}>
+              <legend>Account control</legend>
+              <label>
+                Reason to {ledger.state.halted ? "resume" : "halt"}
+                <input value={controlReason} maxLength={1000} onChange={(e) => setControlReason(e.target.value)} />
+              </label>
+              <button
+                className="panels-btn"
+                disabled={!controlReason.trim()}
+                onClick={() => void record({ kind: ledger.state.halted ? "resume" : "halt", reason: controlReason })}
+              >
+                {ledger.state.halted ? "Resume paper account" : "Halt paper account"}
+              </button>
+              <p>Halting blocks all new simulated fills, including sells. It does not liquidate holdings.</p>
+            </fieldset>
+            <details open={!ledger.state.halted}>
+              <summary>Review a simulated fill</summary>
+              <fieldset className="research-form" disabled={busy || ledger.state.halted}>
+                <div className="research-mapping">
+                  <label>
+                    Ticker
+                    <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} />
+                  </label>
+                  <label>
+                    Side
+                    <select value={side} onChange={(e) => setSide(e.target.value)}>
+                      <option value="buy">Buy</option>
+                      <option value="sell">Sell held shares</option>
+                    </select>
+                  </label>
+                  <label>
+                    Whole shares
+                    <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                  </label>
+                  <label>
+                    Assumed fill price (USD)
+                    <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+                  </label>
+                  <label>
+                    Fee (USD)
+                    <input inputMode="decimal" value={fee} onChange={(e) => setFee(e.target.value)} />
+                  </label>
+                </div>
+                <label>
+                  Price assumption or source
+                  <input
+                    value={basis}
+                    maxLength={1000}
+                    onChange={(e) => setBasis(e.target.value)}
+                    placeholder="Describe where this assumed price came from"
+                  />
+                </label>
+                <label>
+                  Approval reason
+                  <input value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} />
+                </label>
+                {Number.isFinite(total) && (
+                  <p>
+                    Review: {side} {quantity} {symbol || "shares"} at {dollars(cents(price))}.{" "}
+                    {side === "buy" ? "Cash required" : "Net proceeds"}:{" "}
+                    {dollars(side === "buy" ? total : notional - cents(fee))}. This records a manual simulation
+                    immediately.
+                  </p>
+                )}
+                <button
+                  className="bt-run"
+                  disabled={
+                    !symbol ||
+                    !basis.trim() ||
+                    !reason.trim() ||
+                    !Number.isFinite(total) ||
+                    !Number.isInteger(Number(quantity)) ||
+                    Number(quantity) < 1
+                  }
+                  onClick={() =>
+                    void record({
+                      kind: "fill",
+                      symbol,
+                      side,
+                      quantity: Number(quantity),
+                      priceCents: cents(price),
+                      feeCents: cents(fee),
+                      priceBasis: basis,
+                      approvalReason: reason,
+                    })
+                  }
+                >
+                  Approve and record simulated fill
+                </button>
+              </fieldset>
+            </details>
+            <details>
+              <summary>Activity and approval history · {ledger.state.sequence} events</summary>
+              <p>
+                Latest 50 events. Export contains the complete account and hash-linked history. Reconciliation checks
+                internal cash/share arithmetic, not broker records or market prices.
+              </p>
+              {ledger.events
+                .slice(-50)
+                .reverse()
+                .map((e) => (
+                  <div key={e.sequence}>
+                    <p>
+                      <strong>
+                        {e.action.kind === "fill"
+                          ? `${e.action.side} ${e.action.quantity} ${e.action.symbol} at ${dollars(e.action.priceCents!)}`
+                          : e.action.kind}
+                      </strong>{" "}
+                      · {e.recordedAt}
+                    </p>
+                    <p>{e.action.approvalReason || e.action.reason}</p>
+                    {e.action.priceBasis && <p>Assumed price basis: {e.action.priceBasis}</p>}
+                  </div>
+                ))}
+              <p className="research-hash">Ledger checksum: {ledger.state.head}</p>
+            </details>
+          </section>
+        )}
+      </div>
+    </section>
+  );
 }

@@ -5,7 +5,9 @@ import { DatabaseSync } from "node:sqlite";
 let extras = new Map();
 
 export function openDb(root) {
-  extras = new Map(JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8")).map((row) => [row.symbol, row]));
+  extras = new Map(
+    JSON.parse(fs.readFileSync(path.join(root, "data", "tickers.json"), "utf8")).map((row) => [row.symbol, row]),
+  );
   const file = process.env.INTEL_CACHE || path.join(root, "data", "cache.sqlite");
   const db = new DatabaseSync(file);
   db.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;");
@@ -49,7 +51,7 @@ export function openDb(root) {
           JSON.stringify(row.districts),
           row.state,
           row.lat,
-          row.lon
+          row.lon,
         );
       }
       db.exec("COMMIT");
@@ -70,11 +72,13 @@ export function readCache(db, key) {
 }
 
 export function writeCache(db, key, value, ttlMs) {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO cache (key, body, stored_at, ttl_ms)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET body = excluded.body, stored_at = excluded.stored_at, ttl_ms = excluded.ttl_ms
-  `).run(key, JSON.stringify(value), Date.now(), ttlMs);
+  `,
+  ).run(key, JSON.stringify(value), Date.now(), ttlMs);
 }
 
 export function listTickers(db) {
@@ -105,7 +109,7 @@ function hydrate(row) {
     sector: extras.get(row.symbol)?.sector || "",
     industry: extras.get(row.symbol)?.industry || "",
     joinBasis: extras.get(row.symbol)?.joinBasis || null,
-    contractParents: extras.get(row.symbol)?.contractParents || []
+    contractParents: extras.get(row.symbol)?.contractParents || [],
   };
 }
 

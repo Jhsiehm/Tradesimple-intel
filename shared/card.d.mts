@@ -19,7 +19,14 @@ export type CardSummary = {
   hasLanes: boolean;
   dayShare: number | null;
   baseline: number | null;
-  returns: { buys: number; priced: number; excess: number | null; excess90: number | null; hit: number | null; basis: string } | null;
+  returns: {
+    buys: number;
+    priced: number;
+    excess: number | null;
+    excess90: number | null;
+    hit: number | null;
+    basis: string;
+  } | null;
   range: { from: string; to: string };
   asOf: string;
   strip: { d: string; side: string; near: boolean; low: number }[];
@@ -34,6 +41,12 @@ export function memberSlug(name: string): string;
 export function seatLabel(m: { party?: string; state?: string; district?: string; chamber?: string }): string;
 export function summarize(res: unknown): CardSummary | null;
 export function describe(s: CardSummary | null): string;
-export function memberMeta(s: CardSummary, opts: { pageUrl: string; imageUrl: string; site?: string }): { title: string; description: string; url: string; image: string; site: string };
+export function memberMeta(
+  s: CardSummary,
+  opts: { pageUrl: string; imageUrl: string; site?: string },
+): { title: string; description: string; url: string; image: string; site: string };
 export function cardSvg(s: CardSummary, opts?: { site?: string; host?: string }): string;
-export function memberPageHtml(s: CardSummary, opts: { pageUrl: string; imageUrl: string; appPath: string; site?: string }): string;
+export function memberPageHtml(
+  s: CardSummary,
+  opts: { pageUrl: string; imageUrl: string; appPath: string; site?: string },
+): string;

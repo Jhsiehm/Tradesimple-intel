@@ -13,15 +13,15 @@ const DUST = [
   [597, 498, 138, 62, 3.4, 80],
   [584, 525, 122, 76, 3.1, 200],
   [636, 315, 116, -26, 2.8, 320],
-  [624, 426, 126, 34, 2.8, 360]
+  [624, 426, 126, 34, 2.8, 360],
 ] as const;
 
 function aim(event: PointerEvent<HTMLButtonElement>) {
   if (event.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const button = event.currentTarget;
   const bounds = button.getBoundingClientRect();
-  const x = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
-  const y = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
+  const x = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
+  const y = Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1));
   // Update only this small SVG; pointer movement never rerenders the dashboard.
   button.style.setProperty("--brand-x", `${x * 7}px`);
   button.style.setProperty("--brand-y", `${y * 7}px`);
@@ -51,7 +51,9 @@ export function BrandHome({ onHome }: { onHome: () => void }) {
       <svg className="brand-mark" width="36" height="36" viewBox="0 0 640 640" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id={`${id}-light`} x1="590" y1="371" x2="790" y2="371" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#b9e8c9" stopOpacity="0" /><stop offset="0.3" stopColor="#a1e3bf" stopOpacity="0.42" /><stop offset="1" stopColor="#67d9b2" stopOpacity="0" />
+            <stop stopColor="#b9e8c9" stopOpacity="0" />
+            <stop offset="0.3" stopColor="#a1e3bf" stopOpacity="0.42" />
+            <stop offset="1" stopColor="#67d9b2" stopOpacity="0" />
           </linearGradient>
         </defs>
         <g className="brand-symbol">
@@ -67,9 +69,20 @@ export function BrandHome({ onHome }: { onHome: () => void }) {
           <g transform="translate(-45 -45)">
             <g className="brand-dust" fill="#ecf5d9">
               {DUST.map(([x, y, dx, dy, radius, delay], index) => (
-                <circle key={index} className="brand-grain" cx={x} cy={y} r={radius} style={{
-                  "--dust-x": `${dx}px`, "--dust-y": `${dy}px`, "--dust-delay": `${delay}ms`
-                } as CSSProperties} />
+                <circle
+                  key={index}
+                  className="brand-grain"
+                  cx={x}
+                  cy={y}
+                  r={radius}
+                  style={
+                    {
+                      "--dust-x": `${dx}px`,
+                      "--dust-y": `${dy}px`,
+                      "--dust-delay": `${delay}ms`,
+                    } as CSSProperties
+                  }
+                />
               ))}
             </g>
           </g>

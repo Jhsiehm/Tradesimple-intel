@@ -1,10 +1,27 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { STATES, districtFromGeoid, districtGeoid, districtName, memberPlace, parseDistrict } from "../shared/districts.mjs";
+import {
+  STATES,
+  districtFromGeoid,
+  districtGeoid,
+  districtName,
+  memberPlace,
+  parseDistrict,
+} from "../shared/districts.mjs";
 
 test("parseDistrict reads the usual ways people type a seat", () => {
-  for (const text of ["CA-11", "CA 11", "ca11", "ca-11", "California 11", "california-11", "California's 11th", "CA 11th district", "CA-CD 11"]) {
+  for (const text of [
+    "CA-11",
+    "CA 11",
+    "ca11",
+    "ca-11",
+    "California 11",
+    "california-11",
+    "California's 11th",
+    "CA 11th district",
+    "CA-CD 11",
+  ]) {
     assert.equal(parseDistrict(text), "CA-11", text);
   }
   assert.equal(parseDistrict("NJ-5"), "NJ-05");
@@ -27,7 +44,23 @@ test("parseDistrict folds at-large and delegate seats to -AL", () => {
 });
 
 test("parseDistrict rejects tickers, bare states, and seats that do not exist", () => {
-  for (const text of ["NVDA", "DE", "VT", "DEAL", "DAL", "COAL", "CA", "California", "CA-53", "CA-0", "CA-AL", "AK-2", "ZZ-01", "", null]) {
+  for (const text of [
+    "NVDA",
+    "DE",
+    "VT",
+    "DEAL",
+    "DAL",
+    "COAL",
+    "CA",
+    "California",
+    "CA-53",
+    "CA-0",
+    "CA-AL",
+    "AK-2",
+    "ZZ-01",
+    "",
+    null,
+  ]) {
     assert.equal(parseDistrict(text), null, String(text));
   }
 });
@@ -42,7 +75,10 @@ test("districtGeoid and districtFromGeoid round-trip every seat in the 119th bou
     assert.equal(districtGeoid(code), id, code);
     assert.equal(parseDistrict(code), code, code);
   }
-  assert.equal(Object.values(STATES).reduce((n, s) => n + (s.seats || 1), 0), 441);
+  assert.equal(
+    Object.values(STATES).reduce((n, s) => n + (s.seats || 1), 0),
+    441,
+  );
   assert.equal(districtFromGeoid("33ZZ"), null);
   assert.equal(districtGeoid("CA-99"), "");
 });
@@ -60,5 +96,9 @@ test("memberPlace scopes House members to their seat and everyone else to the st
   assert.equal(memberPlace({ chamber: "house", state: "DC", district: "" }), "DC");
   assert.equal(memberPlace({ chamber: "house", state: "WY", district: null }), "WY");
   assert.equal(memberPlace({ chamber: "senate", state: "TX", district: "" }), "TX");
-  assert.equal(memberPlace({ chamber: "house", state: "CA", district: "99" }), "CA", "a seat that does not exist falls back to the state");
+  assert.equal(
+    memberPlace({ chamber: "house", state: "CA", district: "99" }),
+    "CA",
+    "a seat that does not exist falls back to the state",
+  );
 });

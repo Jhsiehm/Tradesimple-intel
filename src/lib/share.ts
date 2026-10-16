@@ -29,7 +29,9 @@ export async function downloadMemberCard(timeline: unknown) {
     canvas.width = CARD_W;
     canvas.height = CARD_H;
     canvas.getContext("2d")!.drawImage(img, 0, 0, CARD_W, CARD_H);
-    const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG export failed"))), "image/png"));
+    const png = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG export failed"))), "image/png"),
+    );
     const a = document.createElement("a");
     a.href = URL.createObjectURL(png);
     a.download = `${s.slug}-tradesimple-intel.png`;

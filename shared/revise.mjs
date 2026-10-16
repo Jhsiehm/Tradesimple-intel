@@ -25,9 +25,11 @@ export function flaggedItems(check) {
   for (const m of g.miscited || []) add("miscited", m.raw, [...m.cited, ...m.foundIn], miscitedNote(m));
   for (const m of g.mislabeled || []) add("mislabeled", m.raw, [], mislabelNote(m));
   for (const s of g.scope || []) add("scope", s.raw, s.refs || [], s.note);
-  for (const row of g.uncitedRows || []) add("uncitedRow", row, [], `This table row has figures and no ref (add its [tN] in a Ref column): ${row}`);
+  for (const row of g.uncitedRows || [])
+    add("uncitedRow", row, [], `This table row has figures and no ref (add its [tN] in a Ref column): ${row}`);
   for (const id of check?.unknown || []) add("unknownRef", id, [], `[${id}] is not a tool result in this answer.`);
-  if (check?.uncited) add("uncited", "", [], "Tools ran, but the answer cites none of them; add the [tN] ref after each figure.");
+  if (check?.uncited)
+    add("uncited", "", [], "Tools ran, but the answer cites none of them; add the [tN] ref after each figure.");
   return out;
 }
 
@@ -35,8 +37,10 @@ const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
 /** `{ ok, reason }`: skip when under 15 s are left or the call would push the turn past its token budget. */
 export function revisionBudget({ spent = 0, tokenBudget = Infinity, msLeft = Infinity, need = 0 }) {
-  if (msLeft < REVISE.minMs) return { ok: false, reason: `time budget nearly spent (${Math.max(0, Math.round(msLeft / 1000))} s left)` };
-  if (spent + need > tokenBudget) return { ok: false, reason: `token budget nearly spent (${fmt(spent)} of ${fmt(tokenBudget)} tokens used)` };
+  if (msLeft < REVISE.minMs)
+    return { ok: false, reason: `time budget nearly spent (${Math.max(0, Math.round(msLeft / 1000))} s left)` };
+  if (spent + need > tokenBudget)
+    return { ok: false, reason: `token budget nearly spent (${fmt(spent)} of ${fmt(tokenBudget)} tokens used)` };
   return { ok: true, reason: "" };
 }
 
@@ -51,8 +55,8 @@ const SYSTEM = [
   "You correct one answer written by a read-only research terminal's assistant. You get the question, the tool results the answer may cite (each starts with its ref), the answer, and the figures and claims an automatic check flagged.",
   "Return the full corrected answer and nothing else: same language, structure, and tables, refs in the [tN] form.",
   "For each flagged item: change the figure to what the cited result states, move the ref to the result that holds the figure, or remove the figure or claim when no result supports it. A window or comparison claim the results do not cover is rewritten to say what they do cover. A count named as the wrong thing is renamed to what the result calls it.",
-  "A table whose rows have no ref gets a last column \"Ref\" holding, in every row, the [tN] of the result that row comes from.",
-  "Do not add figures, claims, or refs that the results below do not contain. Do not mention the check or that the answer was revised. No tool calls."
+  'A table whose rows have no ref gets a last column "Ref" holding, in every row, the [tN] of the result that row comes from.',
+  "Do not add figures, claims, or refs that the results below do not contain. Do not mention the check or that the answer was revised. No tool calls.",
 ].join("\n");
 
 /** The two messages of the revision call. Excerpts are capped per result and in total. */
@@ -77,9 +81,12 @@ export function revisionMessages({ question, answer, items, excerpts }) {
     ">>>",
     "",
     "Flagged:",
-    ...items.map((i) => `- ${i.note}`)
+    ...items.map((i) => `- ${i.note}`),
   ].join("\n");
-  return [{ role: "system", content: SYSTEM }, { role: "user", content: user }];
+  return [
+    { role: "system", content: SYSTEM },
+    { role: "user", content: user },
+  ];
 }
 
 /** The model's reply without an echoed <<< >>> fence or a "Corrected answer:" lead-in. */
@@ -104,7 +111,11 @@ export function acceptRevision(before, after, text, original = "") {
   return !REF.test(o) || REF.test(s);
 }
 
-const lines = (s) => String(s || "").split("\n").map((l) => l.trim()).filter(Boolean);
+const lines = (s) =>
+  String(s || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 /**
  * What the revision changed: each flagged item as corrected, removed, or still flagged, and the answer's lines that
@@ -124,7 +135,7 @@ export function revisionChanges(before, after, beforeItems, afterItems) {
     remaining: afterItems.length,
     changes,
     removed: a.filter((l) => !b.includes(l)).slice(0, 12),
-    added: b.filter((l) => !a.includes(l)).slice(0, 12)
+    added: b.filter((l) => !a.includes(l)).slice(0, 12),
   };
 }
 
@@ -133,9 +144,16 @@ export function revisionSummary(rev) {
   if (!rev) return "";
   if (rev.status === "skipped") return `Not revised: ${rev.reason}.`;
   if (rev.status === "failed") return `Revision failed: ${rev.reason}`;
-  if (rev.status === "kept") return "Checked figures: the revision cleared none of them, so the original answer is shown.";
+  if (rev.status === "kept")
+    return "Checked figures: the revision cleared none of them, so the original answer is shown.";
   const fixed = (rev.changes || []).filter((c) => c.status !== "still flagged");
   const allFigures = fixed.length > 0 && fixed.every((c) => FIGURES.has(c.kind));
-  const noun = allFigures ? (rev.fixed === 1 ? "figure" : "figures") : rev.fixed === 1 ? "flagged item" : "flagged items";
+  const noun = allFigures
+    ? rev.fixed === 1
+      ? "figure"
+      : "figures"
+    : rev.fixed === 1
+      ? "flagged item"
+      : "flagged items";
   return `Revised: fixed ${rev.fixed} ${noun}${rev.remaining ? ` · ${rev.remaining} still flagged` : ""}`;
 }

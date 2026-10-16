@@ -13,7 +13,10 @@
  */
 
 const DAY_MS = 86400000;
-const lc = (v) => String(v ?? "").trim().toLowerCase();
+const lc = (v) =>
+  String(v ?? "")
+    .trim()
+    .toLowerCase();
 const dayNum = (iso) => {
   const t = Date.parse(`${String(iso || "").slice(0, 10)}T00:00:00Z`);
   return Number.isFinite(t) ? Math.round(t / DAY_MS) : null;
@@ -28,11 +31,13 @@ const memberOf = (r) => `${r.chamber || ""}|${r.bioguide || lc(r.person)}`;
 const reportOf = (r) => r.link || String(r.id || "").replace(/-\d+$/, "");
 const assetOf = (r) => r.symbol || lc(r.asset);
 
-export const transactionKey = (r) => [memberOf(r), assetOf(r), r.traded, lc(r.type), lc(r.amount), lc(r.owner)].join("|");
+export const transactionKey = (r) =>
+  [memberOf(r), assetOf(r), r.traded, lc(r.type), lc(r.amount), lc(r.owner)].join("|");
 const looseKey = (r) => [memberOf(r), assetOf(r), r.traded, r.side, lc(r.owner)].join("|");
 
 const isAmendment = (r) => Boolean(r.amendment);
-const byPublic = (a, b) => String(publicDateOf(a)).localeCompare(String(publicDateOf(b))) || (a.amendment || 0) - (b.amendment || 0);
+const byPublic = (a, b) =>
+  String(publicDateOf(a)).localeCompare(String(publicDateOf(b))) || (a.amendment || 0) - (b.amendment || 0);
 
 export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
   const byReport = new Map();
@@ -43,7 +48,12 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
     (byReport.get(k) || byReport.set(k, { key: k, rows: [], first: i }).get(k)).rows.push(r);
   });
   // Originals first so amendments fold into them; then by public date.
-  const reports = [...byReport.values()].sort((a, b) => Number(isAmendment(a.rows[0])) - Number(isAmendment(b.rows[0])) || byPublic(a.rows[0], b.rows[0]) || a.first - b.first);
+  const reports = [...byReport.values()].sort(
+    (a, b) =>
+      Number(isAmendment(a.rows[0])) - Number(isAmendment(b.rows[0])) ||
+      byPublic(a.rows[0], b.rows[0]) ||
+      a.first - b.first,
+  );
 
   const entries = [];
   const exact = new Map();
@@ -77,10 +87,15 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
     const a = e.rows[0];
     const report = reportOf(a);
     const day = dayNum(a.filed);
-    const target = (loose.get(looseKey(a)) || []).find((o) => !o.gone && !o.reports.has(report) && o.rows.some((r) => {
-      const d = dayNum(r.filed);
-      return !isAmendment(r) && d != null && day != null && Math.abs(d - day) <= windowDays;
-    }));
+    const target = (loose.get(looseKey(a)) || []).find(
+      (o) =>
+        !o.gone &&
+        !o.reports.has(report) &&
+        o.rows.some((r) => {
+          const d = dayNum(r.filed);
+          return !isAmendment(r) && d != null && day != null && Math.abs(d - day) <= windowDays;
+        }),
+    );
     if (!target) continue;
     target.rows.push(a);
     target.reports.add(report);
@@ -88,7 +103,13 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
   }
 
   const kept = entries.filter((e) => !e.gone).sort((a, b) => a.order - b.order);
-  const stats = { rows: rows.length, transactions: kept.length, merged: rows.length - kept.length, revised: 0, byChamber: {} };
+  const stats = {
+    rows: rows.length,
+    transactions: kept.length,
+    merged: rows.length - kept.length,
+    revised: 0,
+    byChamber: {},
+  };
   const items = kept.map((e) => {
     if (e.rows.length === 1) {
       const r = e.rows[0];
@@ -96,7 +117,9 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
     }
     const sorted = [...e.rows].sort(byPublic);
     const first = sorted[0];
-    const amendments = sorted.filter(isAmendment).sort((a, b) => (a.amendment || 0) - (b.amendment || 0) || byPublic(a, b));
+    const amendments = sorted
+      .filter(isAmendment)
+      .sort((a, b) => (a.amendment || 0) - (b.amendment || 0) || byPublic(a, b));
     const base = amendments.at(-1) || first;
     const revised = REVISABLE.filter((f) => (base[f] ?? null) !== (first[f] ?? null));
     if (revised.length) stats.revised += 1;
@@ -109,8 +132,14 @@ export function dedupeDisclosures(rows, { windowDays = 7 } = {}) {
       lag: first.lag,
       public: publicDateOf(first),
       ...(revised.length ? { revised } : {}),
-      sourceDocuments: [...new Map(sorted.flatMap(r => [...(r.sourceDocuments || []), ...(r.sourceDocument ? [r.sourceDocument] : [])]).map(ref => [ref.hash, ref])).values()],
-      alsoIn: sorted.filter((r) => r !== first).map((r) => r.id)
+      sourceDocuments: [
+        ...new Map(
+          sorted
+            .flatMap((r) => [...(r.sourceDocuments || []), ...(r.sourceDocument ? [r.sourceDocument] : [])])
+            .map((ref) => [ref.hash, ref]),
+        ).values(),
+      ],
+      alsoIn: sorted.filter((r) => r !== first).map((r) => r.id),
     };
   });
   return { items, stats };

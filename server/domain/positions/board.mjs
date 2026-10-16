@@ -11,7 +11,7 @@ export async function positionsBoard(db) {
     congressTrades(db).catch((err) => ({ items: [], errors: [err.message] })),
     insiderTrades(db).catch((err) => ({ items: [], errors: [err.message] })),
     whaleHoldings(db).catch((err) => ({ items: [], errors: [err.message] })),
-    shortBoard(db).catch((err) => ({ items: [], errors: [err.message] }))
+    shortBoard(db).catch((err) => ({ items: [], errors: [err.message] })),
   ]);
   const tickers = listTickers(db);
   const join = new Map(tickers.map((t) => [t.symbol, t]));
@@ -52,7 +52,7 @@ export async function positionsBoard(db) {
         buyLow: buys.reduce((sum, r) => sum + (r.amountLow || 0), 0),
         lastBuyer: whoLast(buys),
         lastSeller: whoLast(sells),
-        recentBuyers: recentOf(buys, 6)
+        recentBuyers: recentOf(buys, 6),
       },
       insiders: {
         filings: new Set(ins.map((r) => r.link)).size,
@@ -68,10 +68,16 @@ export async function positionsBoard(db) {
         avgLag: avg(ins.map((r) => r.lag).filter((v) => v != null)),
         lastBuyer: whoLast(ins.filter((r) => r.code === "P")),
         lastSeller: whoLast(ins.filter((r) => r.code === "S")),
-        recentBuyers: recentOf(ins.filter((r) => r.code === "P"), 6)
+        recentBuyers: recentOf(
+          ins.filter((r) => r.code === "P"),
+          6,
+        ),
       },
       whales: {
-        lastBuyer: whoLast(whAll.filter((r) => r.side === "buy"), "filed"),
+        lastBuyer: whoLast(
+          whAll.filter((r) => r.side === "buy"),
+          "filed",
+        ),
         holders: new Set(wh.map((r) => r.person)).size,
         buyers: whAll.filter((r) => r.side === "buy").length,
         sellers: whAll.filter((r) => r.side === "sell").length,
@@ -79,29 +85,55 @@ export async function positionsBoard(db) {
         value: wh.reduce((sum, r) => sum + (r.value || 0), 0),
         lastFiled: maxOf(wh.map((r) => r.filed)),
         filedAgo: age(maxOf(wh.map((r) => r.filed))),
-        avgLag: avg(whAll.map((r) => r.lag).filter((v) => v != null))
+        avgLag: avg(whAll.map((r) => r.lag).filter((v) => v != null)),
       },
-      short: si[0] ? { shares: si[0].shares, change: si[0].change, prior: si[0].prior, date: si[0].traded } : null
+      short: si[0] ? { shares: si[0].shares, change: si[0].change, prior: si[0].prior, date: si[0].traded } : null,
     };
   });
-  rows.sort((a, b) =>
-    Number(b.inJoin) - Number(a.inJoin)
-    || b.congress.members - a.congress.members
-    || b.congress.trades - a.congress.trades
-    || a.symbol.localeCompare(b.symbol)
+  rows.sort(
+    (a, b) =>
+      Number(b.inJoin) - Number(a.inJoin) ||
+      b.congress.members - a.congress.members ||
+      b.congress.trades - a.congress.trades ||
+      a.symbol.localeCompare(b.symbol),
   );
   return {
     ok: true,
     source: "House Clerk · Senate eFD · SEC Form 4 · SEC 13F · FINRA",
     asOf: new Date().toISOString(),
-    latency: "Each column keeps its own filing lag: Congress up to 45 days, Form 4 two business days, 13F up to 45 days after quarter end, short interest twice monthly.",
+    latency:
+      "Each column keeps its own filing lag: Congress up to 45 days, Form 4 two business days, 13F up to 45 days after quarter end, short interest twice monthly.",
     feeds: {
-      congress: { source: congress.source, asOf: congress.asOf, latency: congress.latency, count: (congress.items || []).length, errors: congress.errors || [] },
-      insiders: { source: insiders.source, asOf: insiders.asOf, latency: insiders.latency, count: (insiders.items || []).length, errors: insiders.errors || [] },
-      whales: { source: whales.source, asOf: whales.asOf, latency: whales.latency, count: (whales.items || []).length, errors: whales.errors || [] },
-      shorts: { source: shorts.source, asOf: shorts.asOf, latency: shorts.latency, count: (shorts.items || []).length, errors: shorts.errors || [] }
+      congress: {
+        source: congress.source,
+        asOf: congress.asOf,
+        latency: congress.latency,
+        count: (congress.items || []).length,
+        errors: congress.errors || [],
+      },
+      insiders: {
+        source: insiders.source,
+        asOf: insiders.asOf,
+        latency: insiders.latency,
+        count: (insiders.items || []).length,
+        errors: insiders.errors || [],
+      },
+      whales: {
+        source: whales.source,
+        asOf: whales.asOf,
+        latency: whales.latency,
+        count: (whales.items || []).length,
+        errors: whales.errors || [],
+      },
+      shorts: {
+        source: shorts.source,
+        asOf: shorts.asOf,
+        latency: shorts.latency,
+        count: (shorts.items || []).length,
+        errors: shorts.errors || [],
+      },
     },
-    items: rows
+    items: rows,
   };
 }
 
@@ -111,7 +143,7 @@ export async function positionsFor(db, symbol) {
     congressTrades(db).catch(() => ({ items: [] })),
     insiderTrades(db).catch(() => ({ items: [] })),
     whaleHoldings(db).catch(() => ({ items: [] })),
-    shortBoard(db).catch(() => ({ items: [] }))
+    shortBoard(db).catch(() => ({ items: [] })),
   ]);
   const join = listTickers(db).find((t) => t.symbol === sym);
   const trades = (congress.items || []).filter((r) => r.symbol === sym);
@@ -130,22 +162,28 @@ export async function positionsFor(db, symbol) {
     asOf: new Date().toISOString(),
     congress: trades,
     pacs,
-    pacNote: "Corporate PAC gifts (FEC) from the last two years to members who traded this symbol. Only PACs joined in data/tickers.json are tracked.",
+    pacNote:
+      "Corporate PAC gifts (FEC) from the last two years to members who traded this symbol. Only PACs joined in data/tickers.json are tracked.",
     insiders: (insiders.items || []).filter((r) => r.symbol === sym),
     whales: (whales.items || []).filter((r) => r.symbol === sym),
     shorts: (shorts.items || []).filter((r) => r.symbol === sym),
     coverage: {
       insiders: coverage(insiders, sym, join, "Form 4 scan"),
-      shorts: coverage(shorts, sym, join, "FINRA short-interest scan")
-    }
+      shorts: coverage(shorts, sym, join, "FINRA short-interest scan"),
+    },
   };
 }
 
 /** Whether an empty list means "none filed" or "never looked". Only scanned symbols can report zero. */
 export function coverage(scan, sym, join, label) {
   if (!join) return { scanned: false, note: `${sym} is not in data/tickers.json, so the ${label} does not cover it.` };
-  if (!join.core) return { scanned: false, note: `${sym} is quotes-only in data/tickers.json; the ${label} covers full-join names only.` };
-  if (!Array.isArray(scan?.scanned)) return { scanned: false, note: `The ${label} has not finished or failed; retry shortly.` };
+  if (!join.core)
+    return {
+      scanned: false,
+      note: `${sym} is quotes-only in data/tickers.json; the ${label} covers full-join names only.`,
+    };
+  if (!Array.isArray(scan?.scanned))
+    return { scanned: false, note: `The ${label} has not finished or failed; retry shortly.` };
   if (!scan.scanned.includes(sym)) return { scanned: false, note: `The ${label} could not read ${sym} this run.` };
   return { scanned: true, note: "" };
 }
@@ -164,16 +202,22 @@ function who(r) {
     bioguide: r.bioguide || "",
     party: r.party || "",
     role: r.title || r.role || "",
-    amount: r.amount || (r.shares ? `${Math.round(r.shares).toLocaleString("en-US")} sh${r.price ? ` @ $${r.price}` : ""}` : ""),
+    amount:
+      r.amount ||
+      (r.shares ? `${Math.round(r.shares).toLocaleString("en-US")} sh${r.price ? ` @ $${r.price}` : ""}` : ""),
     traded: r.traded || "",
     filed: r.filed || "",
     lag: r.lag ?? null,
-    link: r.link || ""
+    link: r.link || "",
   };
 }
 
 function byLatest(rows, key = "traded") {
-  return [...rows].sort((a, b) => String(b[key] || "").localeCompare(String(a[key] || "")) || String(b.filed || "").localeCompare(String(a.filed || "")));
+  return [...rows].sort(
+    (a, b) =>
+      String(b[key] || "").localeCompare(String(a[key] || "")) ||
+      String(b.filed || "").localeCompare(String(a.filed || "")),
+  );
 }
 
 function whoLast(rows, key = "traded") {

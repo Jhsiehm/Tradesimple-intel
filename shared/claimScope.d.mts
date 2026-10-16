@@ -6,4 +6,7 @@ export function windowClaims(text: string): WindowClaim[];
 export function benchmarkClaims(text: string): BenchmarkClaim[];
 export function windowOf(tool: string, body: unknown): Coverage | null;
 export function hasBenchmarkFigures(body: unknown): boolean;
-export function scopeCheck(answer: string, evidence: { id: string; tool: string; ok: boolean; json: string }[]): ScopeFlag[];
+export function scopeCheck(
+  answer: string,
+  evidence: { id: string; tool: string; ok: boolean; json: string }[],
+): ScopeFlag[];

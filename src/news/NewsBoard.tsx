@@ -12,11 +12,14 @@ type Props = {
 };
 
 export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Props) {
-  const columns = useMemo(() => ({
-    world: items.filter((h) => h.desk === "world").slice(0, 80),
-    markets: items.filter((h) => h.desk === "markets").slice(0, 80),
-    x: items.filter((h) => h.desk === "x").slice(0, 80)
-  }), [items]);
+  const columns = useMemo(
+    () => ({
+      world: items.filter((h) => h.desk === "world").slice(0, 80),
+      markets: items.filter((h) => h.desk === "markets").slice(0, 80),
+      x: items.filter((h) => h.desk === "x").slice(0, 80),
+    }),
+    [items],
+  );
 
   const mentions = useMemo(() => {
     const counts = new Map<string, number>();
@@ -29,13 +32,17 @@ export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Pr
       <header className="board-head">
         <div className="board-title">
           <strong>WIRE</strong>
-          <span>{items.length} stories · {when(wire?.asOf)} · up to 80 per column</span>
+          <span>
+            {items.length} stories · {when(wire?.asOf)} · up to 80 per column
+          </span>
         </div>
         {mentions.length ? (
           <p className="chips">
             <em>MENTIONS</em>
             {mentions.map(([symbol, count]) => (
-              <button key={symbol} className="chip" onClick={() => onTicker(symbol)}>{symbol} <b>{count}</b></button>
+              <button key={symbol} className="chip" onClick={() => onTicker(symbol)}>
+                {symbol} <b>{count}</b>
+              </button>
             ))}
           </p>
         ) : null}
@@ -49,23 +56,46 @@ export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Pr
           selectedId={selectedId}
           onSelect={onSelect}
           empty="No posts match the current filters."
-          lead={x?.trends?.length ? (
-            <div className="x-trends">
-              <p><em>TRENDING ON X · US</em> {x.trendsAsOf ? `${when(x.trendsAsOf).slice(11)} UTC · trends24` : ""}</p>
-              <p className="chips">
-                {x.trends.slice(0, 14).map((t) => (
-                  t.symbol
-                    ? <button key={t.name} className="chip on" onClick={() => onTicker(t.symbol)}>{t.name} <b>{t.symbol}</b></button>
-                    : <a key={t.name} className={t.fresh ? "chip fresh-chip" : "chip"} href={t.url} target="_blank" rel="noreferrer">{t.name}</a>
-                ))}
-              </p>
-              {x.mode === "social" ? <p className="x-note">No {x.tokenMissing} yet: posts below are these accounts on Bluesky and Trump on Truth Social.</p> : null}
-            </div>
-          ) : null}
+          lead={
+            x?.trends?.length ? (
+              <div className="x-trends">
+                <p>
+                  <em>TRENDING ON X · US</em> {x.trendsAsOf ? `${when(x.trendsAsOf).slice(11)} UTC · trends24` : ""}
+                </p>
+                <p className="chips">
+                  {x.trends.slice(0, 14).map((t) =>
+                    t.symbol ? (
+                      <button key={t.name} className="chip on" onClick={() => onTicker(t.symbol)}>
+                        {t.name} <b>{t.symbol}</b>
+                      </button>
+                    ) : (
+                      <a
+                        key={t.name}
+                        className={t.fresh ? "chip fresh-chip" : "chip"}
+                        href={t.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t.name}
+                      </a>
+                    ),
+                  )}
+                </p>
+                {x.mode === "social" ? (
+                  <p className="x-note">
+                    No {x.tokenMissing} yet: posts below are these accounts on Bluesky and Trump on Truth Social.
+                  </p>
+                ) : null}
+              </div>
+            ) : null
+          }
         />
       </div>
       <p className="tape-src">
-        <em>SOURCE</em> {wire?.source || "RSS wires"}{x?.ok ? ` · ${x.mode === "social" ? "Bluesky, Truth Social (trumpstruth.org), X trends (trends24)" : "X API v2"}` : ""}
+        <em>SOURCE</em> {wire?.source || "RSS wires"}
+        {x?.ok
+          ? ` · ${x.mode === "social" ? "Bluesky, Truth Social (trumpstruth.org), X trends (trends24)" : "X API v2"}`
+          : ""}
         <em>AS OF</em> {when(wire?.asOf)}
         <em>NOTE</em> {wire?.latency || "Publisher RSS."}
       </p>
@@ -73,20 +103,48 @@ export function NewsBoard({ wire, x, items, selectedId, onSelect, onTicker }: Pr
   );
 }
 
-function Column({ title, rows, selectedId, onSelect, empty, lead }: { title: string; rows: Headline[]; selectedId: string | null; onSelect: (id: string) => void; empty?: string; lead?: ReactNode }) {
+function Column({
+  title,
+  rows,
+  selectedId,
+  onSelect,
+  empty,
+  lead,
+}: {
+  title: string;
+  rows: Headline[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  empty?: string;
+  lead?: ReactNode;
+}) {
   return (
     <section className="wire-col">
-      <h3>{title} <small>{rows.length}</small></h3>
+      <h3>
+        {title} <small>{rows.length}</small>
+      </h3>
       <div className="wire-list">
         {lead}
-        {rows.length ? rows.map((h) => (
-          <button key={h.id} className="wire-row" aria-selected={h.id === selectedId} onClick={() => onSelect(h.id)}>
-            <time>{Number.isFinite(Date.parse(h.published)) ? new Date(h.published).toISOString().slice(11, 16) : "--:--"}</time>
-            <span className={h.via ? "wire-src handle" : "wire-src"}>{h.source}{h.via ? <i> · {h.via}</i> : null}</span>
-            <span className="wire-title">{h.title}</span>
-            <small>{age(h.published)}{h.symbols.length ? ` · ${h.symbols.join(" ")}` : ""}</small>
-          </button>
-        )) : <p className="note">{empty || "No stories match the current filters."}</p>}
+        {rows.length ? (
+          rows.map((h) => (
+            <button key={h.id} className="wire-row" aria-selected={h.id === selectedId} onClick={() => onSelect(h.id)}>
+              <time>
+                {Number.isFinite(Date.parse(h.published)) ? new Date(h.published).toISOString().slice(11, 16) : "--:--"}
+              </time>
+              <span className={h.via ? "wire-src handle" : "wire-src"}>
+                {h.source}
+                {h.via ? <i> · {h.via}</i> : null}
+              </span>
+              <span className="wire-title">{h.title}</span>
+              <small>
+                {age(h.published)}
+                {h.symbols.length ? ` · ${h.symbols.join(" ")}` : ""}
+              </small>
+            </button>
+          ))
+        ) : (
+          <p className="note">{empty || "No stories match the current filters."}</p>
+        )}
       </div>
     </section>
   );

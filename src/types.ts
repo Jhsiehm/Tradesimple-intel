@@ -5,9 +5,19 @@ export type CongressMode = "votes" | "bills" | "members" | "committees";
 export type EarthBase = "dark" | "sat" | "live" | "daily" | "night";
 export type EarthView = "2d" | "globe" | "3d";
 export type EarthSettings = { base: EarthBase; view: EarthView; labels: boolean; lanes: boolean };
-export type TileLayer = { tiles: string[]; maxzoom: number; source?: string; asOf?: string; attribution?: string; encoding?: string; tilejson?: string };
+export type TileLayer = {
+  tiles: string[];
+  maxzoom: number;
+  source?: string;
+  asOf?: string;
+  attribution?: string;
+  encoding?: string;
+  tilejson?: string;
+};
 export type Earth = {
-  layers: Record<"dark" | "sat" | "daily" | "night" | "labels" | "darkLabels" | "roads" | "terrain", TileLayer> & { buildings?: TileLayer };
+  layers: Record<"dark" | "sat" | "daily" | "night" | "labels" | "darkLabels" | "roads" | "terrain", TileLayer> & {
+    buildings?: TileLayer;
+  };
   lanes?: GeoJSON.FeatureCollection;
   chokepoints?: GeoJSON.FeatureCollection;
   lanesSource?: string;
@@ -84,7 +94,13 @@ export type DrawerTable = {
   title: string;
   cols: string[];
   /** `filing` is the original disclosure; rendered as its own link so `action` can still open the member. */
-  rows: { cells: string[]; action?: string; href?: string; filing?: string; tone?: "up" | "down" | "dem" | "rep" | "" }[];
+  rows: {
+    cells: string[];
+    action?: string;
+    href?: string;
+    filing?: string;
+    tone?: "up" | "down" | "dem" | "rep" | "";
+  }[];
   note?: string;
   /** Shown instead of rows when the feed never looked at this symbol (so an empty list is not read as zero). */
   empty?: string;

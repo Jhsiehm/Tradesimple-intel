@@ -12,7 +12,10 @@ const PASSWORD = "a long test passphrase";
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "intel-front-"));
 fs.mkdirSync(path.join(root, "dist", "assets"), { recursive: true });
 fs.writeFileSync(path.join(root, "dist", "index.html"), "<!doctype html><div id=root></div>");
-fs.writeFileSync(path.join(root, "dist", "assets", "index-AbCd1234.js"), `console.log(${JSON.stringify("x".repeat(4000))});`);
+fs.writeFileSync(
+  path.join(root, "dist", "assets", "index-AbCd1234.js"),
+  `console.log(${JSON.stringify("x".repeat(4000))});`,
+);
 fs.writeFileSync(path.join(root, "secret.txt"), "outside dist");
 
 let clock = Date.now();
@@ -34,7 +37,7 @@ async function serve(env, opts = {}) {
     env,
     now: () => clock,
     log: (line) => logs.push(line),
-    ...opts
+    ...opts,
   });
   const server = http.createServer(front);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -64,12 +67,15 @@ const loginForm = (base, password, extra = {}) =>
     method: "POST",
     redirect: "manual",
     headers: { "content-type": "application/x-www-form-urlencoded", ...extra },
-    body: new URLSearchParams({ password, next: "/#backtest" })
+    body: new URLSearchParams({ password, next: "/#backtest" }),
   });
 const cookieOf = (res) => (res.headers.get("set-cookie") || "").split(";")[0];
 
 test("production refuses to start without a complete sign-in config", () => {
-  assert.throws(() => createFront({ handle: () => {}, root, env: { NODE_ENV: "production" } }), /INTEL_PASSWORD_HASH[\s\S]*SESSION_SECRET[\s\S]*PUBLIC_ORIGIN/);
+  assert.throws(
+    () => createFront({ handle: () => {}, root, env: { NODE_ENV: "production" } }),
+    /INTEL_PASSWORD_HASH[\s\S]*SESSION_SECRET[\s\S]*PUBLIC_ORIGIN/,
+  );
 });
 
 test("health is open; the app redirects to sign-in; the API answers 401 JSON", async () => {
@@ -93,7 +99,10 @@ test("sign in, use the app and the API (including a stream), sign out", async ()
   const res = await loginForm(prod, PASSWORD, { origin: "http://127.0.0.1:1" });
   assert.equal(res.status, 303);
   assert.equal(res.headers.get("location"), "/#backtest");
-  assert.match(res.headers.get("set-cookie"), /^intel_session=[\w-]+\.[\w-]+; Path=\/; HttpOnly; SameSite=Lax; Max-Age=2592000$/);
+  assert.match(
+    res.headers.get("set-cookie"),
+    /^intel_session=[\w-]+\.[\w-]+; Path=\/; HttpOnly; SameSite=Lax; Max-Age=2592000$/,
+  );
   const cookie = cookieOf(res);
   assert.ok(logs.some((l) => l === "intel auth: signed in from 127.0.0.1"));
 
@@ -109,7 +118,11 @@ test("sign in, use the app and the API (including a stream), sign out", async ()
   assert.equal(await stream.text(), "data: hi\n\n");
   assert.equal((await get(`${prod}/login`, { cookie })).status, 303, "already signed in");
 
-  const out = await fetch(`${prod}/logout`, { method: "POST", redirect: "manual", headers: { origin: "http://127.0.0.1:1" } });
+  const out = await fetch(`${prod}/logout`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { origin: "http://127.0.0.1:1" },
+  });
   assert.equal(out.status, 303);
   assert.match(out.headers.get("set-cookie"), /^intel_session=; .*Max-Age=0/);
 });
@@ -140,7 +153,10 @@ test("a session past half its life is renewed; a fresh one is not", async () => 
   const fresh = signSession({ sub: "owner", iat: clock, exp: clock + 30 * 86_400_000 }, SECRET);
   assert.equal((await get(`${prod}/api/x`, { cookie: `intel_session=${fresh}` })).headers.get("set-cookie"), null);
   const old = signSession({ sub: "owner", iat: clock - 20 * 86_400_000, exp: clock + 10 * 86_400_000 }, SECRET);
-  assert.match((await get(`${prod}/api/x`, { cookie: `intel_session=${old}` })).headers.get("set-cookie"), /Max-Age=2592000/);
+  assert.match(
+    (await get(`${prod}/api/x`, { cookie: `intel_session=${old}` })).headers.get("set-cookie"),
+    /Max-Age=2592000/,
+  );
 });
 
 test("login attempts are rate limited per client", async () => {
@@ -149,7 +165,11 @@ test("login attempts are rate limited per client", async () => {
   const limited = await loginForm(prod, PASSWORD, ip);
   assert.equal(limited.status, 429);
   assert.ok(Number(limited.headers.get("retry-after")) > 0);
-  assert.equal((await loginForm(prod, PASSWORD, { "x-forwarded-for": "198.51.100.24" })).status, 303, "other clients still sign in");
+  assert.equal(
+    (await loginForm(prod, PASSWORD, { "x-forwarded-for": "198.51.100.24" })).status,
+    303,
+    "other clients still sign in",
+  );
   clock += 16 * 60_000;
   assert.equal((await loginForm(prod, PASSWORD, ip)).status, 303, "window passed");
 });

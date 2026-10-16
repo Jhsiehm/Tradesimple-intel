@@ -6,10 +6,62 @@
  */
 
 const POSTAL = new Set([
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY",
-  "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH",
-  "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-  "AS", "GU", "MP", "PR", "VI"
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "DC",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
+  "AS",
+  "GU",
+  "MP",
+  "PR",
+  "VI",
 ]);
 
 export function normName(value) {
@@ -21,7 +73,9 @@ export function normName(value) {
 }
 
 function words(value) {
-  return normName(value).split(/[^a-z0-9]+/).filter(Boolean);
+  return normName(value)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
 }
 
 function nameWords(m) {
@@ -61,7 +115,9 @@ function scoreMember(qWords, phrase, m) {
   }
   const last = words(m.last);
   if (qWords.some((q) => last.includes(q))) total += 2;
-  const full = [m.name, `${m.first} ${m.last}`, m.nickname ? `${m.nickname} ${m.last}` : ""].map((v) => words(v).join(" "));
+  const full = [m.name, `${m.first} ${m.last}`, m.nickname ? `${m.nickname} ${m.last}` : ""].map((v) =>
+    words(v).join(" "),
+  );
   if (full.includes(phrase)) total += 5;
   return total;
 }
@@ -100,5 +156,8 @@ export function matchMembers(roster, query, limit = 8) {
   if (!ranked.length && qWords.length === 1 && qWords[0].length >= 3) {
     ranked = roster.filter((m) => initials(m).includes(qWords[0])).map((m) => ({ m, score: 1 }));
   }
-  return ranked.sort(order).slice(0, limit).map((r) => r.m);
+  return ranked
+    .sort(order)
+    .slice(0, limit)
+    .map((r) => r.m);
 }

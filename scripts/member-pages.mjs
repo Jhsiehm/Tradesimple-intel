@@ -17,13 +17,20 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 const OUT = path.resolve(root, arg("out", "dist-demo"));
-const URL_BASE = String(arg("url", process.env.PUBLIC_URL || "https://jhsiehm.github.io/Tradesimple-intel/")).replace(/\/?$/, "/");
+const URL_BASE = String(arg("url", process.env.PUBLIC_URL || "https://jhsiehm.github.io/Tradesimple-intel/")).replace(
+  /\/?$/,
+  "/",
+);
 const HOST = URL_BASE.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-const FONTS = ["/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"].filter((f) => fs.existsSync(f));
+const FONTS = ["/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"].filter((f) =>
+  fs.existsSync(f),
+);
 
 export function renderPng(svg) {
-  const font = FONTS.length ? { fontFiles: FONTS, loadSystemFonts: false, defaultFontFamily: "Menlo" } : { loadSystemFonts: true };
+  const font = FONTS.length
+    ? { fontFiles: FONTS, loadSystemFonts: false, defaultFontFamily: "Menlo" }
+    : { loadSystemFonts: true };
   return new Resvg(svg, { fitTo: { mode: "original" }, font }).render().asPng();
 }
 
@@ -42,9 +49,14 @@ for (const file of files) {
   for (const dir of [slug, s.bioguide]) {
     const target = path.join(OUT, "m", dir);
     fs.mkdirSync(target, { recursive: true });
-    fs.writeFileSync(path.join(target, "index.html"), memberPageHtml(s, { pageUrl: `${URL_BASE}m/${dir}/`, imageUrl, appPath: "../../" }));
+    fs.writeFileSync(
+      path.join(target, "index.html"),
+      memberPageHtml(s, { pageUrl: `${URL_BASE}m/${dir}/`, imageUrl, appPath: "../../" }),
+    );
   }
   index.push({ bioguide: s.bioguide, name: s.name, slug, trades: s.trades });
 }
 fs.writeFileSync(path.join(OUT, "m", "index.json"), JSON.stringify(index));
-console.log(`member pages: ${index.length} members (${index.filter((m) => m.trades).length} with trades) → ${path.relative(root, path.join(OUT, "m"))}/<slug>/ (cards ${1200}×${630}, one per member)`);
+console.log(
+  `member pages: ${index.length} members (${index.filter((m) => m.trades).length} with trades) → ${path.relative(root, path.join(OUT, "m"))}/<slug>/ (cards ${1200}×${630}, one per member)`,
+);

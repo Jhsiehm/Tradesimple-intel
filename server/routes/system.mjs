@@ -15,15 +15,22 @@ export const handlers = {
   geo: ({ root, params, req, res }) => {
     const name = Object.hasOwn(GEO, params.name) ? GEO[params.name] : null;
     if (!name) return reply(404, { ok: false, error: "Unknown geometry" });
-    if (!geoFiles.has(name)) geoFiles.set(name, staticFile(() => fs.readFileSync(path.join(root, "data", "geo", name))));
+    if (!geoFiles.has(name))
+      geoFiles.set(
+        name,
+        staticFile(() => fs.readFileSync(path.join(root, "data", "geo", name))),
+      );
     geoFiles.get(name)(req, res, { "Content-Type": "application/geo+json", "Cache-Control": "public, max-age=86400" });
   },
-  universe: ({ root }) => ({ ok: true, ...JSON.parse(fs.readFileSync(path.join(root, "data", "universe.json"), "utf8")) }),
+  universe: ({ root }) => ({
+    ok: true,
+    ...JSON.parse(fs.readFileSync(path.join(root, "data", "universe.json"), "utf8")),
+  }),
   health: () => ({ ok: true }),
   tickers: ({ db }) => ({ ok: true, items: listTickers(db) }),
   ticker: ({ db, params, query }) => tickerDossier(db, params.symbol.toUpperCase(), query.params.get("lobby") !== "0"),
   hq: ({ db }) => hqAll(db),
   "hq.symbol": ({ db, params }) => hqFor(db, params.symbol.toUpperCase()),
   sites: () => ({ ok: true, source: "Curated district registry", asOf: null, items: siteRegistry() }),
-  search: ({ db, query }) => search(db, query.str("q"))
+  search: ({ db, query }) => search(db, query.str("q")),
 };

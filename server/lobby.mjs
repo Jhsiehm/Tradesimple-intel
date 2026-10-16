@@ -29,16 +29,21 @@ export async function lobbyingForClient(db, clientName) {
         expenses: f.expenses,
         type: f.filing_type_display || f.filing_type || "",
         posted: f.dt_posted || "",
-        year: f.filing_year
+        year: f.filing_year,
       }));
       filings.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
       filings.splice(8);
       return { ok: true, source: "LDA.gov", asOf: new Date().toISOString(), filings };
-    }
+    },
   });
   if (!down) return value;
   const label = ldaDownLabel(down);
-  if (value) return { ...value, stale: true, note: `${label}; showing filings fetched ${staleAt.slice(0, 16).replace("T", " ")} UTC` };
+  if (value)
+    return {
+      ...value,
+      stale: true,
+      note: `${label}; showing filings fetched ${staleAt.slice(0, 16).replace("T", " ")} UTC`,
+    };
   return { ok: false, source: "LDA.gov", unavailable: true, error: label, retryAt: down.retryAt, filings: [] };
 }
 
@@ -74,7 +79,7 @@ export async function fecForName(db, name) {
       id: c.committee_id,
       name: c.name,
       type: c.committee_type_full || c.committee_type || "",
-      receipts
+      receipts,
     });
   }
   const result = {
@@ -82,7 +87,7 @@ export async function fecForName(db, name) {
     source: "FEC",
     asOf: new Date().toISOString(),
     note: "PAC receipts are committee money, separate from LDA lobbying spend.",
-    committees
+    committees,
   };
   writeCache(db, cacheKey, result, TTL);
   return result;
@@ -94,7 +99,8 @@ export async function fecForCommittees(db, ids) {
   if (!apiKey) return { ok: false, missing: "FEC_API_KEY", committees: [] };
   const year = new Date().getUTCFullYear();
   const cycle = year % 2 ? year + 1 : year;
-  if (!ids.length) return { ok: true, source: "FEC", cycle, note: "No corporate PAC is joined to this ticker.", committees: [] };
+  if (!ids.length)
+    return { ok: true, source: "FEC", cycle, note: "No corporate PAC is joined to this ticker.", committees: [] };
   const cacheKey = KEY.fecCommittees(cycle, ids);
   const hit = readCache(db, cacheKey);
   if (hit) return hit;
@@ -106,7 +112,10 @@ export async function fecForCommittees(db, ids) {
     totals.searchParams.set("cycle", String(cycle));
     const info = new URL(`https://api.open.fec.gov/v1/committee/${id}/`);
     info.searchParams.set("api_key", apiKey);
-    const slow = (url) => fetchJson(url, {}, 30000).catch(() => fetchJson(url, {}, 30000)).catch(() => null);
+    const slow = (url) =>
+      fetchJson(url, {}, 30000)
+        .catch(() => fetchJson(url, {}, 30000))
+        .catch(() => null);
     const [body, meta] = await Promise.all([slow(totals), slow(info)]);
     if (!body) failed = true;
     const row = body?.results?.[0];
@@ -115,7 +124,7 @@ export async function fecForCommittees(db, ids) {
       name: meta?.results?.[0]?.name || id,
       receipts: row?.receipts ?? null,
       disbursements: row?.disbursements ?? null,
-      coverageEnd: row?.coverage_end_date ? String(row.coverage_end_date).slice(0, 10) : null
+      coverageEnd: row?.coverage_end_date ? String(row.coverage_end_date).slice(0, 10) : null,
     });
   }
   const result = {
@@ -124,7 +133,7 @@ export async function fecForCommittees(db, ids) {
     asOf: new Date().toISOString(),
     cycle,
     note: `${cycle - 1}–${cycle} cycle totals through each committee's latest report. Separate from LDA lobbying spend.`,
-    committees
+    committees,
   };
   if (!failed) writeCache(db, cacheKey, result, TTL);
   return result;

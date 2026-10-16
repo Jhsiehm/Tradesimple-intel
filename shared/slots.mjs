@@ -17,10 +17,10 @@ export const SLOT_NOTE = [
   "Value slot: {{tN.path|format}}. The path follows the JSON of result tN, for example {{t1.stats.excess|spct}}, {{t2.rows[0].amount|usd}}, {{t1.rows.length}}. Formats: pct (a fraction such as 0.0834 shown as 8.3%), spct (signed, +8.3%), pp (already in percent units), usd, num, int, date, text. Leave the format off and the app picks one from the field name.",
   "Table: put {{table tN.path cols=field1,field2:format limit=8 sort=-field}} on its own line; the app writes the rows, the header, and the ref column. Use the field names exactly as the result spells them. sort=-field is largest first.",
   "Still cite every sentence with its ref, as in: Members' buys beat SPY by {{t1.stats.excess|spct}} on average [t1].",
-  "Example. Result t1 = {\"ref\":\"t1\",\"rows\":[{\"member\":\"Jane Doe\",\"ticker\":\"NVDA\",\"excessReturn\":0.0834,\"amount\":15000}],\"total\":12}. A good answer:",
+  'Example. Result t1 = {"ref":"t1","rows":[{"member":"Jane Doe","ticker":"NVDA","excessReturn":0.0834,"amount":15000}],"total":12}. A good answer:',
   "Jane Doe's NVDA buy beat SPY by {{t1.rows[0].excessReturn|spct}} [t1].",
   "{{table t1.rows cols=member,ticker,excessReturn:spct,amount:usd limit=5}}",
-  "Never invent a path: a slot that does not match the result shows as [missing] to the user. If a value is not in any result, say it is not available."
+  "Never invent a path: a slot that does not match the result shows as [missing] to the user. If a value is not in any result, say it is not available.",
 ].join("\n");
 
 /* ---------- paths ---------- */
@@ -44,7 +44,8 @@ export function parsePath(raw) {
 }
 
 /** Lists the model saw cut to `{ items, total, truncated }` are walked as the list they stand for. */
-const cutList = (v) => v && typeof v === "object" && !Array.isArray(v) && Array.isArray(v.items) && v.truncated === true;
+const cutList = (v) =>
+  v && typeof v === "object" && !Array.isArray(v) && Array.isArray(v.items) && v.truncated === true;
 
 /** `{ found, value }` for `keys` under `root`. `length` counts a list (its true total when it was cut). */
 export function lookup(root, keys) {
@@ -53,11 +54,20 @@ export function lookup(root, keys) {
     const key = keys[i];
     if (i === 0 && key === "result" && Array.isArray(root)) continue;
     if (key === "length") {
-      if (cutList(node)) { node = Number(node.total) || node.items.length; continue; }
-      if (Array.isArray(node)) { node = node.length; continue; }
+      if (cutList(node)) {
+        node = Number(node.total) || node.items.length;
+        continue;
+      }
+      if (Array.isArray(node)) {
+        node = node.length;
+        continue;
+      }
     }
     if (cutList(node) && (typeof key === "number" || key === "items")) {
-      if (key === "items") { node = node.items; continue; }
+      if (key === "items") {
+        node = node.items;
+        continue;
+      }
       node = node.items;
     }
     if (node == null || typeof node !== "object") return { found: false, value: undefined };
@@ -77,12 +87,45 @@ export function lookup(root, keys) {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)?$/;
 const minus = (v) => (v < 0 ? "−" : "");
-const group = (v, digits) => Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const group = (v, digits) =>
+  Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-const FRACTION_WORDS = new Set(["return", "returns", "excess", "alpha", "hit", "drawdown", "cagr", "weight", "winrate"]);
-const DOLLAR_WORDS = new Set(["amount", "usd", "dollar", "dollars", "obligated", "obligation", "obligations", "spend", "spending", "cost", "price", "award", "awarded", "notional", "income", "revenue"]);
+const FRACTION_WORDS = new Set([
+  "return",
+  "returns",
+  "excess",
+  "alpha",
+  "hit",
+  "drawdown",
+  "cagr",
+  "weight",
+  "winrate",
+]);
+const DOLLAR_WORDS = new Set([
+  "amount",
+  "usd",
+  "dollar",
+  "dollars",
+  "obligated",
+  "obligation",
+  "obligations",
+  "spend",
+  "spending",
+  "cost",
+  "price",
+  "award",
+  "awarded",
+  "notional",
+  "income",
+  "revenue",
+]);
 /** "hitRate" → ["hit", "rate"]; whole words only, so "priced" (a count) is not "price". */
-const words = (key) => String(key ?? "").replace(/([a-z\d])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z\d]+/).filter(Boolean);
+const words = (key) =>
+  String(key ?? "")
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z\d]+/)
+    .filter(Boolean);
 
 /** The format a field gets when the slot names none, from its name and value. */
 export function autoFormat(key, value) {
@@ -108,33 +151,70 @@ function usd(v) {
  * Numbers given as numeric strings ("0.12") are read as numbers.
  */
 export function formatValue(value, fmt = "auto", key = "") {
-  const [name0, digitsRaw] = String(fmt || "auto").toLowerCase().split(":");
+  const [name0, digitsRaw] = String(fmt || "auto")
+    .toLowerCase()
+    .split(":");
   if (!SLOT_FORMATS.includes(name0)) return { ok: false, text: MISSING, reason: `unknown format "${fmt}"` };
   if (value === undefined) return { ok: false, text: MISSING, reason: "no such field" };
   if (value === null) return { ok: false, text: MISSING, reason: "the tool returned null" };
-  if (typeof value === "object") return { ok: false, text: MISSING, reason: Array.isArray(value) ? "a list, not one value (add .length or an index)" : "an object, not one value" };
-  const num = typeof value === "number" ? value : typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : NaN;
-  const asked = name0 === "auto" ? autoFormat(key, Number.isFinite(num) && typeof value === "string" ? num : value) : name0;
+  if (typeof value === "object")
+    return {
+      ok: false,
+      text: MISSING,
+      reason: Array.isArray(value) ? "a list, not one value (add .length or an index)" : "an object, not one value",
+    };
+  const num =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())
+        ? Number(value)
+        : NaN;
+  const asked =
+    name0 === "auto" ? autoFormat(key, Number.isFinite(num) && typeof value === "string" ? num : value) : name0;
   // A field named …Pct / …Percent is already in percent units (changePct 1.13 is 1.13%), whatever format was asked.
   const percentUnits = ["pct", "percent"].includes(words(key).at(-1));
   const name = percentUnits && asked === "pct" ? "pp" : percentUnits && asked === "spct" ? "spp" : asked;
   const digits = digitsRaw != null && /^\d$/.test(digitsRaw) ? Number(digitsRaw) : null;
   const needNum = ["pct", "spct", "pp", "spp", "usd", "num", "int"].includes(name);
-  if (needNum && !Number.isFinite(num)) return { ok: false, text: MISSING, reason: `"${String(value).slice(0, 40)}" is not a number` };
+  if (needNum && !Number.isFinite(num))
+    return { ok: false, text: MISSING, reason: `"${String(value).slice(0, 40)}" is not a number` };
   switch (name) {
-    case "pct": return { ok: true, text: `${minus(num)}${group(num * 100, digits ?? 1)}%` };
-    case "spct": return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num * 100, digits ?? 1)}%` };
-    case "pp": return { ok: true, text: `${minus(num)}${group(num, digits ?? 1)}%` };
-    case "spp": return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num, digits ?? 1)}%` };
-    case "usd": return { ok: true, text: digits != null ? `${minus(num)}$${group(num, digits)}` : usd(num) };
-    case "int": return { ok: true, text: `${minus(Math.round(num))}${group(Math.round(num), 0)}` };
-    case "num": return { ok: true, text: `${minus(num)}${group(num, digits ?? (Number.isInteger(num) ? 0 : Math.abs(num) < 1 ? 4 : 2)).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "")}` };
+    case "pct":
+      return { ok: true, text: `${minus(num)}${group(num * 100, digits ?? 1)}%` };
+    case "spct":
+      return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num * 100, digits ?? 1)}%` };
+    case "pp":
+      return { ok: true, text: `${minus(num)}${group(num, digits ?? 1)}%` };
+    case "spp":
+      return { ok: true, text: `${num > 0 ? "+" : minus(num)}${group(num, digits ?? 1)}%` };
+    case "usd":
+      return { ok: true, text: digits != null ? `${minus(num)}$${group(num, digits)}` : usd(num) };
+    case "int":
+      return { ok: true, text: `${minus(Math.round(num))}${group(Math.round(num), 0)}` };
+    case "num":
+      return {
+        ok: true,
+        text: `${minus(num)}${group(num, digits ?? (Number.isInteger(num) ? 0 : Math.abs(num) < 1 ? 4 : 2))
+          .replace(/(\.\d*?)0+$/, "$1")
+          .replace(/\.$/, "")}`,
+      };
     case "date": {
-      if (typeof value === "number" && value > 1e11) return { ok: true, text: new Date(value).toISOString().slice(0, 10) };
-      if (typeof value === "string" && ISO_DATE.test(value.trim())) return { ok: true, text: value.trim().slice(0, 10) };
+      if (typeof value === "number" && value > 1e11)
+        return { ok: true, text: new Date(value).toISOString().slice(0, 10) };
+      if (typeof value === "string" && ISO_DATE.test(value.trim()))
+        return { ok: true, text: value.trim().slice(0, 10) };
       return { ok: false, text: MISSING, reason: `"${String(value).slice(0, 40)}" is not a date` };
     }
-    default: return { ok: true, text: typeof value === "boolean" ? (value ? "yes" : "no") : String(value).replace(/\s+/g, " ").replace(/\|/g, "/").slice(0, 200) };
+    default:
+      return {
+        ok: true,
+        text:
+          typeof value === "boolean"
+            ? value
+              ? "yes"
+              : "no"
+            : String(value).replace(/\s+/g, " ").replace(/\|/g, "/").slice(0, 200),
+      };
   }
 }
 
@@ -171,7 +251,12 @@ const listsIn = (v, depth = 0, out = []) => {
 /** "excessReturn" → "Excess return", "returnPct" → "Return %", "stats.n" → "N". */
 export function columnLabel(col) {
   const last = String(col).split(".").pop() || "";
-  const words = last.replace(/([a-z\d])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").toLowerCase().replace(/\bpct\b/g, "%").trim();
+  const words = last
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\bpct\b/g, "%")
+    .trim();
   return words ? words[0].toUpperCase() + words.slice(1) : String(col);
 }
 
@@ -191,7 +276,10 @@ const tableArgs = (body) => {
 function renderValue(body, src, used) {
   // Markdown table authors escape pipes; the escape belongs to the separator,
   // not to the JSON path. Normalize only this syntax, never guess missing fields.
-  const [pathRaw, fmt = "auto"] = body.replace(/\\\|/g, "|").split("|").map((s) => s.trim());
+  const [pathRaw, fmt = "auto"] = body
+    .replace(/\\\|/g, "|")
+    .split("|")
+    .map((s) => s.trim());
   const path = parsePath(pathRaw);
   if (!path) return { ok: false, text: MISSING, reason: "not a slot path (expected tN.field)" };
   const hit = resolve(path.ref, path.keys, src, ["bodies", "raws"]);
@@ -211,8 +299,14 @@ function renderTable(body, src, used) {
   for (const which of ["raws", "bodies"]) {
     if (!path.keys.length) {
       const ev = (src.evidence || []).find((e) => e.id === path.ref);
-      if (!ev) { reason = `no tool result ${path.ref}`; break; }
-      if (!ev.ok) { reason = `${path.ref} failed`; break; }
+      if (!ev) {
+        reason = `no tool result ${path.ref}`;
+        break;
+      }
+      if (!ev.ok) {
+        reason = `${path.ref} failed`;
+        break;
+      }
       const root = src[which]?.get?.(path.ref);
       list = listsIn(root).sort((a, b) => b.length - a.length)[0] || null;
     } else {
@@ -227,8 +321,19 @@ function renderTable(body, src, used) {
   if (!list) return { ok: false, text: MISSING, reason, ref: path.ref };
   let rows = list.filter((r) => r && typeof r === "object" && !Array.isArray(r));
   if (!rows.length) return { ok: false, text: MISSING, reason: "the list has no rows", ref: path.ref };
-  const cols = String(opts.cols || opts.columns || Object.keys(rows[0]).filter((k) => ["number", "string"].includes(typeof rows[0][k])).slice(0, 5).join(","))
-    .split(",").map((c) => c.trim()).filter(Boolean).slice(0, 8).map((c) => {
+  const cols = String(
+    opts.cols ||
+      opts.columns ||
+      Object.keys(rows[0])
+        .filter((k) => ["number", "string"].includes(typeof rows[0][k]))
+        .slice(0, 5)
+        .join(","),
+  )
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((c) => {
       const [field, fmt = "auto"] = c.split(":");
       return { field, fmt, keys: parsePath(`t0.${field}`)?.keys || null };
     });
@@ -238,9 +343,14 @@ function renderTable(body, src, used) {
     const desc = sort.startsWith("-");
     const keys = parsePath(`t0.${sort.replace(/^[-+]/, "")}`)?.keys;
     if (keys) {
-      const val = (r) => { const v = lookup(r, keys).value; const n = typeof v === "number" ? v : Number(v); return Number.isFinite(n) ? n : typeof v === "string" ? v : null; };
+      const val = (r) => {
+        const v = lookup(r, keys).value;
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? n : typeof v === "string" ? v : null;
+      };
       rows = [...rows].sort((a, b) => {
-        const x = val(a), y = val(b);
+        const x = val(a),
+          y = val(b);
         if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1;
         const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
         return desc ? -c : c;
@@ -250,7 +360,10 @@ function renderTable(body, src, used) {
   const limit = Math.max(1, Math.min(TABLE_MAX, Number(opts.limit || opts.rows) || TABLE_DEFAULT));
   const shown = rows.slice(0, limit);
   const total = cutList(list) ? Number(list.total) || rows.length : rows.length;
-  const lines = [`| ${cols.map((c) => columnLabel(c.field)).join(" | ")} | Ref |`, `|${cols.map(() => "---").join("|")}|---|`];
+  const lines = [
+    `| ${cols.map((c) => columnLabel(c.field)).join(" | ")} | Ref |`,
+    `|${cols.map(() => "---").join("|")}|---|`,
+  ];
   for (const r of shown) {
     const cells = cols.map((c) => {
       if (!c.keys || bad.includes(c)) return MISSING;
@@ -265,9 +378,19 @@ function renderTable(body, src, used) {
   note(used, path.ref, shown.length);
   note(used, path.ref, total);
   const tail = total > shown.length ? `\n${shown.length} of ${total} rows shown [${path.ref}].` : "";
-  const reasonBad = bad.length ? `unknown column${bad.length > 1 ? "s" : ""} ${bad.map((c) => c.field).join(", ")}` : "";
-  const fmtBad = cols.filter((c) => !SLOT_FORMATS.includes(String(c.fmt).toLowerCase().split(":")[0])).map((c) => c.fmt);
-  return { ok: !reasonBad && !fmtBad.length, text: lines.join("\n") + tail, reason: reasonBad || (fmtBad.length ? `unknown format "${fmtBad[0]}"` : ""), ref: path.ref, table: true };
+  const reasonBad = bad.length
+    ? `unknown column${bad.length > 1 ? "s" : ""} ${bad.map((c) => c.field).join(", ")}`
+    : "";
+  const fmtBad = cols
+    .filter((c) => !SLOT_FORMATS.includes(String(c.fmt).toLowerCase().split(":")[0]))
+    .map((c) => c.fmt);
+  return {
+    ok: !reasonBad && !fmtBad.length,
+    text: lines.join("\n") + tail,
+    reason: reasonBad || (fmtBad.length ? `unknown format "${fmtBad[0]}"` : ""),
+    ref: path.ref,
+    table: true,
+  };
 }
 
 function note(used, ref, value) {
@@ -279,7 +402,9 @@ function note(used, ref, value) {
 
 /** One `{{…}}` (braces included) → `{ ok, text, reason, ref }`. */
 export function renderSlot(slot, src, used = new Map()) {
-  const body = String(slot).replace(/^\{\{|\}\}$/g, "").trim();
+  const body = String(slot)
+    .replace(/^\{\{|\}\}$/g, "")
+    .trim();
   return /^table\b/i.test(body) ? renderTable(body, src, used) : renderValue(body, src, used);
 }
 
@@ -335,8 +460,13 @@ export function slotStream(fill) {
     }
   };
   return {
-    push(delta) { buf += String(delta || ""); return drain(false); },
-    flush() { return drain(true); }
+    push(delta) {
+      buf += String(delta || "");
+      return drain(false);
+    },
+    flush() {
+      return drain(true);
+    },
   };
 }
 
@@ -354,6 +484,9 @@ export function slotEvidence(evidence, used) {
 export function missingNote(missing) {
   const list = Array.isArray(missing) ? missing : [];
   if (!list.length) return "";
-  const shown = list.slice(0, 3).map((m) => `${m.slot} (${m.reason})`).join("; ");
+  const shown = list
+    .slice(0, 3)
+    .map((m) => `${m.slot} (${m.reason})`)
+    .join("; ");
   return `${list.length} figure${list.length === 1 ? "" : "s"} could not be filled from the data and show as ${MISSING}: ${shown}${list.length > 3 ? "; …" : ""}.`;
 }

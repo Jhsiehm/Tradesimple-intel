@@ -22,8 +22,15 @@ export function useBacktest() {
 
   useEffect(() => {
     let live = true;
-    api<BtOptions>("/api/backtest").then((o) => { if (live && o.ok) setOptions(o); }).catch(() => null);
-    return () => { live = false; window.clearTimeout(timer.current); };
+    api<BtOptions>("/api/backtest")
+      .then((o) => {
+        if (live && o.ok) setOptions(o);
+      })
+      .catch(() => null);
+    return () => {
+      live = false;
+      window.clearTimeout(timer.current);
+    };
   }, []);
 
   const run = useCallback((spec: BacktestSpec) => {
@@ -31,25 +38,44 @@ export function useBacktest() {
     window.clearTimeout(timer.current);
     saveSpec(spec);
     const attempt = (n: number) => {
-      setState({ phase: "running", since: Date.now(), note: n ? `Prices still loading on the server (try ${n + 1})…` : "Reading disclosures and loading prices…" });
+      setState({
+        phase: "running",
+        since: Date.now(),
+        note: n ? `Prices still loading on the server (try ${n + 1})…` : "Reading disclosures and loading prices…",
+      });
       post<BtRun | BtFailure>("/api/backtest", { spec })
         .then((res) => {
           if (mine !== turn.current) return;
-          if (res.ok && !res.building) { setState({ phase: "done", run: res }); return; }
+          if (res.ok && !res.building) {
+            setState({ phase: "done", run: res });
+            return;
+          }
           if (res.ok) {
             // Partial: some tickers were still loading. Show it, then ask again so the cache fills in.
             setState({ phase: "done", run: res });
-            if (n < MAX_RETRIES) timer.current = window.setTimeout(() => { if (mine === turn.current) attempt(n + 1); }, RETRY_MS);
+            if (n < MAX_RETRIES)
+              timer.current = window.setTimeout(() => {
+                if (mine === turn.current) attempt(n + 1);
+              }, RETRY_MS);
             return;
           }
-          if (res.building && n < MAX_RETRIES) { timer.current = window.setTimeout(() => attempt(n + 1), RETRY_MS); return; }
+          if (res.building && n < MAX_RETRIES) {
+            timer.current = window.setTimeout(() => attempt(n + 1), RETRY_MS);
+            return;
+          }
           setState({ phase: "error", error: res.error, missing: res.missing, runId: res.runId });
         })
-        .catch((err: Error) => { if (mine === turn.current) setState({ phase: "error", error: err.message }); });
+        .catch((err: Error) => {
+          if (mine === turn.current) setState({ phase: "error", error: err.message });
+        });
     };
     attempt(0);
   }, []);
 
-  const clear = useCallback(() => { turn.current += 1; window.clearTimeout(timer.current); setState({ phase: "idle" }); }, []);
+  const clear = useCallback(() => {
+    turn.current += 1;
+    window.clearTimeout(timer.current);
+    setState({ phase: "idle" });
+  }, []);
   return { options, state, run, clear };
 }

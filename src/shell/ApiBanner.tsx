@@ -8,7 +8,12 @@ export function ApiBanner() {
   useEffect(() => onApiDown(setDown), []);
   return (
     <p className="api-banner" role="status" aria-live="polite" hidden={!down}>
-      {down ? <><i className="api-banner-dot" aria-hidden="true" />API restarting — retrying…</> : null}
+      {down ? (
+        <>
+          <i className="api-banner-dot" aria-hidden="true" />
+          API restarting — retrying…
+        </>
+      ) : null}
     </p>
   );
 }

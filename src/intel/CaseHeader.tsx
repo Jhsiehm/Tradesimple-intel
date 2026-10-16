@@ -13,7 +13,9 @@ export function CaseHeader({ caseKey }: { caseKey: string }) {
   if (!c) {
     return (
       <header className="case case-wait" aria-busy="true">
-        <div className="case-top"><span className="case-subject">{subject} · CASE FILE</span></div>
+        <div className="case-top">
+          <span className="case-subject">{subject} · CASE FILE</span>
+        </div>
         <p className="case-headline">Assembling trades, hearings, contracts…</p>
       </header>
     );
@@ -21,7 +23,9 @@ export function CaseHeader({ caseKey }: { caseKey: string }) {
   if (!c.ok) {
     return (
       <header className="case case-err">
-        <div className="case-top"><span className="case-subject">{subject} · CASE FILE</span></div>
+        <div className="case-top">
+          <span className="case-subject">{subject} · CASE FILE</span>
+        </div>
         <p className="case-headline">Case file unavailable · {c.error || "no response"}</p>
       </header>
     );
@@ -30,7 +34,10 @@ export function CaseHeader({ caseKey }: { caseKey: string }) {
   return (
     <header className="case" aria-label={`${c.subject.toLowerCase()} case file`}>
       <div className="case-top">
-        <span className="case-subject">{c.subject}{c.sub ? <b> · {c.sub}</b> : null}</span>
+        <span className="case-subject">
+          {c.subject}
+          {c.sub ? <b> · {c.sub}</b> : null}
+        </span>
         <button
           className={`case-chip case-lv-${c.signal.level}`}
           aria-expanded={rule}
@@ -44,7 +51,9 @@ export function CaseHeader({ caseKey }: { caseKey: string }) {
       {rule ? (
         <p className="case-rule">
           <span>{c.signal.why}</span>
-          <span><em>RULE</em> {ruleText}</span>
+          <span>
+            <em>RULE</em> {ruleText}
+          </span>
         </p>
       ) : null}
       <dl className="case-stats">
@@ -57,9 +66,20 @@ export function CaseHeader({ caseKey }: { caseKey: string }) {
         ))}
       </dl>
       <p className="case-src">
-        <span><em>AS OF</em>{when(c.asOf)} UTC</span>
-        <span><em>SOURCE</em>{c.sources.join(" · ")}</span>
-        {c.latency ? <span><em>LAG</em>{c.latency}</span> : null}
+        <span>
+          <em>AS OF</em>
+          {when(c.asOf)} UTC
+        </span>
+        <span>
+          <em>SOURCE</em>
+          {c.sources.join(" · ")}
+        </span>
+        {c.latency ? (
+          <span>
+            <em>LAG</em>
+            {c.latency}
+          </span>
+        ) : null}
       </p>
     </header>
   );

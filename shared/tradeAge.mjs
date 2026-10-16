@@ -11,7 +11,7 @@ export const FRESHNESS = [
   { tier: "fresh", maxDays: 3, label: "FRESH" },
   { tier: "recent", maxDays: 14, label: "RECENT" },
   { tier: "stale", maxDays: 45, label: "STALE" },
-  { tier: "old", maxDays: Infinity, label: "OLD" }
+  { tier: "old", maxDays: Infinity, label: "OLD" },
 ];
 
 /** Kinds whose event date is a trade; only these are downgraded by age. */
@@ -27,10 +27,11 @@ export const EVENT_WORDS = {
   "8-k": "event",
   stake: "event",
   whale: "quarter ended",
-  lobbying: "period ended"
+  lobbying: "period ended",
 };
 
-export const AGE_RULE = "Trade age is days from the transaction date to now (New York calendar). FRESH ≤3 d, RECENT ≤14 d, STALE ≤45 d, OLD >45 d. A Congress trade or Form 4 that is STALE drops one severity level and one that is OLD drops two (never below ROUTINE), so a trade disclosed today but made 38 days ago ranks below an insider buy from yesterday. Late-filing rows keep their level: the lateness is the signal.";
+export const AGE_RULE =
+  "Trade age is days from the transaction date to now (New York calendar). FRESH ≤3 d, RECENT ≤14 d, STALE ≤45 d, OLD >45 d. A Congress trade or Form 4 that is STALE drops one severity level and one that is OLD drops two (never below ROUTINE), so a trade disclosed today but made 38 days ago ranks below an insider buy from yesterday. Late-filing rows keep their level: the lateness is the signal.";
 
 const LEVELS = ["high", "elevated", "routine"];
 
@@ -43,7 +44,12 @@ function msOf(v) {
   return Date.parse(isDateOnly(s) ? `${s}T00:00:00Z` : s);
 }
 
-const nyFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+const nyFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 /** New York calendar date (YYYY-MM-DD) of an instant; a date-only string is already one. */
 function nyDay(v) {
@@ -105,7 +111,7 @@ export function tradeAge({ kind = "", eventAt = "", filedAt = "" } = {}, now = D
     eventDays: eventDays == null ? null : Math.max(0, eventDays),
     lagDays: lagDays == null ? null : Math.max(0, lagDays),
     tier: TRADE_KINDS.includes(kind) || word ? freshness(eventDays == null ? null : Math.max(0, eventDays)) : null,
-    trade: TRADE_KINDS.includes(kind)
+    trade: TRADE_KINDS.includes(kind),
   };
 }
 

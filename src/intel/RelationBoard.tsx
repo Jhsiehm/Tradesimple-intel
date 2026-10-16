@@ -15,7 +15,7 @@ const KINDS: Record<string, string> = {
   roll: "Vote",
   contract: "Contract",
   form4: "Form 4",
-  pac: "PAC"
+  pac: "PAC",
 };
 
 const COLOR: Record<string, string> = {
@@ -23,7 +23,7 @@ const COLOR: Record<string, string> = {
   member: "#e4e7e6",
   hq: "#ffc14a",
   agency: "#d9b45a",
-  pac: "#b48cff"
+  pac: "#b48cff",
 };
 
 type Node = { id: string; kind: string; label: string; action?: string; x: number; y: number };
@@ -50,8 +50,9 @@ const EMPTY: BoardModel = {
   status: {
     source: "Terminal records",
     asOf: "",
-    latency: "A member or a ticker scopes the board. The scrubber is the window. Drag between two icons to keep a line."
-  }
+    latency:
+      "A member or a ticker scopes the board. The scrubber is the window. Drag between two icons to keep a line.",
+  },
 };
 
 function column(kind: string) {
@@ -77,7 +78,7 @@ function layout(rows: { id: string; kind: string; label: string; action?: string
       nodes.push({
         ...row,
         x: 1.5 + (ci * 97) / span,
-        y: (i / list.length) * 94
+        y: (i / list.length) * 94,
       });
     });
   });
@@ -85,7 +86,12 @@ function layout(rows: { id: string; kind: string; label: string; action?: string
 }
 
 /** Icons and record lines for one scoped window. A line you draw is kept outside this model. */
-export function relationModel(data: IntelData | null, win: DayWindow | null, kinds: Set<ArcKind>, selectedId: string | null): BoardModel {
+export function relationModel(
+  data: IntelData | null,
+  win: DayWindow | null,
+  kinds: Set<ArcKind>,
+  selectedId: string | null,
+): BoardModel {
   if (!data?.ok || data.scope.kind === "all") return EMPTY;
   const window = win || presetWindow(data.len, 90);
   const places = data.arcs.places;
@@ -95,8 +101,14 @@ export function relationModel(data: IntelData | null, win: DayWindow | null, kin
     weight.set(arc.from, (weight.get(arc.from) || 0) + arc.n);
     weight.set(arc.to, (weight.get(arc.to) || 0) + arc.n);
   }
-  const memberIdx = places.map((p, i) => (p.kind === "member" ? i : -1)).filter((i) => i >= 0).slice(0, 4);
-  const otherIdx = [...weight.keys()].filter((i) => places[i]?.kind !== "member").sort((a, b) => (weight.get(b) || 0) - (weight.get(a) || 0)).slice(0, 10);
+  const memberIdx = places
+    .map((p, i) => (p.kind === "member" ? i : -1))
+    .filter((i) => i >= 0)
+    .slice(0, 4);
+  const otherIdx = [...weight.keys()]
+    .filter((i) => places[i]?.kind !== "member")
+    .sort((a, b) => (weight.get(b) || 0) - (weight.get(a) || 0))
+    .slice(0, 10);
   const kept = new Set([...memberIdx, ...otherIdx]);
   const placeId = new Map<number, string>();
   const raw: { id: string; kind: string; label: string; action?: string }[] = [];
@@ -108,7 +120,10 @@ export function relationModel(data: IntelData | null, win: DayWindow | null, kin
     raw.push({ id, kind: place.kind, label: place.label, action: place.action || undefined });
   }
   const start = dayNum(data.from);
-  const events = data.events.filter((e) => e.d >= window[0] && e.d <= window[1]).sort((a, b) => b.d - a.d).slice(0, 18);
+  const events = data.events
+    .filter((e) => e.d >= window[0] && e.d <= window[1])
+    .sort((a, b) => b.d - a.d)
+    .slice(0, 18);
   const seen = new Set(raw.map((r) => r.id));
   events.forEach((event, n) => {
     const id = `ev:${event.k}:${event.d}:${n}`;
@@ -154,7 +169,7 @@ export function relationModel(data: IntelData | null, win: DayWindow | null, kin
   const items: ListItem[] = nodes.map((n) => ({
     id: n.id,
     title: n.label,
-    meta: KINDS[n.kind] || n.kind
+    meta: KINDS[n.kind] || n.kind,
   }));
   const drawer: DrawerModel | null = picked
     ? {
@@ -162,7 +177,8 @@ export function relationModel(data: IntelData | null, win: DayWindow | null, kin
         meta: KINDS[picked.kind] || picked.kind,
         rows: [{ label: "Kind", value: KINDS[picked.kind] || picked.kind }],
         links: picked.action ? [{ label: "Open", value: "The record this icon points at", action: picked.action }] : [],
-        source: "This icon is a record in the window. A solid line is one the feeds share. A dashed line is one you drew."
+        source:
+          "This icon is a record in the window. A solid line is one the feeds share. A dashed line is one you drew.",
       }
     : null;
   return {
@@ -175,8 +191,9 @@ export function relationModel(data: IntelData | null, win: DayWindow | null, kin
     status: {
       source: data.scope.label,
       asOf: data.asOf ? `${when(data.asOf)} UTC` : "",
-      latency: "Solid lines are trades, contracts, and PAC gifts in the window, plus a filing tied to the same member or ticker. Dashed lines are yours."
-    }
+      latency:
+        "Solid lines are trades, contracts, and PAC gifts in the window, plus a filing tied to the same member or ticker. Dashed lines are yours.",
+    },
   };
 }
 
@@ -206,13 +223,23 @@ function writeThreads(key: string, threads: Thread[]) {
  * Abstract board for one scope. Record lines come from the window. Dragging from one icon to another
  * keeps a line that is yours, separate from the feeds.
  */
-export function RelationBoard({ model, selectedId, onSelect }: { model: BoardModel; selectedId: string | null; onSelect: (id: string) => void }) {
+export function RelationBoard({
+  model,
+  selectedId,
+  onSelect,
+}: {
+  model: BoardModel;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
   const board = useRef<HTMLDivElement>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [draft, setDraft] = useState<{ from: string; x: number; y: number } | null>(null);
   const drag = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null);
 
-  useEffect(() => { setThreads(readThreads(model.scopeKey)); }, [model.scopeKey]);
+  useEffect(() => {
+    setThreads(readThreads(model.scopeKey));
+  }, [model.scopeKey]);
 
   const at = useMemo(() => new Map(model.nodes.map((n) => [n.id, n])), [model.nodes]);
   const mine = threads.filter((t) => at.has(t.from) && at.has(t.to));
@@ -227,7 +254,11 @@ export function RelationBoard({ model, selectedId, onSelect }: { model: BoardMod
     event.preventDefault();
     const p = point(event);
     drag.current = { id, x: p.x, y: p.y, moved: false };
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* a click still selects */ }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* a click still selects */
+    }
   }
 
   function move(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -247,9 +278,15 @@ export function RelationBoard({ model, selectedId, onSelect }: { model: BoardMod
       onSelect(cur.id);
       return;
     }
-    const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-node]")?.getAttribute("data-node");
+    const hit = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest("[data-node]")
+      ?.getAttribute("data-node");
     if (!hit || hit === cur.id) return;
-    const next = [...readThreads(model.scopeKey).filter((t) => !(t.from === cur.id && t.to === hit)), { id: `${cur.id}>${hit}`, from: cur.id, to: hit }];
+    const next = [
+      ...readThreads(model.scopeKey).filter((t) => !(t.from === cur.id && t.to === hit)),
+      { id: `${cur.id}>${hit}`, from: cur.id, to: hit },
+    ];
     writeThreads(model.scopeKey, next);
     setThreads(next);
   }
@@ -263,59 +300,97 @@ export function RelationBoard({ model, selectedId, onSelect }: { model: BoardMod
   const fromOf = (id: string) => at.get(id);
   const cols = new Set(model.nodes.map((n) => column(n.kind))).size || 1;
   const nudge = Math.min(9, (97 / cols) * 0.42);
-  const rows = Math.max(1, ...[...model.nodes.reduce((g, n) => g.set(column(n.kind), (g.get(column(n.kind)) || 0) + 1), new Map<number, number>()).values()]);
+  const rows = Math.max(
+    1,
+    ...[
+      ...model.nodes
+        .reduce((g, n) => g.set(column(n.kind), (g.get(column(n.kind)) || 0) + 1), new Map<number, number>())
+        .values(),
+    ],
+  );
 
   return (
     <div ref={board} className="rel">
       <div className="rel-stage" style={{ ["--cols" as string]: cols, ["--rows" as string]: rows }}>
-      <svg className="rel-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        {model.lines.map((line) => {
-          const a = fromOf(line.from);
-          const b = fromOf(line.to);
-          if (!a || !b) return null;
-          return <line key={`${line.from}-${line.to}-${line.kind}`} x1={a.x + nudge} y1={a.y + 3} x2={b.x + nudge} y2={b.y + 3} stroke={ARC_COLOR[line.kind as ArcKind] || COLOR[line.kind] || "#5c6b78"} strokeWidth="0.35" />;
-        })}
+        <svg className="rel-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {model.lines.map((line) => {
+            const a = fromOf(line.from);
+            const b = fromOf(line.to);
+            if (!a || !b) return null;
+            return (
+              <line
+                key={`${line.from}-${line.to}-${line.kind}`}
+                x1={a.x + nudge}
+                y1={a.y + 3}
+                x2={b.x + nudge}
+                y2={b.y + 3}
+                stroke={ARC_COLOR[line.kind as ArcKind] || COLOR[line.kind] || "#5c6b78"}
+                strokeWidth="0.35"
+              />
+            );
+          })}
+          {mine.map((line) => {
+            const a = fromOf(line.from);
+            const b = fromOf(line.to);
+            if (!a || !b) return null;
+            return (
+              <line
+                key={line.id}
+                x1={a.x + nudge}
+                y1={a.y + 3}
+                x2={b.x + nudge}
+                y2={b.y + 3}
+                stroke="#e4e7e6"
+                strokeWidth="0.45"
+                strokeDasharray="1.2 0.8"
+              />
+            );
+          })}
+          {draft && fromOf(draft.from) ? (
+            <line
+              x1={fromOf(draft.from)!.x + nudge}
+              y1={fromOf(draft.from)!.y + 3}
+              x2={draft.x}
+              y2={draft.y}
+              stroke="#e4e7e6"
+              strokeWidth="0.4"
+              strokeDasharray="1.2 0.8"
+            />
+          ) : null}
+        </svg>
         {mine.map((line) => {
           const a = fromOf(line.from);
           const b = fromOf(line.to);
           if (!a || !b) return null;
-          return <line key={line.id} x1={a.x + nudge} y1={a.y + 3} x2={b.x + nudge} y2={b.y + 3} stroke="#e4e7e6" strokeWidth="0.45" strokeDasharray="1.2 0.8" />;
+          return (
+            <button
+              key={line.id}
+              className="rel-cut"
+              style={{ left: `${(a.x + b.x) / 2 + nudge}%`, top: `${(a.y + b.y) / 2 + 3}%` }}
+              title="Remove this line"
+              onClick={() => dropThread(line.id)}
+            >
+              ×
+            </button>
+          );
         })}
-        {draft && fromOf(draft.from) ? <line x1={fromOf(draft.from)!.x + nudge} y1={fromOf(draft.from)!.y + 3} x2={draft.x} y2={draft.y} stroke="#e4e7e6" strokeWidth="0.4" strokeDasharray="1.2 0.8" /> : null}
-      </svg>
-      {mine.map((line) => {
-        const a = fromOf(line.from);
-        const b = fromOf(line.to);
-        if (!a || !b) return null;
-        return (
+        {model.nodes.map((node) => (
           <button
-            key={line.id}
-            className="rel-cut"
-            style={{ left: `${(a.x + b.x) / 2 + nudge}%`, top: `${(a.y + b.y) / 2 + 3}%` }}
-            title="Remove this line"
-            onClick={() => dropThread(line.id)}
+            key={node.id}
+            data-node={node.id}
+            className="rel-node"
+            style={{ left: `${node.x}%`, top: `${node.y}%`, ["--pip" as string]: COLOR[node.kind] || "#9aa7b2" }}
+            aria-pressed={node.id === selectedId}
+            onPointerDown={(event) => down(event, node.id)}
+            onPointerMove={move}
+            onPointerUp={up}
           >
-            ×
+            <i />
+            <span>{KINDS[node.kind] || node.kind}</span>
+            <strong>{node.label}</strong>
           </button>
-        );
-      })}
-      {model.nodes.map((node) => (
-        <button
-          key={node.id}
-          data-node={node.id}
-          className="rel-node"
-          style={{ left: `${node.x}%`, top: `${node.y}%`, ["--pip" as string]: COLOR[node.kind] || "#9aa7b2" }}
-          aria-pressed={node.id === selectedId}
-          onPointerDown={(event) => down(event, node.id)}
-          onPointerMove={move}
-          onPointerUp={up}
-        >
-          <i />
-          <span>{KINDS[node.kind] || node.kind}</span>
-          <strong>{node.label}</strong>
-        </button>
-      ))}
-      {model.nodes.length ? null : <p className="rel-empty">{model.empty}</p>}
+        ))}
+        {model.nodes.length ? null : <p className="rel-empty">{model.empty}</p>}
       </div>
     </div>
   );

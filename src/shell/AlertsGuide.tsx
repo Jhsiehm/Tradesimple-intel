@@ -13,26 +13,52 @@ const sentence = (text: string) => text.replace(/^or /, "").replace(/^\w/, (lett
 export function AlertsGuide({ sources }: { sources: AlertSource[] }) {
   return (
     <div className="alerts-guide">
-      <p className="alerts-intro">Highest priority first, then newest filing. Expand a topic to see how the queue works.</p>
+      <p className="alerts-intro">
+        Highest priority first, then newest filing. Expand a topic to see how the queue works.
+      </p>
       <details>
-        <summary><span className="sev-high">High priority</span><small>Largest or most significant signals</small></summary>
-        <ul>{highRules.map((rule) => <li key={rule}>{sentence(rule)}</li>)}</ul>
+        <summary>
+          <span className="sev-high">High priority</span>
+          <small>Largest or most significant signals</small>
+        </summary>
+        <ul>
+          {highRules.map((rule) => (
+            <li key={rule}>{sentence(rule)}</li>
+          ))}
+        </ul>
       </details>
       <details>
-        <summary><span className="sev-elevated">Elevated priority</span><small>Notable filings and activity</small></summary>
+        <summary>
+          <span className="sev-elevated">Elevated priority</span>
+          <small>Notable filings and activity</small>
+        </summary>
         <p>{sentence((RULES.find((rule) => rule.startsWith("ELEVATED:")) || "").replace(/^ELEVATED: /, ""))}</p>
       </details>
       <details>
-        <summary><span>Routine & exceptions</span><small>Other updates and planned sales</small></summary>
+        <summary>
+          <span>Routine & exceptions</span>
+          <small>Other updates and planned sales</small>
+        </summary>
         <p>{RULES.find((rule) => rule.startsWith("Otherwise"))}</p>
       </details>
       <details>
-        <summary><span>Trade age</span><small>Why older trades can rank lower</small></summary>
+        <summary>
+          <span>Trade age</span>
+          <small>Why older trades can rank lower</small>
+        </summary>
         <p>{AGE_RULE}</p>
       </details>
-      {sources.some((source) => source.label === "Research tasks") ? <details><summary>Research task alerts</summary><p>{RESEARCH_RULE}</p></details> : null}
+      {sources.some((source) => source.label === "Research tasks") ? (
+        <details>
+          <summary>Research task alerts</summary>
+          <p>{RESEARCH_RULE}</p>
+        </details>
+      ) : null}
       <details>
-        <summary><span>Sources & timing</span><small>Coverage, filing delays, and refreshes</small></summary>
+        <summary>
+          <span>Sources & timing</span>
+          <small>Coverage, filing delays, and refreshes</small>
+        </summary>
         <p>The queue covers the last 90 days by filed date. It refreshes every 5 minutes and after each live push.</p>
         <dl className="alerts-sources">
           {sources.map((source) => (

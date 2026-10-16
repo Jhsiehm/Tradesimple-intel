@@ -15,14 +15,18 @@ export function meetingModel(item: Meeting): DrawerModel {
       { label: "When", value: `${when(item.date)} UTC` },
       { label: "Chamber", value: item.chamber || "—" },
       { label: "Room", value: item.location || "—" },
-      { label: "Nominations", value: item.nominations ? String(item.nominations) : "—" }
+      { label: "Nominations", value: item.nominations ? String(item.nominations) : "—" },
     ],
     links: [
-      ...(item.committees || []).map((c) => ({ label: "Committee", value: c.name, action: `committee:${committeeIdFor(c.system)}` })),
+      ...(item.committees || []).map((c) => ({
+        label: "Committee",
+        value: c.name,
+        action: `committee:${committeeIdFor(c.system)}`,
+      })),
       ...(item.bills || []).map((b) => ({ label: "Bill", value: b.label, action: `bill:${b.id}` })),
       ...(item.documents || []).map((d) => ({ label: "Document", value: d.name, href: d.url })),
       ...(item.videos || []).map((v) => ({ label: "Video", value: v.name, href: v.url })),
-      ...(item.link ? [{ label: "Congress.gov", value: `Event ${item.id}`, href: item.link }] : [])
-    ]
+      ...(item.link ? [{ label: "Congress.gov", value: `Event ${item.id}`, href: item.link }] : []),
+    ],
   };
 }

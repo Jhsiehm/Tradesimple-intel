@@ -11,8 +11,8 @@ export function yahooHeaders() {
   return {
     headers: {
       "User-Agent": BROWSER_UA,
-      Accept: "application/json"
-    }
+      Accept: "application/json",
+    },
   };
 }
 
@@ -31,7 +31,17 @@ export function yahooChart(symbol, params, { timeoutMs = 20000, priority = false
 export async function yahooBars(symbol, { from = PRICE_HISTORY_FROM, timeoutMs = 20000, priority = false } = {}) {
   const period1 = Math.floor(Date.parse(`${from}T00:00:00Z`) / 1000);
   const period2 = Math.floor(Date.now() / 1000) + 86_400;
-  const body = await yahooChart(symbol, { interval: "1d", period1: String(period1), period2: String(period2), includeAdjustedClose: "true", events: "div,splits" }, { timeoutMs, priority });
+  const body = await yahooChart(
+    symbol,
+    {
+      interval: "1d",
+      period1: String(period1),
+      period2: String(period2),
+      includeAdjustedClose: "true",
+      events: "div,splits",
+    },
+    { timeoutMs, priority },
+  );
   return parseBars(body);
 }
 
@@ -40,7 +50,13 @@ const rssGate = makeGate(2, gateSpacing(250));
 /** Yahoo Finance headline RSS for one symbol, as raw XML (newest ~20 items, publisher time stamps). */
 export function yahooHeadlines(symbol, { timeoutMs = 10000 } = {}) {
   const url = `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(symbol)}&region=US&lang=en-US`;
-  return rssGate(() => fetchText(url, { headers: { "User-Agent": BROWSER_UA, Accept: "application/rss+xml, application/xml" } }, timeoutMs));
+  return rssGate(() =>
+    fetchText(
+      url,
+      { headers: { "User-Agent": BROWSER_UA, Accept: "application/rss+xml, application/xml" } },
+      timeoutMs,
+    ),
+  );
 }
 
 export async function sessionQuote(ticker, digitsFor = () => 2) {
@@ -59,7 +75,7 @@ export async function sessionQuote(ticker, digitsFor = () => 2) {
       h: quote.high?.[i],
       l: quote.low?.[i],
       c: close,
-      v: quote.volume?.[i] || 0
+      v: quote.volume?.[i] || 0,
     });
   }
   const lastBar = bars.at(-1);
@@ -86,7 +102,9 @@ export async function sessionQuote(ticker, digitsFor = () => 2) {
     yearLow: r(meta.fiftyTwoWeekLow),
     spark: bars.map((bar) => bar.c),
     volume: meta.regularMarketVolume || lastBar.v || 0,
-    asOf: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : new Date(lastBar.t).toISOString()
+    asOf: meta.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString()
+      : new Date(lastBar.t).toISOString(),
   };
 }
 

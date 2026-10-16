@@ -13,15 +13,30 @@ export type NodeLook = Look & { shape: "circle" | "square" | "diamond" | "hex" }
 /** Reversible Phase C pilot: hue families, icons, shapes and dash semantics stay intact. */
 const chromaticPilot = import.meta.env?.VITE_CHROMATIC_MAP !== "0";
 const chroma = {
-  blue: "#2E7DF6", amber: "#FAA340", violet: "#986CFF", cyan: "#26E0D4",
-  lime: "#A6E22E", orange: "#FF8A3C", pink: "#FF5CAB"
+  blue: "#2E7DF6",
+  amber: "#FAA340",
+  violet: "#986CFF",
+  cyan: "#26E0D4",
+  lime: "#A6E22E",
+  orange: "#FF8A3C",
+  pink: "#FF5CAB",
 };
 /** Same 68% pigment / 32% ivory mixture as the namespaced CSS light variants. */
 function light(hex: string) {
-  const a = parseInt(hex.slice(1), 16), b = 0xEAE4D6;
-  return "#" + [16, 8, 0].map((n) => Math.round(((a >> n) & 255) * .68 + ((b >> n) & 255) * .32).toString(16).padStart(2, "0")).join("");
+  const a = parseInt(hex.slice(1), 16),
+    b = 0xeae4d6;
+  return (
+    "#" +
+    [16, 8, 0]
+      .map((n) =>
+        Math.round(((a >> n) & 255) * 0.68 + ((b >> n) & 255) * 0.32)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")
+  );
 }
-const pigment = (legacy: string, hue: keyof typeof chroma) => chromaticPilot ? light(chroma[hue]) : legacy;
+const pigment = (legacy: string, hue: keyof typeof chroma) => (chromaticPilot ? light(chroma[hue]) : legacy);
 
 export const PANEL = "#0d1115";
 
@@ -35,11 +50,16 @@ export const CATEGORY_LOOK: Record<CategoryId, EdgeLook> = {
   pac: { color: pigment("#b48cff", "violet"), icon: "pac", label: "PAC money", dash: [6, 2, 2, 2] },
   supply: { color: pigment("#3df0ff", "cyan"), icon: "supply", label: "Supply chain", dash: [] },
   hq: { color: pigment("#b9d95a", "lime"), icon: "hq", label: "HQ · district", dash: [4, 4] },
-  insider: { color: "#2fbfa8", icon: "form4", label: "Form 4 insiders", dash: [2, 2] }
+  insider: { color: "#2fbfa8", icon: "form4", label: "Form 4 insiders", dash: [2, 2] },
 };
 
 /** Your theories: a color no data category uses, a long animated dash, and the bulb badge. */
-export const THEORY_LOOK: EdgeLook = { color: pigment("#ff4fd8", "pink"), icon: "theory", label: "Your theory — not from a data source", dash: [7, 5] };
+export const THEORY_LOOK: EdgeLook = {
+  color: pigment("#ff4fd8", "pink"),
+  icon: "theory",
+  label: "Your theory — not from a data source",
+  dash: [7, 5],
+};
 
 export const NODE_LOOK: Record<NodeType, NodeLook> = {
   member: { color: "#e4e7e6", icon: "members", label: "Member", shape: "circle" },
@@ -53,7 +73,7 @@ export const NODE_LOOK: Record<NodeType, NodeLook> = {
   firm: { color: pigment("#ff8552", "orange"), icon: "firm", label: "Lobbying firm", shape: "square" },
   insider: { color: "#2fbfa8", icon: "insider", label: "Form 4 filer", shape: "circle" },
   district: { color: pigment("#b9d95a", "lime"), icon: "districts", label: "District", shape: "hex" },
-  note: { color: THEORY_LOOK.color, icon: "user-node", label: "Added by you", shape: "circle" }
+  note: { color: THEORY_LOOK.color, icon: "user-node", label: "Added by you", shape: "circle" },
 };
 
 /** Relative luminance contrast, for the palette test and any tint that sits on text. */

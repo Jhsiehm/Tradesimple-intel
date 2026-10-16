@@ -13,7 +13,8 @@ export type Failure = {
   error?: unknown;
 };
 
-const NETWORK = /failed to fetch|fetch failed|networkerror|load failed|econnrefused|econnreset|socket hang up|network connection was lost/i;
+const NETWORK =
+  /failed to fetch|fetch failed|networkerror|load failed|econnrefused|econnreset|socket hang up|network connection was lost/i;
 const PROXY_DOWN = /refused the connection|is it restarting|connection dropped|econnrefused|econnreset|socket hang up/i;
 
 /** True when the failure looks like the API process is down or restarting, not like a real error from it. */
@@ -28,7 +29,8 @@ export function isRestart(f: Failure): boolean {
   if (status === 503 || status === 504) return !/timed out/i.test(body);
   if (status === 502) return !body || PROXY_DOWN.test(body) || !body.startsWith("{");
   // Vite's generic proxy answers an empty (or plain-text) 500 when the target refuses the connection.
-  if (status === 500) return !body || (!body.startsWith("{") && NETWORK.test(body)) || /^internal server error$/i.test(body);
+  if (status === 500)
+    return !body || (!body.startsWith("{") && NETWORK.test(body)) || /^internal server error$/i.test(body);
   return false;
 }
 

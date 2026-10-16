@@ -17,7 +17,7 @@ function readAt(fd, position, length) {
 
 /** Zip64 extra field (0x0001): the 64-bit values for whichever 32-bit fields were saturated, in spec order. */
 function zip64Extra(extra, entry) {
-  for (let p = 0; p + 4 <= extra.length;) {
+  for (let p = 0; p + 4 <= extra.length; ) {
     const id = extra.readUInt16LE(p);
     const size = extra.readUInt16LE(p + 2);
     if (id === 0x0001) {
@@ -41,7 +41,11 @@ export function zipEntries(file) {
     const tailLen = Math.min(size, 65557);
     const tail = readAt(fd, size - tailLen, tailLen);
     let at = -1;
-    for (let i = tail.length - 22; i >= 0; i -= 1) if (tail.readUInt32LE(i) === EOCD) { at = i; break; }
+    for (let i = tail.length - 22; i >= 0; i -= 1)
+      if (tail.readUInt32LE(i) === EOCD) {
+        at = i;
+        break;
+      }
     if (at < 0) throw new Error("not a zip file (no end-of-central-directory record)");
     let count = tail.readUInt16LE(at + 10);
     let cdSize = tail.readUInt32LE(at + 12);
@@ -64,7 +68,7 @@ export function zipEntries(file) {
         method: cd.readUInt16LE(p + 10),
         compressedSize: cd.readUInt32LE(p + 20),
         size: cd.readUInt32LE(p + 24),
-        offset: cd.readUInt32LE(p + 42)
+        offset: cd.readUInt32LE(p + 42),
       };
       zip64Extra(cd.subarray(p + 46 + nameLen, p + 46 + nameLen + extraLen), entry);
       out.push(entry);
@@ -80,7 +84,11 @@ export function zipEntries(file) {
 export function zipEntryStream(file, entry) {
   const fd = fs.openSync(file, "r");
   let header;
-  try { header = readAt(fd, entry.offset, 30); } finally { fs.closeSync(fd); }
+  try {
+    header = readAt(fd, entry.offset, 30);
+  } finally {
+    fs.closeSync(fd);
+  }
   if (header.readUInt32LE(0) !== LOCAL) throw new Error(`corrupt zip local header for ${entry.name}`);
   const start = entry.offset + 30 + header.readUInt16LE(26) + header.readUInt16LE(28);
   if (!entry.compressedSize) return Readable.from([]);

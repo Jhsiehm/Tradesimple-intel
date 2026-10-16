@@ -96,11 +96,21 @@ export function checkOf(id: string): LiveCheck | null;
 export function checkFor(source: string): LiveCheck | null;
 export function nextDelay(check: { everyMs: number; maxMs: number }, failures?: number, retryAfterMs?: number): number;
 export function durationLabel(ms: number | null | undefined): string;
-export function detectionLag(ev: LiveEvent, detectedAt: string | number, backfill?: boolean): { ms: number | null; days: number | null; precision: LiveInfo["precision"]; label: string };
+export function detectionLag(
+  ev: LiveEvent,
+  detectedAt: string | number,
+  backfill?: boolean,
+): { ms: number | null; days: number | null; precision: LiveInfo["precision"]; label: string };
 export function filingLagLabel(ev: LiveEvent): string;
 export function predatesWatch(ev: LiveEvent, primedAt: string | number, precision: LiveCheck["precision"]): boolean;
-export function liveAlertRow(ev: LiveEvent, opts?: { detectedAt?: string | number; backfill?: boolean; seq?: number }): LiveAlertRow;
+export function liveAlertRow(
+  ev: LiveEvent,
+  opts?: { detectedAt?: string | number; backfill?: boolean; seq?: number },
+): LiveAlertRow;
 export function headlineKey(title: string): string;
 export function dedupeHeadlines<T extends { title: string; published?: string }>(items: T[]): T[];
 export function textHash(value: string): string;
-export function checkHealth(status: LiveStatus | null | undefined, now?: number): "off" | "failing" | "late" | "ok" | "waiting";
+export function checkHealth(
+  status: LiveStatus | null | undefined,
+  now?: number,
+): "off" | "failing" | "late" | "ok" | "waiting";

@@ -11,7 +11,9 @@ const SCRYPT_N = 1 << 15;
 const b64u = (buf) => Buffer.from(buf).toString("base64url");
 
 const scrypt = (password, salt, len, opts) =>
-  new Promise((resolve, reject) => crypto.scrypt(password, salt, len, opts, (err, key) => (err ? reject(err) : resolve(key))));
+  new Promise((resolve, reject) =>
+    crypto.scrypt(password, salt, len, opts, (err, key) => (err ? reject(err) : resolve(key))),
+  );
 
 const scryptOpts = (N, r, p) => ({ N, r, p, maxmem: 256 * N * r + 1024 * 1024 });
 
@@ -74,7 +76,9 @@ export function parseCookies(header) {
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 export function base32Decode(text) {
-  const clean = String(text || "").toUpperCase().replace(/[\s=-]/g, "");
+  const clean = String(text || "")
+    .toUpperCase()
+    .replace(/[\s=-]/g, "");
   let bits = 0;
   let value = 0;
   const out = [];
@@ -151,7 +155,7 @@ export function createLimiter({ perIp = 5, global = 30, windowMs = 15 * 60_000, 
     },
     reset(ip) {
       byIp.delete(ip);
-    }
+    },
   };
 }
 
@@ -166,7 +170,13 @@ export function clientIp(req) {
   const remote = String(req.socket?.remoteAddress || "");
   const fwd = String(req.headers?.["x-forwarded-for"] || "");
   if (!LOOPBACK.test(remote) || !fwd) return remote;
-  return fwd.split(",").map((s) => s.trim()).filter(Boolean).pop() || remote;
+  return (
+    fwd
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .pop() || remote
+  );
 }
 
 const originOf = (raw) => {
@@ -186,9 +196,12 @@ export function authConfig(env = process.env) {
   const totp = String(env.INTEL_TOTP_SECRET || "").trim();
   const days = Math.min(90, Math.max(1, Number(env.INTEL_SESSION_DAYS) || 30));
   const problems = [];
-  if (!parseHash(hash)) problems.push("INTEL_PASSWORD_HASH is missing or malformed (make one with `npm run auth:hash`).");
-  if (secret.length < 32) problems.push("INTEL_SESSION_SECRET must be at least 32 characters (`npm run auth:hash` prints one).");
-  if (totp && !(base32Decode(totp)?.length >= 10)) problems.push("INTEL_TOTP_SECRET is not a base32 secret of at least 16 characters.");
+  if (!parseHash(hash))
+    problems.push("INTEL_PASSWORD_HASH is missing or malformed (make one with `npm run auth:hash`).");
+  if (secret.length < 32)
+    problems.push("INTEL_SESSION_SECRET must be at least 32 characters (`npm run auth:hash` prints one).");
+  if (totp && !(base32Decode(totp)?.length >= 10))
+    problems.push("INTEL_TOTP_SECRET is not a base32 secret of at least 16 characters.");
   const configured = !problems.length;
   if (production && !origin) problems.push("PUBLIC_ORIGIN is not set (the https:// address you open the app at).");
   const secure = origin.startsWith("https:");
@@ -202,7 +215,7 @@ export function authConfig(env = process.env) {
     ttlMs: days * 86_400_000,
     secure,
     cookie: secure ? "__Host-intel_session" : "intel_session",
-    problems
+    problems,
   };
 }
 

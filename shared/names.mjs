@@ -1,6 +1,29 @@
 // Pure company-name matching rules shared by the join scripts and the server. No network calls, so tests import them directly.
 
-const SUFFIX = new Set(["INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "COMPANIES", "LLC", "LTD", "LIMITED", "PLC", "NV", "SA", "AG", "HOLDINGS", "HOLDING", "GROUP", "THE", "AND", "DE", "USA", "US"]);
+const SUFFIX = new Set([
+  "INC",
+  "INCORPORATED",
+  "CORP",
+  "CORPORATION",
+  "CO",
+  "COMPANY",
+  "COMPANIES",
+  "LLC",
+  "LTD",
+  "LIMITED",
+  "PLC",
+  "NV",
+  "SA",
+  "AG",
+  "HOLDINGS",
+  "HOLDING",
+  "GROUP",
+  "THE",
+  "AND",
+  "DE",
+  "USA",
+  "US",
+]);
 
 /** Company name reduced to its comparable core: "PROCTER & GAMBLE Co" and "Procter and Gamble" both become "PROCTER AND GAMBLE". */
 export function norm(value) {
@@ -19,7 +42,9 @@ export function norm(value) {
 
 /** LDA client names whose normalized form equals one of the targets, collapsed so the lobbying lookup's substring match covers variants. */
 export function ldaMatches(names, targets) {
-  const hits = [...new Set(names.map((n) => String(n).trim()).filter((n) => targets.includes(norm(n))))].sort((a, b) => a.length - b.length);
+  const hits = [...new Set(names.map((n) => String(n).trim()).filter((n) => targets.includes(norm(n))))].sort(
+    (a, b) => a.length - b.length,
+  );
   const strip = (s) => s.toUpperCase().replace(/[.,]/g, "");
   const keep = [];
   for (const name of hits) if (!keep.some((k) => strip(name).includes(strip(k)))) keep.push(name);
@@ -32,7 +57,26 @@ export function districtCode(state, cd) {
   return /^[A-Z]{2}$/.test(state || "") && /^\d+$/.test(base) ? `${state}-${base.padStart(2, "0")}` : null;
 }
 
-const DIVISION = new Set(["SYSTEMS", "DEFENSE", "AEROSPACE", "SPACE", "AERONAUTICS", "SERVICES", "SOLUTIONS", "TECHNOLOGIES", "TECHNOLOGY", "GOVERNMENT", "FEDERAL", "PUBLIC", "SECTOR", "MISSION", "INTERNATIONAL", "GLOBAL", "ELECTRONIC", "ELECTRONICS"]);
+const DIVISION = new Set([
+  "SYSTEMS",
+  "DEFENSE",
+  "AEROSPACE",
+  "SPACE",
+  "AERONAUTICS",
+  "SERVICES",
+  "SOLUTIONS",
+  "TECHNOLOGIES",
+  "TECHNOLOGY",
+  "GOVERNMENT",
+  "FEDERAL",
+  "PUBLIC",
+  "SECTOR",
+  "MISSION",
+  "INTERNATIONAL",
+  "GLOBAL",
+  "ELECTRONIC",
+  "ELECTRONICS",
+]);
 
 /**
  * Whether a USAspending parent recipient name belongs to a join token. Exact after norm() always counts.
@@ -45,7 +89,10 @@ export function contractParentMatch(token, parent) {
   if (!t || !p) return false;
   if (p === t) return true;
   if (!t.includes(" ") || !p.startsWith(`${t} `)) return false;
-  return p.slice(t.length + 1).split(" ").every((w) => DIVISION.has(w));
+  return p
+    .slice(t.length + 1)
+    .split(" ")
+    .every((w) => DIVISION.has(w));
 }
 
 /** FEC committee-master lines (pipe-delimited) to a map of normalized connected organization → corporate PAC ids. */

@@ -1,4 +1,4 @@
-import { preserveSourceDocument } from './domain/source-documents.mjs';
+import { preserveSourceDocument } from "./domain/source-documents.mjs";
 import { fetchText } from "./lib/http.mjs";
 import { usaspendingSearch } from "./feeds/usaspending.mjs";
 import { listTickers, readCache, tickerBySymbol, writeCache } from "./lib/db.mjs";
@@ -12,8 +12,22 @@ import { KEY } from "./lib/cacheKeys.mjs";
 import { readStale } from "./lib/cache.mjs";
 
 const CONTRACT_TYPES = ["A", "B", "C", "D"];
-const LATENCY = "USAspending prime contract actions by action date. Civilian agencies report within days; DoD actions are published about 90 days after award. Negative amounts are de-obligations.";
-const FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "Action Date", "Transaction Amount", "Transaction Description", "Awarding Agency", "Awarding Sub Agency", "Mod", "generated_internal_id", "Primary Place of Performance", "NAICS"];
+const LATENCY =
+  "USAspending prime contract actions by action date. Civilian agencies report within days; DoD actions are published about 90 days after award. Negative amounts are de-obligations.";
+const FIELDS = [
+  "Award ID",
+  "Recipient Name",
+  "Recipient UEI",
+  "Action Date",
+  "Transaction Amount",
+  "Transaction Description",
+  "Awarding Agency",
+  "Awarding Sub Agency",
+  "Mod",
+  "generated_internal_id",
+  "Primary Place of Performance",
+  "NAICS",
+];
 
 /** Exact normalized parent name → symbol, from data/tickers.json contractParents only. */
 function parentIndex(db) {
@@ -68,7 +82,16 @@ export async function contractFeed(db, params, { search = usaspendingSearch } = 
     const ueis = [...new Set((t.contractParents || []).map((p) => p.uei).filter(Boolean))];
     scope.symbol = t.symbol;
     scope.parents = [...new Set((t.contractParents || []).map((p) => p.name))];
-    if (!ueis.length) return { ok: true, source: "USAspending.gov", asOf: new Date().toISOString(), latency: LATENCY, scope, note: `${t.symbol} has no USAspending parent recipient in data/tickers.json.`, items: [] };
+    if (!ueis.length)
+      return {
+        ok: true,
+        source: "USAspending.gov",
+        asOf: new Date().toISOString(),
+        latency: LATENCY,
+        scope,
+        note: `${t.symbol} has no USAspending parent recipient in data/tickers.json.`,
+        items: [],
+      };
     filters.recipient_search_text = ueis;
   }
   if (params.place) {
@@ -85,38 +108,66 @@ export async function contractFeed(db, params, { search = usaspendingSearch } = 
   if (hit) return { ...hit, items: keyed(hit.items || []), scope };
   const t0 = Date.now();
   let body;
-  const request = { filters, fields: FIELDS, limit: 100, page: 1, sort: sort === "largest" ? "Transaction Amount" : "Action Date", order: "desc" };
+  const request = {
+    filters,
+    fields: FIELDS,
+    limit: 100,
+    page: 1,
+    sort: sort === "largest" ? "Transaction Amount" : "Action Date",
+    order: "desc",
+  };
   try {
     body = await search("spending_by_transaction", request, { timeoutMs: 45000, retries: 1, priority: true });
   } catch (err) {
     const stale = readStale(db, key);
-    if (stale) return { ...stale.value, items: keyed(stale.value.items || []), scope, note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
-    return { ok: false, source: "USAspending.gov prime contract transactions", asOf: new Date().toISOString(), latency: LATENCY, error: `Contract feed: ${err.message}. Try again, or narrow the window.`, scope, items: [] };
+    if (stale)
+      return {
+        ...stale.value,
+        items: keyed(stale.value.items || []),
+        scope,
+        note: `USAspending is not answering (${err.message}); showing actions fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.`,
+      };
+    return {
+      ok: false,
+      source: "USAspending.gov prime contract transactions",
+      asOf: new Date().toISOString(),
+      latency: LATENCY,
+      error: `Contract feed: ${err.message}. Try again, or narrow the window.`,
+      scope,
+      items: [],
+    };
   }
   if (body?.detail) return { ok: false, error: String(body.detail).slice(0, 200), items: [] };
-  const sourceDocument = preserveSourceDocument(db, { url: 'https://api.usaspending.gov/api/v2/search/spending_by_transaction/', content: JSON.stringify({ request, response: body }), mediaType: 'application/json' });
+  const sourceDocument = preserveSourceDocument(db, {
+    url: "https://api.usaspending.gov/api/v2/search/spending_by_transaction/",
+    content: JSON.stringify({ request, response: body }),
+    mediaType: "application/json",
+  });
   const parents = parentIndex(db);
-  const items = keyed((body.results || []).map((r) => {
-    const pop = r["Primary Place of Performance"] || {};
-    const district = pop.state_code && pop.congressional_code ? `${pop.state_code}-${pop.congressional_code}` : pop.state_code || "";
-    return {
-      sourceDocument,
-      award: r["Award ID"],
-      recipient: r["Recipient Name"] || "",
-      uei: r["Recipient UEI"] || "",
-      symbol: scope.symbol || parents.get(norm(r["Recipient Name"])) || null,
-      date: r["Action Date"] || "",
-      amount: Number(r["Transaction Amount"]) || 0,
-      mod: r.Mod || "",
-      description: String(r["Transaction Description"] || "").slice(0, 240),
-      agency: r["Awarding Agency"] || "",
-      subAgency: r["Awarding Sub Agency"] || "",
-      naics: r.NAICS?.description || "",
-      place: [pop.city_name, district].filter(Boolean).join(" · "),
-      district,
-      link: r.generated_internal_id ? `https://www.usaspending.gov/award/${r.generated_internal_id}` : ""
-    };
-  }));
+  const items = keyed(
+    (body.results || []).map((r) => {
+      const pop = r["Primary Place of Performance"] || {};
+      const district =
+        pop.state_code && pop.congressional_code ? `${pop.state_code}-${pop.congressional_code}` : pop.state_code || "";
+      return {
+        sourceDocument,
+        award: r["Award ID"],
+        recipient: r["Recipient Name"] || "",
+        uei: r["Recipient UEI"] || "",
+        symbol: scope.symbol || parents.get(norm(r["Recipient Name"])) || null,
+        date: r["Action Date"] || "",
+        amount: Number(r["Transaction Amount"]) || 0,
+        mod: r.Mod || "",
+        description: String(r["Transaction Description"] || "").slice(0, 240),
+        agency: r["Awarding Agency"] || "",
+        subAgency: r["Awarding Sub Agency"] || "",
+        naics: r.NAICS?.description || "",
+        place: [pop.city_name, district].filter(Boolean).join(" · "),
+        district,
+        link: r.generated_internal_id ? `https://www.usaspending.gov/award/${r.generated_internal_id}` : "",
+      };
+    }),
+  );
   const result = {
     ok: true,
     source: "USAspending.gov prime contract transactions",
@@ -125,14 +176,15 @@ export async function contractFeed(db, params, { search = usaspendingSearch } = 
     window: { days, from: filters.time_period[0].start_date, to: filters.time_period[0].end_date },
     sort,
     note: items.length === 100 ? "Showing the first 100 actions; narrow the window or switch sort to see others." : "",
-    items
+    items,
   };
   writeCache(db, key, result, 3 * HOUR);
   return { ...result, scope };
 }
 
 const BOARD_KEY = KEY.usaBoard;
-const BOARD_LATENCY = "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered.";
+const BOARD_LATENCY =
+  "Obligations by federal fiscal year (Oct–Sep), last complete year; DoD actions post about 90 days late, so the newest year runs low for defense names. Revenue is the latest annual 10-K figure. Share = obligations ÷ revenue; fiscal years may differ by a few months. Only S&P 500 names with a USAspending parent in data/tickers.json are covered.";
 const BOARD_COOLDOWN = 2 * 60 * 1000;
 const OUTAGE_STREAK = 8;
 const board = { job: null, partial: null, error: null, failedAt: 0 };
@@ -151,27 +203,57 @@ export function contractorBoard(db) {
   if (!board.job && !cooling) {
     board.error = null;
     const t0 = Date.now();
-    board.job = buildBoard(db, stale, (res) => { board.partial = res; })
+    board.job = buildBoard(db, stale, (res) => {
+      board.partial = res;
+    })
       .then((res) => {
         if (res.items.length) writeCache(db, BOARD_KEY, res, res.progress.failed ? 2 * HOUR : DAY);
-        else throw new Error(res.progress.failed ? `USAspending failed for all ${res.progress.failed} contractors. ${res.note}` : "USAspending returned no contractor obligations.");
-        console.log(`contractor board: ${res.items.length} contractors, ${res.progress.failed} failed, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+        else
+          throw new Error(
+            res.progress.failed
+              ? `USAspending failed for all ${res.progress.failed} contractors. ${res.note}`
+              : "USAspending returned no contractor obligations.",
+          );
+        console.log(
+          `contractor board: ${res.items.length} contractors, ${res.progress.failed} failed, ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+        );
       })
       .catch((err) => {
         board.error = err.message;
         board.failedAt = Date.now();
         console.error("contractor board", err.message);
       })
-      .finally(() => { board.job = null; board.partial = null; });
+      .finally(() => {
+        board.job = null;
+        board.partial = null;
+      });
   }
   if (board.partial) return Promise.resolve(board.partial);
   const total = listTickers(db).filter((t) => (t.contractParents || []).length).length;
   const base = stale
-    ? { ...stale, building: true, progress: { done: 0, total, failed: 0 }, note: `Refreshing; showing the board from ${stale.asOf?.slice(0, 16).replace("T", " ")} UTC.` }
-    : { ok: true, building: true, source: "USAspending.gov prime contract obligations · SEC XBRL revenue", asOf: new Date().toISOString(), latency: BOARD_LATENCY, items: [], progress: { done: 0, total, failed: 0 } };
+    ? {
+        ...stale,
+        building: true,
+        progress: { done: 0, total, failed: 0 },
+        note: `Refreshing; showing the board from ${stale.asOf?.slice(0, 16).replace("T", " ")} UTC.`,
+      }
+    : {
+        ok: true,
+        building: true,
+        source: "USAspending.gov prime contract obligations · SEC XBRL revenue",
+        asOf: new Date().toISOString(),
+        latency: BOARD_LATENCY,
+        items: [],
+        progress: { done: 0, total, failed: 0 },
+      };
   if (!board.job && board.error) {
     const retryIn = Math.max(0, Math.ceil((BOARD_COOLDOWN - (Date.now() - board.failedAt)) / 1000));
-    return Promise.resolve({ ...base, ok: !!stale, building: false, error: `${board.error} Retrying in ${retryIn} s.` });
+    return Promise.resolve({
+      ...base,
+      ok: !!stale,
+      building: false,
+      error: `${board.error} Retrying in ${retryIn} s.`,
+    });
   }
   return Promise.resolve(base);
 }
@@ -198,14 +280,16 @@ export function boardRow(t, res, fyNow = currentFy()) {
     revenueFy: dep?.revenueFy || null,
     share: dep?.share ?? null,
     byYear: res.byYear,
-    parents: (t.contractParents || []).length
+    parents: (t.contractParents || []).length,
   };
 }
 
 /** Fetch order: largest prior obligations first, so the top of the board fills in first. Unknown names last. */
 export function boardOrder(tickers, prior) {
   const rank = new Map((prior?.items || []).map((r) => [r.symbol, r.obligations || 0]));
-  return [...tickers].sort((a, b) => (rank.get(b.symbol) ?? -1) - (rank.get(a.symbol) ?? -1) || a.symbol.localeCompare(b.symbol));
+  return [...tickers].sort(
+    (a, b) => (rank.get(b.symbol) ?? -1) - (rank.get(a.symbol) ?? -1) || a.symbol.localeCompare(b.symbol),
+  );
 }
 
 /** Board payload from the rows loaded so far. Pure apart from the timestamp. */
@@ -220,7 +304,9 @@ export function composeBoard({ rows, building, done, total, failed = [], constit
     cur.names += 1;
     bySector.set(cur.sector, cur);
   }
-  const failedNote = failed.length ? `${failed.length} contractor${failed.length > 1 ? "s" : ""} failed to load from USAspending (${failed.slice(0, 6).join(", ")}${failed.length > 6 ? ", …" : ""}); retrying within two hours.` : "";
+  const failedNote = failed.length
+    ? `${failed.length} contractor${failed.length > 1 ? "s" : ""} failed to load from USAspending (${failed.slice(0, 6).join(", ")}${failed.length > 6 ? ", …" : ""}); retrying within two hours.`
+    : "";
   return {
     ok: true,
     building,
@@ -231,7 +317,7 @@ export function composeBoard({ rows, building, done, total, failed = [], constit
     progress: { done, total, failed: failed.length },
     index: { name: "S&P 500", joined: total, constituents, fy, obligations },
     sectors: [...bySector.values()].sort((a, b) => b.obligations - a.obligations),
-    items
+    items,
   };
 }
 
@@ -250,10 +336,20 @@ async function buildBoard(db, stale, publish) {
     else if (!res) pending.push(t);
   }
   const compose = (building) => {
-    const rows = tickers.map((t) => fresh.get(t.symbol) || (building || failed.has(t.symbol) ? staleRows.get(t.symbol) : null)).filter(Boolean);
+    const rows = tickers
+      .map((t) => fresh.get(t.symbol) || (building || failed.has(t.symbol) ? staleRows.get(t.symbol) : null))
+      .filter(Boolean);
     const done = tickers.length - pending.length;
     const note = building && staleRows.size ? "Refreshing; names not yet reloaded show the previous build." : "";
-    return composeBoard({ rows, building, done, total: tickers.length, failed: [...failed.keys()], constituents, note });
+    return composeBoard({
+      rows,
+      building,
+      done,
+      total: tickers.length,
+      failed: [...failed.keys()],
+      constituents,
+      note,
+    });
   };
   let lastPublish = 0;
   const tick = (force) => {
@@ -266,27 +362,32 @@ async function buildBoard(db, stale, publish) {
   let outage = "";
   const run = async (list, workers) => {
     const queue = boardOrder(list, stale);
-    await Promise.all(Array.from({ length: workers }, async () => {
-      while (queue.length && !outage) {
-        const t = queue.shift();
-        try {
-          const row = boardRow(t, await contractsFor(db, t));
-          if (row) fresh.set(t.symbol, row);
-          failed.delete(t.symbol);
-          streak = 0;
-        } catch (err) {
-          failed.set(t.symbol, err.message);
-          if (++streak >= OUTAGE_STREAK) outage = err.message;
+    await Promise.all(
+      Array.from({ length: workers }, async () => {
+        while (queue.length && !outage) {
+          const t = queue.shift();
+          try {
+            const row = boardRow(t, await contractsFor(db, t));
+            if (row) fresh.set(t.symbol, row);
+            failed.delete(t.symbol);
+            streak = 0;
+          } catch (err) {
+            failed.set(t.symbol, err.message);
+            if (++streak >= OUTAGE_STREAK) outage = err.message;
+          }
+          if (pending.includes(t)) pending.splice(pending.indexOf(t), 1);
+          tick(false);
         }
-        if (pending.includes(t)) pending.splice(pending.indexOf(t), 1);
-        tick(false);
-      }
-    }));
+      }),
+    );
   };
   await run(pending.slice(), 2);
   const retry = tickers.filter((t) => failed.has(t.symbol));
   if (retry.length && !outage) await run(retry, 2);
-  if (outage) throw new Error(`USAspending stopped answering after ${fresh.size} of ${tickers.length} contractors loaded (${OUTAGE_STREAK} failures in a row). Last error: ${outage}.`);
+  if (outage)
+    throw new Error(
+      `USAspending stopped answering after ${fresh.size} of ${tickers.length} contractors loaded (${OUTAGE_STREAK} failures in a row). Last error: ${outage}.`,
+    );
   if (failed.size) console.error(`contractor board: ${failed.size} failed, e.g. ${[...failed.values()][0]}`);
   return compose(false);
 }
@@ -304,25 +405,47 @@ export async function dodAnnouncements(db) {
   const SOURCE = "War.gov (Department of Defense) daily contract announcements";
   let xml;
   try {
-    xml = await fetchText("https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20", { headers: { "User-Agent": BROWSER_UA } }, 20000);
+    xml = await fetchText(
+      "https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=400&Site=945&max=20",
+      { headers: { "User-Agent": BROWSER_UA } },
+      20000,
+    );
   } catch (err) {
     const why = err.name === "AbortError" ? "did not answer within 20 s" : err.message;
     const stale = readStale(db, KEY.dodContracts);
-    if (stale) return { ...stale.value, note: `War.gov RSS ${why}; showing the list fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.` };
-    return { ok: false, source: SOURCE, asOf: new Date().toISOString(), latency: "Posted around 5 p.m. ET each business day for awards of $7.5 million or more.", error: `War.gov RSS ${why}.`, items: [] };
+    if (stale)
+      return {
+        ...stale.value,
+        note: `War.gov RSS ${why}; showing the list fetched ${new Date(stale.storedAt).toISOString().slice(0, 16).replace("T", " ")} UTC.`,
+      };
+    return {
+      ok: false,
+      source: SOURCE,
+      asOf: new Date().toISOString(),
+      latency: "Posted around 5 p.m. ET each business day for awards of $7.5 million or more.",
+      error: `War.gov RSS ${why}.`,
+      items: [],
+    };
   }
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
-    const tag = (name) => (new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(m[1])?.[1] || "").trim();
-    const published = new Date(tag("pubDate"));
-    return { id: tag("link"), title: tag("title"), link: tag("link"), published: Number.isNaN(published.getTime()) ? "" : published.toISOString() };
-  }).filter((r) => r.link);
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+    .map((m) => {
+      const tag = (name) => (new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(m[1])?.[1] || "").trim();
+      const published = new Date(tag("pubDate"));
+      return {
+        id: tag("link"),
+        title: tag("title"),
+        link: tag("link"),
+        published: Number.isNaN(published.getTime()) ? "" : published.toISOString(),
+      };
+    })
+    .filter((r) => r.link);
   const result = {
     ok: items.length > 0,
     ...(items.length ? {} : { error: "War.gov RSS returned no announcements." }),
     source: SOURCE,
     asOf: new Date().toISOString(),
     latency: `Posted around 5 p.m. ET each business day for awards of $7.5 million or more, months before the same actions reach USAspending. Fetched in ${((Date.now() - t0) / 1000).toFixed(1)} s.`,
-    items
+    items,
   };
   if (items.length) writeCache(db, KEY.dodContracts, result, HOUR);
   return result;

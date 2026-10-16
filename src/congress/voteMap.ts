@@ -15,10 +15,15 @@ export const VOTE_LABEL: Record<string, string> = {
   "Half yea": "1 yea, 1 absent",
   "Half nay": "1 nay, 1 absent",
   Vacant: "Vacant",
-  Delegate: "Delegate (no floor vote)"
+  Delegate: "Delegate (no floor vote)",
 };
 
-export const SENATE_LABEL: Record<string, string> = { ...VOTE_LABEL, Yea: "Both yea", Nay: "Both nay", "Not voting": "Neither voted" };
+export const SENATE_LABEL: Record<string, string> = {
+  ...VOTE_LABEL,
+  Yea: "Both yea",
+  Nay: "Both nay",
+  "Not voting": "Neither voted",
+};
 
 function tally(features: GeoJSON.Feature[]) {
   const counts: Record<string, number> = {};
@@ -38,7 +43,11 @@ export function houseVoteMap(districts: GeoJSON.FeatureCollection, positions: Se
     const undefinedSeat = f.properties?.CD119 === "ZZ";
     return {
       ...f,
-      properties: { ...f.properties, id: undefinedSeat ? "" : id, vote: voted && !undefinedSeat ? houseCategory(id, byGeoid.get(id) || [], party) : "" }
+      properties: {
+        ...f.properties,
+        id: undefinedSeat ? "" : id,
+        vote: voted && !undefinedSeat ? houseCategory(id, byGeoid.get(id) || [], party) : "",
+      },
     };
   });
   return { geojson: { ...districts, features }, counts: tally(features) };
@@ -54,7 +63,14 @@ export function senateVoteMap(states: GeoJSON.FeatureCollection, positions: Seat
   const features = states.features.map((f) => {
     const postal = STATE_NAME_TO_POSTAL[String(f.properties?.name || "")] || "";
     const seated = postal && postal !== "DC" && postal !== "PR";
-    return { ...f, properties: { ...f.properties, id: postal, vote: voted && seated ? senateCategory(byState.get(postal) || [], party !== "all") : "" } };
+    return {
+      ...f,
+      properties: {
+        ...f.properties,
+        id: postal,
+        vote: voted && seated ? senateCategory(byState.get(postal) || [], party !== "all") : "",
+      },
+    };
   });
   return { geojson: { ...states, features }, counts: tally(features) };
 }

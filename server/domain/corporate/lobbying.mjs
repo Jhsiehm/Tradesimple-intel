@@ -1,4 +1,4 @@
-import { preserveSourceDocument } from '../source-documents.mjs';
+import { preserveSourceDocument } from "../source-documents.mjs";
 import { fetchJson } from "../../lib/http.mjs";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { readStale, throughCache } from "../../lib/cache.mjs";
@@ -18,8 +18,12 @@ export async function lobbyingFor(db, ticker, years = 5, { currentTtlMs = 0 } = 
   const filings = [];
   const gaps = [];
   let asOf = "";
-  const asks = (ticker.ldaClients || []).flatMap((client) => Array.from({ length: years }, (_, i) => ({ client, year: now - i })));
-  const answers = await Promise.all(asks.map(({ client, year }) => ldaClientYear(db, client, year, year === now ? currentTtlMs : 0)));
+  const asks = (ticker.ldaClients || []).flatMap((client) =>
+    Array.from({ length: years }, (_, i) => ({ client, year: now - i })),
+  );
+  const answers = await Promise.all(
+    asks.map(({ client, year }) => ldaClientYear(db, client, year, year === now ? currentTtlMs : 0)),
+  );
   answers.forEach((res, i) => {
     const { client, year } = asks[i];
     if (res.down) gaps.push({ client, year, stale: Boolean(res.rows), down: res.down });
@@ -35,14 +39,26 @@ export async function lobbyingFor(db, ticker, years = 5, { currentTtlMs = 0 } = 
     ok: true,
     source: "LDA.gov (Senate / House Lobbying Disclosure Act filings)",
     asOf: asOf || new Date().toISOString(),
-    latency: "Quarterly LD-2 reports are due 20 days after quarter end; lag shows posted date minus period end. Amount is fee income for outside firms or expenses for in-house filers.",
-    ...(gaps.length ? { unavailable: gaps.map((g) => `${g.client} ${g.year}: ${ldaDownLabel(g.down)}${g.stale ? " (showing the last stored copy)" : ""}`) } : {}),
+    latency:
+      "Quarterly LD-2 reports are due 20 days after quarter end; lag shows posted date minus period end. Amount is fee income for outside firms or expenses for in-house filers.",
+    ...(gaps.length
+      ? {
+          unavailable: gaps.map(
+            (g) => `${g.client} ${g.year}: ${ldaDownLabel(g.down)}${g.stale ? " (showing the last stored copy)" : ""}`,
+          ),
+        }
+      : {}),
     byYear,
-    filings: unique
+    filings: unique,
   };
 }
 
-const PERIOD_END = [[/1st Quarter|first_quarter/i, "03-31"], [/2nd Quarter|second_quarter|Mid-Year/i, "06-30"], [/3rd Quarter|third_quarter/i, "09-30"], [/4th Quarter|fourth_quarter|Year-End/i, "12-31"]];
+const PERIOD_END = [
+  [/1st Quarter|first_quarter/i, "03-31"],
+  [/2nd Quarter|second_quarter|Mid-Year/i, "06-30"],
+  [/3rd Quarter|third_quarter/i, "09-30"],
+  [/4th Quarter|fourth_quarter|Year-End/i, "12-31"],
+];
 
 function withLag(row) {
   const end = PERIOD_END.find(([re]) => re.test(`${row.period} ${row.typeLabel}`))?.[1];
@@ -60,12 +76,13 @@ async function ldaClientYear(db, client, year, ttlOverride = 0) {
   const key = KEY.ldaYear(client, year);
   const now = new Date().getUTCFullYear();
   const prior = ttlOverride ? readStale(db, key) : null;
-  if (prior && Date.now() - prior.storedAt > ttlOverride) db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key = ?").run(key);
+  if (prior && Date.now() - prior.storedAt > ttlOverride)
+    db.prepare("UPDATE cache SET ttl_ms = -1 WHERE key = ?").run(key);
   const { value, staleAt, down } = await throughCache(db, key, {
     ttlMs: ttlOverride || (year < now - 1 ? 30 * DAY : 12 * HOUR),
     downMs: LDA_DOWN_MS,
     timeoutMs: PAGE_TIMEOUT,
-    load: () => fetchClientYear(db, client, year)
+    load: () => fetchClientYear(db, client, year),
   });
   const stored = down ? staleAt : readStale(db, key)?.storedAt;
   return { rows: value, storedAt: stored ? new Date(stored).toISOString() : "", down };
@@ -77,9 +94,15 @@ export async function fetchClientYear(db, client, year, { read = fetchJson } = {
   let url = `https://lda.gov/api/v1/filings/?client_name=${encodeURIComponent(client)}&filing_year=${year}&page_size=25`;
   for (let page = 0; url && page < 8; page += 1) {
     const body = await read(url, { headers: { Authorization: `Token ${process.env.LDA_API_KEY}` } }, PAGE_TIMEOUT);
-    const sourceDocument = preserveSourceDocument(db, { url, content: JSON.stringify(body), mediaType: 'application/json' });
+    const sourceDocument = preserveSourceDocument(db, {
+      url,
+      content: JSON.stringify(body),
+      mediaType: "application/json",
+    });
     for (const f of body.results || []) {
-      const name = String(f.client?.name || "").toUpperCase().replace(/[.,]/g, "");
+      const name = String(f.client?.name || "")
+        .toUpperCase()
+        .replace(/[.,]/g, "");
       if (!name.startsWith(want) && !name.includes(want)) continue;
       const acts = f.lobbying_activities || [];
       rows.push({
@@ -95,10 +118,21 @@ export async function fetchClientYear(db, client, year, { read = fetchJson } = {
         registrant: f.registrant?.name || "",
         client: f.client?.name || client,
         issues: [...new Set(acts.map((a) => a.general_issue_code_display).filter(Boolean))],
-        detail: acts.map((a) => a.description).filter(Boolean).slice(0, 4).join(" · ").slice(0, 600),
+        detail: acts
+          .map((a) => a.description)
+          .filter(Boolean)
+          .slice(0, 4)
+          .join(" · ")
+          .slice(0, 600),
         entities: [...new Set(acts.flatMap((a) => (a.government_entities || []).map((g) => g.name)))].slice(0, 12),
-        lobbyists: [...new Set(acts.flatMap((a) => (a.lobbyists || []).map((l) => `${l.lobbyist?.first_name || ""} ${l.lobbyist?.last_name || ""}`.trim())))].slice(0, 20),
-        link: f.filing_document_url || ""
+        lobbyists: [
+          ...new Set(
+            acts.flatMap((a) =>
+              (a.lobbyists || []).map((l) => `${l.lobbyist?.first_name || ""} ${l.lobbyist?.last_name || ""}`.trim()),
+            ),
+          ),
+        ].slice(0, 20),
+        link: f.filing_document_url || "",
       });
     }
     url = body.next;
@@ -109,7 +143,7 @@ export async function fetchClientYear(db, client, year, { read = fetchJson } = {
 export async function lobbyingBoard(db) {
   const hit = readCache(db, KEY.ldaBoard);
   if (hit) return hit;
-  const tickers = listTickers(db).filter(t => t.ldaClients.length);
+  const tickers = listTickers(db).filter((t) => t.ldaClients.length);
   const all = [];
   const totals = [];
   await pool(tickers, 3, async (ticker) => {
@@ -117,7 +151,14 @@ export async function lobbyingBoard(db) {
     if (!res?.ok) return;
     all.push(...res.filings);
     const now = new Date().getUTCFullYear();
-    totals.push({ symbol: ticker.symbol, name: ticker.name, current: res.byYear[now] || 0, prior: res.byYear[now - 1] || 0, filings: res.filings.length, firms: new Set(res.filings.map((f) => f.registrant)).size });
+    totals.push({
+      symbol: ticker.symbol,
+      name: ticker.name,
+      current: res.byYear[now] || 0,
+      prior: res.byYear[now - 1] || 0,
+      filings: res.filings.length,
+      firms: new Set(res.filings.map((f) => f.registrant)).size,
+    });
   });
   all.sort((a, b) => String(b.posted).localeCompare(String(a.posted)));
   totals.sort((a, b) => b.current + b.prior - (a.current + a.prior));
@@ -125,9 +166,10 @@ export async function lobbyingBoard(db) {
     ok: true,
     source: "LDA.gov",
     asOf: new Date().toISOString(),
-    latency: "Join-table clients only, this year and last. Rechecked every 2h; lag is posted date minus quarter end (LD-2 due in 20 days).",
+    latency:
+      "Join-table clients only, this year and last. Rechecked every 2h; lag is posted date minus quarter end (LD-2 due in 20 days).",
     items: all.slice(0, 400),
-    totals
+    totals,
   };
   if (all.length) writeCache(db, KEY.ldaBoard, result, 2 * HOUR);
   return result;

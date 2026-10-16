@@ -9,7 +9,8 @@ export const ANSWER_CACHE_DEFAULT_MIN = 15;
 /** Tools whose output is the open web or changes by the second; an answer that used them is never reused. */
 export const NO_REUSE_TOOLS = new Set(["web_search", "web_fetch", "web_result", "propose_theory"]);
 /** Fields that change on every call without the data changing: timings, request traces, cache flags. */
-const VOLATILE = /^(ms|latency|elapsed|took|tookMs|durationMs|fetchedAt|generatedAt|servedAt|now|requestId|requests|cached|cacheHit|stale|age|ageMs)$/i;
+const VOLATILE =
+  /^(ms|latency|elapsed|took|tookMs|durationMs|fetchedAt|generatedAt|servedAt|now|requestId|requests|cached|cacheHit|stale|age|ageMs)$/i;
 
 /** "  What   did NVDA do?? " → "what did nvda do". */
 export function normalizeQuestion(q) {
@@ -47,7 +48,12 @@ export function answerIdentity(asked, { model = "", pinned = false } = {}) {
     v: 3,
     memory: a.memory || null,
     q: normalizeQuestion(a.question),
-    history: (a.history || []).map((t) => [t.role, String(t.content || "").replace(/\s+/g, " ").trim()]),
+    history: (a.history || []).map((t) => [
+      t.role,
+      String(t.content || "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    ]),
     context: a.context || null,
     attached: a.attached || null,
     prefs: a.prefs || null,
@@ -56,7 +62,7 @@ export function answerIdentity(asked, { model = "", pinned = false } = {}) {
     priors: a.priors || [],
     answers: a.answers || {},
     acceptDefaults: Boolean(a.acceptDefaults),
-    model: pinned ? String(model) : "auto"
+    model: pinned ? String(model) : "auto",
   });
 }
 
@@ -85,7 +91,10 @@ export function replayEvents(events, reused) {
   let text = "";
   for (const e of events) {
     if (e.type === "step_progress" || e.type === "revise" || e.type === "budget" || e.type === "spend") continue;
-    if (e.type === "token") { text += String(e.delta || ""); continue; }
+    if (e.type === "token") {
+      text += String(e.delta || "");
+      continue;
+    }
     if (e.type === "done") {
       if (text) out.push({ type: "token", delta: e.answer || text });
       out.push({ ...e, reused });

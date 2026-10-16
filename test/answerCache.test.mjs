@@ -2,7 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { DatabaseSync } from "node:sqlite";
-import { answerIdentity, dataText, noReuseReason, normalizeQuestion, replayEvents, reusedLabel } from "../shared/answerCache.mjs";
+import {
+  answerIdentity,
+  dataText,
+  noReuseReason,
+  normalizeQuestion,
+  replayEvents,
+  reusedLabel,
+} from "../shared/answerCache.mjs";
 import { cacheTtlMs } from "../server/ai/answerCache.mjs";
 import { makeAskHandler } from "../server/routes/ask.mjs";
 import { makeLimiter } from "../shared/ask.mjs";
@@ -20,9 +27,19 @@ function fakeReq(body) {
 function fakeRes() {
   const res = { chunks: [], writableEnded: false, destroyed: false, on() {} };
   res.writeHead = () => {};
-  res.write = (c) => { res.chunks.push(c); return true; };
-  res.end = () => { res.writableEnded = true; };
-  res.events = () => res.chunks.join("").split("\n\n").filter(Boolean).map((b) => JSON.parse(b.replace(/^data: /, "")));
+  res.write = (c) => {
+    res.chunks.push(c);
+    return true;
+  };
+  res.end = () => {
+    res.writableEnded = true;
+  };
+  res.events = () =>
+    res.chunks
+      .join("")
+      .split("\n\n")
+      .filter(Boolean)
+      .map((b) => JSON.parse(b.replace(/^data: /, "")));
   return res;
 }
 
@@ -43,7 +60,7 @@ function makeModel(counter) {
         yield { type: "text", delta: "Buys beat SPY by {{t1.stats.excess|spct}} over {{t1.stats.n}} trades [t1]." };
         yield { type: "usage", input: 500, output: 40, cost: 0.004 };
         yield { type: "end", reason: "stop" };
-      }
+      },
     };
   };
 }
@@ -51,23 +68,43 @@ function makeModel(counter) {
 function setup() {
   const db = new DatabaseSync(":memory:");
   const counter = { calls: 0 };
-  const data = { value: { ok: true, source: "House Clerk", asOf: "2026-10-09", latency: "45 days", stats: { excess: 0.0412, n: 52 }, ms: 1 } };
+  const data = {
+    value: {
+      ok: true,
+      source: "House Clerk",
+      asOf: "2026-10-09",
+      latency: "45 days",
+      stats: { excess: 0.0412, n: 52 },
+      ms: 1,
+    },
+  };
   const tools = { runs: 0 };
   let clock = T0;
   const handler = makeAskHandler({
     env: ENV,
     makeProvider: makeModel(counter),
-    execute: async () => { tools.runs += 1; return { ...structuredClone(data.value), ms: tools.runs * 7 }; },
+    execute: async () => {
+      tools.runs += 1;
+      return { ...structuredClone(data.value), ms: tools.runs * 7 };
+    },
     now: () => clock,
     limiter: makeLimiter({ max: 99, windowMs: 1000 }),
-    log: () => {}
+    log: () => {},
   });
   const ask = async (body) => {
     const res = fakeRes();
     await handler({ req: fakeReq(body), res, db });
     return res.events();
   };
-  return { ask, counter, data, tools, tick: (ms) => { clock += ms; } };
+  return {
+    ask,
+    counter,
+    data,
+    tools,
+    tick: (ms) => {
+      clock += ms;
+    },
+  };
 }
 
 test("questions normalize; the identity covers chat, attachments and a pinned model, not wording noise", () => {
@@ -76,8 +113,14 @@ test("questions normalize; the identity covers chat, attachments and a pinned mo
   assert.equal(answerIdentity(base), answerIdentity({ ...base, question: "who beat  spy" }));
   assert.notEqual(answerIdentity(base), answerIdentity({ ...base, context: { node: "ticker:NVDA" } }));
   assert.notEqual(answerIdentity(base), answerIdentity({ ...base, history: [{ role: "user", content: "x" }] }));
-  assert.equal(answerIdentity(base, { model: "a", pinned: false }), answerIdentity(base, { model: "b", pinned: false }));
-  assert.notEqual(answerIdentity(base, { model: "a", pinned: true }), answerIdentity(base, { model: "b", pinned: true }));
+  assert.equal(
+    answerIdentity(base, { model: "a", pinned: false }),
+    answerIdentity(base, { model: "b", pinned: false }),
+  );
+  assert.notEqual(
+    answerIdentity(base, { model: "a", pinned: true }),
+    answerIdentity(base, { model: "b", pinned: true }),
+  );
   assert.notEqual(answerIdentity(base, { model: "a", pinned: true }), answerIdentity(base));
 });
 
@@ -99,16 +142,22 @@ test("what is never stored: errors, clarify chips, quick replies, web answers, e
 });
 
 test("replay keeps steps and citations, sends the answer in one token, marks done.reused", () => {
-  const out = replayEvents([
-    { type: "step_progress", phase: "fetching" },
-    { type: "step_start", id: "t1" },
-    { type: "step_end", id: "t1" },
-    { type: "token", delta: "A " },
-    { type: "token", delta: "B" },
-    { type: "citation", id: "t1" },
-    { type: "done", answer: "A B" }
-  ], { at: T0, model: "m" });
-  assert.deepEqual(out.map((e) => e.type), ["step_start", "step_end", "citation", "token", "done"]);
+  const out = replayEvents(
+    [
+      { type: "step_progress", phase: "fetching" },
+      { type: "step_start", id: "t1" },
+      { type: "step_end", id: "t1" },
+      { type: "token", delta: "A " },
+      { type: "token", delta: "B" },
+      { type: "citation", id: "t1" },
+      { type: "done", answer: "A B" },
+    ],
+    { at: T0, model: "m" },
+  );
+  assert.deepEqual(
+    out.map((e) => e.type),
+    ["step_start", "step_end", "citation", "token", "done"],
+  );
   assert.equal(out[3].delta, "A B");
   assert.deepEqual(out[4].reused, { at: T0, model: "m" });
   assert.equal(reusedLabel(T0), "Reused answer from 10:31 ET — data unchanged");
@@ -135,7 +184,10 @@ test("route: the same question with unchanged data is reused without a model cal
   assert.equal(tools.runs, 2, "the recorded tool call ran again to compare the data");
   assert.deepEqual(done2.reused, { at: Date.parse("2026-10-09T14:31:00Z"), model: "anthropic/claude-sonnet-4.6" });
   assert.equal(done2.answer, done1.answer);
-  assert.ok(again.some((e) => e.type === "step_end" && e.id === "t1"), "steps replay so the citation chips still open");
+  assert.ok(
+    again.some((e) => e.type === "step_end" && e.id === "t1"),
+    "steps replay so the citation chips still open",
+  );
   assert.equal(again.find((e) => e.type === "token").delta, done1.answer);
 
   const fresh = await ask({ question: "Did members beat SPY in the last 30 days?", fresh: true });
@@ -155,7 +207,13 @@ test("route: changed data, an expired entry, or a different chat is never reused
   await ask({ question: "Did members beat SPY?" });
   assert.equal(counter.calls, 6, "past the 15-minute TTL");
 
-  await ask({ question: "Did members beat SPY?", history: [{ role: "user", content: "earlier" }, { role: "assistant", content: "ok" }] });
+  await ask({
+    question: "Did members beat SPY?",
+    history: [
+      { role: "user", content: "earlier" },
+      { role: "assistant", content: "ok" },
+    ],
+  });
   assert.equal(counter.calls, 8, "a different chat is a different question");
 });
 

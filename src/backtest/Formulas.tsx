@@ -6,7 +6,10 @@ let loading: Promise<Render> | null = null;
 
 /** KaTeX is loaded the first time a formula is shown, and renders to MathML (no font or CSS download). */
 function loadKatex(): Promise<Render> {
-  loading ||= import("katex").then((m) => (tex: string) => m.default.renderToString(tex, { output: "mathml", throwOnError: false, displayMode: false }));
+  loading ||= import("katex").then(
+    (m) => (tex: string) =>
+      m.default.renderToString(tex, { output: "mathml", throwOnError: false, displayMode: false }),
+  );
   return loading;
 }
 
@@ -23,21 +26,36 @@ export function Formulas({ formulas, open = false }: { formulas: Formula[]; open
   useEffect(() => {
     if (!shown || render) return;
     let live = true;
-    loadKatex().then((r) => { if (live) setRender(() => r); }).catch(() => null);
-    return () => { live = false; };
+    loadKatex()
+      .then((r) => {
+        if (live) setRender(() => r);
+      })
+      .catch(() => null);
+    return () => {
+      live = false;
+    };
   }, [shown, render]);
   if (!formulas.length) return null;
   return (
     <details className="fx" open={open} onToggle={(e) => setShown((e.currentTarget as HTMLDetailsElement).open)}>
-      <summary>How each number is computed <small>{formulas.length} formulas, worked with this run's figures</small></summary>
+      <summary>
+        How each number is computed <small>{formulas.length} formulas, worked with this run's figures</small>
+      </summary>
       {shown ? (
         <dl>
           {formulas.map((f) => (
             <div key={f.id} className="fx-row">
               <dt>{f.title}</dt>
               <dd>
-                <div className="fx-line"><Tex tex={f.tex} render={render} /></div>
-                {f.worked ? <div className="fx-line fx-worked"><em>this run</em><Tex tex={f.worked} render={render} /></div> : null}
+                <div className="fx-line">
+                  <Tex tex={f.tex} render={render} />
+                </div>
+                {f.worked ? (
+                  <div className="fx-line fx-worked">
+                    <em>this run</em>
+                    <Tex tex={f.worked} render={render} />
+                  </div>
+                ) : null}
                 {f.note ? <p className="fx-note">{f.note}</p> : null}
               </dd>
             </div>

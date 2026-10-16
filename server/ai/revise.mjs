@@ -1,5 +1,14 @@
 import { toolMessage } from "../../shared/ask.mjs";
-import { REVISE, acceptRevision, cleanRevision, excerptRefs, flaggedItems, revisionBudget, revisionChanges, revisionMessages } from "../../shared/revise.mjs";
+import {
+  REVISE,
+  acceptRevision,
+  cleanRevision,
+  excerptRefs,
+  flaggedItems,
+  revisionBudget,
+  revisionChanges,
+  revisionMessages,
+} from "../../shared/revise.mjs";
 
 const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.content || "").length, 0) / 4);
 
@@ -9,7 +18,21 @@ const estimate = (messages) => Math.ceil(messages.reduce((n, m) => n + String(m.
  * revised text only when the revision cleared at least one flag. Emits `revise {state:"start"|"end", note}`.
  * The call has no tools; when the turn's budget is nearly spent it is skipped and `revision.reason` says why.
  */
-export async function revisePass({ question, answer, evidence, bodies, check, provider, model, limits, spent, msLeft, signal, emit, log = () => {} }) {
+export async function revisePass({
+  question,
+  answer,
+  evidence,
+  bodies,
+  check,
+  provider,
+  model,
+  limits,
+  spent,
+  msLeft,
+  signal,
+  emit,
+  log = () => {},
+}) {
   if (!evidence.some((e) => e.ok)) return null;
   const before = check(answer);
   const items = flaggedItems(before);
@@ -35,13 +58,19 @@ export async function revisePass({ question, answer, evidence, bodies, check, pr
   let text = "";
   let usage = null;
   try {
-    for await (const ev of provider.chat(messages, [], { signal: ctl.signal, maxTokens: limits.maxOutputTokens, noTools: true })) {
+    for await (const ev of provider.chat(messages, [], {
+      signal: ctl.signal,
+      maxTokens: limits.maxOutputTokens,
+      noTools: true,
+    })) {
       if (ev.type === "text") text += ev.delta;
       else if (ev.type === "usage") usage = ev;
     }
   } catch (err) {
     if (signal?.aborted) return null;
-    const reason = ctl.signal.aborted ? "the model did not finish the revision in time." : `${err?.message || "the model request failed."}`;
+    const reason = ctl.signal.aborted
+      ? "the model did not finish the revision in time."
+      : `${err?.message || "the model request failed."}`;
     log({ event: "revise", status: "failed", reason: reason.slice(0, 120) });
     return { answer, revision: { ...base, status: "failed", reason }, spent: need };
   } finally {

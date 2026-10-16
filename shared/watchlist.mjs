@@ -21,12 +21,15 @@ export const WATCH_SOURCES = [
   { key: "contracts", label: "Gov contracts", short: "GOV" },
   { key: "lobbying", label: "Lobbying · LDA", short: "LDA" },
   { key: "filings", label: "Material events · 8-K", short: "8-K" },
-  { key: "news", label: "News", short: "NEWS" }
+  { key: "news", label: "News", short: "NEWS" },
 ];
 
 const SYMBOL_RE = /^[A-Z][A-Z0-9.\-]{0,7}$/;
 
-export const normSymbol = (s) => String(s ?? "").trim().toUpperCase();
+export const normSymbol = (s) =>
+  String(s ?? "")
+    .trim()
+    .toUpperCase();
 
 /** Known symbols in request order (deduped, capped at `max`) and everything else, so a bad entry is named, not dropped. */
 export function cleanTickers(list, known, max = WATCH_MAX) {
@@ -65,7 +68,9 @@ export function moveSymbol(list, symbol, delta) {
 
 /** Typeahead over join-table tickers: exact symbol, symbol prefix, name word prefix, then name substring. */
 export function matchTickers(tickers, query, n = 8) {
-  const q = String(query || "").trim().toLowerCase();
+  const q = String(query || "")
+    .trim()
+    .toLowerCase();
   if (!q) return [];
   const rank = (t) => {
     const sym = t.symbol.toLowerCase();
@@ -123,7 +128,14 @@ export function ageLabel(iso, now = Date.now()) {
 /** The time an event became public, falling back to the event time for feeds without a separate disclosure. */
 export const shownAt = (e) => e.publishedAt || e.eventAt || "";
 
-const usdAbs = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`);
+const usdAbs = (v) =>
+  v >= 1e9
+    ? `$${(v / 1e9).toFixed(1)}B`
+    : v >= 1e6
+      ? `$${(v / 1e6).toFixed(1)}M`
+      : v >= 1e3
+        ? `$${Math.round(v / 1e3)}K`
+        : `$${Math.round(v)}`;
 const usd = (v) => (v == null || !Number.isFinite(v) ? "" : v < 0 ? `−${usdAbs(-v)}` : usdAbs(v));
 const num = (v) => (v == null || !Number.isFinite(v) ? "" : Math.round(v).toLocaleString("en-US"));
 
@@ -131,14 +143,27 @@ const num = (v) => (v == null || !Number.isFinite(v) ? "" : Math.round(v).toLoca
 export function congressEvent(t) {
   const lag = t.lag ?? lagDays(t.traded, t.filed);
   const late = lag != null && lag > LATE_DAYS;
-  const verb = t.side === "buy" ? "bought" : t.side === "sell" ? (/partial/i.test(t.type || "") ? "sold part of" : "sold") : t.type || "traded";
+  const verb =
+    t.side === "buy"
+      ? "bought"
+      : t.side === "sell"
+        ? /partial/i.test(t.type || "")
+          ? "sold part of"
+          : "sold"
+        : t.type || "traded";
   return {
     id: `trade:${t.id}`,
     symbol: t.symbol,
     source: "congress",
     feed: t.chamber === "senate" ? "Senate eFD PTR" : "House Clerk PTR",
     title: `${t.person} ${verb} ${t.amount || ""}`.trim(),
-    detail: [t.chamber === "senate" ? "Senate" : "House", [t.party, t.state].filter(Boolean).join("-"), t.owner ? `owner ${t.owner}` : ""].filter(Boolean).join(" · "),
+    detail: [
+      t.chamber === "senate" ? "Senate" : "House",
+      [t.party, t.state].filter(Boolean).join("-"),
+      t.owner ? `owner ${t.owner}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
     who: t.person,
     bioguide: t.bioguide || "",
     chamber: t.chamber || "",
@@ -151,7 +176,7 @@ export function congressEvent(t) {
     publishedAt: t.filed || "",
     lag,
     late,
-    link: t.link || ""
+    link: t.link || "",
   };
 }
 
@@ -167,8 +192,29 @@ export function insiderEvents(rows) {
     const acc = r.accession || String(r.id);
     const key = `${r.symbol}:${acc}`;
     let g = groups.get(key);
-    if (!g) groups.set(key, (g = { symbol: r.symbol, accession: acc, person: r.person, title: r.title || "", filed: r.filed, link: r.link, lines: [] }));
-    g.lines.push({ code: r.code, side: r.side, shares: r.shares ?? null, price: r.price ?? null, value: r.value ?? (r.shares && r.price ? Math.round(r.shares * r.price) : null), plan: Boolean(r.plan), traded: r.traded || "", owned: r.owned ?? null });
+    if (!g)
+      groups.set(
+        key,
+        (g = {
+          symbol: r.symbol,
+          accession: acc,
+          person: r.person,
+          title: r.title || "",
+          filed: r.filed,
+          link: r.link,
+          lines: [],
+        }),
+      );
+    g.lines.push({
+      code: r.code,
+      side: r.side,
+      shares: r.shares ?? null,
+      price: r.price ?? null,
+      value: r.value ?? (r.shares && r.price ? Math.round(r.shares * r.price) : null),
+      plan: Boolean(r.plan),
+      traded: r.traded || "",
+      owned: r.owned ?? null,
+    });
   }
   return [...groups.values()].map((g) => {
     const open = g.lines.filter((l) => F4_SIDE[l.code]);
@@ -177,7 +223,10 @@ export function insiderEvents(rows) {
     const unplanned = open.filter((l) => !(l.code === "S" && l.plan));
     const openValue = Math.round(unplanned.reduce((s, l) => s + (l.value || 0), 0));
     const planned = open.length > 0 && buys === 0 && open.every((l) => l.plan);
-    const traded = g.lines.map((l) => l.traded).filter(Boolean).sort();
+    const traded = g.lines
+      .map((l) => l.traded)
+      .filter(Boolean)
+      .sort();
     const eventAt = traded[0] || "";
     const codes = [...new Set(g.lines.map((l) => l.code))].join("/");
     const shares = g.lines.reduce((s, l) => s + (l.shares || 0), 0);
@@ -201,12 +250,19 @@ export function insiderEvents(rows) {
       planned,
       buys,
       lines: g.lines,
-      link: g.link || ""
+      link: g.link || "",
     };
   });
 }
 
-const WHALE_ACTION = { new: "new position", add: "increased", trim: "decreased", exit: "exited", held: "holds", hold: "unchanged" };
+const WHALE_ACTION = {
+  new: "new position",
+  add: "increased",
+  trim: "decreased",
+  exit: "exited",
+  held: "holds",
+  hold: "unchanged",
+};
 
 /** 13F holder change (server/domain/positions/whales.mjs). Quarter-end holdings, so the event date is the quarter end. */
 export function whaleEvent(r) {
@@ -230,7 +286,7 @@ export function whaleEvent(r) {
     publishedAt: r.filed || "",
     lag: r.lag ?? lagDays(r.period, r.filed),
     late: false,
-    link: r.link || ""
+    link: r.link || "",
   };
 }
 
@@ -259,7 +315,7 @@ export function stakeEvent(f) {
     publishedAt: f.accepted || f.filed || "",
     lag: lagDays(f.eventDate, f.accepted || f.filed),
     late: false,
-    link: f.link || ""
+    link: f.link || "",
   };
 }
 
@@ -272,7 +328,16 @@ export function contractEvent(a, symbol) {
     source: "contracts",
     feed: "USAspending.gov prime contract transactions",
     title: `${a.agency || "Federal agency"}${a.subAgency && a.subAgency !== a.agency ? ` · ${a.subAgency}` : ""} · ${amount}`,
-    detail: [String(a.description || "").slice(0, 240), a.recipient, a.mod ? `mod ${a.mod}` : "", a.amount === 0 ? "no money obligated by this action (USAspending reports $0: a change order, extension or administrative change)" : ""].filter(Boolean).join(" · "),
+    detail: [
+      String(a.description || "").slice(0, 240),
+      a.recipient,
+      a.mod ? `mod ${a.mod}` : "",
+      a.amount === 0
+        ? "no money obligated by this action (USAspending reports $0: a change order, extension or administrative change)"
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
     who: a.agency || "",
     side: "",
     amount: a.amount ?? null,
@@ -281,7 +346,7 @@ export function contractEvent(a, symbol) {
     publishedAt: "",
     lag: null,
     late: false,
-    link: a.link || ""
+    link: a.link || "",
   };
 }
 
@@ -293,7 +358,9 @@ export function lobbyingEvent(l, symbol) {
     source: "lobbying",
     feed: "LDA.gov",
     title: `${l.registrant || "Registrant"}${l.amount ? ` · ${usd(l.amount)}` : ""}`,
-    detail: [l.typeLabel || l.period, l.inHouse ? "in-house" : "", (l.issues || []).slice(0, 3).join(", ")].filter(Boolean).join(" · "),
+    detail: [l.typeLabel || l.period, l.inHouse ? "in-house" : "", (l.issues || []).slice(0, 3).join(", ")]
+      .filter(Boolean)
+      .join(" · "),
     who: l.registrant || "",
     issues: l.issues || [],
     period: l.period || "",
@@ -302,24 +369,45 @@ export function lobbyingEvent(l, symbol) {
     amountLabel: usd(l.amount),
     eventAt: l.periodEnd || "",
     publishedAt: l.posted || "",
-    lag: ldaLagApplies(l.typeLabel) ? l.lag ?? lagDays(l.periodEnd, l.posted) : null,
+    lag: ldaLagApplies(l.typeLabel) ? (l.lag ?? lagDays(l.periodEnd, l.posted)) : null,
     late: false,
-    link: l.link || ""
+    link: l.link || "",
   };
 }
 
 export const ITEMS_8K = {
-  "1.01": "Material agreement", "1.02": "Agreement terminated", "1.03": "Bankruptcy or receivership", "1.04": "Mine safety", "1.05": "Cybersecurity incident",
-  "2.01": "Acquisition or disposal completed", "2.02": "Results of operations", "2.03": "New debt obligation", "2.04": "Debt acceleration", "2.05": "Exit or restructuring costs", "2.06": "Impairment",
-  "3.01": "Delisting notice", "3.02": "Unregistered equity sale", "3.03": "Shareholder rights changed",
-  "4.01": "Auditor change", "4.02": "Prior financials unreliable",
-  "5.01": "Change in control", "5.02": "Director or officer change", "5.03": "Bylaws or fiscal year changed", "5.07": "Shareholder vote results", "5.08": "Director nominations",
-  "7.01": "Reg FD disclosure", "8.01": "Other events", "9.01": "Exhibits"
+  1.01: "Material agreement",
+  1.02: "Agreement terminated",
+  1.03: "Bankruptcy or receivership",
+  1.04: "Mine safety",
+  1.05: "Cybersecurity incident",
+  2.01: "Acquisition or disposal completed",
+  2.02: "Results of operations",
+  2.03: "New debt obligation",
+  2.04: "Debt acceleration",
+  2.05: "Exit or restructuring costs",
+  2.06: "Impairment",
+  3.01: "Delisting notice",
+  3.02: "Unregistered equity sale",
+  3.03: "Shareholder rights changed",
+  4.01: "Auditor change",
+  4.02: "Prior financials unreliable",
+  5.01: "Change in control",
+  5.02: "Director or officer change",
+  5.03: "Bylaws or fiscal year changed",
+  5.07: "Shareholder vote results",
+  5.08: "Director nominations",
+  7.01: "Reg FD disclosure",
+  8.01: "Other events",
+  9.01: "Exhibits",
 };
 
 /** 8-K from the issuer's submissions: event date is SEC's report date, publish time the EDGAR acceptance time. */
 export function filingEvent(f) {
-  const items = String(f.items || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const items = String(f.items || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const named = items.filter((i) => i !== "9.01").map((i) => ITEMS_8K[i] || `Item ${i}`);
   return {
     id: `8k:${f.accession}`,
@@ -337,7 +425,7 @@ export function filingEvent(f) {
     publishedAt: f.accepted || f.filed || "",
     lag: lagDays(f.reportDate, f.accepted || f.filed),
     late: false,
-    link: f.link || ""
+    link: f.link || "",
   };
 }
 
@@ -352,8 +440,19 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function namesTicker(item, { symbol = "", name = "" } = {}) {
   const text = `${item?.title || ""} ${item?.summary || ""}`;
   const sym = String(symbol).toUpperCase();
-  if (sym && (sym.length >= 3 ? new RegExp(`(^|[^A-Za-z0-9])${escapeRe(sym)}([^A-Za-z0-9]|$)`) : new RegExp(`[($]${escapeRe(sym)}\\b`)).test(text)) return true;
-  const base = String(name).replace(NAME_TAIL, " ").replace(/[,.&]+/g, " ").replace(/\s+/g, " ").trim();
+  if (
+    sym &&
+    (sym.length >= 3
+      ? new RegExp(`(^|[^A-Za-z0-9])${escapeRe(sym)}([^A-Za-z0-9]|$)`)
+      : new RegExp(`[($]${escapeRe(sym)}\\b`)
+    ).test(text)
+  )
+    return true;
+  const base = String(name)
+    .replace(NAME_TAIL, " ")
+    .replace(/[,.&]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!base) return false;
   const first = base.split(" ")[0];
   const words = [base, ...(first.length >= 4 && base.split(" ").length > 1 ? [first] : [])];
@@ -377,7 +476,7 @@ export function newsEvent(n, symbol) {
     publishedAt: n.published || "",
     lag: null,
     late: false,
-    link: n.link || ""
+    link: n.link || "",
   };
 }
 
@@ -403,7 +502,11 @@ export function groupRepeats(events) {
   for (const e of events) {
     const key = JSON.stringify([e.source, e.link, e.title, e.detail, e.eventAt, e.publishedAt, e.amountLabel, e.side]);
     const i = at.get(key);
-    if (i == null || !e.link) { at.set(key, out.length); out.push(e); continue; }
+    if (i == null || !e.link) {
+      at.set(key, out.length);
+      out.push(e);
+      continue;
+    }
     const first = out[i];
     out[i] = { ...first, repeat: (first.repeat || 1) + 1, ids: [...(first.ids || [first.id]), e.id] };
   }
@@ -440,7 +543,12 @@ const bigChange = (e) => {
   const prior = (e.shares || 0) - (e.delta || 0);
   return prior > 0 && Math.abs(e.delta || 0) / prior >= WHALE_ALERT_SHARE;
 };
-const ALERT_SOURCE = { stakes: "SEC EDGAR Schedule 13D/13G", contracts: "USAspending.gov", whales: "SEC EDGAR 13F-HR", filings: "SEC EDGAR 8-K" };
+const ALERT_SOURCE = {
+  stakes: "SEC EDGAR Schedule 13D/13G",
+  contracts: "USAspending.gov",
+  whales: "SEC EDGAR 13F-HR",
+  filings: "SEC EDGAR 8-K",
+};
 
 /**
  * Alert rows for the watchlist sources the Alerts feed did not already cover (Congress, Form 4 and lobbying rows come
@@ -453,7 +561,15 @@ export function watchAlertRows(events, since = "", { news = false } = {}) {
   for (const e of events) {
     const kind = e.source === "news" && news ? "news" : ALERT_KIND[e.source];
     if (!kind) continue;
-    if (kind === "whale" && !(e.change === "new" || e.change === "exit" || ((e.change === "increase" || e.change === "decrease") && bigChange(e)))) continue;
+    if (
+      kind === "whale" &&
+      !(
+        e.change === "new" ||
+        e.change === "exit" ||
+        ((e.change === "increase" || e.change === "decrease") && bigChange(e))
+      )
+    )
+      continue;
     if (kind === "contract" && !(Math.abs(e.amount || 0) >= CONTRACT_ALERT_MIN)) continue;
     const date = String(shownAt(e)).slice(0, 10);
     if (since && date < since) continue;
@@ -464,13 +580,26 @@ export function watchAlertRows(events, since = "", { news = false } = {}) {
       eventAt: e.eventAt || "",
       filedAt: e.publishedAt || "",
       title: `${{ "8-k": "8-K", stake: e.activist ? "13D" : "13G", whale: "13F", contract: "Contract", news: "News" }[kind]} · ${e.symbol} · ${e.title}`,
-      detail: [e.detail, e.eventAt ? `event ${String(e.eventAt).slice(0, 10)}` : "", e.lag != null ? `disclosed ${e.lag}d later` : ""].filter(Boolean).join(" · "),
+      detail: [
+        e.detail,
+        e.eventAt ? `event ${String(e.eventAt).slice(0, 10)}` : "",
+        e.lag != null ? `disclosed ${e.lag}d later` : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
       link: e.link,
       action: `pos:${e.symbol}`,
       late: false,
-      severity: alertSeverity({ kind, amount: e.amount, activist: e.activist, change: e.change, value: e.amount, items: e.items }),
+      severity: alertSeverity({
+        kind,
+        amount: e.amount,
+        activist: e.activist,
+        change: e.change,
+        value: e.amount,
+        items: e.items,
+      }),
       source: ALERT_SOURCE[e.source] || e.feed,
-      pins: [{ kind: "symbol", id: e.symbol, label: e.symbol }]
+      pins: [{ kind: "symbol", id: e.symbol, label: e.symbol }],
     });
   }
   return out;

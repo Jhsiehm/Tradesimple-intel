@@ -4,7 +4,13 @@ import type { IconName } from "../ui/icons/names";
 
 const ICONS = new Map<IconName, { path: Path2D; fill: boolean }[]>();
 export function glyph(name: IconName) {
-  if (!ICONS.has(name)) ICONS.set(name, PATHS[name].map((p) => (typeof p === "string" ? { path: new Path2D(p), fill: false } : { path: new Path2D(p.d), fill: true })));
+  if (!ICONS.has(name))
+    ICONS.set(
+      name,
+      PATHS[name].map((p) =>
+        typeof p === "string" ? { path: new Path2D(p), fill: false } : { path: new Path2D(p.d), fill: true },
+      ),
+    );
   return ICONS.get(name)!;
 }
 
@@ -15,12 +21,29 @@ export const MAX_K = 3.5;
 export function shape(ctx: CanvasRenderingContext2D, kind: string, x: number, y: number, r: number) {
   ctx.beginPath();
   if (kind === "square") ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8);
-  else if (kind === "diamond") { ctx.moveTo(x, y - r * 1.15); ctx.lineTo(x + r * 1.15, y); ctx.lineTo(x, y + r * 1.15); ctx.lineTo(x - r * 1.15, y); ctx.closePath(); }
-  else if (kind === "hex") { for (let i = 0; i < 6; i += 1) { const a = Math.PI / 6 + (i * Math.PI) / 3; ctx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05); } ctx.closePath(); }
-  else ctx.arc(x, y, r, 0, Math.PI * 2);
+  else if (kind === "diamond") {
+    ctx.moveTo(x, y - r * 1.15);
+    ctx.lineTo(x + r * 1.15, y);
+    ctx.lineTo(x, y + r * 1.15);
+    ctx.lineTo(x - r * 1.15, y);
+    ctx.closePath();
+  } else if (kind === "hex") {
+    for (let i = 0; i < 6; i += 1) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      ctx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05);
+    }
+    ctx.closePath();
+  } else ctx.arc(x, y, r, 0, Math.PI * 2);
 }
 
-export function drawIcon(ctx: CanvasRenderingContext2D, name: IconName, x: number, y: number, size: number, color: string) {
+export function drawIcon(
+  ctx: CanvasRenderingContext2D,
+  name: IconName,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+) {
   ctx.save();
   ctx.translate(x - size / 2, y - size / 2);
   ctx.scale(size / 16, size / 16);

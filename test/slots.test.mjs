@@ -1,6 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MISSING, SLOT_NOTE, formatValue, lookup, parsePath, renderSlots, slotEvidence, slotStream, missingNote, columnLabel } from "../shared/slots.mjs";
+import {
+  MISSING,
+  SLOT_NOTE,
+  formatValue,
+  lookup,
+  parsePath,
+  renderSlots,
+  slotEvidence,
+  slotStream,
+  missingNote,
+  columnLabel,
+} from "../shared/slots.mjs";
 import { groundingCheck, ASK_LIMITS } from "../shared/ask.mjs";
 import { citationCheck } from "../shared/citations.mjs";
 import { runAsk } from "../server/ai/run.mjs";
@@ -10,13 +21,29 @@ const RAW = {
   ok: true,
   source: "House Clerk PTRs + Yahoo prices",
   asOf: "2026-10-09",
-  rows: Array.from({ length: 14 }, (_, i) => ({ member: `Member ${i}`, ticker: ["NVDA", "MSFT", "AAPL"][i % 3], excessReturn: (i - 4) / 100 + 0.0034, amount: 15000 * (i + 1), filed: `2026-09-${String(i + 10).padStart(2, "0")}` })),
+  rows: Array.from({ length: 14 }, (_, i) => ({
+    member: `Member ${i}`,
+    ticker: ["NVDA", "MSFT", "AAPL"][i % 3],
+    excessReturn: (i - 4) / 100 + 0.0034,
+    amount: 15000 * (i + 1),
+    filed: `2026-09-${String(i + 10).padStart(2, "0")}`,
+  })),
   stats: { excess: 0.0412, n: 52, hitRate: 0.583, medianPct: 3.1 },
-  benchmarkComparison: null
+  benchmarkComparison: null,
 };
 // What the model saw: lists cut to 10 rows with their true total.
 const BODY = { ...RAW, rows: { items: RAW.rows.slice(0, 10), total: 14, truncated: true } };
-const SRC = { evidence: [{ id: "t1", ok: true }, { id: "t2", ok: false }], bodies: new Map([["t1", BODY], ["t2", { ok: false, error: "down" }]]), raws: new Map([["t1", RAW]]) };
+const SRC = {
+  evidence: [
+    { id: "t1", ok: true },
+    { id: "t2", ok: false },
+  ],
+  bodies: new Map([
+    ["t1", BODY],
+    ["t2", { ok: false, error: "down" }],
+  ]),
+  raws: new Map([["t1", RAW]]),
+};
 
 test("slot paths: dots, brackets, negative and quoted indices; junk is not a path", () => {
   assert.deepEqual(parsePath("t1.rows[0].excessReturn"), { ref: "t1", keys: ["rows", 0, "excessReturn"] });
@@ -43,7 +70,11 @@ test("formatting: percent of a fraction, signed, points, dollars, numbers, dates
   assert.equal(f(0.0834, "spct"), "+8.3%");
   assert.equal(f(-0.05, "spct"), "−5.0%");
   assert.equal(f(3.14, "pp"), "3.1%");
-  assert.equal(f(1.13, "spct", "changePct"), "+1.1%", "a …Pct field is already percent: DAX +1.13% must not read +113%");
+  assert.equal(
+    f(1.13, "spct", "changePct"),
+    "+1.1%",
+    "a …Pct field is already percent: DAX +1.13% must not read +113%",
+  );
   assert.equal(f(-0.42, "pct:2", "changePct"), "−0.42%");
   assert.equal(f(0.0834, "spct", "excess"), "+8.3%");
   assert.equal(f(15000, "usd"), "$15,000");
@@ -75,32 +106,44 @@ test("formatted figures pass the numeric grounding check against the raw value",
 });
 
 test("invalid slots render as [missing] and are reported with a reason", () => {
-  const out = renderSlots("A {{t1.stats.nope}} B {{t9.x}} C {{t2.x}} D {{t1.stats|pct}} E {{t1.rows[0].member|pct}} F {{t1.stats.n|bogus}} G {{t1.benchmarkComparison|pct}} H {{nonsense}}", SRC);
+  const out = renderSlots(
+    "A {{t1.stats.nope}} B {{t9.x}} C {{t2.x}} D {{t1.stats|pct}} E {{t1.rows[0].member|pct}} F {{t1.stats.n|bogus}} G {{t1.benchmarkComparison|pct}} H {{nonsense}}",
+    SRC,
+  );
   assert.equal(out.count, 8);
   assert.equal(out.text.split(MISSING).length - 1, 8);
-  assert.deepEqual(out.missing.map((m) => m.reason), [
-    "no such field",
-    "no tool result t9",
-    "t2 failed",
-    "an object, not one value",
-    "\"Member 0\" is not a number",
-    "unknown format \"bogus\"",
-    "the tool returned null",
-    "not a slot path (expected tN.field)"
-  ]);
+  assert.deepEqual(
+    out.missing.map((m) => m.reason),
+    [
+      "no such field",
+      "no tool result t9",
+      "t2 failed",
+      "an object, not one value",
+      '"Member 0" is not a number',
+      'unknown format "bogus"',
+      "the tool returned null",
+      "not a slot path (expected tN.field)",
+    ],
+  );
   assert.match(missingNote(out.missing), /^8 figures could not be filled .* \[missing\]/);
   assert.equal(missingNote([]), "");
 });
 
 test("value slots fill from what the model saw and record the values they printed", () => {
-  const out = renderSlots("Beat SPY by {{t1.stats.excess|spct}} over {{t1.stats.n}} trades; {{t1.rows.length}} rows; first {{t1.rows[0].member}} [t1].", SRC);
+  const out = renderSlots(
+    "Beat SPY by {{t1.stats.excess|spct}} over {{t1.stats.n}} trades; {{t1.rows.length}} rows; first {{t1.rows[0].member}} [t1].",
+    SRC,
+  );
   assert.equal(out.text, "Beat SPY by +4.1% over 52 trades; 14 rows; first Member 0 [t1].");
   assert.deepEqual(out.missing, []);
   assert.deepEqual(out.used.get("t1"), [0.0412, 52, 14]);
 });
 
 test("table directive: columns, formats, sort, limit, ref column, row count line; reads every row of the full result", () => {
-  const out = renderSlots("Top buys:\n{{table t1.rows cols=member,ticker,excessReturn:spct,amount:usd sort=-excessReturn limit=3}}\nDone [t1].", SRC);
+  const out = renderSlots(
+    "Top buys:\n{{table t1.rows cols=member,ticker,excessReturn:spct,amount:usd sort=-excessReturn limit=3}}\nDone [t1].",
+    SRC,
+  );
   const lines = out.text.split("\n");
   assert.deepEqual(lines.slice(0, 3), ["Top buys:", "", "| Member | Ticker | Excess return | Amount | Ref |"]);
   assert.deepEqual(lines.slice(-2), ["", "Done [t1]."]);
@@ -113,7 +156,10 @@ test("table directive: columns, formats, sort, limit, ref column, row count line
   // A column the rows do not have is flagged; the rest of the table still renders.
   const bad = renderSlots("{{table t1.rows cols=member,alpha}}", SRC);
   assert.match(bad.text, /\| Member 0 \| \[missing\] \| \[t1\] \|/);
-  assert.deepEqual(bad.missing.map((m) => m.reason), ["unknown column alpha"]);
+  assert.deepEqual(
+    bad.missing.map((m) => m.reason),
+    ["unknown column alpha"],
+  );
   // No path: the largest list in the result; no cols: its first scalar fields.
   const auto = renderSlots("{{table t1}}", SRC);
   assert.match(auto.text, /^\n\| Member \| Ticker \| Excess return \| Amount \| Filed \| Ref \|/);
@@ -134,8 +180,21 @@ test("slot values join their ref's grounding pool, so code-filled rows past the 
 });
 
 test("a slot filled from t1 in a sentence cited to t2 is flagged as miscited; cited to t1 it is clean", () => {
-  const two = { evidence: [{ id: "t1", ok: true }, { id: "t2", ok: true }], bodies: new Map([["t1", BODY], ["t2", { ok: true, count: 7 }]]), raws: new Map([["t1", RAW]]) };
-  const ev = [{ id: "t1", ok: true, json: JSON.stringify(BODY) }, { id: "t2", ok: true, json: JSON.stringify({ ok: true, count: 7 }) }];
+  const two = {
+    evidence: [
+      { id: "t1", ok: true },
+      { id: "t2", ok: true },
+    ],
+    bodies: new Map([
+      ["t1", BODY],
+      ["t2", { ok: true, count: 7 }],
+    ]),
+    raws: new Map([["t1", RAW]]),
+  };
+  const ev = [
+    { id: "t1", ok: true, json: JSON.stringify(BODY) },
+    { id: "t2", ok: true, json: JSON.stringify({ ok: true, count: 7 }) },
+  ];
   const wrong = renderSlots("Buys beat SPY by {{t1.stats.excess|spct}} [t2].", two);
   assert.equal(wrong.text, "Buys beat SPY by +4.1% [t2].");
   const flagged = citationCheck(wrong.text, slotEvidence(ev, wrong.used)).miscited;
@@ -168,29 +227,56 @@ function scripted(...rounds) {
     model: "fake",
     async *chat(messages, tools, opts) {
       seen.push({ messages: messages.map((m) => ({ ...m })), opts });
-      for (const e of rounds.shift() || [{ type: "text", delta: "done" }, { type: "end", reason: "stop" }]) yield e;
-    }
+      for (const e of rounds.shift() || [
+        { type: "text", delta: "done" },
+        { type: "end", reason: "stop" },
+      ])
+        yield e;
+    },
   };
 }
-const split = (s, n = 7) => Array.from({ length: Math.ceil(s.length / n) }, (_, i) => ({ type: "text", delta: s.slice(i * n, i * n + n) }));
+const split = (s, n = 7) =>
+  Array.from({ length: Math.ceil(s.length / n) }, (_, i) => ({ type: "text", delta: s.slice(i * n, i * n + n) }));
 
 test("runAsk: the model writes slots, the stream and done.answer carry the data's values, grounding stays clean", async () => {
-  const answer = "Disclosed buys beat SPY by {{t1.stats.excess|spct}} on average over {{t1.stats.n}} trades [t1]. Hit rate {{t1.stats.hitRate|pct}} [t1].\n{{table t1.rows cols=member,ticker,excessReturn:spct sort=-excessReturn limit=3}}\nBenchmark {{t1.benchmarkComparison|pct}} [t1].";
+  const answer =
+    "Disclosed buys beat SPY by {{t1.stats.excess|spct}} on average over {{t1.stats.n}} trades [t1]. Hit rate {{t1.stats.hitRate|pct}} [t1].\n{{table t1.rows cols=member,ticker,excessReturn:spct sort=-excessReturn limit=3}}\nBenchmark {{t1.benchmarkComparison|pct}} [t1].";
   const p = scripted(
-    [{ type: "tool_call", id: "c1", name: "congress_leaders", args: {} }, { type: "end", reason: "tool_calls" }],
-    [...split(answer), { type: "usage", input: 100, output: 40 }, { type: "end", reason: "stop" }]
+    [
+      { type: "tool_call", id: "c1", name: "congress_leaders", args: {} },
+      { type: "end", reason: "tool_calls" },
+    ],
+    [...split(answer), { type: "usage", input: 100, output: 40 }, { type: "end", reason: "stop" }],
   );
   const events = [];
-  await runAsk({ question: "Who beat SPY?", provider: p, tools: toolDefs(), execute: async () => structuredClone(RAW), labelOf: (n) => n, emit: (e) => events.push(e), limits: ASK_LIMITS, today: "2026-10-09" });
+  await runAsk({
+    question: "Who beat SPY?",
+    provider: p,
+    tools: toolDefs(),
+    execute: async () => structuredClone(RAW),
+    labelOf: (n) => n,
+    emit: (e) => events.push(e),
+    limits: ASK_LIMITS,
+    today: "2026-10-09",
+  });
   const done = events.at(-1);
   assert.equal(done.type, "done");
   assert.match(p.seen[0].messages[0].content, /Figures come from code/);
   assert.match(done.answer, /beat SPY by \+4\.1% on average over 52 trades \[t1\]\. Hit rate 58\.3% \[t1\]\./);
   assert.match(done.answer, /\| Member 13 \| MSFT \| \+9\.3% \| \[t1\] \|/);
   assert.doesNotMatch(done.answer, /\{\{/);
-  assert.equal(events.filter((e) => e.type === "token").map((e) => e.delta).join(""), done.answer);
+  assert.equal(
+    events
+      .filter((e) => e.type === "token")
+      .map((e) => e.delta)
+      .join(""),
+    done.answer,
+  );
   assert.equal(done.slots.count, 5);
-  assert.deepEqual(done.slots.missing.map((m) => m.reason), ["the tool returned null"]);
+  assert.deepEqual(
+    done.slots.missing.map((m) => m.reason),
+    ["the tool returned null"],
+  );
   assert.deepEqual(done.grounding.unmatched, []);
   assert.deepEqual(done.grounding.miscited, []);
   assert.deepEqual(done.cited, ["t1"]);
@@ -199,12 +285,35 @@ test("runAsk: the model writes slots, the stream and done.answer carry the data'
 
 test("runAsk: plain numbers stay allowed and are still grounded as a second layer", async () => {
   const p = scripted(
-    [{ type: "tool_call", id: "c1", name: "congress_leaders", args: {} }, { type: "end", reason: "tool_calls" }],
-    [{ type: "text", delta: "Excess {{t1.stats.excess|pct}} over 52 trades, and 77 losers [t1]." }, { type: "end", reason: "stop" }]
+    [
+      { type: "tool_call", id: "c1", name: "congress_leaders", args: {} },
+      { type: "end", reason: "tool_calls" },
+    ],
+    [
+      { type: "text", delta: "Excess {{t1.stats.excess|pct}} over 52 trades, and 77 losers [t1]." },
+      { type: "end", reason: "stop" },
+    ],
   );
   const events = [];
-  const fixed = { name: "rev", model: "rev", async *chat() { yield { type: "text", delta: "Excess 4.1% over 52 trades [t1]." }; } };
-  await runAsk({ question: "How did they do?", provider: p, strong: { model: "rev", provider: fixed }, auto: true, tools: toolDefs(), execute: async () => structuredClone(RAW), labelOf: (n) => n, emit: (e) => events.push(e), limits: ASK_LIMITS, today: "2026-10-09" });
+  const fixed = {
+    name: "rev",
+    model: "rev",
+    async *chat() {
+      yield { type: "text", delta: "Excess 4.1% over 52 trades [t1]." };
+    },
+  };
+  await runAsk({
+    question: "How did they do?",
+    provider: p,
+    strong: { model: "rev", provider: fixed },
+    auto: true,
+    tools: toolDefs(),
+    execute: async () => structuredClone(RAW),
+    labelOf: (n) => n,
+    emit: (e) => events.push(e),
+    limits: ASK_LIMITS,
+    today: "2026-10-09",
+  });
   const done = events.at(-1);
   assert.equal(done.revision.status, "applied");
   assert.equal(done.answer, "Excess 4.1% over 52 trades [t1].");
@@ -214,23 +323,30 @@ test("runAsk: plain numbers stay allowed and are still grounded as a second laye
 test("Markdown-escaped market slots resolve all 14 figures, including across stream boundaries", () => {
   const rows = Array.from({ length: 17 }, (_, i) => ({ name: `Benchmark ${i}`, last: 100 + i, changePct: i - 3.25 }));
   const body = { rows: { items: rows.slice(0, 10), total: rows.length, truncated: true } };
-  const src = { evidence: [{ id: "t1", ok: true }], bodies: new Map([["t1", body]]), raws: new Map([["t1", { rows }]]) };
-  const answer = '| Index | Last | Day change |\n|---|---|---|\n' + rows.slice(0, 7).map((r, i) =>
-    `| ${r.name} | {{t1.rows.items[${i}].last\\|num}} | {{t1.rows.items[${i}].changePct\\|pp}} |`
-  ).join('\n');
-  const expected = renderSlots(answer.replaceAll('\\|', '|'), src);
+  const src = {
+    evidence: [{ id: "t1", ok: true }],
+    bodies: new Map([["t1", body]]),
+    raws: new Map([["t1", { rows }]]),
+  };
+  const answer =
+    "| Index | Last | Day change |\n|---|---|---|\n" +
+    rows
+      .slice(0, 7)
+      .map((r, i) => `| ${r.name} | {{t1.rows.items[${i}].last\\|num}} | {{t1.rows.items[${i}].changePct\\|pp}} |`)
+      .join("\n");
+  const expected = renderSlots(answer.replaceAll("\\|", "|"), src);
   const actual = renderSlots(answer, src);
   assert.equal(actual.count, 14);
   assert.deepEqual(actual.missing, []);
   assert.equal(actual.text, expected.text);
   assert.deepEqual(actual.used, expected.used);
   for (let at = 0; at <= answer.length; at++) {
-    const stream = slotStream(s => renderSlots(s, src).text);
+    const stream = slotStream((s) => renderSlots(s, src).text);
     assert.equal(stream.push(answer.slice(0, at)) + stream.push(answer.slice(at)) + stream.flush(), expected.text);
   }
   const invalid = renderSlots(String.raw`{{t1.rows.items[0].absent\|num}}`, src);
   assert.equal(invalid.text, MISSING);
-  assert.equal(invalid.missing[0].reason, 'no such field');
+  assert.equal(invalid.missing[0].reason, "no such field");
 });
 
 test("runAsk fills Markdown-escaped table slots in both token events and the final answer", async () => {
@@ -239,15 +355,31 @@ test("runAsk fills Markdown-escaped table slots in both token events and the fin
 | {{t1.rows.items[0].member\|text}} | {{t1.rows.items[0].excessReturn\|spct}} | [t1] |
 Sample size {{t1.stats.n\|int}} [t1].`;
   const p = scripted(
-    [{ type: "tool_call", id: "c1", name: "congress_leaders", args: {} }, { type: "end", reason: "tool_calls" }],
-    [...split(answer, 1), { type: "usage", input: 100, output: 40 }, { type: "end", reason: "stop" }]
+    [
+      { type: "tool_call", id: "c1", name: "congress_leaders", args: {} },
+      { type: "end", reason: "tool_calls" },
+    ],
+    [...split(answer, 1), { type: "usage", input: 100, output: 40 }, { type: "end", reason: "stop" }],
   );
   const events = [];
-  await runAsk({ question: "Show the disclosed trades", provider: p, tools: toolDefs(), execute: async () => structuredClone(RAW), emit: e => events.push(e), limits: ASK_LIMITS });
+  await runAsk({
+    question: "Show the disclosed trades",
+    provider: p,
+    tools: toolDefs(),
+    execute: async () => structuredClone(RAW),
+    emit: (e) => events.push(e),
+    limits: ASK_LIMITS,
+  });
   const done = events.at(-1);
-  assert.equal(done.type, 'done');
+  assert.equal(done.type, "done");
   assert.match(done.answer, /\| Member 0 \| −3\.7% \| \[t1\] \|/);
   assert.deepEqual(done.slots.missing, []);
   assert.equal(done.slots.count, 3);
-  assert.equal(events.filter(e => e.type === 'token').map(e => e.delta).join(''), done.answer);
+  assert.equal(
+    events
+      .filter((e) => e.type === "token")
+      .map((e) => e.delta)
+      .join(""),
+    done.answer,
+  );
 });

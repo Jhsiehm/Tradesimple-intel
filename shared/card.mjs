@@ -9,7 +9,19 @@ export const CARD_W = 1200;
 export const CARD_H = 630;
 const DAY = 86_400_000;
 const MONO = "IBM Plex Mono, Menlo, SF Mono, Consolas, Courier New, monospace";
-const C = { bg: "#07090c", panel: "#0d1115", ink: "#e4e7e6", dim: "#8a949b", faint: "#56616a", line: "#232c34", amber: "#e8a33d", buy: "#b7e38a", sell: "#e07a72", dem: "#7aa7e6", rep: "#e07a72" };
+const C = {
+  bg: "#07090c",
+  panel: "#0d1115",
+  ink: "#e4e7e6",
+  dim: "#8a949b",
+  faint: "#56616a",
+  line: "#232c34",
+  amber: "#e8a33d",
+  buy: "#b7e38a",
+  sell: "#e07a72",
+  dem: "#7aa7e6",
+  rep: "#e07a72",
+};
 
 const day = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
@@ -22,17 +34,22 @@ export const shortDate = (iso) => {
 };
 
 export function escapeXml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
 }
 
 /** "Cory A. Booker" → "cory-a-booker". Accents are folded; anything else non-alphanumeric becomes a dash. */
 export function memberSlug(name) {
-  return String(name || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "member";
+  return (
+    String(name || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "member"
+  );
 }
 
 export function seatLabel(m) {
@@ -45,7 +62,10 @@ export function summarize(res) {
   if (!res?.ok || !res.member) return null;
   const m = res.member;
   const trades = (res.trades || []).filter((t) => t.traded);
-  const lags = trades.map((t) => t.lag).filter((v) => v != null).sort((a, b) => a - b);
+  const lags = trades
+    .map((t) => t.lag)
+    .filter((v) => v != null)
+    .sort((a, b) => a - b);
   const px = res.proximity || null;
   const hasLanes = (res.committees || []).length > 0;
   const r = res.returns || null;
@@ -71,10 +91,20 @@ export function summarize(res) {
     hasLanes,
     dayShare: hasLanes && px ? px.dayShare : null,
     baseline: hasLanes && px ? px.baseline : null,
-    returns: r && r.buys ? { buys: r.buys, priced: r.priced, excess: r.excessSince, excess90: r.excess90, hit: r.hitRate, basis: r.basis || "" } : null,
+    returns:
+      r && r.buys
+        ? {
+            buys: r.buys,
+            priced: r.priced,
+            excess: r.excessSince,
+            excess90: r.excess90,
+            hit: r.hitRate,
+            basis: r.basis || "",
+          }
+        : null,
     range: { from: res.range?.from || trades[0]?.traded || asOf, to: res.range?.to || asOf },
     asOf,
-    strip: trades.map((t) => ({ d: t.traded, side: t.side, near: Boolean(t.near), low: t.amountLow || 0 }))
+    strip: trades.map((t) => ({ d: t.traded, side: t.side, near: Boolean(t.near), low: t.amountLow || 0 })),
   };
 }
 
@@ -82,10 +112,14 @@ export function summarize(res) {
 export function describe(s) {
   if (!s) return "";
   const parts = [`${count(s.trades)} disclosed trades${s.first ? ` since ${shortDate(s.first)}` : ""}`];
-  if (s.dayShare != null) parts.push(`${pct(s.dayShare)} of trade days within ${s.nearDays} days of a hearing on their committees vs ${pct(s.baseline)} of all days`);
+  if (s.dayShare != null)
+    parts.push(
+      `${pct(s.dayShare)} of trade days within ${s.nearDays} days of a hearing on their committees vs ${pct(s.baseline)} of all days`,
+    );
   if (s.medianLag != null) parts.push(`median filing lag ${s.medianLag}d`);
   if (s.late) parts.push(`${count(s.late)} filed more than ${LATE_DAYS} days late`);
-  if (s.returns?.excess != null) parts.push(`disclosed buys ${signed(s.returns.excess)} pts vs S&P 500 since trade (equal-weighted)`);
+  if (s.returns?.excess != null)
+    parts.push(`disclosed buys ${signed(s.returns.excess)} pts vs S&P 500 since trade (equal-weighted)`);
   return `${s.title} ${s.name} (${s.seat}): ${parts.join(" · ")}. Calendar proximity only.`;
 }
 
@@ -95,7 +129,7 @@ export function memberMeta(s, { pageUrl, imageUrl, site = "TradeSimple Intel" })
     description: describe(s),
     url: pageUrl,
     image: imageUrl,
-    site
+    site,
   };
 }
 
@@ -122,7 +156,9 @@ function strip(s, x0, y0, w, h) {
     const cx = (x0 + (wk + 0.5) * colW).toFixed(1);
     list.slice(0, cap).forEach((t, i) => {
       const cy = (sell ? mid + 6 + r + i * step : mid - 6 - r - i * step).toFixed(1);
-      out.push(`<circle cx="${cx}" cy="${cy}" r="${r.toFixed(1)}" fill="${sell ? C.sell : C.buy}"${t.near ? ` stroke="${C.amber}" stroke-width="1.2"` : ""}/>`);
+      out.push(
+        `<circle cx="${cx}" cy="${cy}" r="${r.toFixed(1)}" fill="${sell ? C.sell : C.buy}"${t.near ? ` stroke="${C.amber}" stroke-width="1.2"` : ""}/>`,
+      );
     });
     if (list.length > cap) {
       const cy = sell ? y0 + h + 2 : y0 - 2;
@@ -140,7 +176,9 @@ function strip(s, x0, y0, w, h) {
     if (m % every === 0) {
       const x = (x0 + ((cursor.getTime() - start) / (end - start)) * w).toFixed(1);
       const label = m === 0 ? String(cursor.getUTCFullYear()) : MONTHS[m].toUpperCase();
-      ticks.push(`<line x1="${x}" x2="${x}" y1="${y0 + h + 6}" y2="${y0 + h + 12}" stroke="${C.faint}"/><text x="${x}" y="${y0 + h + 28}" fill="${m === 0 ? C.ink : C.faint}" font-size="14" text-anchor="middle">${label}</text>`);
+      ticks.push(
+        `<line x1="${x}" x2="${x}" y1="${y0 + h + 6}" y2="${y0 + h + 12}" stroke="${C.faint}"/><text x="${x}" y="${y0 + h + 28}" fill="${m === 0 ? C.ink : C.faint}" font-size="14" text-anchor="middle">${label}</text>`,
+      );
     }
     cursor.setUTCMonth(m + 1);
   }
@@ -148,9 +186,11 @@ function strip(s, x0, y0, w, h) {
 }
 
 function stat(x, y, label, value, note, color = C.ink) {
-  return `<text x="${x}" y="${y}" fill="${C.faint}" font-size="15" letter-spacing="1.5">${escapeXml(label)}</text>`
-    + `<text x="${x}" y="${y + 44}" fill="${color}" font-size="40" font-weight="600">${escapeXml(value)}</text>`
-    + `<text x="${x}" y="${y + 72}" fill="${C.dim}" font-size="15">${escapeXml(note)}</text>`;
+  return (
+    `<text x="${x}" y="${y}" fill="${C.faint}" font-size="15" letter-spacing="1.5">${escapeXml(label)}</text>` +
+    `<text x="${x}" y="${y + 44}" fill="${color}" font-size="40" font-weight="600">${escapeXml(value)}</text>` +
+    `<text x="${x}" y="${y + 72}" fill="${C.dim}" font-size="15">${escapeXml(note)}</text>`
+  );
 }
 
 /** 1200×630 summary card as an SVG string (rasterized by resvg at build time, or by a canvas in the browser). */
@@ -160,32 +200,51 @@ export function cardSvg(s, { site = "TRADESIMPLE INTEL", host = "" } = {}) {
   const stats = [
     ["DISCLOSED TRADES", count(s.trades), `${count(s.buys)} buys · ${count(s.sells)} sells`, C.ink],
     s.dayShare != null
-      ? ["NEAR A HEARING", pct(s.dayShare), `of trade days · baseline ${pct(s.baseline)}`, s.dayShare > s.baseline + 0.1 ? C.amber : C.ink]
+      ? [
+          "NEAR A HEARING",
+          pct(s.dayShare),
+          `of trade days · baseline ${pct(s.baseline)}`,
+          s.dayShare > s.baseline + 0.1 ? C.amber : C.ink,
+        ]
       : ["NEAR A HEARING", "—", "no current committee seats", C.dim],
-    ["MEDIAN FILING LAG", s.medianLag == null ? "—" : `${s.medianLag}d`, s.late ? `${count(s.late)} filed > ${LATE_DAYS} days late` : `none filed > ${LATE_DAYS} days late`, s.late ? C.amber : C.ink]
+    [
+      "MEDIAN FILING LAG",
+      s.medianLag == null ? "—" : `${s.medianLag}d`,
+      s.late ? `${count(s.late)} filed > ${LATE_DAYS} days late` : `none filed > ${LATE_DAYS} days late`,
+      s.late ? C.amber : C.ink,
+    ],
   ];
   if (s.returns?.excess != null) {
-    stats.push(["BUYS VS S&P 500", `${signed(s.returns.excess)} pts`, `${count(s.returns.priced)} buys · hit rate ${pct(s.returns.hit)}`, s.returns.excess >= 0 ? C.buy : C.sell]);
+    stats.push([
+      "BUYS VS S&P 500",
+      `${signed(s.returns.excess)} pts`,
+      `${count(s.returns.priced)} buys · hit rate ${pct(s.returns.hit)}`,
+      s.returns.excess >= 0 ? C.buy : C.sell,
+    ]);
   }
   const colW = 1080 / stats.length;
   const span = s.first ? `${shortDate(s.first)} – ${shortDate(s.last)}` : "No disclosed trades";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${MONO}">`
-    + `<rect width="${CARD_W}" height="${CARD_H}" fill="${C.bg}"/>`
-    + `<rect x="0" y="0" width="${CARD_W}" height="6" fill="${C.amber}"/>`
-    + `<text x="60" y="62" fill="${C.amber}" font-size="17" letter-spacing="3" font-weight="600">MEMBER TIMELINE · TRADES VS COMMITTEE HEARINGS</text>`
-    + `<text x="60" y="118" fill="${C.ink}" font-size="48" font-weight="600">${escapeXml(name)}</text>`
-    + `<rect x="60" y="136" width="${s.seat.length * 13 + 22}" height="32" fill="none" stroke="${party}" stroke-opacity="0.6"/>`
-    + `<text x="71" y="158" fill="${party}" font-size="19">${escapeXml(s.seat)}</text>`
-    + `<text x="${60 + s.seat.length * 13 + 40}" y="158" fill="${C.dim}" font-size="18">${escapeXml(`${s.chamber === "senate" ? "SENATE" : "HOUSE"} · ${span}`)}</text>`
-    + `<text x="1140" y="62" fill="${C.amber}" font-size="18" letter-spacing="3" font-weight="600" text-anchor="end">${escapeXml(site)}</text>`
-    + strip(s, 60, 192, 1080, 150)
-    + `<text x="1140" y="402" fill="${C.faint}" font-size="14" text-anchor="end">${escapeXml(`one dot per trade, by week · buys above the line, sells below · amber ring: within ${s.nearDays} days of a hearing`)}</text>`
-    + stats.map(([label, value, note, color], i) => stat(60 + i * colW, 440, label, value, note, color)).join("")
-    + `<line x1="60" x2="1140" y1="546" y2="546" stroke="${C.line}"/>`
-    + `<text x="60" y="574" fill="${C.dim}" font-size="15">${escapeXml(`Calendar proximity only; not evidence of wrongdoing.${s.returns ? " Returns: disclosed buys, equal-weighted, not their actual portfolio." : ""}`)}</text>`
-    + `<text x="60" y="600" fill="${C.faint}" font-size="14">${escapeXml(`Source: House Clerk PTRs · Senate eFD · Congress.gov${s.returns ? " · Yahoo Finance" : ""} · as of ${s.asOf || "—"}`)}</text>`
-    + (host ? `<text x="1140" y="600" fill="${C.faint}" font-size="14" text-anchor="end">${escapeXml(host)}</text>` : "")
-    + `</svg>`;
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${MONO}">` +
+    `<rect width="${CARD_W}" height="${CARD_H}" fill="${C.bg}"/>` +
+    `<rect x="0" y="0" width="${CARD_W}" height="6" fill="${C.amber}"/>` +
+    `<text x="60" y="62" fill="${C.amber}" font-size="17" letter-spacing="3" font-weight="600">MEMBER TIMELINE · TRADES VS COMMITTEE HEARINGS</text>` +
+    `<text x="60" y="118" fill="${C.ink}" font-size="48" font-weight="600">${escapeXml(name)}</text>` +
+    `<rect x="60" y="136" width="${s.seat.length * 13 + 22}" height="32" fill="none" stroke="${party}" stroke-opacity="0.6"/>` +
+    `<text x="71" y="158" fill="${party}" font-size="19">${escapeXml(s.seat)}</text>` +
+    `<text x="${60 + s.seat.length * 13 + 40}" y="158" fill="${C.dim}" font-size="18">${escapeXml(`${s.chamber === "senate" ? "SENATE" : "HOUSE"} · ${span}`)}</text>` +
+    `<text x="1140" y="62" fill="${C.amber}" font-size="18" letter-spacing="3" font-weight="600" text-anchor="end">${escapeXml(site)}</text>` +
+    strip(s, 60, 192, 1080, 150) +
+    `<text x="1140" y="402" fill="${C.faint}" font-size="14" text-anchor="end">${escapeXml(`one dot per trade, by week · buys above the line, sells below · amber ring: within ${s.nearDays} days of a hearing`)}</text>` +
+    stats.map(([label, value, note, color], i) => stat(60 + i * colW, 440, label, value, note, color)).join("") +
+    `<line x1="60" x2="1140" y1="546" y2="546" stroke="${C.line}"/>` +
+    `<text x="60" y="574" fill="${C.dim}" font-size="15">${escapeXml(`Calendar proximity only; not evidence of wrongdoing.${s.returns ? " Returns: disclosed buys, equal-weighted, not their actual portfolio." : ""}`)}</text>` +
+    `<text x="60" y="600" fill="${C.faint}" font-size="14">${escapeXml(`Source: House Clerk PTRs · Senate eFD · Congress.gov${s.returns ? " · Yahoo Finance" : ""} · as of ${s.asOf || "—"}`)}</text>` +
+    (host
+      ? `<text x="1140" y="600" fill="${C.faint}" font-size="14" text-anchor="end">${escapeXml(host)}</text>`
+      : "") +
+    `</svg>`
+  );
 }
 
 /** Static landing page for one member: link-preview meta, then straight into the app's timeline. */

@@ -30,10 +30,19 @@ test("routeModel: auto, empty, or an unknown model is Auto; an allowed model is 
 test("the strong model is an allowed option; ASK_STRONG_MODEL overrides the provider default", () => {
   assert.ok(modelOptions(OR).includes(OR.strong));
   assert.deepEqual(modelOptions({ provider: "compat", model: "m", strong: "big" }), ["m", "big"]);
-  assert.equal(askConfig({ OPENROUTER_API_KEY: "k", ASK_MODEL: "openai/gpt-4o-mini" }).strong, "anthropic/claude-sonnet-4.6");
+  assert.equal(
+    askConfig({ OPENROUTER_API_KEY: "k", ASK_MODEL: "openai/gpt-4o-mini" }).strong,
+    "anthropic/claude-sonnet-4.6",
+  );
   assert.equal(askConfig({ OPENROUTER_API_KEY: "k", ASK_STRONG_MODEL: "openai/gpt-5.4" }).strong, "openai/gpt-5.4");
-  assert.equal(askConfig({ ASK_PROVIDER: "compat", ASK_BASE_URL: "https://gw/v1", ASK_API_KEY: "k", ASK_MODEL: "m" }).strong, "m");
-  assert.equal(askStatus({ OPENROUTER_API_KEY: "k", ASK_MODEL: "openai/gpt-4o-mini" }).strong, "anthropic/claude-sonnet-4.6");
+  assert.equal(
+    askConfig({ ASK_PROVIDER: "compat", ASK_BASE_URL: "https://gw/v1", ASK_API_KEY: "k", ASK_MODEL: "m" }).strong,
+    "m",
+  );
+  assert.equal(
+    askStatus({ OPENROUTER_API_KEY: "k", ASK_MODEL: "openai/gpt-4o-mini" }).strong,
+    "anthropic/claude-sonnet-4.6",
+  );
 });
 
 test("the nudge is for a saved small model only, and model names read short", () => {
@@ -62,15 +71,34 @@ function fakeReq(body) {
 function fakeRes() {
   const res = { chunks: [], writableEnded: false, destroyed: false };
   res.writeHead = () => {};
-  res.write = (c) => { res.chunks.push(c); return true; };
-  res.end = () => { res.writableEnded = true; };
+  res.write = (c) => {
+    res.chunks.push(c);
+    return true;
+  };
+  res.end = () => {
+    res.writableEnded = true;
+  };
   res.on = () => {};
-  res.events = () => res.chunks.join("").split("\n\n").filter(Boolean).map((b) => JSON.parse(b.replace(/^data: /, "")));
+  res.events = () =>
+    res.chunks
+      .join("")
+      .split("\n\n")
+      .filter(Boolean)
+      .map((b) => JSON.parse(b.replace(/^data: /, "")));
   return res;
 }
 
 const ENV = { OPENROUTER_API_KEY: "sk-test", ASK_MODEL: "openai/gpt-4o-mini" };
-const BACKTEST = { ok: true, source: "S", asOf: "2026-10-09T13:00:00Z", latency: "L", spec: {}, description: "d", counts: { signalsOnChosenSides: 37, tradesPriced: 30 }, stats: { trades: 30, totalReturn: 0.0834 } };
+const BACKTEST = {
+  ok: true,
+  source: "S",
+  asOf: "2026-10-09T13:00:00Z",
+  latency: "L",
+  spec: {},
+  description: "d",
+  counts: { signalsOnChosenSides: 37, tradesPriced: 30 },
+  stats: { trades: 30, totalReturn: 0.0834 },
+};
 
 /** One provider per model; each records the questions it answered. */
 function harness() {
@@ -85,7 +113,7 @@ function harness() {
         return;
       }
       yield { type: "text", delta: ran ? "It made 8.34% over 30 trades [t1]." : "Hello there." };
-    }
+    },
   });
   const execute = async (_db, name) => (name === "run_backtest" ? BACKTEST : { ok: true, source: "web", results: [] });
   return { used, handler: makeAskHandler({ env: ENV, makeProvider, execute, log: () => {} }) };
@@ -99,17 +127,31 @@ const run = async (body) => {
 };
 
 test("Auto: a backtest is answered by the strong model, and the turn says which model and why", async () => {
-  const { used, events } = await run({ question: "Backtest congress buys over the last 90 days", model: AUTO, acceptDefaults: true });
+  const { used, events } = await run({
+    question: "Backtest congress buys over the last 90 days",
+    model: AUTO,
+    acceptDefaults: true,
+  });
   assert.ok(used.length >= 2);
-  assert.ok(used.every((m) => m === "anthropic/claude-sonnet-4.6"), used.join());
-  assert.deepEqual(events.find((e) => e.type === "model"), { type: "model", model: "anthropic/claude-sonnet-4.6", auto: true, reason: "backtest" });
+  assert.ok(
+    used.every((m) => m === "anthropic/claude-sonnet-4.6"),
+    used.join(),
+  );
+  assert.deepEqual(
+    events.find((e) => e.type === "model"),
+    { type: "model", model: "anthropic/claude-sonnet-4.6", auto: true, reason: "backtest" },
+  );
   const done = events.at(-1);
   assert.equal(done.model, "anthropic/claude-sonnet-4.6");
   assert.deepEqual(done.backtests[0].counts, BACKTEST.counts);
 });
 
 test("Auto: web research goes to the strong model; a simple lookup stays on the server's model", async () => {
-  const web = await run({ question: "What happened with the ECB rate decision?", model: AUTO, session: { v: 1, sourcing: "both" } });
+  const web = await run({
+    question: "What happened with the ECB rate decision?",
+    model: AUTO,
+    session: { v: 1, sourcing: "both" },
+  });
   assert.ok(web.used.length && web.used.every((m) => m === "anthropic/claude-sonnet-4.6"), web.used.join());
   assert.equal(web.events.find((e) => e.type === "model").reason, "web research");
   const simple = await run({ question: "What did Nancy Pelosi file most recently?" });
@@ -118,10 +160,24 @@ test("Auto: web research goes to the strong model; a simple lookup stays on the 
 });
 
 test("a pinned model answers a backtest itself; a model the server does not offer falls back to Auto", async () => {
-  const pinned = await run({ question: "Backtest congress buys over the last 90 days", model: "openai/gpt-4.1", acceptDefaults: true });
+  const pinned = await run({
+    question: "Backtest congress buys over the last 90 days",
+    model: "openai/gpt-4.1",
+    acceptDefaults: true,
+  });
   assert.ok(pinned.used.length && pinned.used.every((m) => m === "openai/gpt-4.1"), pinned.used.join());
-  assert.equal(pinned.events.some((e) => e.type === "model"), false);
+  assert.equal(
+    pinned.events.some((e) => e.type === "model"),
+    false,
+  );
   assert.equal(pinned.events.at(-1).model, "openai/gpt-4.1");
-  const evil = await run({ question: "Backtest congress buys over the last 90 days", model: "evil/model", acceptDefaults: true });
-  assert.ok(evil.used.every((m) => m === "anthropic/claude-sonnet-4.6"), evil.used.join());
+  const evil = await run({
+    question: "Backtest congress buys over the last 90 days",
+    model: "evil/model",
+    acceptDefaults: true,
+  });
+  assert.ok(
+    evil.used.every((m) => m === "anthropic/claude-sonnet-4.6"),
+    evil.used.join(),
+  );
 });

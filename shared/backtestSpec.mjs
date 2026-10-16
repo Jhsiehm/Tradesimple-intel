@@ -10,7 +10,7 @@ export const SOURCE_LABEL = {
   congress: "Congressional trades",
   form4: "Form 4 insider trades",
   contracts: "Contract awards",
-  lobbying: "Lobbying spikes"
+  lobbying: "Lobbying spikes",
 };
 
 /** GICS sector (data/tickers.json) → SPDR sector ETF. */
@@ -25,13 +25,25 @@ export const SECTOR_ETF = {
   Materials: "XLB",
   Utilities: "XLU",
   "Real Estate": "XLRE",
-  "Communication Services": "XLC"
+  "Communication Services": "XLC",
 };
 export const SECTOR_ETFS = Object.values(SECTOR_ETF);
 export const BENCHMARKS = ["SPY", "^GSPC", "SECTOR", ...SECTOR_ETFS];
-export const BENCHMARK_LABEL = { SPY: "SPY (S&P 500 ETF)", "^GSPC": "^GSPC (S&P 500 index, price only)", SECTOR: "Sector ETF of each ticker" };
+export const BENCHMARK_LABEL = {
+  SPY: "SPY (S&P 500 ETF)",
+  "^GSPC": "^GSPC (S&P 500 index, price only)",
+  SECTOR: "Sector ETF of each ticker",
+};
 
-export const LIMITS = { holdDays: [1, 730], pct: [1, 95], bps: [0, 300], hearingDays: [1, 60], signals: 1500, tickers: 40, minAmount: 1e10 };
+export const LIMITS = {
+  holdDays: [1, 730],
+  pct: [1, 95],
+  bps: [0, 300],
+  hearingDays: [1, 60],
+  signals: 1500,
+  tickers: 40,
+  minAmount: 1e10,
+};
 
 export const DEFAULT_RULES = {
   entry: "nextOpen",
@@ -43,7 +55,7 @@ export const DEFAULT_RULES = {
   benchmark: "SPY",
   costBps: 0,
   slippageBps: 5,
-  openTrades: "exclude"
+  openTrades: "exclude",
 };
 
 export const DEFAULT_FILTERS = {
@@ -69,7 +81,7 @@ export const DEFAULT_FILTERS = {
   planOnly: false,
   role: "",
   clusterMin: 0,
-  awardWithinDays: 0
+  awardWithinDays: 0,
 };
 
 /** Form 4 insider roles the role filter understands, matched against the filer's title. */
@@ -84,7 +96,11 @@ const num = (v, lo, hi, fallback) => {
   return Math.min(hi, Math.max(lo, n));
 };
 const pick = (v, list, fallback) => (list.includes(v) ? v : fallback);
-const text = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const text = (v, max) =>
+  String(v ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 const isoDay = (v) => {
   const s = String(v ?? "").slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(`${s}T00:00:00Z`)) ? s : "";
@@ -92,7 +108,8 @@ const isoDay = (v) => {
 
 export function cleanRules(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
-  const optionalPct = (v) => (v === "" || v == null || Number(v) === 0 ? null : num(v, LIMITS.pct[0], LIMITS.pct[1], null));
+  const optionalPct = (v) =>
+    v === "" || v == null || Number(v) === 0 ? null : num(v, LIMITS.pct[0], LIMITS.pct[1], null);
   return {
     entry: pick(r.entry, ["nextOpen", "nextClose"], DEFAULT_RULES.entry),
     holdDays: Math.round(num(r.holdDays, LIMITS.holdDays[0], LIMITS.holdDays[1], DEFAULT_RULES.holdDays)),
@@ -103,7 +120,7 @@ export function cleanRules(raw) {
     benchmark: pick(r.benchmark, BENCHMARKS, DEFAULT_RULES.benchmark),
     costBps: num(r.costBps, LIMITS.bps[0], LIMITS.bps[1], DEFAULT_RULES.costBps),
     slippageBps: num(r.slippageBps, LIMITS.bps[0], LIMITS.bps[1], DEFAULT_RULES.slippageBps),
-    openTrades: pick(r.openTrades, ["exclude", "mark"], DEFAULT_RULES.openTrades)
+    openTrades: pick(r.openTrades, ["exclude", "mark"], DEFAULT_RULES.openTrades),
   };
 }
 
@@ -112,7 +129,10 @@ const SYMBOL = /^[A-Z][A-Z0-9.\-]{0,9}$/;
 export function cleanFilters(raw) {
   const f = raw && typeof raw === "object" ? raw : {};
   const list = Array.isArray(f.tickers) ? f.tickers : String(f.tickers || "").split(/[\s,]+/);
-  const tickers = [...new Set(list.map((s) => String(s).trim().toUpperCase()).filter((s) => SYMBOL.test(s)))].slice(0, LIMITS.tickers);
+  const tickers = [...new Set(list.map((s) => String(s).trim().toUpperCase()).filter((s) => SYMBOL.test(s)))].slice(
+    0,
+    LIMITS.tickers,
+  );
   const from = isoDay(f.from);
   const to = isoDay(f.to);
   return {
@@ -132,13 +152,19 @@ export function cleanFilters(raw) {
     contractAgency: text(f.contractAgency, 80),
     contractLagDays: Math.round(num(f.contractLagDays, 0, 365, 0)),
     include10b51: Boolean(f.include10b51),
-    excludeMembers: [...new Set((Array.isArray(f.excludeMembers) ? f.excludeMembers : String(f.excludeMembers || "").split(/[,;]+/)).map((x) => text(x, 60)).filter(Boolean))].slice(0, 10),
+    excludeMembers: [
+      ...new Set(
+        (Array.isArray(f.excludeMembers) ? f.excludeMembers : String(f.excludeMembers || "").split(/[,;]+/))
+          .map((x) => text(x, 60))
+          .filter(Boolean),
+      ),
+    ].slice(0, 10),
     spikePct: Math.round(num(f.spikePct, 1, 10000, DEFAULT_FILTERS.spikePct)),
     maxAmount: Math.round(num(f.maxAmount, 0, LIMITS.minAmount, 0)),
     planOnly: Boolean(f.planOnly),
     role: pick(f.role, Object.keys(ROLES), ""),
     clusterMin: Math.round(num(f.clusterMin, 0, 20, 0)),
-    awardWithinDays: Math.round(num(f.awardWithinDays, 0, 365, 0))
+    awardWithinDays: Math.round(num(f.awardWithinDays, 0, 365, 0)),
   };
 }
 
@@ -146,27 +172,80 @@ export function cleanFilters(raw) {
 export function cleanSpec(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: "A spec object is required." };
   const source = String(raw.source || "congress");
-  if (!SOURCES.includes(source) && source !== "dataset") return { ok: false, error: `source must be one of ${SOURCES.join(", ")}.` };
+  if (!SOURCES.includes(source) && source !== "dataset")
+    return { ok: false, error: `source must be one of ${SOURCES.join(", ")}.` };
   const spec = { source, filters: cleanFilters(raw.filters), rules: cleanRules(raw.rules) };
   if (source === "dataset") {
-    if (!/^ds_[a-f0-9]{32}$/.test(String(raw.datasetId || ""))) return { ok: false, error: "A saved dataset version ID is required." };
-    if (specKey(spec.filters) !== specKey(DEFAULT_FILTERS)) return { ok: false, error: "Dataset experiments use their frozen rows. Import a filtered version to change the signal cohort." };
+    if (!/^ds_[a-f0-9]{32}$/.test(String(raw.datasetId || "")))
+      return { ok: false, error: "A saved dataset version ID is required." };
+    if (specKey(spec.filters) !== specKey(DEFAULT_FILTERS))
+      return {
+        ok: false,
+        error: "Dataset experiments use their frozen rows. Import a filtered version to change the signal cohort.",
+      };
     spec.datasetId = raw.datasetId;
   }
   if (raw.relationship != null) {
     const r = raw.relationship;
-    const entity = /^(company|security|facility|jurisdiction|agency|institution|person|industry|policy):[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/;
-    if (!r || typeof r !== 'object' || Array.isArray(r) || !/^rel_[a-f0-9]{32}$/.test(r.snapshotId || '') ||
-      !['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'].includes(r.predicate) ||
-      typeof r.object !== 'string' || !entity.test(r.object) || !r.subjects || typeof r.subjects !== 'object' || Array.isArray(r.subjects))
-      return { ok: false, error: 'Relationship eligibility requires a saved snapshot, predicate, typed object and explicit symbol-to-subject mappings.' };
-    if (r.path != null && (!Array.isArray(r.path) || r.path.length < 1 || r.path.length > 4 || r.path[0] !== r.predicate || r.path.some(p => !['owns','operates','located-in','regulated-by','member-of','issued-by','exposed-to'].includes(p))))
-      return { ok: false, error: 'A relationship path must contain 1–4 supported predicates, starting with the selected relationship.' };
-    if (r.minPathWeight !== undefined && (typeof r.minPathWeight !== 'number' || !Number.isFinite(r.minPathWeight) || r.minPathWeight<0 || r.minPathWeight>1)) return {ok:false,error:'Minimum path weight must be a number from 0 to 1.'};
+    const entity =
+      /^(company|security|facility|jurisdiction|agency|institution|person|industry|policy):[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/;
+    if (
+      !r ||
+      typeof r !== "object" ||
+      Array.isArray(r) ||
+      !/^rel_[a-f0-9]{32}$/.test(r.snapshotId || "") ||
+      !["owns", "operates", "located-in", "regulated-by", "member-of", "issued-by", "exposed-to"].includes(
+        r.predicate,
+      ) ||
+      typeof r.object !== "string" ||
+      !entity.test(r.object) ||
+      !r.subjects ||
+      typeof r.subjects !== "object" ||
+      Array.isArray(r.subjects)
+    )
+      return {
+        ok: false,
+        error:
+          "Relationship eligibility requires a saved snapshot, predicate, typed object and explicit symbol-to-subject mappings.",
+      };
+    if (
+      r.path != null &&
+      (!Array.isArray(r.path) ||
+        r.path.length < 1 ||
+        r.path.length > 4 ||
+        r.path[0] !== r.predicate ||
+        r.path.some(
+          (p) =>
+            !["owns", "operates", "located-in", "regulated-by", "member-of", "issued-by", "exposed-to"].includes(p),
+        ))
+    )
+      return {
+        ok: false,
+        error: "A relationship path must contain 1–4 supported predicates, starting with the selected relationship.",
+      };
+    if (
+      r.minPathWeight !== undefined &&
+      (typeof r.minPathWeight !== "number" ||
+        !Number.isFinite(r.minPathWeight) ||
+        r.minPathWeight < 0 ||
+        r.minPathWeight > 1)
+    )
+      return { ok: false, error: "Minimum path weight must be a number from 0 to 1." };
     const entries = Object.entries(r.subjects);
-    if (!entries.length || entries.length > 1500 || entries.some(([symbol, subject]) => !SYMBOL.test(symbol) || typeof subject !== 'string' || !entity.test(subject)))
-      return { ok: false, error: 'Provide 1–1,500 exact ticker-to-entity mappings for relationship eligibility.' };
-    spec.relationship = { ...(r.minPathWeight!==undefined?{minPathWeight:r.minPathWeight}:{}), snapshotId: r.snapshotId, predicate: r.predicate, object: r.object, ...(r.path?.length > 1 ? {path: [...r.path]} : {}), subjects: Object.fromEntries(entries.sort(([a],[b]) => a.localeCompare(b))) };
+    if (
+      !entries.length ||
+      entries.length > 1500 ||
+      entries.some(([symbol, subject]) => !SYMBOL.test(symbol) || typeof subject !== "string" || !entity.test(subject))
+    )
+      return { ok: false, error: "Provide 1–1,500 exact ticker-to-entity mappings for relationship eligibility." };
+    spec.relationship = {
+      ...(r.minPathWeight !== undefined ? { minPathWeight: r.minPathWeight } : {}),
+      snapshotId: r.snapshotId,
+      predicate: r.predicate,
+      object: r.object,
+      ...(r.path?.length > 1 ? { path: [...r.path] } : {}),
+      subjects: Object.fromEntries(entries.sort(([a], [b]) => a.localeCompare(b))),
+    };
   }
   if (source === "lobbying" && !spec.filters.tickers.length) {
     return { ok: false, error: "Lobbying spikes are read per ticker. Add up to 40 tickers from data/tickers.json." };
@@ -178,7 +257,12 @@ export function cleanSpec(raw) {
 export function specKey(spec) {
   const sort = (v) => {
     if (Array.isArray(v)) return v.map(sort);
-    if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sort(v[k])]));
+    if (v && typeof v === "object")
+      return Object.fromEntries(
+        Object.keys(v)
+          .sort()
+          .map((k) => [k, sort(v[k])]),
+      );
     return v;
   };
   return JSON.stringify(sort(spec));
@@ -219,7 +303,15 @@ export function encodeSpec(spec) {
   const c = cleanSpec(spec);
   if (!c.ok) return "";
   const { source, filters, rules } = c.spec;
-  return toB64url(specKey({ source, ...(c.spec.datasetId ? { datasetId: c.spec.datasetId } : {}), ...(c.spec.relationship ? { relationship: c.spec.relationship } : {}), filters: nonDefault(filters, DEFAULT_FILTERS), rules: nonDefault(rules, DEFAULT_RULES) }));
+  return toB64url(
+    specKey({
+      source,
+      ...(c.spec.datasetId ? { datasetId: c.spec.datasetId } : {}),
+      ...(c.spec.relationship ? { relationship: c.spec.relationship } : {}),
+      filters: nonDefault(filters, DEFAULT_FILTERS),
+      rules: nonDefault(rules, DEFAULT_RULES),
+    }),
+  );
 }
 
 export function decodeSpec(token) {
@@ -240,15 +332,19 @@ export function describeSpec(spec) {
   const who = [
     f.committee && `${f.committee} members`,
     f.member && `member “${f.member}”`,
-    f.party && ({ D: "Democrats", R: "Republicans", I: "Independents" })[f.party],
-    f.chamber && `${f.chamber === "senate" ? "Senate" : "House"}`
-  ].filter(Boolean).join(", ");
+    f.party && { D: "Democrats", R: "Republicans", I: "Independents" }[f.party],
+    f.chamber && `${f.chamber === "senate" ? "Senate" : "House"}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const side = r.sides === "buy" ? "buys" : r.sides === "sell" ? "sells (shorted)" : "buys and sells";
   const bits = [
     `${SOURCE_LABEL[spec.source]}${who ? ` · ${who}` : ""} · ${side}`,
     f.tickers.length ? `tickers ${f.tickers.slice(0, 6).join(", ")}${f.tickers.length > 6 ? "…" : ""}` : "",
     f.sector,
-    spec.relationship ? `relationship ${(spec.relationship.path || [spec.relationship.predicate]).join(" → ")} ${spec.relationship.object} at signal publication${spec.relationship.minPathWeight!==undefined?` with minimum path weight ${spec.relationship.minPathWeight}`:''} (snapshot ${spec.relationship.snapshotId})` : "",
+    spec.relationship
+      ? `relationship ${(spec.relationship.path || [spec.relationship.predicate]).join(" → ")} ${spec.relationship.object} at signal publication${spec.relationship.minPathWeight !== undefined ? ` with minimum path weight ${spec.relationship.minPathWeight}` : ""} (snapshot ${spec.relationship.snapshotId})`
+      : "",
     f.minAmount ? `≥ ${fmtUsd(f.minAmount)}` : "",
     f.maxAmount ? `< ${fmtUsd(f.maxAmount)}` : "",
     f.maxLagDays ? `filed within ${f.maxLagDays} d of the trade` : "",
@@ -256,12 +352,14 @@ export function describeSpec(spec) {
     spec.source === "form4" && f.planOnly ? "10b5-1 plan trades only" : "",
     spec.source === "form4" && f.role ? `${ROLE_LABEL[f.role]}s only` : "",
     spec.source === "form4" && f.clusterMin ? `cluster buys (≥ ${f.clusterMin} insiders within ${CLUSTER_DAYS} d)` : "",
-    spec.source === "congress" && f.awardWithinDays ? `followed by a contract award to the company within ${f.awardWithinDays} d (award public by the disclosure)` : "",
+    spec.source === "congress" && f.awardWithinDays
+      ? `followed by a contract award to the company within ${f.awardWithinDays} d (award public by the disclosure)`
+      : "",
     f.nearHearingDays ? `within ${f.nearHearingDays} d of a hearing` : "",
     f.excludeMembers?.length ? `excluding ${f.excludeMembers.join(", ")}` : "",
     spec.source === "form4" && f.include10b51 ? "10b5-1 plan trades included" : "",
     spec.source === "contracts" && f.contractLagDays ? `public ${f.contractLagDays} d after the award` : "",
-    f.from || f.to ? `${f.from || "start"} → ${f.to || "now"} (public date)` : ""
+    f.from || f.to ? `${f.from || "start"} → ${f.to || "now"} (public date)` : "",
   ].filter(Boolean);
   const exit = `hold ${r.holdDays} d${r.stopLossPct ? `, stop −${r.stopLossPct}%` : ""}${r.takeProfitPct ? `, take +${r.takeProfitPct}%` : ""}`;
   const entry = r.entry === "nextOpen" ? "open after the public date" : "close after the public date";

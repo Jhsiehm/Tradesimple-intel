@@ -1,35 +1,550 @@
-import { ActivityFeedback } from './ActivityFeedback';
-import { useCallback, useEffect, useState } from 'react';
-import { read, write, message } from './api';
-type Part = { id:string; symbol:string; from:string; to:string; page:number|null; state:string; received:number; expected:number|null; after:number|null; error:string|null };
-type Job = { id:string; title:string; progress:{done:number;total:number}; preview:any[]; symbols:string[]; from:string; to:string; createdAt:string; updatedAt:string; status:string; error:string|null; datasetId:string|null; parents:{symbol:string;name:string;uei:string;historicalOwnership:string}[]; mappingWarnings:string[]; partitions:Part[]; coverage:{partitions:number;completed:number;received:number;versions:number;ambiguousVersions:number;unmapped:number;missingAmounts:number;missingDates:number}; features:{positive:number;negative:number;net:number;missing:number;formula:string;byAgency:{key:string;net:number;positive:number;negative:number;transactions:number}[]}; warnings:string[] };
-type Draft = { title:string; symbols:string; from:string; to:string; publicFrom:string; publicTo:string; policy:string; defenseDays:string; civilianDays:string; cooldown:string; allowPartial:boolean };
-const today = new Date().toISOString().slice(0,10);
-const initial:Draft={title:'Defense awards · historical evidence',symbols:'LMT, RTX, NOC, GD, HII',from:'2024-10-03',to:today,publicFrom:'2025-01-01',publicTo:today,policy:'assumed',defenseDays:'90',civilianDays:'7',cooldown:'30',allowPartial:false};
-export function ContractEvidence({onDataset}:{onDataset:(id:string)=>void}) {
- const [loading,setLoading]=useState(true);
- const [draft,setDraft]=useState(initial),[jobs,setJobs]=useState<Job[]>([]),[selected,setSelected]=useState<Job|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const refresh=useCallback(async(id?:string)=>{const out=await read<{items:Job[]}>('contract-jobs');setJobs(out.items);const target=id||selected?.id;if(target){const detail=await read<{job:Job}>('contract-jobs/'+target);setSelected(detail.job)}},[selected?.id]);
- useEffect(()=>{let live=true;read<{items:Job[]}>('contract-jobs').then(x=>{if(live)setJobs(x.items)}).catch(e=>{if(live)setError(message(e))}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[]);
- useEffect(()=>{if(!selected||!['queued','running'].includes(selected.status))return;const timer=setInterval(()=>{void refresh(selected.id).catch(e=>setError(message(e)))},1500);return()=>clearInterval(timer)},[selected?.id,selected?.status,refresh]);
- const act=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');setNotice('');try{await fn()}catch(e){setError(message(e))}finally{setBusy(false)}};
- const update=(key:keyof Draft,value:string|boolean)=>setDraft(x=>({...x,[key]:value}) as Draft);
- const valid=/^\d{4}-\d{2}-\d{2}$/.test(draft.from)&&/^\d{4}-\d{2}-\d{2}$/.test(draft.to)&&draft.from<=draft.to&&draft.to<=today&&draft.title.trim().length>0;
- const create=()=>act(async()=>{const out=await write<{job:Job}>('contract-jobs',{title:draft.title,symbols:draft.symbols,from:draft.from,to:draft.to});setSelected(out.job);await refresh(out.job.id);setNotice('Retrieval started. Progress is checkpointed by page and action month.')});
- const selectedStatus=selected?.status;
- const freeze=()=>act(async()=>{const out=await write<{dataset:{id:string;name:string;version:number}}>('contract-jobs/'+selected!.id+'/freeze',{from:draft.publicFrom,to:draft.publicTo,allowPartial:draft.allowPartial,policy:{mode:draft.policy,...(draft.policy==='assumed'?{defenseDays:+draft.defenseDays,civilianDays:+draft.civilianDays}:{})},cooldownDays:+draft.cooldown});setNotice('Frozen '+out.dataset.name+' v'+out.dataset.version+' as a versioned research dataset.');await refresh(selected!.id)});
- return <section className="contract-evidence"><h2>Historical contract evidence</h2><p>Retrieve USAspending prime contract transactions by recipient and action month. Inspect recipient identity, counts, signed obligations and timing assumptions before freezing evidence.</p>
- <details open={!selected}><summary>Start a bounded retrieval</summary><fieldset className="research-form" disabled={busy}><label>Job title<input value={draft.title} onChange={e=>update('title',e.target.value)}/></label><label>Tickers<input value={draft.symbols} onChange={e=>update('symbols',e.target.value)} placeholder="LMT, RTX, NOC"/></label><div className="research-mapping"><label>Action date from<input type="date" value={draft.from} onChange={e=>update('from',e.target.value)} onInput={e=>update('from',e.currentTarget.value)}/></label><label>Action date through<input type="date" value={draft.to} onChange={e=>update('to',e.target.value)} onInput={e=>update('to',e.currentTarget.value)}/></label></div><details><summary>Retrieval limits</summary><p>Monthly partitions · at most 600 ticker-months and 100,000 records per job · 100 rows per page. This keeps retrieval bounded and resumable.</p></details><button className="bt-run" disabled={!valid} onClick={()=>void create()}>Retrieve evidence</button></fieldset></details>
- {(busy||loading)&&<ActivityFeedback className="research-working">{loading?'Loading retrieval jobs…':'Updating contract evidence…'}</ActivityFeedback>}{error&&<p role="alert" className="bt-note warn">{error}</p>}{notice&&<ActivityFeedback className="bt-note">{notice}</ActivityFeedback>}
- <div className="data-workbench" data-selected={Boolean(selected)}><aside className="data-library" aria-label="Retrieval jobs"><h3>Retrieval jobs</h3>{jobs.length===0?(!loading&&!error&&<p>No historical contract retrievals yet.</p>):<div className="research-list">{jobs.map(j=><button className="research-item" aria-pressed={selected?.id===j.id} key={j.id} disabled={busy} onClick={()=>void act(async()=>{const out=await read<{job:Job}>('contract-jobs/'+j.id);setSelected(out.job)})}><strong>{j.title||j.symbols.join(', ')} · {j.from} → {j.to}</strong><span>{j.status} · {j.progress?.done??0}/{j.progress?.total??0} months · {j.id}</span></button>)}</div>}
- </aside>{selected&&<section key={selected.id} className="research-content research-result"><h3>{selected.title||'USAspending · '+selected.symbols.join(', ')}</h3><p>Action dates {selected.from} → {selected.to} · created {selected.createdAt} · last checkpoint {selected.updatedAt}</p><p><strong>{selected.status}</strong> · {selected.coverage.completed}/{selected.coverage.partitions} partitions complete · {selected.coverage.received} rows received · {selected.coverage.versions} immutable versions · {selected.coverage.ambiguousVersions} ambiguous duplicate identities.</p>{['queued','running'].includes(selected.status)&&<ActivityFeedback className="research-working">Retrieving evidence · {selected.coverage.completed} of {selected.coverage.partitions} partitions complete. Checkpoints update as pages arrive.</ActivityFeedback>}{selected.error&&<p className="bt-note warn">{selected.error}</p>}
- <details><summary>Inspect recipient mappings and monthly partitions</summary><div className="research-table"><table><thead><tr><th>Company</th><th>Curated recipient</th><th>Historical ownership</th><th>Action month</th><th>State</th><th>Rows / count</th><th>Note</th></tr></thead><tbody>{selected.partitions.map(p=><tr key={p.id}><th>{p.symbol}</th><td>{selected.parents.filter(x=>x.symbol===p.symbol).map(x=>x.name+' · '+x.uei).join('; ')||'No curated UEI'}</td><td>Unverified</td><td>{p.from} → {p.to}</td><td>{p.state}</td><td>{p.received} / {p.expected??'pending'}{p.after!=null?' · final '+p.after:''}</td><td>{p.error||''}</td></tr>)}</tbody></table></div></details>
- <p>Recipient search only retrieves candidates. A transaction maps to a ticker only if its returned UEI matches a captured mapping. Parent and discovered child relationships are current; historical ownership remains unverified.</p>{selected.warnings?.map((x,i)=><p key={i} className="bt-note warn">{x}</p>)}{selected.mappingWarnings.map((x,i)=><p key={'mapping-'+i} className="bt-note warn">{x}</p>)}
- <h3>Signed obligation checks</h3><p>{selected.features.formula}</p><p>Positive {selected.features.positive.toLocaleString()} · negative {selected.features.negative.toLocaleString()} · net {selected.features.net.toLocaleString()} · missing amounts {selected.features.missing}. Ambiguous identities and unmapped recipients are excluded.</p>{selected.features.byAgency.length>0&&<div className="research-table"><table><thead><tr><th>Awarding agency</th><th>Transactions</th><th>Positive</th><th>Negative</th><th>Net</th></tr></thead><tbody>{selected.features.byAgency.map(a=><tr key={a.key}><th>{a.key}</th><td>{a.transactions}</td><td>{a.positive.toLocaleString()}</td><td>{a.negative.toLocaleString()}</td><td>{a.net.toLocaleString()}</td></tr>)}</tbody></table></div>}
- <h3>Availability window and timing policy</h3><p>Retrieval action dates can begin earlier than the public window so assumed delays do not erase the first part of the study.</p><div className="research-mapping"><label>Public availability from<input type="date" value={draft.publicFrom} onChange={e=>update('publicFrom',e.target.value)} onInput={e=>update('publicFrom',e.currentTarget.value)}/></label><label>Public availability through<input type="date" value={draft.publicTo} onChange={e=>update('publicTo',e.target.value)} onInput={e=>update('publicTo',e.currentTarget.value)}/></label></div><label>Public availability<select value={draft.policy} onChange={e=>update('policy',e.target.value)}><option value="assumed">Assumed action-date delay</option><option value="observed">First observed by this collector</option><option value="verified" disabled>Verified publication date · no verifier available</option></select></label>{draft.policy==='assumed'&&<div className="research-mapping"><label>Defense delay, days<input type="number" min="1" max="365" value={draft.defenseDays} onChange={e=>update('defenseDays',e.target.value)}/></label><label>Civilian delay, days<input type="number" min="1" max="365" value={draft.civilianDays} onChange={e=>update('civilianDays',e.target.value)}/></label></div>}{draft.policy==='observed'&&<p>First observed means the time this collector captured a version. A backfill observed today does not establish original publication.</p>}<label>Cooldown between signals per ticker<input type="number" min="0" max="365" value={draft.cooldown} onChange={e=>update('cooldown',e.target.value)}/></label>
- {selectedStatus!=='complete'&&<label><input type="checkbox" checked={draft.allowPartial} onChange={e=>update('allowPartial',e.target.checked)}/> I acknowledge that partial retrieval can bias results.</label>}
- <div className="research-actions"><button className="bt-run" disabled={busy||['queued','running','interrupted'].includes(selectedStatus||'')||selectedStatus!=='complete'&&!draft.allowPartial} onClick={()=>void freeze()}>Freeze as versioned dataset</button>{['partial','failed','paused','interrupted'].includes(selectedStatus||'')&&<button disabled={busy} onClick={()=>void act(async()=>{const out=await write<{job:Job}>('contract-jobs/'+selected.id+'/resume',{});setSelected(out.job)})}>Resume checkpoint</button>}{['queued','running'].includes(selectedStatus||'')&&<button disabled={busy} onClick={()=>void act(async()=>{const out=await write<{job:Job}>('contract-jobs/'+selected.id+'/pause',{});setSelected(out.job)})}>Pause retrieval</button>}<a className="panels-btn" href={'/api/research/contract-jobs/'+selected.id+'/export'}>Export raw evidence (.json.gz)</a>{selected.datasetId&&<button onClick={()=>onDataset(selected.datasetId!)}>Create backtest from frozen dataset</button>}</div>
- <details><summary>Recent transactions · preview of up to 30 rows</summary><div className="research-table"><table><thead><tr><th>Action date</th><th>Company</th><th>Recipient</th><th>UEI</th><th>Agency</th><th>Modification</th><th>Obligation</th><th>Identity basis</th></tr></thead><tbody>{selected.preview.slice(0,30).map((r:any,i:number)=><tr key={String(r.recordKey)+String(r.versionHash)+i}><td>{r.actionDate||'Unknown'}</td><td>{r.symbol||'Unmapped'}</td><td>{r.recipient||'Unknown'}</td><td>{r.uei||'Missing'}</td><td>{r.agency||'Unknown'}</td><td>{r.mod||'Unknown'}</td><td>{r.amount==null?'Missing':Number(r.amount).toLocaleString()}</td><td>{r.identityBasis}</td></tr>)}</tbody></table></div>
- <p>Raw pages and normalized transaction versions are stored append-only with checksums. Count reconciliation detects many incomplete retrievals, but not same-count upstream revisions.</p></details></section>}
- </div></section>
+import { ActivityFeedback } from "./ActivityFeedback";
+import { useCallback, useEffect, useState } from "react";
+import { read, write, message } from "./api";
+type Part = {
+  id: string;
+  symbol: string;
+  from: string;
+  to: string;
+  page: number | null;
+  state: string;
+  received: number;
+  expected: number | null;
+  after: number | null;
+  error: string | null;
+};
+type Job = {
+  id: string;
+  title: string;
+  progress: { done: number; total: number };
+  preview: any[];
+  symbols: string[];
+  from: string;
+  to: string;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  error: string | null;
+  datasetId: string | null;
+  parents: { symbol: string; name: string; uei: string; historicalOwnership: string }[];
+  mappingWarnings: string[];
+  partitions: Part[];
+  coverage: {
+    partitions: number;
+    completed: number;
+    received: number;
+    versions: number;
+    ambiguousVersions: number;
+    unmapped: number;
+    missingAmounts: number;
+    missingDates: number;
+  };
+  features: {
+    positive: number;
+    negative: number;
+    net: number;
+    missing: number;
+    formula: string;
+    byAgency: { key: string; net: number; positive: number; negative: number; transactions: number }[];
+  };
+  warnings: string[];
+};
+type Draft = {
+  title: string;
+  symbols: string;
+  from: string;
+  to: string;
+  publicFrom: string;
+  publicTo: string;
+  policy: string;
+  defenseDays: string;
+  civilianDays: string;
+  cooldown: string;
+  allowPartial: boolean;
+};
+const today = new Date().toISOString().slice(0, 10);
+const initial: Draft = {
+  title: "Defense awards · historical evidence",
+  symbols: "LMT, RTX, NOC, GD, HII",
+  from: "2024-10-03",
+  to: today,
+  publicFrom: "2025-01-01",
+  publicTo: today,
+  policy: "assumed",
+  defenseDays: "90",
+  civilianDays: "7",
+  cooldown: "30",
+  allowPartial: false,
+};
+export function ContractEvidence({ onDataset }: { onDataset: (id: string) => void }) {
+  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState(initial),
+    [jobs, setJobs] = useState<Job[]>([]),
+    [selected, setSelected] = useState<Job | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const refresh = useCallback(
+    async (id?: string) => {
+      const out = await read<{ items: Job[] }>("contract-jobs");
+      setJobs(out.items);
+      const target = id || selected?.id;
+      if (target) {
+        const detail = await read<{ job: Job }>("contract-jobs/" + target);
+        setSelected(detail.job);
+      }
+    },
+    [selected?.id],
+  );
+  useEffect(() => {
+    let live = true;
+    read<{ items: Job[] }>("contract-jobs")
+      .then((x) => {
+        if (live) setJobs(x.items);
+      })
+      .catch((e) => {
+        if (live) setError(message(e));
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!selected || !["queued", "running"].includes(selected.status)) return;
+    const timer = setInterval(() => {
+      void refresh(selected.id).catch((e) => setError(message(e)));
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [selected?.id, selected?.status, refresh]);
+  const act = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const update = (key: keyof Draft, value: string | boolean) => setDraft((x) => ({ ...x, [key]: value }) as Draft);
+  const valid =
+    /^\d{4}-\d{2}-\d{2}$/.test(draft.from) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(draft.to) &&
+    draft.from <= draft.to &&
+    draft.to <= today &&
+    draft.title.trim().length > 0;
+  const create = () =>
+    act(async () => {
+      const out = await write<{ job: Job }>("contract-jobs", {
+        title: draft.title,
+        symbols: draft.symbols,
+        from: draft.from,
+        to: draft.to,
+      });
+      setSelected(out.job);
+      await refresh(out.job.id);
+      setNotice("Retrieval started. Progress is checkpointed by page and action month.");
+    });
+  const selectedStatus = selected?.status;
+  const freeze = () =>
+    act(async () => {
+      const out = await write<{ dataset: { id: string; name: string; version: number } }>(
+        "contract-jobs/" + selected!.id + "/freeze",
+        {
+          from: draft.publicFrom,
+          to: draft.publicTo,
+          allowPartial: draft.allowPartial,
+          policy: {
+            mode: draft.policy,
+            ...(draft.policy === "assumed"
+              ? { defenseDays: +draft.defenseDays, civilianDays: +draft.civilianDays }
+              : {}),
+          },
+          cooldownDays: +draft.cooldown,
+        },
+      );
+      setNotice("Frozen " + out.dataset.name + " v" + out.dataset.version + " as a versioned research dataset.");
+      await refresh(selected!.id);
+    });
+  return (
+    <section className="contract-evidence">
+      <h2>Historical contract evidence</h2>
+      <p>
+        Retrieve USAspending prime contract transactions by recipient and action month. Inspect recipient identity,
+        counts, signed obligations and timing assumptions before freezing evidence.
+      </p>
+      <details open={!selected}>
+        <summary>Start a bounded retrieval</summary>
+        <fieldset className="research-form" disabled={busy}>
+          <label>
+            Job title
+            <input value={draft.title} onChange={(e) => update("title", e.target.value)} />
+          </label>
+          <label>
+            Tickers
+            <input
+              value={draft.symbols}
+              onChange={(e) => update("symbols", e.target.value)}
+              placeholder="LMT, RTX, NOC"
+            />
+          </label>
+          <div className="research-mapping">
+            <label>
+              Action date from
+              <input
+                type="date"
+                value={draft.from}
+                onChange={(e) => update("from", e.target.value)}
+                onInput={(e) => update("from", e.currentTarget.value)}
+              />
+            </label>
+            <label>
+              Action date through
+              <input
+                type="date"
+                value={draft.to}
+                onChange={(e) => update("to", e.target.value)}
+                onInput={(e) => update("to", e.currentTarget.value)}
+              />
+            </label>
+          </div>
+          <details>
+            <summary>Retrieval limits</summary>
+            <p>
+              Monthly partitions · at most 600 ticker-months and 100,000 records per job · 100 rows per page. This keeps
+              retrieval bounded and resumable.
+            </p>
+          </details>
+          <button className="bt-run" disabled={!valid} onClick={() => void create()}>
+            Retrieve evidence
+          </button>
+        </fieldset>
+      </details>
+      {(busy || loading) && (
+        <ActivityFeedback className="research-working">
+          {loading ? "Loading retrieval jobs…" : "Updating contract evidence…"}
+        </ActivityFeedback>
+      )}
+      {error && (
+        <p role="alert" className="bt-note warn">
+          {error}
+        </p>
+      )}
+      {notice && <ActivityFeedback className="bt-note">{notice}</ActivityFeedback>}
+      <div className="data-workbench" data-selected={Boolean(selected)}>
+        <aside className="data-library" aria-label="Retrieval jobs">
+          <h3>Retrieval jobs</h3>
+          {jobs.length === 0 ? (
+            !loading && !error && <p>No historical contract retrievals yet.</p>
+          ) : (
+            <div className="research-list">
+              {jobs.map((j) => (
+                <button
+                  className="research-item"
+                  aria-pressed={selected?.id === j.id}
+                  key={j.id}
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const out = await read<{ job: Job }>("contract-jobs/" + j.id);
+                      setSelected(out.job);
+                    })
+                  }
+                >
+                  <strong>
+                    {j.title || j.symbols.join(", ")} · {j.from} → {j.to}
+                  </strong>
+                  <span>
+                    {j.status} · {j.progress?.done ?? 0}/{j.progress?.total ?? 0} months · {j.id}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </aside>
+        {selected && (
+          <section key={selected.id} className="research-content research-result">
+            <h3>{selected.title || "USAspending · " + selected.symbols.join(", ")}</h3>
+            <p>
+              Action dates {selected.from} → {selected.to} · created {selected.createdAt} · last checkpoint{" "}
+              {selected.updatedAt}
+            </p>
+            <p>
+              <strong>{selected.status}</strong> · {selected.coverage.completed}/{selected.coverage.partitions}{" "}
+              partitions complete · {selected.coverage.received} rows received · {selected.coverage.versions} immutable
+              versions · {selected.coverage.ambiguousVersions} ambiguous duplicate identities.
+            </p>
+            {["queued", "running"].includes(selected.status) && (
+              <ActivityFeedback className="research-working">
+                Retrieving evidence · {selected.coverage.completed} of {selected.coverage.partitions} partitions
+                complete. Checkpoints update as pages arrive.
+              </ActivityFeedback>
+            )}
+            {selected.error && <p className="bt-note warn">{selected.error}</p>}
+            <details>
+              <summary>Inspect recipient mappings and monthly partitions</summary>
+              <div className="research-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Company</th>
+                      <th>Curated recipient</th>
+                      <th>Historical ownership</th>
+                      <th>Action month</th>
+                      <th>State</th>
+                      <th>Rows / count</th>
+                      <th>Note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.partitions.map((p) => (
+                      <tr key={p.id}>
+                        <th>{p.symbol}</th>
+                        <td>
+                          {selected.parents
+                            .filter((x) => x.symbol === p.symbol)
+                            .map((x) => x.name + " · " + x.uei)
+                            .join("; ") || "No curated UEI"}
+                        </td>
+                        <td>Unverified</td>
+                        <td>
+                          {p.from} → {p.to}
+                        </td>
+                        <td>{p.state}</td>
+                        <td>
+                          {p.received} / {p.expected ?? "pending"}
+                          {p.after != null ? " · final " + p.after : ""}
+                        </td>
+                        <td>{p.error || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            <p>
+              Recipient search only retrieves candidates. A transaction maps to a ticker only if its returned UEI
+              matches a captured mapping. Parent and discovered child relationships are current; historical ownership
+              remains unverified.
+            </p>
+            {selected.warnings?.map((x, i) => (
+              <p key={i} className="bt-note warn">
+                {x}
+              </p>
+            ))}
+            {selected.mappingWarnings.map((x, i) => (
+              <p key={"mapping-" + i} className="bt-note warn">
+                {x}
+              </p>
+            ))}
+            <h3>Signed obligation checks</h3>
+            <p>{selected.features.formula}</p>
+            <p>
+              Positive {selected.features.positive.toLocaleString()} · negative{" "}
+              {selected.features.negative.toLocaleString()} · net {selected.features.net.toLocaleString()} · missing
+              amounts {selected.features.missing}. Ambiguous identities and unmapped recipients are excluded.
+            </p>
+            {selected.features.byAgency.length > 0 && (
+              <div className="research-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Awarding agency</th>
+                      <th>Transactions</th>
+                      <th>Positive</th>
+                      <th>Negative</th>
+                      <th>Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.features.byAgency.map((a) => (
+                      <tr key={a.key}>
+                        <th>{a.key}</th>
+                        <td>{a.transactions}</td>
+                        <td>{a.positive.toLocaleString()}</td>
+                        <td>{a.negative.toLocaleString()}</td>
+                        <td>{a.net.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <h3>Availability window and timing policy</h3>
+            <p>
+              Retrieval action dates can begin earlier than the public window so assumed delays do not erase the first
+              part of the study.
+            </p>
+            <div className="research-mapping">
+              <label>
+                Public availability from
+                <input
+                  type="date"
+                  value={draft.publicFrom}
+                  onChange={(e) => update("publicFrom", e.target.value)}
+                  onInput={(e) => update("publicFrom", e.currentTarget.value)}
+                />
+              </label>
+              <label>
+                Public availability through
+                <input
+                  type="date"
+                  value={draft.publicTo}
+                  onChange={(e) => update("publicTo", e.target.value)}
+                  onInput={(e) => update("publicTo", e.currentTarget.value)}
+                />
+              </label>
+            </div>
+            <label>
+              Public availability
+              <select value={draft.policy} onChange={(e) => update("policy", e.target.value)}>
+                <option value="assumed">Assumed action-date delay</option>
+                <option value="observed">First observed by this collector</option>
+                <option value="verified" disabled>
+                  Verified publication date · no verifier available
+                </option>
+              </select>
+            </label>
+            {draft.policy === "assumed" && (
+              <div className="research-mapping">
+                <label>
+                  Defense delay, days
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={draft.defenseDays}
+                    onChange={(e) => update("defenseDays", e.target.value)}
+                  />
+                </label>
+                <label>
+                  Civilian delay, days
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={draft.civilianDays}
+                    onChange={(e) => update("civilianDays", e.target.value)}
+                  />
+                </label>
+              </div>
+            )}
+            {draft.policy === "observed" && (
+              <p>
+                First observed means the time this collector captured a version. A backfill observed today does not
+                establish original publication.
+              </p>
+            )}
+            <label>
+              Cooldown between signals per ticker
+              <input
+                type="number"
+                min="0"
+                max="365"
+                value={draft.cooldown}
+                onChange={(e) => update("cooldown", e.target.value)}
+              />
+            </label>
+            {selectedStatus !== "complete" && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.allowPartial}
+                  onChange={(e) => update("allowPartial", e.target.checked)}
+                />{" "}
+                I acknowledge that partial retrieval can bias results.
+              </label>
+            )}
+            <div className="research-actions">
+              <button
+                className="bt-run"
+                disabled={
+                  busy ||
+                  ["queued", "running", "interrupted"].includes(selectedStatus || "") ||
+                  (selectedStatus !== "complete" && !draft.allowPartial)
+                }
+                onClick={() => void freeze()}
+              >
+                Freeze as versioned dataset
+              </button>
+              {["partial", "failed", "paused", "interrupted"].includes(selectedStatus || "") && (
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const out = await write<{ job: Job }>("contract-jobs/" + selected.id + "/resume", {});
+                      setSelected(out.job);
+                    })
+                  }
+                >
+                  Resume checkpoint
+                </button>
+              )}
+              {["queued", "running"].includes(selectedStatus || "") && (
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const out = await write<{ job: Job }>("contract-jobs/" + selected.id + "/pause", {});
+                      setSelected(out.job);
+                    })
+                  }
+                >
+                  Pause retrieval
+                </button>
+              )}
+              <a className="panels-btn" href={"/api/research/contract-jobs/" + selected.id + "/export"}>
+                Export raw evidence (.json.gz)
+              </a>
+              {selected.datasetId && (
+                <button onClick={() => onDataset(selected.datasetId!)}>Create backtest from frozen dataset</button>
+              )}
+            </div>
+            <details>
+              <summary>Recent transactions · preview of up to 30 rows</summary>
+              <div className="research-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Action date</th>
+                      <th>Company</th>
+                      <th>Recipient</th>
+                      <th>UEI</th>
+                      <th>Agency</th>
+                      <th>Modification</th>
+                      <th>Obligation</th>
+                      <th>Identity basis</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.preview.slice(0, 30).map((r: any, i: number) => (
+                      <tr key={String(r.recordKey) + String(r.versionHash) + i}>
+                        <td>{r.actionDate || "Unknown"}</td>
+                        <td>{r.symbol || "Unmapped"}</td>
+                        <td>{r.recipient || "Unknown"}</td>
+                        <td>{r.uei || "Missing"}</td>
+                        <td>{r.agency || "Unknown"}</td>
+                        <td>{r.mod || "Unknown"}</td>
+                        <td>{r.amount == null ? "Missing" : Number(r.amount).toLocaleString()}</td>
+                        <td>{r.identityBasis}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Raw pages and normalized transaction versions are stored append-only with checksums. Count
+                reconciliation detects many incomplete retrievals, but not same-count upstream revisions.
+              </p>
+            </details>
+          </section>
+        )}
+      </div>
+    </section>
+  );
 }

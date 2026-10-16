@@ -14,7 +14,17 @@ import { makeGate } from "../lib/http.mjs";
 import { HOUR } from "../lib/time.mjs";
 import { form4 } from "../domain/positions/insiders.mjs";
 import { ingestDailyIdx, ingestDatasetZip } from "../domain/positions/insiderIngest.mjs";
-import { STORE_START, doneOf, dropLease, getMeta, joinsByCik, markDone, setMeta, storeStatus, takeLease } from "../domain/positions/insiderStore.mjs";
+import {
+  STORE_START,
+  doneOf,
+  dropLease,
+  getMeta,
+  joinsByCik,
+  markDone,
+  setMeta,
+  storeStatus,
+  takeLease,
+} from "../domain/positions/insiderStore.mjs";
 
 const STORE_QUARTER_START = quarterOf(STORE_START);
 
@@ -25,7 +35,13 @@ const rss = () => mb(process.memoryUsage().rss);
 const isoToday = () => new Date().toISOString().slice(0, 10);
 
 /** SEC reads, swappable in tests. */
-const SEC_IO = { page: datasetPage, download: secDownload, dailyNames: dailyIndexNames, dailyIdx: dailyFormIdx, read: form4 };
+const SEC_IO = {
+  page: datasetPage,
+  download: secDownload,
+  dailyNames: dailyIndexNames,
+  dailyIdx: dailyFormIdx,
+  read: form4,
+};
 
 /** Quarters done, in order, from `since` with no gap: the span the data sets cover completely. */
 function contiguous(done, since, joins) {
@@ -38,7 +54,19 @@ function contiguous(done, since, joins) {
  * Runs one pass. `quarters: false` skips the data sets, `daily: false` the daily index. Returns a summary;
  * `skipped` names why nothing ran (another writer holds the lease).
  */
-export async function updateInsiderHistory(db, { since = STORE_QUARTER_START, quarters = true, daily = true, log = () => {}, dir = os.tmpdir(), owner = `pid:${process.pid}`, io = SEC_IO, today = isoToday() } = {}) {
+export async function updateInsiderHistory(
+  db,
+  {
+    since = STORE_QUARTER_START,
+    quarters = true,
+    daily = true,
+    log = () => {},
+    dir = os.tmpdir(),
+    owner = `pid:${process.pid}`,
+    io = SEC_IO,
+    today = isoToday(),
+  } = {},
+) {
   if (!takeLease(db, owner, LEASE_MS)) return { skipped: "another insider-history update is running" };
   const t0 = Date.now();
   const summary = { quarters: [], days: [], errors: [] };
@@ -48,7 +76,9 @@ export async function updateInsiderHistory(db, { since = STORE_QUARTER_START, qu
       const links = parseDatasetLinks(await io.page()).filter((l) => l.quarter >= since);
       const done = doneOf(db, "quarter");
       const todo = links.filter((l) => done.get(l.quarter)?.joins !== joins);
-      log(`insiders: ${links.length} quarterly data sets from ${since} listed; ${links.length - todo.length} already stored, ${todo.length} to read (${byCik.size} join-table CIKs)`);
+      log(
+        `insiders: ${links.length} quarterly data sets from ${since} listed; ${links.length - todo.length} already stored, ${todo.length} to read (${byCik.size} join-table CIKs)`,
+      );
       for (const [i, link] of todo.entries()) {
         const file = path.join(dir, `tradesimple-${link.quarter}_form345.zip`);
         const t1 = Date.now();
@@ -58,7 +88,9 @@ export async function updateInsiderHistory(db, { since = STORE_QUARTER_START, qu
           const got = await ingestDatasetZip(db, file, { byCik });
           markDone(db, "quarter", link.quarter, { joins, forms: got.forms, rows: got.rows, url: link.url });
           summary.quarters.push({ quarter: link.quarter, ...got });
-          log(`insiders: [${i + 1}/${todo.length}] ${link.quarter}: ${mb(bytes)} in ${((t2 - t1) / 1000).toFixed(1)} s; ${got.forms} forms (${got.amendments} 4/A), ${got.rows} rows in ${secs(t2)}; rss ${rss()}`);
+          log(
+            `insiders: [${i + 1}/${todo.length}] ${link.quarter}: ${mb(bytes)} in ${((t2 - t1) / 1000).toFixed(1)} s; ${got.forms} forms (${got.amendments} 4/A), ${got.rows} rows in ${secs(t2)}; rss ${rss()}`,
+          );
         } catch (err) {
           summary.errors.push(`${link.quarter}: ${err.message}`);
           log(`insiders: ${link.quarter} failed: ${err.message}`);
@@ -82,21 +114,35 @@ export async function updateInsiderHistory(db, { since = STORE_QUARTER_START, qu
       for (let q = nextQuarter(qDone.at(-1)); q <= quarterOf(today); q = nextQuarter(q)) {
         const [year, n] = [q.slice(0, 4), q.slice(5)];
         let names = [];
-        try { names = (await io.dailyNames(year, n)).sort(); } catch (err) {
-          if (err.status !== 404) { summary.errors.push(`daily ${q}: ${err.message}`); gap = true; }
+        try {
+          names = (await io.dailyNames(year, n)).sort();
+        } catch (err) {
+          if (err.status !== 404) {
+            summary.errors.push(`daily ${q}: ${err.message}`);
+            gap = true;
+          }
           continue;
         }
         for (const name of names) {
           const day = name.slice(5, 13);
           const iso = `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6, 8)}`;
           if (iso <= datasetThrough) continue;
-          if (daysDone.has(day)) { if (!gap) through = iso; continue; }
+          if (daysDone.has(day)) {
+            if (!gap) through = iso;
+            continue;
+          }
           const t1 = Date.now();
           try {
             const got = await ingestDailyIdx(db, await io.dailyIdx(year, n, name), { byCik, read: reader });
             summary.days.push({ day, ...got });
-            log(`insiders: daily ${iso}: ${got.listed} Form 4/4A listed for join-table CIKs, ${got.known} already stored, ${got.read} read, ${got.failed} failed, ${got.rows} rows in ${secs(t1)}`);
-            if (got.failed) { gap = true; summary.errors.push(`daily ${iso}: ${got.failed} forms could not be read; the day is retried next run`); continue; }
+            log(
+              `insiders: daily ${iso}: ${got.listed} Form 4/4A listed for join-table CIKs, ${got.known} already stored, ${got.read} read, ${got.failed} failed, ${got.rows} rows in ${secs(t1)}`,
+            );
+            if (got.failed) {
+              gap = true;
+              summary.errors.push(`daily ${iso}: ${got.failed} forms could not be read; the day is retried next run`);
+              continue;
+            }
             markDone(db, "day", day, { joins, forms: got.forms, rows: got.rows, url: name });
             if (!gap) through = iso;
           } catch (err) {
@@ -122,7 +168,9 @@ export async function updateInsiderHistory(db, { since = STORE_QUARTER_START, qu
 /** The API's scheduled refresh: new quarters and days only, and only once a backfill has stored a first quarter. */
 export async function refreshInsiderHistory(db) {
   if (!getMeta(db, "coverage")) return null;
-  const out = await updateInsiderHistory(db, { log: (s) => console.log(s) }).catch((err) => ({ errors: [err.message] }));
+  const out = await updateInsiderHistory(db, { log: (s) => console.log(s) }).catch((err) => ({
+    errors: [err.message],
+  }));
   if (out?.errors?.length) console.error("insider history:", out.errors[0]);
   return storeStatus(db);
 }

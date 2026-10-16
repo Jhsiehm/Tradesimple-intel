@@ -17,7 +17,7 @@ const START = dayOf("2025-01-02");
 /** Deterministic random walk with weekends removed and a few missing opens. */
 function series(seed, base, days = 320) {
   let x = seed;
-  const rnd = () => ((x = (x * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const rnd = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
   const out = [];
   let p = base;
   for (let d = START; d < START + days; d += 1) {
@@ -38,8 +38,15 @@ function fixture(ruleOverrides) {
   for (let i = 0; i < 36; i += 1) {
     const sym = symbols[i % symbols.length];
     signals.push({
-      id: `s${i}`, symbol: sym, side: i % 4 === 3 ? "sell" : "buy", signalDate: new Date((START + 5 + i * 7) * 86_400_000).toISOString().slice(0, 10),
-      sizeHint: [8_000, 32_500.5, 75_000, 2_000_000][i % 4], sizeIsRange: true, actor: `M${i % 3}`, actorLabel: `Member ${i % 3}`, sector: i % 2 ? "Information Technology" : "Energy"
+      id: `s${i}`,
+      symbol: sym,
+      side: i % 4 === 3 ? "sell" : "buy",
+      signalDate: new Date((START + 5 + i * 7) * 86_400_000).toISOString().slice(0, 10),
+      sizeHint: [8_000, 32_500.5, 75_000, 2_000_000][i % 4],
+      sizeIsRange: true,
+      actor: `M${i % 3}`,
+      actorLabel: `Member ${i % 3}`,
+      sector: i % 2 ? "Information Technology" : "Energy",
     });
   }
   const rules = cleanRules(ruleOverrides);
@@ -55,11 +62,20 @@ function fixture(ruleOverrides) {
     out,
     reality,
     rep: {
-      ok: true, spec: { source: "congress", filters: {}, rules }, description: "fixture", stats: out.stats, reality, counts: out.counts, trades: out.trades,
+      ok: true,
+      spec: { source: "congress", filters: {}, rules },
+      description: "fixture",
+      stats: out.stats,
+      reality,
+      counts: out.counts,
+      trades: out.trades,
       prices: used.map((symbol) => ({ symbol, bars: cut(bars[symbol]) })),
       benchmarks: benches.map((symbol) => ({ symbol, bars: cut(benchBars[symbol] || SPY) })),
-      feeds: [{ label: "Prices", source: "fixture", asOf: "2026-10-09", latency: "none" }], priceSource: "fixture", priceAsOf: "2026-10-09", ranAt: "2026-10-09T00:00:00Z"
-    }
+      feeds: [{ label: "Prices", source: "fixture", asOf: "2026-10-09", latency: "none" }],
+      priceSource: "fixture",
+      priceAsOf: "2026-10-09",
+      ranAt: "2026-10-09T00:00:00Z",
+    },
   };
 }
 
@@ -74,8 +90,32 @@ function writeFolder(rep) {
 const lastJson = (stdout) => JSON.parse(String(stdout).trim().split("\n").at(-1));
 
 const CASES = [
-  ["size-weighted, both sides, stop/take, marked open trades", { entry: "nextOpen", holdDays: 20, sides: "both", sizing: "amountMid", stopLossPct: 8, takeProfitPct: 15, costBps: 3, slippageBps: 5, openTrades: "mark" }],
-  ["equal weight, buys, close entry, sector benchmark, open trades excluded", { entry: "nextClose", holdDays: 90, sides: "buy", sizing: "equal", benchmark: "SECTOR", costBps: 0, slippageBps: 5 }]
+  [
+    "size-weighted, both sides, stop/take, marked open trades",
+    {
+      entry: "nextOpen",
+      holdDays: 20,
+      sides: "both",
+      sizing: "amountMid",
+      stopLossPct: 8,
+      takeProfitPct: 15,
+      costBps: 3,
+      slippageBps: 5,
+      openTrades: "mark",
+    },
+  ],
+  [
+    "equal weight, buys, close entry, sector benchmark, open trades excluded",
+    {
+      entry: "nextClose",
+      holdDays: 90,
+      sides: "buy",
+      sizing: "equal",
+      benchmark: "SECTOR",
+      costBps: 0,
+      slippageBps: 5,
+    },
+  ],
 ];
 
 for (const [name, rules] of CASES) {
@@ -87,8 +127,19 @@ for (const [name, rules] of CASES) {
     try {
       const res = lastJson(execFileSync(process.execPath, [join(dir, "replicate.mjs"), dir], { encoding: "utf8" }));
       assert.equal(res.match, true, JSON.stringify(res));
-      for (const [k, v] of Object.entries(expectedRealityOf(reality))) assert.equal(res.replicated[k], v, `reality ${k}`);
-      for (const k of ["trades", "total", "benchmarkTotal", "excessTotal", "hitRate", "avgTrade", "medianTrade", "maxDrawdown", "spanDays"]) {
+      for (const [k, v] of Object.entries(expectedRealityOf(reality)))
+        assert.equal(res.replicated[k], v, `reality ${k}`);
+      for (const k of [
+        "trades",
+        "total",
+        "benchmarkTotal",
+        "excessTotal",
+        "hitRate",
+        "avgTrade",
+        "medianTrade",
+        "maxDrawdown",
+        "spanDays",
+      ]) {
         assert.ok(Math.abs(res.replicated[k] - out.stats[k]) <= 1e-4, `${k}: ${res.replicated[k]} vs ${out.stats[k]}`);
       }
       assert.deepEqual(res.app, { ...expectedOf(out.stats), ...expectedRealityOf(reality) });
@@ -109,7 +160,8 @@ test("the generated Python script reproduces the same numbers (skipped without p
     const j = lastJson(res.stdout);
     assert.equal(j.match, true);
     assert.equal(j.replicated.total, out.stats.total);
-    for (const [k, v] of Object.entries(expectedRealityOf(reality))) assert.equal(j.replicated[k], v, `python reality ${k}`);
+    for (const [k, v] of Object.entries(expectedRealityOf(reality)))
+      assert.equal(j.replicated[k], v, `python reality ${k}`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -120,7 +172,13 @@ test("export files carry source and as-of on every price row, and spec.json hold
   const files = Object.fromEntries(replicateFiles(rep).map((f) => [f.name, f.text]));
   assert.deepEqual(Object.keys(files), ["spec.json", "trades.csv", "prices.csv", "benchmark.csv", "METHODS.md"]);
   assert.match(files["prices.csv"].split("\n")[0], /^symbol,date,open_adj,close_adj,source,as_of$/);
-  assert.ok(files["prices.csv"].split("\n").slice(1).filter(Boolean).every((l) => l.endsWith(",fixture,2026-10-09")));
+  assert.ok(
+    files["prices.csv"]
+      .split("\n")
+      .slice(1)
+      .filter(Boolean)
+      .every((l) => l.endsWith(",fixture,2026-10-09")),
+  );
   assert.equal(files["trades.csv"].trim().split("\n").length, out.trades.length + 1);
   assert.equal(JSON.parse(files["spec.json"]).expected.total, out.stats.total);
   assert.match(files["METHODS.md"], /Max drawdown/);
@@ -128,7 +186,10 @@ test("export files carry source and as-of on every price row, and spec.json hold
 
 test("the zip is a valid stored archive (unzip -t when available)", () => {
   assert.equal(crc32(new TextEncoder().encode("123456789")), 0xcbf43926);
-  const bytes = zipFiles([{ name: "a.txt", text: "hello" }, { name: "b/c.csv", text: "x,y\n1,2\n" }]);
+  const bytes = zipFiles([
+    { name: "a.txt", text: "hello" },
+    { name: "b/c.csv", text: "x,y\n1,2\n" },
+  ]);
   assert.equal(new DataView(bytes.buffer).getUint32(0, true), 0x04034b50);
   const dir = mkdtempSync(join(tmpdir(), "intel-zip-"));
   try {
@@ -143,7 +204,22 @@ test("the zip is a valid stored archive (unzip -t when available)", () => {
 test("formulas substitute this run's own numbers", () => {
   const { out } = fixture(CASES[0][1]);
   const f = Object.fromEntries(backtestFormulas(out).map((x) => [x.id, x]));
-  for (const id of ["entry", "exit", "costs", "trade", "sizing", "daily", "total", "annualized", "excess", "hit", "avg", "drawdown", "sharpe"]) assert.ok(f[id], id);
+  for (const id of [
+    "entry",
+    "exit",
+    "costs",
+    "trade",
+    "sizing",
+    "daily",
+    "total",
+    "annualized",
+    "excess",
+    "hit",
+    "avg",
+    "drawdown",
+    "sharpe",
+  ])
+    assert.ok(f[id], id);
   assert.match(f.total.worked, new RegExp(`${(out.stats.total * 100).toFixed(2)}\\\\%`));
   assert.match(f.hit.worked, new RegExp(`\\\\frac\\{${out.stats.wins}\\}\\{${out.stats.trades}\\}`));
   assert.match(f.costs.worked, /\\frac\{3 \+ 5\}\{10\^4\} = 0\.0008/);

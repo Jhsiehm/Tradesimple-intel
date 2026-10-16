@@ -16,7 +16,8 @@ export function parseBars(body) {
     if (close == null || !Number.isFinite(close) || !(close > 0)) continue;
     const rawOpen = quote.open?.[i];
     const factor = rawClose > 0 && adj[i] != null ? adj[i] / rawClose : 1;
-    const open = rawOpen != null && Number.isFinite(rawOpen) && rawOpen > 0 ? Number((rawOpen * factor).toPrecision(7)) : null;
+    const open =
+      rawOpen != null && Number.isFinite(rawOpen) && rawOpen > 0 ? Number((rawOpen * factor).toPrecision(7)) : null;
     const day = Math.floor(stamps[i] / 86_400);
     const bar = [day, open, Number(close.toPrecision(7))];
     if (out.length && out.at(-1)[0] === day) out[out.length - 1] = bar;

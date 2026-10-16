@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { amountMid, dayOf, firstAfter, isoOf, maxDrawdown, median, runBacktest, simulateTrade } from "../shared/backtest.mjs";
+import {
+  amountMid,
+  dayOf,
+  firstAfter,
+  isoOf,
+  maxDrawdown,
+  median,
+  runBacktest,
+  simulateTrade,
+} from "../shared/backtest.mjs";
 import { cleanSpec, decodeSpec, describeSpec, encodeSpec, specHash, specKey } from "../shared/backtestSpec.mjs";
 
 const START = dayOf("2025-03-03"); // a Monday
@@ -11,12 +20,23 @@ function bars(n, close, open = close, skip = () => false) {
   for (let i = 0; i < n; i += 1) if (!skip(i)) out.push([START + i, open(i), close(i)]);
   return out;
 }
-const flat = (n, v = 100, skip) => bars(n, () => v, () => v, skip);
+const flat = (n, v = 100, skip) =>
+  bars(
+    n,
+    () => v,
+    () => v,
+    skip,
+  );
 const sig = (over = {}) => ({ id: "s1", symbol: "AAA", signalDate: isoOf(START + 2), side: "buy", ...over });
-const run = (over) => runBacktest({ rules: { holdDays: 10, slippageBps: 0, benchmark: "SPY" }, benchBars: { SPY: flat(60) }, ...over });
+const run = (over) =>
+  runBacktest({ rules: { holdDays: 10, slippageBps: 0, benchmark: "SPY" }, benchBars: { SPY: flat(60) }, ...over });
 
 test("entry is strictly after the public date, even when that day has a bar", () => {
-  const stock = bars(60, (i) => 100 + i, (i) => 1000 + i);
+  const stock = bars(
+    60,
+    (i) => 100 + i,
+    (i) => 1000 + i,
+  );
   const out = run({ signals: [sig()], bars: { AAA: stock } });
   const t = out.trades[0];
   assert.equal(t.signal, isoOf(START + 2));
@@ -26,8 +46,16 @@ test("entry is strictly after the public date, even when that day has a bar", ()
 });
 
 test("nextClose enters at the close of the day after the filing", () => {
-  const stock = bars(60, (i) => 100 + i, (i) => 500);
-  const out = run({ rules: { entry: "nextClose", holdDays: 10, slippageBps: 0, benchmark: "SPY" }, signals: [sig()], bars: { AAA: stock } });
+  const stock = bars(
+    60,
+    (i) => 100 + i,
+    (i) => 500,
+  );
+  const out = run({
+    rules: { entry: "nextClose", holdDays: 10, slippageBps: 0, benchmark: "SPY" },
+    signals: [sig()],
+    bars: { AAA: stock },
+  });
   assert.equal(out.trades[0].entry, isoOf(START + 3));
   assert.equal(out.trades[0].entryPrice, 103);
   assert.equal(out.trades[0].exit, isoOf(START + 13));
@@ -37,7 +65,11 @@ test("nextClose enters at the close of the day after the filing", () => {
 
 test("known answer: +10% over the hold against a flat benchmark", () => {
   // open 100 on the entry day, close 110 on the exit day, linear in between
-  const stock = bars(60, (i) => (i >= 3 ? 100 + (i - 3) : 100), () => 100);
+  const stock = bars(
+    60,
+    (i) => (i >= 3 ? 100 + (i - 3) : 100),
+    () => 100,
+  );
   const out = run({ signals: [sig()], bars: { AAA: stock } });
   const t = out.trades[0];
   assert.equal(t.entryPrice, 100);
@@ -63,12 +95,16 @@ test("drawdown is peak to trough on the curve", () => {
 
 test("engine drawdown matches a hand-built path", () => {
   const closes = [100, 100, 100, 100, 120, 90, 110, 110, 110, 110, 110, 110, 110];
-  const stock = bars(closes.length, (i) => closes[i], () => 100);
+  const stock = bars(
+    closes.length,
+    (i) => closes[i],
+    () => 100,
+  );
   const out = runBacktest({
     rules: { holdDays: 9, slippageBps: 0, benchmark: "SPY", entry: "nextClose" },
     signals: [sig({ signalDate: isoOf(START + 2) })],
     bars: { AAA: stock },
-    benchBars: { SPY: flat(30) }
+    benchBars: { SPY: flat(30) },
   });
   // entry close at day 3 (100); closes 120, 90, 110 → peak 1.2, trough 0.9
   assert.ok(Math.abs(out.stats.maxDrawdown - (0.9 / 1.2 - 1)) < 1e-3);
@@ -77,7 +113,12 @@ test("engine drawdown matches a hand-built path", () => {
 
 test("benchmark stays aligned over a holiday it does not trade", () => {
   // stock trades every day; the benchmark has no bar on day 8 (a holiday there). Benchmark rises 1/day otherwise.
-  const bench = bars(60, (i) => 100 + i, (i) => 100 + i, (i) => i === 8);
+  const bench = bars(
+    60,
+    (i) => 100 + i,
+    (i) => 100 + i,
+    (i) => i === 8,
+  );
   const stock = flat(60);
   const out = run({ signals: [sig()], bars: { AAA: stock }, benchBars: { SPY: bench } });
   const t = out.trades[0];
@@ -104,15 +145,25 @@ test("amountMid reads a disclosed range", () => {
 });
 
 test("range-midpoint sizing weights positions by disclosed size", () => {
-  const winner = bars(60, (i) => (i === 4 ? 110 : 100), () => 100);
+  const winner = bars(
+    60,
+    (i) => (i === 4 ? 110 : 100),
+    () => 100,
+  );
   const flatter = flat(60);
   const signals = [
     sig({ id: "a", symbol: "WIN", sizeHint: 10000, sizeIsRange: true }),
-    sig({ id: "b", symbol: "FLT", sizeHint: 30000, sizeIsRange: true })
+    sig({ id: "b", symbol: "FLT", sizeHint: 30000, sizeIsRange: true }),
   ];
   const input = { signals, bars: { WIN: winner, FLT: flatter }, benchBars: { SPY: flat(60) } };
-  const equal = runBacktest({ ...input, rules: { holdDays: 1, entry: "nextClose", slippageBps: 0, benchmark: "SPY", sizing: "equal" } });
-  const sized = runBacktest({ ...input, rules: { holdDays: 1, entry: "nextClose", slippageBps: 0, benchmark: "SPY", sizing: "amountMid" } });
+  const equal = runBacktest({
+    ...input,
+    rules: { holdDays: 1, entry: "nextClose", slippageBps: 0, benchmark: "SPY", sizing: "equal" },
+  });
+  const sized = runBacktest({
+    ...input,
+    rules: { holdDays: 1, entry: "nextClose", slippageBps: 0, benchmark: "SPY", sizing: "amountMid" },
+  });
   assert.ok(Math.abs(equal.stats.total - 0.05) < 1e-3);
   assert.ok(Math.abs(sized.stats.total - 0.025) < 1e-3);
   assert.ok(sized.caveats.items.some((c) => c.id === "ranges" && /estimate/.test(c.text)));
@@ -120,32 +171,61 @@ test("range-midpoint sizing weights positions by disclosed size", () => {
 });
 
 test("costs and slippage come off every trade, entry and exit", () => {
-  const stock = bars(60, (i) => (i >= 3 ? 100 + (i - 3) : 100), () => 100);
-  const out = runBacktest({ rules: { holdDays: 10, costBps: 10, slippageBps: 15, benchmark: "SPY" }, signals: [sig()], bars: { AAA: stock }, benchBars: { SPY: flat(60) } });
+  const stock = bars(
+    60,
+    (i) => (i >= 3 ? 100 + (i - 3) : 100),
+    () => 100,
+  );
+  const out = runBacktest({
+    rules: { holdDays: 10, costBps: 10, slippageBps: 15, benchmark: "SPY" },
+    signals: [sig()],
+    bars: { AAA: stock },
+    benchBars: { SPY: flat(60) },
+  });
   assert.equal(out.trades[0].ret, Math.round((0.1 - 0.005) * 1e4) / 1e4);
   assert.ok(Math.abs(out.stats.total - 0.095) < 2e-3);
 });
 
 test("stop loss and take profit exit on the first qualifying close", () => {
-  const down = bars(60, (i) => (i < 5 ? 100 : 90), () => 100);
-  const stopped = run({ rules: { holdDays: 30, stopLossPct: 8, slippageBps: 0, benchmark: "SPY" }, signals: [sig()], bars: { AAA: down } });
+  const down = bars(
+    60,
+    (i) => (i < 5 ? 100 : 90),
+    () => 100,
+  );
+  const stopped = run({
+    rules: { holdDays: 30, stopLossPct: 8, slippageBps: 0, benchmark: "SPY" },
+    signals: [sig()],
+    bars: { AAA: down },
+  });
   assert.equal(stopped.trades[0].why, "stop");
   assert.equal(stopped.trades[0].exit, isoOf(START + 5));
   assert.equal(stopped.trades[0].ret, -0.1);
-  const up = bars(60, (i) => (i < 6 ? 100 : 130), () => 100);
-  const took = run({ rules: { holdDays: 30, takeProfitPct: 20, slippageBps: 0, benchmark: "SPY" }, signals: [sig()], bars: { AAA: up } });
+  const up = bars(
+    60,
+    (i) => (i < 6 ? 100 : 130),
+    () => 100,
+  );
+  const took = run({
+    rules: { holdDays: 30, takeProfitPct: 20, slippageBps: 0, benchmark: "SPY" },
+    signals: [sig()],
+    bars: { AAA: up },
+  });
   assert.equal(took.trades[0].why, "take");
   assert.equal(took.trades[0].ret, 0.3);
 });
 
 test("a short sells the stock and mirrors the benchmark", () => {
-  const stock = bars(60, (i) => (i >= 13 ? 90 : 100), () => 100);
+  const stock = bars(
+    60,
+    (i) => (i >= 13 ? 90 : 100),
+    () => 100,
+  );
   const bench = bars(60, (i) => (i >= 13 ? 95 : 100));
   const out = runBacktest({
     rules: { holdDays: 10, sides: "sell", slippageBps: 0, benchmark: "SPY" },
     signals: [sig({ side: "sell" }), sig({ id: "b", side: "buy" })],
     bars: { AAA: stock },
-    benchBars: { SPY: bench }
+    benchBars: { SPY: bench },
   });
   assert.equal(out.counts.used, 1);
   assert.equal(out.trades[0].ret, 0.1);
@@ -163,9 +243,9 @@ test("signals that cannot be priced are excluded and counted, never zeroed", () 
       sig({ id: "gone", symbol: "DEAD" }),
       sig({ id: "late", signalDate: isoOf(START + 59) }),
       sig({ id: "open", signalDate: isoOf(START + 55) }),
-      sig({ id: "bad", signalDate: "" })
+      sig({ id: "bad", signalDate: "" }),
     ],
-    bars: { AAA: flat(60) }
+    bars: { AAA: flat(60) },
   });
   assert.equal(out.counts.used, 1);
   assert.equal(out.caveats.exclusions.noPrice, 1);
@@ -179,20 +259,37 @@ test("signals that cannot be priced are excluded and counted, never zeroed", () 
   assert.match(text, /Survivorship/);
   const summary = out.caveats.items.find((c) => c.id === "unpriced");
   assert.equal(summary.level, "warn");
-  assert.match(summary.text, /^1 of 5 signals became trades; 4 did not: 1 hold not complete, 1 no price history, 1 no usable public date, 1 public on or after the last price bar\./);
+  assert.match(
+    summary.text,
+    /^1 of 5 signals became trades; 4 did not: 1 hold not complete, 1 no price history, 1 no usable public date, 1 public on or after the last price bar\./,
+  );
   assert.match(summary.text, /openTrades = mark/);
 });
 
 test("a run where every signal is unpriced still explains each one by reason", () => {
-  const out = run({ signals: [sig({ id: "a", symbol: "GONE" }), sig({ id: "b", signalDate: isoOf(START + 59) })], bars: { AAA: flat(60) } });
+  const out = run({
+    signals: [sig({ id: "a", symbol: "GONE" }), sig({ id: "b", signalDate: isoOf(START + 59) })],
+    bars: { AAA: flat(60) },
+  });
   assert.equal(out.stats, null);
   assert.equal(out.caveats.items[0].id, "unpriced");
-  assert.match(out.caveats.items[0].text, /^0 of 2 signals became trades; 2 did not: 1 no price history, 1 public on or after the last price bar\.$/);
+  assert.match(
+    out.caveats.items[0].text,
+    /^0 of 2 signals became trades; 2 did not: 1 no price history, 1 public on or after the last price bar\.$/,
+  );
 });
 
 test("open trades are marked at the last close only when asked", () => {
-  const stock = bars(60, (i) => 100 + i, () => 100);
-  const marked = run({ rules: { holdDays: 90, openTrades: "mark", slippageBps: 0, benchmark: "SPY" }, signals: [sig()], bars: { AAA: stock } });
+  const stock = bars(
+    60,
+    (i) => 100 + i,
+    () => 100,
+  );
+  const marked = run({
+    rules: { holdDays: 90, openTrades: "mark", slippageBps: 0, benchmark: "SPY" },
+    signals: [sig()],
+    bars: { AAA: stock },
+  });
   assert.equal(marked.trades[0].open, true);
   assert.equal(marked.trades[0].why, "open");
   assert.equal(marked.trades[0].exit, isoOf(START + 59));
@@ -202,9 +299,9 @@ test("disclosure lag statistics come from the filing and trade dates", () => {
   const out = run({
     signals: [
       sig({ id: "1", tradeDate: isoOf(START - 10) }),
-      sig({ id: "2", symbol: "BBB", tradeDate: isoOf(START - 48) })
+      sig({ id: "2", symbol: "BBB", tradeDate: isoOf(START - 48) }),
     ],
-    bars: { AAA: flat(60), BBB: flat(60) }
+    bars: { AAA: flat(60), BBB: flat(60) },
   });
   assert.equal(out.caveats.lag.n, 2);
   assert.equal(out.caveats.lag.max, 50);
@@ -213,8 +310,12 @@ test("disclosure lag statistics come from the filing and trade dates", () => {
 });
 
 test("dataset timing does not inherit a Congress filing deadline", () => {
-  const out = run({ signals: [sig({ tradeDate: isoOf(START - 90) })], bars: { AAA: flat(60) }, context: { sourceFamily: 'dataset' } });
-  const lag = out.caveats.items.find(x => x.id === 'lag').text;
+  const out = run({
+    signals: [sig({ tradeDate: isoOf(START - 90) })],
+    bars: { AAA: flat(60) },
+    context: { sourceFamily: "dataset" },
+  });
+  const lag = out.caveats.items.find((x) => x.id === "lag").text;
   assert.match(lag, /Availability gap/);
   assert.doesNotMatch(lag, /STOCK Act|filed after/);
 });
@@ -223,15 +324,18 @@ test("amendment delay is reported apart from filing lag", () => {
   const out = run({
     signals: [
       sig({ id: "1", tradeDate: isoOf(START - 10) }),
-      sig({ id: "2", symbol: "BBB", tradeDate: isoOf(START - 300), filedDate: isoOf(START - 280) })
+      sig({ id: "2", symbol: "BBB", tradeDate: isoOf(START - 300), filedDate: isoOf(START - 280) }),
     ],
-    bars: { AAA: flat(60), BBB: flat(60) }
+    bars: { AAA: flat(60), BBB: flat(60) },
   });
   assert.equal(out.caveats.lag.n, 2);
   assert.equal(out.caveats.lag.max, 20, "the original report was filed 20 days after the trade");
   assert.equal(out.caveats.lag.over45, 0);
   assert.deepEqual(out.caveats.lag.amended, { n: 1, median: 282, max: 282 });
-  assert.match(out.caveats.items.find((c) => c.id === "amendLag").text, /^1 signals first appear in a later amendment, a median 282 days/);
+  assert.match(
+    out.caveats.items.find((c) => c.id === "amendLag").text,
+    /^1 signals first appear in a later amendment, a median 282 days/,
+  );
 });
 
 test("a tiny sample says so", () => {
@@ -244,7 +348,14 @@ test("sector benchmark uses each ticker's ETF and falls back to SPY", () => {
     rules: { holdDays: 10, slippageBps: 0, benchmark: "SECTOR" },
     signals: [sig({ id: "1", sector: "Energy" }), sig({ id: "2", symbol: "BBB", sector: "Unknown" })],
     bars: { AAA: flat(60), BBB: flat(60) },
-    benchBars: { XLE: bars(60, (i) => 100 + i, (i) => 100 + i), SPY: flat(60) }
+    benchBars: {
+      XLE: bars(
+        60,
+        (i) => 100 + i,
+        (i) => 100 + i,
+      ),
+      SPY: flat(60),
+    },
   });
   const a = out.trades.find((t) => t.symbol === "AAA");
   const b = out.trades.find((t) => t.symbol === "BBB");
@@ -259,9 +370,9 @@ test("breakdowns group by member and ticker", () => {
     signals: [
       sig({ id: "1", actor: "A1", actorLabel: "Ann" }),
       sig({ id: "2", actor: "A1", actorLabel: "Ann" }),
-      sig({ id: "3", symbol: "BBB", actor: "B1", actorLabel: "Bob" })
+      sig({ id: "3", symbol: "BBB", actor: "B1", actorLabel: "Bob" }),
     ],
-    bars: { AAA: flat(60), BBB: flat(60) }
+    bars: { AAA: flat(60), BBB: flat(60) },
   });
   assert.equal(out.byMember.rows[0].label, "Ann");
   assert.equal(out.byMember.rows[0].n, 2);
@@ -269,13 +380,24 @@ test("breakdowns group by member and ticker", () => {
 });
 
 test("firstAfter and median helpers", () => {
-  const b = [[10, 1, 1], [12, 1, 1], [15, 1, 1]];
+  const b = [
+    [10, 1, 1],
+    [12, 1, 1],
+    [15, 1, 1],
+  ];
   assert.equal(firstAfter(b, 9), 0);
   assert.equal(firstAfter(b, 10), 1);
   assert.equal(firstAfter(b, 15), -1);
   assert.equal(median([3, 1, 2]), 2);
   assert.equal(median([4, 1, 2, 3]), 2.5);
-  const lone = simulateTrade({}, [[START, 100, 100]], flat(5), { entry: "nextOpen", holdDays: 3, openTrades: "exclude", costBps: 0, slippageBps: 0 }, START - 1, 1);
+  const lone = simulateTrade(
+    {},
+    [[START, 100, 100]],
+    flat(5),
+    { entry: "nextOpen", holdDays: 3, openTrades: "exclude", costBps: 0, slippageBps: 0 },
+    START - 1,
+    1,
+  );
   assert.equal(lone.skip, "stillOpen");
 });
 
@@ -286,7 +408,7 @@ test("spec cleaning clamps, drops unknowns, and round-trips through the share to
   const { spec } = cleanSpec({
     source: "congress",
     filters: { committee: "Armed Services", tickers: "lmt, rtx lmt $$$", party: "x", minAmount: -5, evil: 1 },
-    rules: { holdDays: 99999, benchmark: "NOPE", entry: "magic", costBps: 5000 }
+    rules: { holdDays: 99999, benchmark: "NOPE", entry: "magic", costBps: 5000 },
   });
   assert.deepEqual(spec.filters.tickers, ["LMT", "RTX"]);
   assert.equal(spec.filters.party, "");
@@ -312,7 +434,7 @@ test("a one-name sample and a price-index benchmark are called out", () => {
     rules: { holdDays: 10, slippageBps: 0, benchmark: "^GSPC" },
     signals: [...many, sig({ id: "b", actor: "B", actorLabel: "Light" })],
     bars: { AAA: flat(60) },
-    benchBars: { "^GSPC": flat(60) }
+    benchBars: { "^GSPC": flat(60) },
   });
   const text = out.caveats.items.map((c) => c.id);
   assert.ok(text.includes("concentration"));

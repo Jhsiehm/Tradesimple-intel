@@ -1,15 +1,47 @@
-import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { binCounts, dayIso, dayNum, missedIn, windowSum, EVENT_KINDS, type ArcKind, type EventKind } from "../../shared/intel.mjs";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  binCounts,
+  dayIso,
+  dayNum,
+  missedIn,
+  windowSum,
+  EVENT_KINDS,
+  type ArcKind,
+  type EventKind,
+} from "../../shared/intel.mjs";
 import { when } from "../lib/api";
 import { ARC_CAP, ARC_COLOR, ARC_LABEL, type ArcView } from "./arcs";
 import { LANE_COLOR, presetWindow, type DayWindow } from "./lanes";
 import type { IntelData, IntelScope } from "./useIntel";
 import { Icon, IconLabel, type IconName } from "../ui/icons/Icon";
 
-const LANE_SHORT: Record<EventKind, string> = { trade: "TRADES", hearing: "HEARINGS", roll: "ROLL CALLS", contract: "CONTRACTS", form4: "FORM 4" };
-const LANE_ICON: Record<EventKind, IconName> = { trade: "trade", hearing: "hearing", roll: "roll", contract: "contracts", form4: "form4" };
+const LANE_SHORT: Record<EventKind, string> = {
+  trade: "TRADES",
+  hearing: "HEARINGS",
+  roll: "ROLL CALLS",
+  contract: "CONTRACTS",
+  form4: "FORM 4",
+};
+const LANE_ICON: Record<EventKind, IconName> = {
+  trade: "trade",
+  hearing: "hearing",
+  roll: "roll",
+  contract: "contracts",
+  form4: "form4",
+};
 const ARC_ICON: Record<ArcKind, IconName> = { trade: "trade", contract: "contracts", pac: "pac" };
-const PRESETS: [string, number][] = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
+const PRESETS: [string, number][] = [
+  ["30D", 30],
+  ["90D", 90],
+  ["1Y", 365],
+  ["ALL", 0],
+];
 const MAX_BINS = 220;
 const EDGE_PX = 8;
 /** Pointer travel before a press on the track becomes a new window instead of a click. */
@@ -40,7 +72,23 @@ type Props = {
  * Bottom-of-map time scrubber. One tick lane per feed, a draggable window that filters the map arcs,
  * and each lane's source, as-of, and latency on hover and under "Feeds".
  */
-export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, onKinds, arcs, mapArcs, onMapArcs, onClearScope, collapsed, onCollapsed, phone, onFollow }: Props) {
+export function Scrubber({
+  scope,
+  data,
+  loading,
+  window: win,
+  onWindow,
+  kinds,
+  onKinds,
+  arcs,
+  mapArcs,
+  onMapArcs,
+  onClearScope,
+  collapsed,
+  onCollapsed,
+  phone,
+  onFollow,
+}: Props) {
   const [feeds, setFeeds] = useState(false);
   const track = useRef<HTMLDivElement>(null);
   const len = data?.ok ? data.len : 0;
@@ -59,7 +107,10 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
     });
   }, [data, bins]);
 
-  const inWindow = useMemo(() => Object.fromEntries(lanes.map((l) => [l.k, windowSum(l.counts, w[0], w[1])])) as Record<EventKind, number>, [lanes, w[0], w[1]]);
+  const inWindow = useMemo(
+    () => Object.fromEntries(lanes.map((l) => [l.k, windowSum(l.counts, w[0], w[1])])) as Record<EventKind, number>,
+    [lanes, w[0], w[1]],
+  );
   const latest = useMemo(() => {
     if (!data?.ok || !phone) return [];
     return data.events.filter((e) => e.d >= w[0] && e.d <= w[1]).slice(0, 5);
@@ -79,7 +130,8 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
     el.setPointerCapture(event.pointerId);
     const at = dayAt(event.clientX);
     const edge = EDGE_PX / pxPerDay();
-    const mode = Math.abs(at - w[0]) <= edge ? "a" : Math.abs(at - w[1]) <= edge ? "b" : at > w[0] && at < w[1] ? "move" : "new";
+    const mode =
+      Math.abs(at - w[0]) <= edge ? "a" : Math.abs(at - w[1]) <= edge ? "b" : at > w[0] && at < w[1] ? "move" : "new";
     const origin = { at, w, x: event.clientX };
     let dragged = false;
     const move = (ev: PointerEvent) => {
@@ -129,32 +181,77 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
 
   const span = w[1] - w[0] + 1;
   const range = len ? `${dayIso(start + w[0])} → ${dayIso(start + w[1])}` : "—";
-  const preset = len ? PRESETS.find(([, d]) => { const p = presetWindow(len, d); return p[0] === w[0] && p[1] === w[1]; })?.[0] : undefined;
+  const preset = len
+    ? PRESETS.find(([, d]) => {
+        const p = presetWindow(len, d);
+        return p[0] === w[0] && p[1] === w[1];
+      })?.[0]
+    : undefined;
   const scoped = scope.kind !== "all";
-  const scopeText = data?.ok ? data.scope.label : scoped ? (scope.kind === "member" ? `Member ${scope.id}` : scope.id) : "All Congress";
+  const scopeText = data?.ok
+    ? data.scope.label
+    : scoped
+      ? scope.kind === "member"
+        ? `Member ${scope.id}`
+        : scope.id
+      : "All Congress";
   const cov = data?.ok ? data.arcs.coverage : null;
-  const unplaced = cov ? (["trade", "contract", "pac"] as ArcKind[]).map((k) => `${ARC_LABEL[k]}: ${cov[k].placed.toLocaleString("en-US")} of ${cov[k].total.toLocaleString("en-US")} placed (${cov[k].noFrom} no origin, ${cov[k].noTo} no SEC HQ or ticker join)`).join("\n") : "";
+  const unplaced = cov
+    ? (["trade", "contract", "pac"] as ArcKind[])
+        .map(
+          (k) =>
+            `${ARC_LABEL[k]}: ${cov[k].placed.toLocaleString("en-US")} of ${cov[k].total.toLocaleString("en-US")} placed (${cov[k].noFrom} no origin, ${cov[k].noTo} no SEC HQ or ticker join)`,
+        )
+        .join("\n")
+    : "";
   const missed = data?.ok && data.arcs.misses ? missedIn(data.arcs.misses, w[0], w[1], kinds) : null;
 
   return (
     <section className={`scrub${collapsed ? " min" : ""}`} aria-label="Time scrubber">
       <header className="scrub-head">
-        <button className="scrub-fold" aria-expanded={!collapsed} onClick={() => onCollapsed(!collapsed)} title={collapsed ? "Show the time scrubber" : "Collapse to one line"}>
+        <button
+          className="scrub-fold"
+          aria-expanded={!collapsed}
+          onClick={() => onCollapsed(!collapsed)}
+          title={collapsed ? "Show the time scrubber" : "Collapse to one line"}
+        >
           <Icon name={collapsed ? "chevron-right" : "chevron-down"} /> <em>RECORDS WINDOW</em>
         </button>
-        <span className="scrub-scope" title="Scope of the lanes and arcs. Opening a member or ticker dossier scopes it.">
+        <span
+          className="scrub-scope"
+          title="Scope of the lanes and arcs. Opening a member or ticker dossier scopes it."
+        >
           <span>{loading && !data ? "Loading…" : scopeText}</span>
-          {scoped ? <button className="scrub-x" onClick={onClearScope} title="Back to all of Congress"><IconLabel icon="reset">All Congress</IconLabel></button> : null}
+          {scoped ? (
+            <button className="scrub-x" onClick={onClearScope} title="Back to all of Congress">
+              <IconLabel icon="reset">All Congress</IconLabel>
+            </button>
+          ) : null}
         </span>
-        <strong className="scrub-range">{range}<small>{len ? ` · ${span} d` : ""}</small></strong>
+        <strong className="scrub-range">
+          {range}
+          <small>{len ? ` · ${span} d` : ""}</small>
+        </strong>
         {collapsed ? (
           <span className="scrub-sum">
-            {lanes.map((l) => <span key={l.k} title={l.meta?.label}><i style={{ background: LANE_COLOR[l.k] }} />{(inWindow[l.k] || 0).toLocaleString("en-US")}</span>)}
+            {lanes.map((l) => (
+              <span key={l.k} title={l.meta?.label}>
+                <i style={{ background: LANE_COLOR[l.k] }} />
+                {(inWindow[l.k] || 0).toLocaleString("en-US")}
+              </span>
+            ))}
           </span>
         ) : (
           <span className="seg scrub-presets" title="Window">
             {PRESETS.map(([label, d]) => (
-              <button key={label} aria-pressed={preset === label} disabled={!len} onClick={() => onWindow(presetWindow(len, d))}>{label}</button>
+              <button
+                key={label}
+                aria-pressed={preset === label}
+                disabled={!len}
+                onClick={() => onWindow(presetWindow(len, d))}
+              >
+                {label}
+              </button>
             ))}
           </span>
         )}
@@ -162,10 +259,30 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           <span className="scrub-arcs" title="Arcs on the map. Hover an arc for its source and as-of.">
             <em>ARCS</em>
             {arcs ? (
-              <button className="scrub-onmap" style={{ ["--arc" as string]: "var(--amber)" }} aria-pressed={mapArcs} disabled={scoped} onClick={() => onMapArcs(!mapArcs)} title={scoped ? "A member or ticker scope always draws its arcs. Clear the scope to hide them." : "Draw trade, contract, and PAC arcs over the map"}><IconLabel icon="arc">On map</IconLabel></button>
+              <button
+                className="scrub-onmap"
+                style={{ ["--arc" as string]: "var(--amber)" }}
+                aria-pressed={mapArcs}
+                disabled={scoped}
+                onClick={() => onMapArcs(!mapArcs)}
+                title={
+                  scoped
+                    ? "A member or ticker scope always draws its arcs. Clear the scope to hide them."
+                    : "Draw trade, contract, and PAC arcs over the map"
+                }
+              >
+                <IconLabel icon="arc">On map</IconLabel>
+              </button>
             ) : null}
             {(["trade", "contract", "pac"] as ArcKind[]).map((k) => (
-              <button key={k} aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} style={{ ["--arc" as string]: ARC_COLOR[k] }}><IconLabel icon={ARC_ICON[k]}>{ARC_LABEL[k]}</IconLabel></button>
+              <button
+                key={k}
+                aria-pressed={kinds.has(k)}
+                onClick={() => toggleKind(k)}
+                style={{ ["--arc" as string]: ARC_COLOR[k] }}
+              >
+                <IconLabel icon={ARC_ICON[k]}>{ARC_LABEL[k]}</IconLabel>
+              </button>
             ))}
           </span>
         ) : null}
@@ -179,7 +296,12 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           <div className="scrub-body">
             <div className="scrub-labels">
               {lanes.map((l) => (
-                <span key={l.k} title={feedTitle(l.meta)}><i style={{ background: LANE_COLOR[l.k] }} /><Icon name={LANE_ICON[l.k]} className="scrub-lane-ic" />{LANE_SHORT[l.k]}<b>{(inWindow[l.k] || 0).toLocaleString("en-US")}</b></span>
+                <span key={l.k} title={feedTitle(l.meta)}>
+                  <i style={{ background: LANE_COLOR[l.k] }} />
+                  <Icon name={LANE_ICON[l.k]} className="scrub-lane-ic" />
+                  {LANE_SHORT[l.k]}
+                  <b>{(inWindow[l.k] || 0).toLocaleString("en-US")}</b>
+                </span>
               ))}
             </div>
             <div
@@ -196,15 +318,39 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
               onKeyDown={key}
             >
               {lanes.map((l) => (
-                <svg key={l.k} className="scrub-lane" viewBox={`0 0 ${bins} 1`} preserveAspectRatio="none" aria-hidden="true">
-                  {l.binned.map((n, i) => n ? (
-                    <rect key={i} x={i + 0.12} width={0.76} y={1 - Math.max(0.18, Math.sqrt(n / l.max))} height={Math.max(0.18, Math.sqrt(n / l.max))} fill={LANE_COLOR[l.k]} />
-                  ) : null)}
+                <svg
+                  key={l.k}
+                  className="scrub-lane"
+                  viewBox={`0 0 ${bins} 1`}
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {l.binned.map((n, i) =>
+                    n ? (
+                      <rect
+                        key={i}
+                        x={i + 0.12}
+                        width={0.76}
+                        y={1 - Math.max(0.18, Math.sqrt(n / l.max))}
+                        height={Math.max(0.18, Math.sqrt(n / l.max))}
+                        fill={LANE_COLOR[l.k]}
+                      />
+                    ) : null,
+                  )}
                 </svg>
               ))}
               <div className="scrub-shade" style={{ left: 0, width: `${(w[0] / Math.max(1, len - 1)) * 100}%` }} />
-              <div className="scrub-shade" style={{ right: 0, width: `${((len - 1 - w[1]) / Math.max(1, len - 1)) * 100}%` }} />
-              <div className="scrub-win" style={{ left: `${(w[0] / Math.max(1, len - 1)) * 100}%`, width: `${(Math.max(0.4, w[1] - w[0]) / Math.max(1, len - 1)) * 100}%` }}>
+              <div
+                className="scrub-shade"
+                style={{ right: 0, width: `${((len - 1 - w[1]) / Math.max(1, len - 1)) * 100}%` }}
+              />
+              <div
+                className="scrub-win"
+                style={{
+                  left: `${(w[0] / Math.max(1, len - 1)) * 100}%`,
+                  width: `${(Math.max(0.4, w[1] - w[0]) / Math.max(1, len - 1)) * 100}%`,
+                }}
+              >
                 <span className="scrub-grip a" />
                 <span className="scrub-grip b" />
               </div>
@@ -212,11 +358,26 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
           </div>
           <div className="scrub-scale">
             <span>{data.from}</span>
-            <span className="scrub-cov" title={`Whole scope since ${data.from}:\n${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}>
-              {!arcs ? "Map arcs show on wider screens" : !mapArcs ? `Arcs hidden · ${arcs.shown} bundles ready · ARCS › On map draws them` : arcs.shown ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}` : kinds.size ? "No placeable links in this window" : "Arcs off"}
-              {arcs && missed ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this window couldn't be placed` : ""}
+            <span
+              className="scrub-cov"
+              title={`Whole scope since ${data.from}:\n${unplaced}\n\nHQs: ${data.arcs.hq.source}, as of ${when(data.arcs.hq.asOf)}. ${data.arcs.hq.placed} of ${data.arcs.hq.total} index companies placed; the rest stay off the map.`}
+            >
+              {!arcs
+                ? "Map arcs show on wider screens"
+                : !mapArcs
+                  ? `Arcs hidden · ${arcs.shown} bundles ready · ARCS › On map draws them`
+                  : arcs.shown
+                    ? `${arcs.shown} arc bundles${arcs.hidden ? ` (top ${arcs.shown} of ${arcs.shown + arcs.hidden})` : ""} · ${arcs.links.toLocaleString("en-US")} links${arcs.local ? ` · ${arcs.local} same-place` : ""}`
+                    : kinds.size
+                      ? "No placeable links in this window"
+                      : "Arcs off"}
+              {arcs && missed
+                ? ` · ${missed.toLocaleString("en-US")} link${missed === 1 ? "" : "s"} in this window couldn't be placed`
+                : ""}
             </span>
-            <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}><IconLabel icon="feed">Feeds</IconLabel> <Icon name={feeds ? "chevron-down" : "chevron-right"} /></button>
+            <button className="scrub-feeds-btn" aria-expanded={feeds} onClick={() => setFeeds((v) => !v)}>
+              <IconLabel icon="feed">Feeds</IconLabel> <Icon name={feeds ? "chevron-down" : "chevron-right"} />
+            </button>
             <span>{data.to}</span>
           </div>
           {feeds ? (
@@ -225,26 +386,42 @@ export function Scrubber({ scope, data, loading, window: win, onWindow, kinds, o
                 <li key={k.id}>
                   <i style={{ background: LANE_COLOR[k.id] }} />
                   <b>{k.label}</b>
-                  <span>{k.source} · as of {k.asOf ? when(k.asOf) : "—"} · {k.total.toLocaleString("en-US")} events</span>
-                  <small>{k.latency}{k.note ? ` ${k.note}` : ""}{k.error ? ` · ${k.error}` : ""}</small>
+                  <span>
+                    {k.source} · as of {k.asOf ? when(k.asOf) : "—"} · {k.total.toLocaleString("en-US")} events
+                  </span>
+                  <small>
+                    {k.latency}
+                    {k.note ? ` ${k.note}` : ""}
+                    {k.error ? ` · ${k.error}` : ""}
+                  </small>
                 </li>
               ))}
               <li>
                 <i style={{ background: "transparent" }} />
                 <b>Arcs</b>
                 <span>{Object.values(data.arcs.sources).join(" · ")}</span>
-                <small>Bundled by origin and destination inside the window; at most {ARC_CAP} heaviest bundles drawn. Companies without an SEC HQ or ticker join stay unplaced.</small>
+                <small>
+                  Bundled by origin and destination inside the window; at most {ARC_CAP} heaviest bundles drawn.
+                  Companies without an SEC HQ or ticker join stay unplaced.
+                </small>
               </li>
             </ul>
           ) : null}
           {latest.length && data.scope.kind === "all" ? (
-            <p className="scrub-note">Latest contract awards in the window. Open a member or ticker to list its trades and hearings here.</p>
+            <p className="scrub-note">
+              Latest contract awards in the window. Open a member or ticker to list its trades and hearings here.
+            </p>
           ) : null}
           {latest.length ? (
             <ul className="scrub-events">
               {latest.map((e, i) => (
                 <li key={`${e.d}:${i}`}>
-                  <button disabled={!e.action && !e.link} onClick={() => (e.action ? onFollow(e.action) : e.link && window.open(e.link, "_blank", "noreferrer"))}>
+                  <button
+                    disabled={!e.action && !e.link}
+                    onClick={() =>
+                      e.action ? onFollow(e.action) : e.link && window.open(e.link, "_blank", "noreferrer")
+                    }
+                  >
                     <i style={{ background: LANE_COLOR[e.k] }} />
                     <time>{dayIso(start + e.d)}</time>
                     <span>{e.label}</span>

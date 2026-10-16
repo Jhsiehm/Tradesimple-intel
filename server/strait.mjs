@@ -10,7 +10,7 @@ export async function straitNews(db) {
   const hit = readCache(db, KEY.gdeltStrait);
   if (hit) return hit;
   const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
-  url.searchParams.set("query", "\"Taiwan Strait\" sourcelang:eng");
+  url.searchParams.set("query", '"Taiwan Strait" sourcelang:eng');
   url.searchParams.set("mode", "artlist");
   url.searchParams.set("maxrecords", "8");
   url.searchParams.set("format", "json");
@@ -28,24 +28,23 @@ export async function straitNews(db) {
     title: a.title,
     source: a.domain || a.sourcecountry || "",
     seen: a.seendate || "",
-    url: a.url
+    url: a.url,
   }));
   items.sort((a, b) => String(b.seen).localeCompare(String(a.seen)));
   const result = {
     ok: true,
     source: "GDELT",
     asOf: new Date().toISOString(),
-    items
+    items,
   };
   writeCache(db, KEY.gdeltStrait, result, 15 * 60 * 1000);
   return result;
 }
 
 async function rssNews(db) {
-  const xml = await fetchText(
-    "https://news.google.com/rss/search?q=Taiwan+Strait&hl=en-US&gl=US&ceid=US:en",
-    { headers: { "User-Agent": "TradeSimpleIntel/0.1" } }
-  );
+  const xml = await fetchText("https://news.google.com/rss/search?q=Taiwan+Strait&hl=en-US&gl=US&ceid=US:en", {
+    headers: { "User-Agent": "TradeSimpleIntel/0.1" },
+  });
   const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 8).map((match) => {
     const block = match[1];
     const title = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1]?.trim() || "";
@@ -66,19 +65,17 @@ export function aisSnapshot() {
       ok: false,
       missing: "AISSTREAM_API_KEY",
       source: "AISStream",
-      items: []
+      items: [],
     };
   }
   ensureAis(apiKey);
-  const items = [...ships.values()]
-    .sort((a, b) => String(b.seen).localeCompare(String(a.seen)))
-    .slice(0, 40);
+  const items = [...ships.values()].sort((a, b) => String(b.seen).localeCompare(String(a.seen))).slice(0, 40);
   return {
     ok: true,
     source: "AISStream",
     asOf: new Date().toISOString(),
     latency: "Positions update while the server holds the websocket.",
-    items
+    items,
   };
 }
 
@@ -87,11 +84,18 @@ function ensureAis(apiKey) {
   aisStarted = true;
   const ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
   ws.addEventListener("open", () => {
-    ws.send(JSON.stringify({
-      APIKey: apiKey,
-      BoundingBoxes: [[[BBOX.minLat, BBOX.minLon], [BBOX.maxLat, BBOX.maxLon]]],
-      FilterMessageTypes: ["PositionReport"]
-    }));
+    ws.send(
+      JSON.stringify({
+        APIKey: apiKey,
+        BoundingBoxes: [
+          [
+            [BBOX.minLat, BBOX.minLon],
+            [BBOX.maxLat, BBOX.maxLon],
+          ],
+        ],
+        FilterMessageTypes: ["PositionReport"],
+      }),
+    );
   });
   ws.addEventListener("message", async (ev) => {
     try {
@@ -109,7 +113,7 @@ function ensureAis(apiKey) {
         mmsi: meta.MMSI || "",
         lat,
         lon,
-        seen: meta.time_utc || new Date().toISOString()
+        seen: meta.time_utc || new Date().toISOString(),
       });
       if (ships.size > 80) {
         const first = ships.keys().next().value;

@@ -68,12 +68,23 @@ export function useGlobals() {
   const [error, setError] = useState("");
   useEffect(() => {
     let cancel = false;
-    const load = () => api<Board>("/api/markets/globals")
-      .then((res) => { if (!cancel) { setBoard(res); setError(""); } })
-      .catch((err: Error) => { if (!cancel) setError(err.message); });
+    const load = () =>
+      api<Board>("/api/markets/globals")
+        .then((res) => {
+          if (!cancel) {
+            setBoard(res);
+            setError("");
+          }
+        })
+        .catch((err: Error) => {
+          if (!cancel) setError(err.message);
+        });
     void load();
     const timer = window.setInterval(load, 2 * 60 * 1000);
-    return () => { cancel = true; window.clearInterval(timer); };
+    return () => {
+      cancel = true;
+      window.clearInterval(timer);
+    };
   }, []);
   return { board, error };
 }
@@ -86,25 +97,56 @@ export function GlobalBoard({ onOpen, compact }: { onOpen: (symbol: string) => v
   const indices = (
     <table>
       <thead>
-        <tr><th>Index</th><th>Market</th><th>Last</th><th>Chg%</th><th>Ccy</th><th>Session</th><th>Age</th>{compact ? null : <th>US ETF</th>}</tr>
+        <tr>
+          <th>Index</th>
+          <th>Market</th>
+          <th>Last</th>
+          <th>Chg%</th>
+          <th>Ccy</th>
+          <th>Session</th>
+          <th>Age</th>
+          {compact ? null : <th>US ETF</th>}
+        </tr>
       </thead>
       {GROUPS.map((group) => {
         const rows = (board?.indices || []).filter((r) => r.group === group);
         if (!rows.length) return null;
         return (
           <tbody key={group}>
-            <tr className="group-row"><td colSpan={compact ? 7 : 8}>{group}</td></tr>
+            <tr className="group-row">
+              <td colSpan={compact ? 7 : 8}>{group}</td>
+            </tr>
             {rows.map((r) => (
-              <tr key={r.symbol} onClick={() => onOpen(r.symbol)} title={`${r.symbol} · ${r.exchange || ""} · as of ${when(r.asOf)} UTC`}>
+              <tr
+                key={r.symbol}
+                onClick={() => onOpen(r.symbol)}
+                title={`${r.symbol} · ${r.exchange || ""} · as of ${when(r.asOf)} UTC`}
+              >
                 <td className="board-name">{r.name}</td>
                 <td className="board-name">{r.country}</td>
                 <td>{r.ok ? num(r.last, 2) : "—"}</td>
                 <td className={tone(r.changePct)}>{signed(r.changePct, 2, "%")}</td>
                 <td>{r.currency || "—"}</td>
-                <td><Session open={r.open} /></td>
+                <td>
+                  <Session open={r.open} />
+                </td>
                 <td>{age(r.asOf)}</td>
                 {compact ? null : (
-                  <td>{r.etf ? <button className="linkish" onClick={(e) => { e.stopPropagation(); onOpen(r.etf!); }}>{r.etf}</button> : "—"}</td>
+                  <td>
+                    {r.etf ? (
+                      <button
+                        className="linkish"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpen(r.etf!);
+                        }}
+                      >
+                        {r.etf}
+                      </button>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 )}
               </tr>
             ))}
@@ -117,7 +159,18 @@ export function GlobalBoard({ onOpen, compact }: { onOpen: (symbol: string) => v
   const arb = (
     <table>
       <thead>
-        <tr><th>Name</th><th>ADR</th><th>Last</th><th>Local line</th><th>Local</th><th>FX</th><th>Implied</th><th>Prem</th><th>Sessions</th><th>Gap</th></tr>
+        <tr>
+          <th>Name</th>
+          <th>ADR</th>
+          <th>Last</th>
+          <th>Local line</th>
+          <th>Local</th>
+          <th>FX</th>
+          <th>Implied</th>
+          <th>Prem</th>
+          <th>Sessions</th>
+          <th>Gap</th>
+        </tr>
       </thead>
       <tbody>
         {(board?.adrs || []).map((a) => (
@@ -125,12 +178,34 @@ export function GlobalBoard({ onOpen, compact }: { onOpen: (symbol: string) => v
             <td className="board-name">{a.name}</td>
             <td>{a.adr}</td>
             <td>{num(a.adrLast, 2)}</td>
-            <td><button className="linkish" onClick={(e) => { e.stopPropagation(); onOpen(a.local); }}>{a.local}</button></td>
+            <td>
+              <button
+                className="linkish"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen(a.local);
+                }}
+              >
+                {a.local}
+              </button>
+            </td>
             <td>{a.localLast == null ? "—" : `${num(a.localLast, 2)} ${a.localCurrency || ""}`}</td>
             <td>{a.fx == null ? "—" : `${a.fxPair} ${num(a.fx, 3)}`}</td>
             <td>{num(a.implied ?? null, 2)}</td>
-            <td className={a.premium == null ? "" : Math.abs(a.premium) >= 2 ? "stale" : tone(a.premium)}>{signed(a.premium ?? null, 2, "%")}</td>
-            <td>{a.adrOpen && a.localOpen ? <span className="sess on">both open</span> : a.adrOpen ? <span className="sess">local closed</span> : a.localOpen ? <span className="sess">ADR closed</span> : <span className="sess">both closed</span>}</td>
+            <td className={a.premium == null ? "" : Math.abs(a.premium) >= 2 ? "stale" : tone(a.premium)}>
+              {signed(a.premium ?? null, 2, "%")}
+            </td>
+            <td>
+              {a.adrOpen && a.localOpen ? (
+                <span className="sess on">both open</span>
+              ) : a.adrOpen ? (
+                <span className="sess">local closed</span>
+              ) : a.localOpen ? (
+                <span className="sess">ADR closed</span>
+              ) : (
+                <span className="sess">both closed</span>
+              )}
+            </td>
             <td>{a.gapHours == null ? "—" : `${a.gapHours.toFixed(1)}h`}</td>
           </tr>
         ))}
@@ -140,7 +215,16 @@ export function GlobalBoard({ onOpen, compact }: { onOpen: (symbol: string) => v
 
   const etfs = (
     <table>
-      <thead><tr><th>ETF</th><th>Name</th><th>Tracks</th><th>Last</th><th>Chg%</th><th>Age</th></tr></thead>
+      <thead>
+        <tr>
+          <th>ETF</th>
+          <th>Name</th>
+          <th>Tracks</th>
+          <th>Last</th>
+          <th>Chg%</th>
+          <th>Age</th>
+        </tr>
+      </thead>
       <tbody>
         {(board?.etfs || []).map((r) => (
           <tr key={r.symbol} onClick={() => onOpen(r.symbol)}>
@@ -161,16 +245,35 @@ export function GlobalBoard({ onOpen, compact }: { onOpen: (symbol: string) => v
       <header className="board-head">
         <div className="board-title">
           <strong>GLOBAL</strong>
-          <span>{board ? `${board.indices.length} indices · ${openCount} in session · ${board.adrs.length} ADR pairs · ${board.etfs.length} ETFs` : "Loading exchanges…"}</span>
+          <span>
+            {board
+              ? `${board.indices.length} indices · ${openCount} in session · ${board.adrs.length} ADR pairs · ${board.etfs.length} ETFs`
+              : "Loading exchanges…"}
+          </span>
           <span className="scope toggle">
-            <button aria-pressed={tab === "indices"} onClick={() => setTab("indices")}>Indices</button>
-            <button aria-pressed={tab === "arb"} onClick={() => setTab("arb")}>ADR arb</button>
-            <button aria-pressed={tab === "etfs"} onClick={() => setTab("etfs")}>ETFs & funds</button>
+            <button aria-pressed={tab === "indices"} onClick={() => setTab("indices")}>
+              Indices
+            </button>
+            <button aria-pressed={tab === "arb"} onClick={() => setTab("arb")}>
+              ADR arb
+            </button>
+            <button aria-pressed={tab === "etfs"} onClick={() => setTab("etfs")}>
+              ETFs & funds
+            </button>
           </span>
         </div>
-        <p className="arb-note"><em>NOT FRESH ENOUGH FOR ARBITRAGE</em> {board?.arbNote || "Delayed snapshots, not an execution feed."}</p>
-        {tab === "arb" && board ? <p><em>MATH</em> {board.ratioNote}</p> : null}
-        <p><em>SOURCE</em> {board?.source || "Yahoo Finance"} · <em>AS OF</em> {when(board?.asOf)} UTC · <em>NOTE</em> {board?.latency || "—"}</p>
+        <p className="arb-note">
+          <em>NOT FRESH ENOUGH FOR ARBITRAGE</em> {board?.arbNote || "Delayed snapshots, not an execution feed."}
+        </p>
+        {tab === "arb" && board ? (
+          <p>
+            <em>MATH</em> {board.ratioNote}
+          </p>
+        ) : null}
+        <p>
+          <em>SOURCE</em> {board?.source || "Yahoo Finance"} · <em>AS OF</em> {when(board?.asOf)} UTC · <em>NOTE</em>{" "}
+          {board?.latency || "—"}
+        </p>
       </header>
       {error ? <p className="tape-empty">{error}</p> : null}
       <div className="board-scroll">{tab === "indices" ? indices : tab === "arb" ? arb : etfs}</div>

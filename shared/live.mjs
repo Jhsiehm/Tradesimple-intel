@@ -16,12 +16,69 @@ const DAY_MS = 24 * HOUR;
  * upstream says when a record became public: "time" (to the second), "day" (a date only) or "none" (no publish date).
  */
 export const LIVE_CHECKS = [
-  { id: "sec", label: "SEC filings", covers: ["insiders", "filings", "stakes"], everyMs: 30_000, maxMs: 15 * MIN, precision: "time", source: "SEC EDGAR latest-filings Atom (Form 4, 8-K, Schedule 13D/13G), plus an issuer submissions sweep every 30 min", publishes: "Continuously on business days, 6 AM–10 PM ET; the acceptance time is to the second, and the Atom feed lists a filing about 25–60 s after acceptance." },
-  { id: "whales", label: "13F funds", covers: ["whales"], everyMs: 10 * MIN, maxMs: 2 * HOUR, precision: "time", source: "SEC EDGAR 13F-HR information tables for the funds in data/whales.json", publishes: "Quarterly, due 45 days after quarter end, so holdings are 45–135 days old when they appear." },
-  { id: "congress", label: "House + Senate", covers: ["congress"], everyMs: 15 * MIN, maxMs: 2 * HOUR, precision: "day", source: "House Clerk PTR index + PDFs · Senate eFD PTRs", publishes: "In batches on business days with a filed date only; trades may be filed up to 45 days after the trade." },
-  { id: "contracts", label: "Gov contracts", covers: ["contracts"], everyMs: HOUR, maxMs: 6 * HOUR, precision: "none", source: "USAspending.gov prime contract transactions (parents in data/tickers.json)", publishes: "No publish time per action; civilian actions post within days, DoD actions about 90 days after award." },
-  { id: "lobbying", label: "Lobbying", covers: ["lobbying"], everyMs: HOUR, maxMs: 6 * HOUR, precision: "day", source: "LDA.gov filings API (clients in data/tickers.json)", publishes: "Quarterly LD-2 reports, due 20 days after quarter end; posted date only.", needs: "LDA_API_KEY" },
-  { id: "news", label: "News", covers: ["news"], everyMs: 3 * MIN, maxMs: 30 * MIN, precision: "time", source: "Yahoo Finance per-ticker headline RSS", publishes: "Continuously; Yahoo's pubDate is to the second and its ticker tagging is Yahoo's own." }
+  {
+    id: "sec",
+    label: "SEC filings",
+    covers: ["insiders", "filings", "stakes"],
+    everyMs: 30_000,
+    maxMs: 15 * MIN,
+    precision: "time",
+    source:
+      "SEC EDGAR latest-filings Atom (Form 4, 8-K, Schedule 13D/13G), plus an issuer submissions sweep every 30 min",
+    publishes:
+      "Continuously on business days, 6 AM–10 PM ET; the acceptance time is to the second, and the Atom feed lists a filing about 25–60 s after acceptance.",
+  },
+  {
+    id: "whales",
+    label: "13F funds",
+    covers: ["whales"],
+    everyMs: 10 * MIN,
+    maxMs: 2 * HOUR,
+    precision: "time",
+    source: "SEC EDGAR 13F-HR information tables for the funds in data/whales.json",
+    publishes: "Quarterly, due 45 days after quarter end, so holdings are 45–135 days old when they appear.",
+  },
+  {
+    id: "congress",
+    label: "House + Senate",
+    covers: ["congress"],
+    everyMs: 15 * MIN,
+    maxMs: 2 * HOUR,
+    precision: "day",
+    source: "House Clerk PTR index + PDFs · Senate eFD PTRs",
+    publishes: "In batches on business days with a filed date only; trades may be filed up to 45 days after the trade.",
+  },
+  {
+    id: "contracts",
+    label: "Gov contracts",
+    covers: ["contracts"],
+    everyMs: HOUR,
+    maxMs: 6 * HOUR,
+    precision: "none",
+    source: "USAspending.gov prime contract transactions (parents in data/tickers.json)",
+    publishes: "No publish time per action; civilian actions post within days, DoD actions about 90 days after award.",
+  },
+  {
+    id: "lobbying",
+    label: "Lobbying",
+    covers: ["lobbying"],
+    everyMs: HOUR,
+    maxMs: 6 * HOUR,
+    precision: "day",
+    source: "LDA.gov filings API (clients in data/tickers.json)",
+    publishes: "Quarterly LD-2 reports, due 20 days after quarter end; posted date only.",
+    needs: "LDA_API_KEY",
+  },
+  {
+    id: "news",
+    label: "News",
+    covers: ["news"],
+    everyMs: 3 * MIN,
+    maxMs: 30 * MIN,
+    precision: "time",
+    source: "Yahoo Finance per-ticker headline RSS",
+    publishes: "Continuously; Yahoo's pubDate is to the second and its ticker tagging is Yahoo's own.",
+  },
 ];
 
 const BY_ID = new Map(LIVE_CHECKS.map((c) => [c.id, c]));
@@ -64,7 +121,12 @@ export function durationLabel(ms) {
 
 /** New York calendar date of an instant. */
 function nyDay(ms) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ms));
 }
 
 /**
@@ -73,7 +135,8 @@ function nyDay(ms) {
  */
 export function detectionLag(ev, detectedAt, backfill = false) {
   const det = msOf(detectedAt);
-  if (backfill) return { ms: null, days: null, precision: "backfill", label: "already on file when the ticker was added" };
+  if (backfill)
+    return { ms: null, days: null, precision: "backfill", label: "already on file when the ticker was added" };
   if (!Number.isFinite(det)) return { ms: null, days: null, precision: "none", label: "" };
   const pub = ev.publishedAt;
   if (pub && hasTime(pub) && Number.isFinite(msOf(pub))) {
@@ -82,11 +145,24 @@ export function detectionLag(ev, detectedAt, backfill = false) {
   }
   if (pub && Number.isFinite(msOf(pub))) {
     const days = Math.round((msOf(nyDay(det)) - msOf(String(pub).slice(0, 10))) / DAY_MS);
-    return { ms: null, days, precision: "day", label: days <= 0 ? "detected the day it was dated (the source gives a date, not a time)" : `detected ${days}d after its posted date (the source gives a date, not a time)` };
+    return {
+      ms: null,
+      days,
+      precision: "day",
+      label:
+        days <= 0
+          ? "detected the day it was dated (the source gives a date, not a time)"
+          : `detected ${days}d after its posted date (the source gives a date, not a time)`,
+    };
   }
   if (ev.eventAt && Number.isFinite(msOf(ev.eventAt))) {
     const days = Math.round((msOf(nyDay(det)) - msOf(String(ev.eventAt).slice(0, 10))) / DAY_MS);
-    return { ms: null, days, precision: "none", label: `no publish date from the source; detected ${days}d after the event date` };
+    return {
+      ms: null,
+      days,
+      precision: "none",
+      label: `no publish date from the source; detected ${days}d after the event date`,
+    };
   }
   return { ms: null, days: null, precision: "none", label: "no publish date from the source" };
 }
@@ -112,7 +188,7 @@ const LAG_WORDS = {
   whales: "after quarter end",
   stakes: "after the event",
   filings: "after the event",
-  lobbying: "after the period ended"
+  lobbying: "after the period ended",
 };
 
 /** "filed 12d after the trade", or "" when the source has no separate event and publish dates. */
@@ -124,25 +200,57 @@ export function filingLagLabel(ev) {
   return `${verb} ${ev.lag}d ${LAG_WORDS[ev.source]}`;
 }
 
-const KIND = { congress: "symbol-trade", insiders: "form4", whales: "whale", stakes: "stake", contracts: "contract", lobbying: "lobbying", filings: "8-k", news: "news" };
-const PREFIX = { congress: "", insiders: "Form 4", whales: "13F", stakes: "", contracts: "Contract", lobbying: "Lobbying", filings: "", news: "News" };
+const KIND = {
+  congress: "symbol-trade",
+  insiders: "form4",
+  whales: "whale",
+  stakes: "stake",
+  contracts: "contract",
+  lobbying: "lobbying",
+  filings: "8-k",
+  news: "news",
+};
+const PREFIX = {
+  congress: "",
+  insiders: "Form 4",
+  whales: "13F",
+  stakes: "",
+  contracts: "Contract",
+  lobbying: "Lobbying",
+  filings: "",
+  news: "News",
+};
 const HONOR = { senate: "Sen.", house: "Rep." };
 
 function severityOf(ev, kind) {
   if (ev.simulated) return ev.severity || "elevated";
   switch (kind) {
-    case "symbol-trade": return alertSeverity({ kind, lag: ev.lag, amountLow: ev.amount, late: ev.late, buy: ev.side === "buy" });
-    case "form4": return alertSeverity({ kind, value: ev.amount, planned: ev.planned, buy: (ev.buys || 0) > 0 });
-    case "lobbying": return alertSeverity({ kind, amount: ev.amount });
-    case "news": return "routine";
-    default: return alertSeverity({ kind, amount: ev.amount, value: ev.amount, activist: ev.activist, change: ev.change, items: ev.items });
+    case "symbol-trade":
+      return alertSeverity({ kind, lag: ev.lag, amountLow: ev.amount, late: ev.late, buy: ev.side === "buy" });
+    case "form4":
+      return alertSeverity({ kind, value: ev.amount, planned: ev.planned, buy: (ev.buys || 0) > 0 });
+    case "lobbying":
+      return alertSeverity({ kind, amount: ev.amount });
+    case "news":
+      return "routine";
+    default:
+      return alertSeverity({
+        kind,
+        amount: ev.amount,
+        value: ev.amount,
+        activist: ev.activist,
+        change: ev.change,
+        items: ev.items,
+      });
   }
 }
 
 function titleOf(ev, kind) {
   if (kind === "symbol-trade") {
     const verb = ev.side === "buy" ? "bought" : ev.side === "sell" ? "sold" : "traded";
-    return `${HONOR[ev.chamber] ? `${HONOR[ev.chamber]} ` : ""}${ev.who} ${verb} ${amountShort(ev.amountLabel)} ${ev.symbol}`.replace(/\s+/g, " ").trim();
+    return `${HONOR[ev.chamber] ? `${HONOR[ev.chamber]} ` : ""}${ev.who} ${verb} ${amountShort(ev.amountLabel)} ${ev.symbol}`
+      .replace(/\s+/g, " ")
+      .trim();
   }
   if (kind === "8-k" || kind === "stake") return `${ev.symbol} · ${ev.title}`;
   return `${PREFIX[ev.source] ? `${PREFIX[ev.source]} · ` : ""}${ev.symbol} · ${ev.title}`;
@@ -184,14 +292,18 @@ export function liveAlertRow(ev, { detectedAt, backfill = false, seq = 0 } = {})
       detection: det.label,
       precision: det.precision,
       backfill,
-      simulated: Boolean(ev.simulated)
-    }
+      simulated: Boolean(ev.simulated),
+    },
   };
 }
 
 /** Lower-cased words of a headline, first 80 characters: two wires carrying one story collapse to one key. */
 export function headlineKey(title) {
-  return String(title || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().slice(0, 80);
+  return String(title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
 /** One item per headline key, earliest publish time kept (a later re-post is not news). */

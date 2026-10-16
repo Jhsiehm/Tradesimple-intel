@@ -1,11 +1,33 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { CATEGORY_IDS, neighborhood, type CategoryId, type Graph, type RelEdge, type RelNode, type Theory } from "../../shared/relations.mjs";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  CATEGORY_IDS,
+  neighborhood,
+  type CategoryId,
+  type Graph,
+  type RelEdge,
+  type RelNode,
+  type Theory,
+} from "../../shared/relations.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK } from "./palette";
 import { edgeSel, theoryId } from "./dossier";
 import { MAX_K, MIN_K, drawIcon, radius, segDist, shape } from "./canvasDraw";
 import type { Pt } from "./layout";
 
-export type CanvasHandle = { fit: () => void; zoom: (f: number) => void; center: () => Pt; focus: (id: string) => void };
+export type CanvasHandle = {
+  fit: () => void;
+  zoom: (f: number) => void;
+  center: () => Pt;
+  focus: (id: string) => void;
+};
 
 type Props = {
   graph: Graph;
@@ -25,14 +47,17 @@ type Props = {
 };
 
 type View = { x: number; y: number; k: number };
-type Hit = { kind: "node"; node: RelNode } | { kind: "edge"; edge: RelEdge } | { kind: "theory"; theory: Theory } | null;
+type Hit =
+  | { kind: "node"; node: RelNode }
+  | { kind: "edge"; edge: RelEdge }
+  | { kind: "theory"; theory: Theory }
+  | null;
 type Gesture =
   | { mode: "pan"; sx: number; sy: number; vx: number; vy: number; moved: boolean }
   | { mode: "node"; id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean; touch: boolean }
   | { mode: "link"; id: string; moved: boolean; sx: number; sy: number }
   | { mode: "pinch"; d: number; cx: number; cy: number; view: View }
   | null;
-
 
 /** Relationship canvas. Draws on demand; your theories animate only while any are on screen. */
 export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(props, ref) {
@@ -89,7 +114,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
 
   const posOf = (n: RelNode): Pt => drag.current.get(n.id) || n;
 
-  const toWorld = (sx: number, sy: number): Pt => ({ x: (sx - view.current.x) / view.current.k, y: (sy - view.current.y) / view.current.k });
+  const toWorld = (sx: number, sy: number): Pt => ({
+    x: (sx - view.current.x) / view.current.k,
+    y: (sy - view.current.y) / view.current.k,
+  });
 
   const hit = (sx: number, sy: number): Hit => {
     const w = toWorld(sx, sy);
@@ -97,7 +125,8 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     for (let i = scene.nodes.length - 1; i >= 0; i -= 1) {
       const n = scene.nodes[i];
       const p = posOf(n);
-      if (Math.hypot(w.x - p.x, w.y - p.y) <= radius(n, scene.degree.get(n.id) || 0) + 4 / k) return { kind: "node", node: n };
+      if (Math.hypot(w.x - p.x, w.y - p.y) <= radius(n, scene.degree.get(n.id) || 0) + 4 / k)
+        return { kind: "node", node: n };
     }
     const tol = 6 / k;
     for (const t of scene.theories) {
@@ -111,7 +140,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       const a = posOf(scene.byId.get(e.from)!);
       const b = posOf(scene.byId.get(e.to)!);
       const d = segDist(w.x, w.y, a.x, a.y, b.x, b.y);
-      if (d < bd) { bd = d; best = e; }
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
     }
     return best ? { kind: "edge", edge: best } : null;
   };
@@ -119,11 +151,26 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   function fit() {
     const list = scene.nodes;
     const { w, h } = size.current;
-    if (!list.length) { view.current = { x: w / 2, y: h / 2, k: 1 }; dirty.current = true; return; }
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const n of list) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); }
+    if (!list.length) {
+      view.current = { x: w / 2, y: h / 2, k: 1 };
+      dirty.current = true;
+      return;
+    }
+    let x0 = Infinity,
+      y0 = Infinity,
+      x1 = -Infinity,
+      y1 = -Infinity;
+    for (const n of list) {
+      x0 = Math.min(x0, n.x);
+      y0 = Math.min(y0, n.y);
+      x1 = Math.max(x1, n.x);
+      y1 = Math.max(y1, n.y);
+    }
     const pad = Math.min(70, Math.min(w, h) * 0.1);
-    const k = Math.max(MIN_K, Math.min(1.6, Math.min((w - pad * 2) / Math.max(1, x1 - x0), (h - pad * 2) / Math.max(1, y1 - y0))));
+    const k = Math.max(
+      MIN_K,
+      Math.min(1.6, Math.min((w - pad * 2) / Math.max(1, x1 - x0), (h - pad * 2) / Math.max(1, y1 - y0))),
+    );
     view.current = { k, x: w / 2 - ((x0 + x1) / 2) * k, y: h / 2 - ((y0 + y1) / 2) * k };
     dirty.current = true;
   }
@@ -145,17 +192,26 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       if (!n) return;
       const { w, h } = size.current;
       const s = { x: n.x * view.current.k + view.current.x, y: n.y * view.current.k + view.current.y };
-      if (s.x < 40 || s.y < 40 || s.x > w - 40 || s.y > h - 40) view.current = { ...view.current, x: w / 2 - n.x * view.current.k, y: h / 2 - n.y * view.current.k };
+      if (s.x < 40 || s.y < 40 || s.x > w - 40 || s.y > h - 40)
+        view.current = { ...view.current, x: w / 2 - n.x * view.current.k, y: h / 2 - n.y * view.current.k };
       dirty.current = true;
-    }
+    },
   }));
 
-  useEffect(() => { drag.current = new Map(); dirty.current = true; }, [scene]);
-  useEffect(() => { dirty.current = true; }, [selectedId, theoryMode, pendingFrom]);
+  useEffect(() => {
+    drag.current = new Map();
+    dirty.current = true;
+  }, [scene]);
+  useEffect(() => {
+    dirty.current = true;
+  }, [selectedId, theoryMode, pendingFrom]);
 
   useEffect(() => {
     fitRef.current = fit;
-    if (!fitted.current && scene.nodes.length && size.current.w > 1 && size.current.h > 1) { fitted.current = true; fit(); }
+    if (!fitted.current && scene.nodes.length && size.current.w > 1 && size.current.h > 1) {
+      fitted.current = true;
+      fit();
+    }
   });
 
   useEffect(() => {
@@ -184,7 +240,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top);
     };
     cv.addEventListener("wheel", wheel, { passive: false });
-    return () => { ro.disconnect(); cv.removeEventListener("wheel", wheel); };
+    return () => {
+      ro.disconnect();
+      cv.removeEventListener("wheel", wheel);
+    };
   }, []);
 
   useEffect(() => {
@@ -218,7 +277,8 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     const hoverEdge = hover.current?.kind === "edge" ? hover.current.edge.id : null;
     const selEdge = sel?.startsWith("edge:") ? sel.slice(5) : null;
     const selTheory = sel?.startsWith("theory:") ? sel.slice(7) : null;
-    const lit = (e: { from: string; to: string }) => !focus || (focus.has(e.from) && focus.has(e.to) && (e.from === [...focus][0] || e.to === [...focus][0]));
+    const lit = (e: { from: string; to: string }) =>
+      !focus || (focus.has(e.from) && focus.has(e.to) && (e.from === [...focus][0] || e.to === [...focus][0]));
     const hubId = focus ? [...focus][0] : null;
 
     // Data edges: one path per category and emphasis, so 1,000 edges are a dozen strokes.
@@ -270,19 +330,27 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       ctx.strokeStyle = THEORY_LOOK.color;
       ctx.setLineDash([]);
       ctx.lineWidth = (th.id === selTheory ? 9 : 6) / k;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
       ctx.globalAlpha = on ? 1 : 0.2;
       ctx.lineWidth = 2.2 / k;
       ctx.setLineDash(THEORY_LOOK.dash.map((d) => d / k));
       ctx.lineDashOffset = march / k;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
       ctx.lineDashOffset = 0;
       const mx = (a.x + b.x) / 2;
       const my = (a.y + b.y) / 2;
       const r = 9 / k;
       ctx.setLineDash([]);
       ctx.fillStyle = PANEL;
-      ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.fill();
       ctx.lineWidth = 1.5 / k;
       ctx.stroke();
       drawIcon(ctx, "theory", mx, my, 12 / k, THEORY_LOOK.color);
@@ -298,7 +366,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       ctx.strokeStyle = THEORY_LOOK.color;
       ctx.lineWidth = 2 / k;
       ctx.setLineDash(THEORY_LOOK.dash.map((d) => d / k));
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
     }
     ctx.setLineDash([]);
 
@@ -309,7 +380,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     ctx.textBaseline = "top";
     for (const n of scene.nodes) {
       const p = posOf(n);
-      if ((p.x * k + x < -60) || (p.y * k + y < -60) || (p.x * k + x > w + 60) || (p.y * k + y > h + 60)) continue;
+      if (p.x * k + x < -60 || p.y * k + y < -60 || p.x * k + x > w + 60 || p.y * k + y > h + 60) continue;
       const look = NODE_LOOK[n.type];
       const r = radius(n, scene.degree.get(n.id) || 0);
       const on = !focus || focus.has(n.id);
@@ -332,7 +403,9 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       drawIcon(ctx, look.icon, p.x, p.y, Math.min(r * 1.2, 16), look.color);
       if (n.pinned && !n.user) {
         ctx.fillStyle = look.color;
-        ctx.beginPath(); ctx.arc(p.x + r * 0.8, p.y - r * 0.8, 2.2 / k, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x + r * 0.8, p.y - r * 0.8, 2.2 / k, 0, Math.PI * 2);
+        ctx.fill();
       }
       if (labels || picked || (focus && focus.has(n.id))) {
         const text = n.label.length > 28 ? `${n.label.slice(0, 27)}…` : n.label;
@@ -373,9 +446,13 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   function showTip(h: Hit, sx: number, sy: number) {
     const el = tip.current;
     if (!el) return;
-    if (!h || gesture.current) { el.hidden = true; return; }
+    if (!h || gesture.current) {
+      el.hidden = true;
+      return;
+    }
     let html = "";
-    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    const esc = (s: string) =>
+      s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
     if (h.kind === "node") {
       const look = NODE_LOOK[h.node.type];
       html = `<b style="color:${look.color}">${esc(look.label)}</b> ${esc(h.node.label)}${h.node.sub ? `<small>${esc(h.node.sub)}</small>` : ""}${h.node.user ? "<small>Added by you · not from a data source</small>" : ""}`;
@@ -404,11 +481,21 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   function down(e: ReactPointerEvent<HTMLCanvasElement>) {
     const p = local(e);
     pointers.current.set(e.pointerId, p);
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ok */ }
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ok */
+    }
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       if (press.current) window.clearTimeout(press.current);
-      gesture.current = { mode: "pinch", d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, view: { ...view.current } };
+      gesture.current = {
+        mode: "pinch",
+        d: Math.hypot(a.x - b.x, a.y - b.y),
+        cx: (a.x + b.x) / 2,
+        cy: (a.y + b.y) / 2,
+        view: { ...view.current },
+      };
       return;
     }
     const h = hit(p.x, p.y);
@@ -416,7 +503,16 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       if (live.current.theoryMode) gesture.current = { mode: "link", id: h.node.id, moved: false, sx: p.x, sy: p.y };
       else {
         const at = posOf(h.node);
-        gesture.current = { mode: "node", id: h.node.id, sx: p.x, sy: p.y, ox: at.x, oy: at.y, moved: false, touch: e.pointerType !== "mouse" };
+        gesture.current = {
+          mode: "node",
+          id: h.node.id,
+          sx: p.x,
+          sy: p.y,
+          ox: at.x,
+          oy: at.y,
+          moved: false,
+          touch: e.pointerType !== "mouse",
+        };
         if (e.pointerType !== "mouse") {
           press.current = window.setTimeout(() => {
             const g = gesture.current;
@@ -439,9 +535,18 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     const g = gesture.current;
     if (!g) {
       const h = hit(p.x, p.y);
-      const same = h?.kind === hover.current?.kind && (h?.kind === "node" ? h.node.id === (hover.current as { node: RelNode }).node.id : h?.kind === "edge" ? h.edge.id === (hover.current as { edge: RelEdge }).edge.id : h?.kind === "theory" ? h.theory.id === (hover.current as { theory: Theory }).theory.id : true);
+      const same =
+        h?.kind === hover.current?.kind &&
+        (h?.kind === "node"
+          ? h.node.id === (hover.current as { node: RelNode }).node.id
+          : h?.kind === "edge"
+            ? h.edge.id === (hover.current as { edge: RelEdge }).edge.id
+            : h?.kind === "theory"
+              ? h.theory.id === (hover.current as { theory: Theory }).theory.id
+              : true);
       if (!same) setHover(h);
-      canvas.current!.style.cursor = h?.kind === "node" ? (live.current.theoryMode ? "crosshair" : "pointer") : h ? "help" : "grab";
+      canvas.current!.style.cursor =
+        h?.kind === "node" ? (live.current.theoryMode ? "crosshair" : "pointer") : h ? "help" : "grab";
       showTip(h, p.x, p.y);
       if (live.current.pendingFrom) dirty.current = true;
       return;
@@ -468,7 +573,8 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     if (g.mode === "pan") {
       view.current = { ...view.current, x: g.vx + p.x - g.sx, y: g.vy + p.y - g.sy };
       moved.current = true;
-    } else if (g.mode === "node") drag.current.set(g.id, { x: g.ox + (p.x - g.sx) / view.current.k, y: g.oy + (p.y - g.sy) / view.current.k });
+    } else if (g.mode === "node")
+      drag.current.set(g.id, { x: g.ox + (p.x - g.sx) / view.current.k, y: g.oy + (p.y - g.sy) / view.current.k });
     dirty.current = true;
   }
 
@@ -477,7 +583,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     pointers.current.delete(e.pointerId);
     if (press.current) window.clearTimeout(press.current);
     const g = gesture.current;
-    if (g?.mode === "pinch") { if (pointers.current.size === 0) gesture.current = null; return; }
+    if (g?.mode === "pinch") {
+      if (pointers.current.size === 0) gesture.current = null;
+      return;
+    }
     gesture.current = null;
     if (!g) return;
     const L = live.current;
@@ -507,8 +616,10 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
   function dbl(e: ReactMouseEvent<HTMLCanvasElement>) {
     const p = local(e);
     const h = hit(p.x, p.y);
-    if (h?.kind === "node") { live.current.onCloseMenu(); live.current.onExpand(h.node.id); }
-    else zoomAt(1.6, p.x, p.y);
+    if (h?.kind === "node") {
+      live.current.onCloseMenu();
+      live.current.onExpand(h.node.id);
+    } else zoomAt(1.6, p.x, p.y);
   }
 
   function key(e: ReactKeyboardEvent<HTMLCanvasElement>) {
@@ -522,21 +633,43 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       L.onSelect(id);
       const n = scene.byId.get(id)!;
       const s = { x: n.x * view.current.k + view.current.x, y: n.y * view.current.k + view.current.y };
-      if (s.x < 40 || s.y < 40 || s.x > size.current.w - 40 || s.y > size.current.h - 40) view.current = { ...view.current, x: size.current.w / 2 - n.x * view.current.k, y: size.current.h / 2 - n.y * view.current.k };
+      if (s.x < 40 || s.y < 40 || s.x > size.current.w - 40 || s.y > size.current.h - 40)
+        view.current = {
+          ...view.current,
+          x: size.current.w / 2 - n.x * view.current.k,
+          y: size.current.h / 2 - n.y * view.current.k,
+        };
       dirty.current = true;
       return;
     }
     const node = L.selectedId && scene.byId.get(L.selectedId);
-    if (e.key === "Enter" && node) { e.preventDefault(); L.onExpand(node.id); return; }
+    if (e.key === "Enter" && node) {
+      e.preventDefault();
+      L.onExpand(node.id);
+      return;
+    }
     if ((e.key === " " || e.key === "ContextMenu") && node) {
       e.preventDefault();
       L.onMenu(node.id, { x: node.x * view.current.k + view.current.x, y: node.y * view.current.k + view.current.y });
       return;
     }
-    if ((e.key === "Delete" || e.key === "Backspace") && node) { e.preventDefault(); L.onRemove(node.id); return; }
-    if (e.key === "+" || e.key === "=") { zoomAt(1.25, size.current.w / 2, size.current.h / 2); return; }
-    if (e.key === "-" || e.key === "_") { zoomAt(0.8, size.current.w / 2, size.current.h / 2); return; }
-    if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey) { fit(); return; }
+    if ((e.key === "Delete" || e.key === "Backspace") && node) {
+      e.preventDefault();
+      L.onRemove(node.id);
+      return;
+    }
+    if (e.key === "+" || e.key === "=") {
+      zoomAt(1.25, size.current.w / 2, size.current.h / 2);
+      return;
+    }
+    if (e.key === "-" || e.key === "_") {
+      zoomAt(0.8, size.current.w / 2, size.current.h / 2);
+      return;
+    }
+    if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey) {
+      fit();
+      return;
+    }
     L.onKey(e);
   }
 
@@ -551,14 +684,22 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
         onPointerMove={move}
         onPointerUp={up}
         onPointerCancel={up}
-        onPointerLeave={() => { if (!gesture.current) { setHover(null); showTip(null, 0, 0); } }}
+        onPointerLeave={() => {
+          if (!gesture.current) {
+            setHover(null);
+            showTip(null, 0, 0);
+          }
+        }}
         onDoubleClick={dbl}
         onKeyDown={key}
         onContextMenu={(e) => {
           e.preventDefault();
           const p = local(e);
           const h = hit(p.x, p.y);
-          if (h?.kind === "node") { live.current.onSelect(h.node.id); live.current.onMenu(h.node.id, p); }
+          if (h?.kind === "node") {
+            live.current.onSelect(h.node.id);
+            live.current.onMenu(h.node.id, p);
+          }
         }}
       />
       <div ref={tip} className="relmap-tip" hidden />

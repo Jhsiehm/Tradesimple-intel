@@ -42,8 +42,10 @@ export type DistrictLayer = "sites" | "hq";
 
 type Seat = { code: string; geoid: string; lon: number; lat: number; zoom: number };
 
-const SOURCE = "Curated HQ, plant, and regulation sites · Census 119th Congress boundaries · congress-legislators roster";
-const HQ_FALLBACK = "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
+const SOURCE =
+  "Curated HQ, plant, and regulation sites · Census 119th Congress boundaries · congress-legislators roster";
+const HQ_FALLBACK =
+  "SEC EDGAR submissions (business address) · US Census Geocoder, OpenStreetMap Nominatim fallback · Census 119th Congressional Districts";
 const POSTAL_TO_NAME = Object.fromEntries(Object.entries(STATES).map(([postal, s]) => [postal, s.name]));
 const delegate = (state: string) => Boolean(STATES[state]?.delegate);
 
@@ -83,10 +85,17 @@ export function useDistricts(query: string, selectedId: string | null, roster: R
 
   useEffect(() => {
     if (!hqSymbol || !hqMeta || hqs.some((h) => h.symbol === hqSymbol) || extra?.symbol === hqSymbol) return;
-    api<{ ok: boolean; item?: Hq }>(`/api/hq/${hqSymbol}`).then((res) => { if (res.item) setExtra(res.item); }).catch(() => null);
+    api<{ ok: boolean; item?: Hq }>(`/api/hq/${hqSymbol}`)
+      .then((res) => {
+        if (res.item) setExtra(res.item);
+      })
+      .catch(() => null);
   }, [hqSymbol, hqMeta, hqs, extra]);
 
-  const allHq = useMemo(() => (extra && !hqs.some((h) => h.symbol === extra.symbol) ? [...hqs, extra] : hqs), [hqs, extra]);
+  const allHq = useMemo(
+    () => (extra && !hqs.some((h) => h.symbol === extra.symbol) ? [...hqs, extra] : hqs),
+    [hqs, extra],
+  );
   const hq = hqSymbol ? allHq.find((h) => h.symbol === hqSymbol) || null : null;
   const site = sites.find((s) => s.id === selectedId) || null;
 
@@ -96,7 +105,10 @@ export function useDistricts(query: string, selectedId: string | null, roster: R
     const [lon, lat, span] = feature ? middle(feature.geometry) : [0, 0, 1];
     const zoom = Math.min(8, Math.max(4, Math.log2(360 / span) - 1));
     if (site) return { code: site.district, geoid: id, lon: site.lon, lat: site.lat, zoom };
-    if (hq) return hq.district && hq.lat != null && hq.lon != null ? { code: hq.district, geoid: id, lon: hq.lon, lat: hq.lat, zoom } : null;
+    if (hq)
+      return hq.district && hq.lat != null && hq.lon != null
+        ? { code: hq.district, geoid: id, lon: hq.lon, lat: hq.lat, zoom }
+        : null;
     const code = feature ? districtCode(id) : "";
     return code ? { code, geoid: id, lon, lat, zoom } : null;
   }, [site, hq, selectedId, districts]);
@@ -119,7 +131,9 @@ export function useDistricts(query: string, selectedId: string | null, roster: R
         .map((h) => ({
           id: `hq:${h.symbol}`,
           title: `${h.symbol} · ${h.name}`,
-          meta: h.foreign ? `${h.city}, ${h.country || h.state} · outside the US` : `${h.district || `${h.state} · no district`} · ${titleCase(h.city)}, ${h.state}`
+          meta: h.foreign
+            ? `${h.city}, ${h.country || h.state} · outside the US`
+            : `${h.district || `${h.state} · no district`} · ${titleCase(h.city)}, ${h.state}`,
         }));
     }
     return sites
@@ -144,10 +158,10 @@ export function useDistricts(query: string, selectedId: string | null, roster: R
           properties: {
             ...f.properties,
             id: f.properties?.CD119 === "ZZ" ? "" : id,
-            vote: id === focus ? "Focus" : focus && id.startsWith(statePrefix) ? "State" : base
-          }
+            vote: id === focus ? "Focus" : focus && id.startsWith(statePrefix) ? "State" : base,
+          },
         };
-      })
+      }),
     };
   }, [districts, sites, seat, layer, hqCount]);
 
@@ -160,44 +174,64 @@ export function useDistricts(query: string, selectedId: string | null, roster: R
         label: h.symbol,
         size: h.symbol === hq?.symbol ? 7 : 3.5,
         color: "#e2b657",
-        hot: h.symbol === hq?.symbol || (!hq && !site && Boolean(seat) && h.district === seat?.code)
+        hot: h.symbol === hq?.symbol || (!hq && !site && Boolean(seat) && h.district === seat?.code),
       }));
     }
-    const pins: Marker[] = sites.map((s) => ({ id: s.id, lon: s.lon, lat: s.lat, label: s.symbol, hot: s.id === site?.id || (!site && !hq && s.district === seat?.code) }));
-    if (hq?.lat != null && hq.lon != null) pins.push({ id: `hq:${hq.symbol}`, lon: hq.lon, lat: hq.lat, label: `${hq.symbol} HQ`, size: 7, hot: true });
+    const pins: Marker[] = sites.map((s) => ({
+      id: s.id,
+      lon: s.lon,
+      lat: s.lat,
+      label: s.symbol,
+      hot: s.id === site?.id || (!site && !hq && s.district === seat?.code),
+    }));
+    if (hq?.lat != null && hq.lon != null)
+      pins.push({ id: `hq:${hq.symbol}`, lon: hq.lon, lat: hq.lat, label: `${hq.symbol} HQ`, size: 7, hot: true });
     return pins;
   }, [layer, placed, sites, site, hq, seat]);
 
   const drawer: DrawerModel | null = hq
     ? hqDrawer(hq, allHq, roster, hqMeta?.source || HQ_FALLBACK)
-    : seat ? districtDrawer(seat, site, sites, roster, layer === "hq" ? placed : []) : null;
+    : seat
+      ? districtDrawer(seat, site, sites, roster, layer === "hq" ? placed : [])
+      : null;
 
   const counted = allHq.length;
-  const status: StatusLine = layer === "hq" || hq
-    ? {
-        source: hqMeta?.source || HQ_FALLBACK,
-        asOf: hq ? `HQ fetched ${when(hq.fetched)}` : hqMeta?.asOf ? `precomputed ${when(hqMeta.asOf)}` : "—",
-        latency: `${placed.length} of ${counted} placed in a district · ${allHq.filter((h) => h.foreign).length} abroad · ${counted - placed.length - allHq.filter((h) => h.foreign).length} unplaced · ${hqMeta?.latency || ""}`
-      }
-    : {
-        source: SOURCE,
-        asOf: "site registry maintained by hand · 119th Congress district lines",
-        latency: geoError || "Not a census of every factory. Representatives change when a seat changes, not live."
-      };
+  const status: StatusLine =
+    layer === "hq" || hq
+      ? {
+          source: hqMeta?.source || HQ_FALLBACK,
+          asOf: hq ? `HQ fetched ${when(hq.fetched)}` : hqMeta?.asOf ? `precomputed ${when(hqMeta.asOf)}` : "—",
+          latency: `${placed.length} of ${counted} placed in a district · ${allHq.filter((h) => h.foreign).length} abroad · ${counted - placed.length - allHq.filter((h) => h.foreign).length} unplaced · ${hqMeta?.latency || ""}`,
+        }
+      : {
+          source: SOURCE,
+          asOf: "site registry maintained by hand · 119th Congress district lines",
+          latency: geoError || "Not a census of every factory. Representatives change when a seat changes, not live.",
+        };
 
-  const top = useMemo(() => [...hqCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, n]) => ({ code: districtCode(id), n })), [hqCount]);
+  const top = useMemo(
+    () =>
+      [...hqCount.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([id, n]) => ({ code: districtCode(id), n })),
+    [hqCount],
+  );
 
   return {
     items,
-    empty: seat && !site && !hq
-      ? `No ${layer === "hq" ? "index HQs" : "joined sites"} in ${seat.code}. Representative and contract links are in the dossier.`
-      : layer === "hq" && !hqMeta ? "Loading SEC headquarters…" : empty,
+    empty:
+      seat && !site && !hq
+        ? `No ${layer === "hq" ? "index HQs" : "joined sites"} in ${seat.code}. Representative and contract links are in the dossier.`
+        : layer === "hq" && !hqMeta
+          ? "Loading SEC headquarters…"
+          : empty,
     drawer,
     status,
     geojson,
     markers,
     top,
-    selected: seat ? { lon: seat.lon, lat: seat.lat, zoom: seat.zoom } : null
+    selected: seat ? { lon: seat.lon, lat: seat.lat, zoom: seat.zoom } : null,
   };
 }
 
@@ -214,7 +248,7 @@ function members(code: string, roster: RosterMember[]) {
     atLarge,
     district,
     rep: num ? roster.find((m) => m.chamber === "house" && m.state === state && m.district === district) : undefined,
-    senators: roster.filter((m) => m.chamber === "senate" && m.state === state)
+    senators: roster.filter((m) => m.chamber === "senate" && m.state === state),
   };
 }
 
@@ -236,30 +270,66 @@ function hqDrawer(hq: Hq, all: Hq[], roster: RosterMember[], source: string): Dr
   const address = [hq.street, `${titleCase(hq.city)}, ${hq.state} ${hq.zip}`].filter(Boolean).join(" · ");
   return {
     title: `${hq.symbol} ${hq.name} · headquarters`,
-    meta: hq.foreign ? `Business address outside the US · ${hq.country || hq.state}` : hq.district ? `${hq.district} · ${POSTAL_TO_NAME[state] || state}${atLarge ? (delegate(state) ? " delegate" : " at-large") : ` district ${district}`}` : hq.note,
+    meta: hq.foreign
+      ? `Business address outside the US · ${hq.country || hq.state}`
+      : hq.district
+        ? `${hq.district} · ${POSTAL_TO_NAME[state] || state}${atLarge ? (delegate(state) ? " delegate" : " at-large") : ` district ${district}`}`
+        : hq.note,
     watch: hq.symbol,
     caseKey: `ticker:${hq.symbol}`,
     rows: [
       { label: "Address", value: address || "—" },
-      ...(hq.foreign ? [] : [
-        { label: "District", value: hq.district ? `${hq.district} · 119th Congress` : `Not placed · ${hq.note}` },
-        ...(hq.district ? [{ label: "Representative", value: rep ? `${who(rep)} · since ${rep.since.slice(0, 4)}` : roster.length ? "Vacant or not in roster" : "Loading roster…" }] : []),
-        { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : delegate(state) ? "None (non-voting delegate seat)" : "—" }
-      ]),
+      ...(hq.foreign
+        ? []
+        : [
+            { label: "District", value: hq.district ? `${hq.district} · 119th Congress` : `Not placed · ${hq.note}` },
+            ...(hq.district
+              ? [
+                  {
+                    label: "Representative",
+                    value: rep
+                      ? `${who(rep)} · since ${rep.since.slice(0, 4)}`
+                      : roster.length
+                        ? "Vacant or not in roster"
+                        : "Loading roster…",
+                  },
+                ]
+              : []),
+            {
+              label: "Senators",
+              value: senators.length
+                ? senators.map(who).join(" · ")
+                : delegate(state)
+                  ? "None (non-voting delegate seat)"
+                  : "—",
+            },
+          ]),
       ...(hq.matched ? [{ label: "Geocoded", value: `${hq.geocoder} · ${hq.matched}` }] : []),
       ...(hq.districtBy ? [{ label: "District by", value: hq.districtBy }] : []),
       { label: "SEC filer", value: `${hq.filer || hq.name} · CIK ${hq.cik}` },
       { label: "As of", value: `${when(hq.fetched)} · address as last filed` },
-      ...(neighbors.length ? [{ label: "Same district", value: neighbors.map((h) => h.symbol).join(", ") }] : [])
+      ...(neighbors.length ? [{ label: "Same district", value: neighbors.map((h) => h.symbol).join(", ") }] : []),
     ],
     links: [
       { label: "Chart", value: hq.symbol, action: `ticker:${hq.symbol}` },
       { label: "Positions", value: `${hq.symbol} holders and trades`, action: `pos:${hq.symbol}` },
       ...(hq.foreign ? [] : seatLinks(code, roster)),
-      ...(hq.district ? [{ label: "Contracts", value: `Awards performed in ${hq.district}`, action: `contracts:place:${hq.district}` }] : []),
-      { label: "Filing", value: "SEC EDGAR company page", href: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${hq.cik}` }
+      ...(hq.district
+        ? [
+            {
+              label: "Contracts",
+              value: `Awards performed in ${hq.district}`,
+              action: `contracts:place:${hq.district}`,
+            },
+          ]
+        : []),
+      {
+        label: "Filing",
+        value: "SEC EDGAR company page",
+        href: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${hq.cik}`,
+      },
     ],
-    source
+    source,
   };
 }
 
@@ -273,33 +343,85 @@ function districtDrawer(seat: Seat, site: Site | null, sites: Site[], roster: Ro
   if (site) {
     links.push({ label: "Chart", value: site.symbol, action: `ticker:${site.symbol}` });
     links.push({ label: "Positions", value: `${site.symbol} holders and trades`, action: `pos:${site.symbol}` });
-    links.push({ label: "Contracts", value: `${site.symbol} federal awards`, action: `contracts:symbol:${site.symbol}` });
+    links.push({
+      label: "Contracts",
+      value: `${site.symbol} federal awards`,
+      action: `contracts:symbol:${site.symbol}`,
+    });
   }
   links.push(...seatLinks(seat.code, roster));
   links.push({ label: "Contracts", value: `Awards performed in ${seat.code}`, action: `contracts:place:${seat.code}` });
-  if (!site) symbols.forEach((s) => links.push({ label: "Company", value: `${s} federal awards`, action: `contracts:symbol:${s}` }));
+  if (!site)
+    symbols.forEach((s) =>
+      links.push({ label: "Company", value: `${s} federal awards`, action: `contracts:symbol:${s}` }),
+    );
 
   const rows = [
-    ...(site ? [{ label: "Ticker", value: site.symbol }, { label: "Kind", value: site.kind }] : []),
+    ...(site
+      ? [
+          { label: "Ticker", value: site.symbol },
+          { label: "Kind", value: site.kind },
+        ]
+      : []),
     { label: "District", value: `${seat.code} · ${POSTAL_TO_NAME[state] || state}` },
-    { label: "Representative", value: rep ? `${who(rep)} · since ${rep.since.slice(0, 4)}` : roster.length ? "Vacant or not in roster" : "Loading roster…" },
+    {
+      label: "Representative",
+      value: rep
+        ? `${who(rep)} · since ${rep.since.slice(0, 4)}`
+        : roster.length
+          ? "Vacant or not in roster"
+          : "Loading roster…",
+    },
     ...(rep?.phone ? [{ label: "Office", value: `${rep.office || "—"} · ${rep.phone}` }] : []),
-    { label: "Senators", value: senators.length ? senators.map(who).join(" · ") : delegate(state) ? "None (non-voting delegate seat)" : "—" },
+    {
+      label: "Senators",
+      value: senators.length
+        ? senators.map(who).join(" · ")
+        : delegate(state)
+          ? "None (non-voting delegate seat)"
+          : "—",
+    },
     { label: "Joined sites", value: here.length ? `${here.length} · ${symbols.join(", ")}` : "None in the registry" },
-    ...(hqs.length ? [{ label: "Index HQs", value: hqHere.length ? `${hqHere.length} · ${hqHere.map((h) => h.symbol).join(", ")}` : "None" }] : [])
+    ...(hqs.length
+      ? [
+          {
+            label: "Index HQs",
+            value: hqHere.length ? `${hqHere.length} · ${hqHere.map((h) => h.symbol).join(", ")}` : "None",
+          },
+        ]
+      : []),
   ];
 
   return {
-    title: site ? site.name : `${seat.code} · ${atLarge ? (delegate(state) ? "delegate" : "at-large") : `district ${district}`}`,
+    title: site
+      ? site.name
+      : `${seat.code} · ${atLarge ? (delegate(state) ? "delegate" : "at-large") : `district ${district}`}`,
     meta: site ? site.note : `${POSTAL_TO_NAME[state] || state} · 119th Congress`,
     caseKey: `district:${seat.code}`,
     rows,
     links,
     tables: [
-      ...(!site && here.length ? [{ title: "Sites in this district", cols: ["Site", "Ticker", "Kind"], rows: here.map((s) => ({ cells: [s.name, s.symbol, s.kind] })) }] : []),
-      ...(hqHere.length ? [{ title: "Headquarters in this district", note: "SEC EDGAR business address.", cols: ["Ticker", "Company", "City"], rows: hqHere.map((h) => ({ cells: [h.symbol, h.name, titleCase(h.city)], action: `hq:${h.symbol}` })) }] : [])
+      ...(!site && here.length
+        ? [
+            {
+              title: "Sites in this district",
+              cols: ["Site", "Ticker", "Kind"],
+              rows: here.map((s) => ({ cells: [s.name, s.symbol, s.kind] })),
+            },
+          ]
+        : []),
+      ...(hqHere.length
+        ? [
+            {
+              title: "Headquarters in this district",
+              note: "SEC EDGAR business address.",
+              cols: ["Ticker", "Company", "City"],
+              rows: hqHere.map((h) => ({ cells: [h.symbol, h.name, titleCase(h.city)], action: `hq:${h.symbol}` })),
+            },
+          ]
+        : []),
     ],
-    source: SOURCE
+    source: SOURCE,
   };
 }
 
@@ -318,12 +440,17 @@ export function districtCode(id: string) {
 
 /** Bounding-box center and its larger side in degrees. */
 function middle(geometry: GeoJSON.Geometry): [number, number, number] {
-  let minX = 180, minY = 90, maxX = -360, maxY = -90;
+  let minX = 180,
+    minY = 90,
+    maxX = -360,
+    maxY = -90;
   const walk = (c: unknown): void => {
     if (Array.isArray(c) && typeof c[0] === "number") {
       const [x, y] = c as number[];
-      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
     } else if (Array.isArray(c)) c.forEach(walk);
   };
   if ("coordinates" in geometry) walk(geometry.coordinates);

@@ -36,7 +36,7 @@ export async function earningsCalendar(db, back = 7, ahead = 60) {
     source: "Nasdaq earnings calendar",
     asOf: new Date().toISOString(),
     latency: `Scheduled report dates and consensus EPS as published by Nasdaq. Shows join-table names plus companies above $50B market cap.${failed.length ? ` ${failed.length} days did not load.` : ""}`,
-    items
+    items,
   };
 }
 
@@ -56,7 +56,7 @@ async function earningsDay(db, date) {
     epsForecast: r.epsForecast || "",
     estimates: Number(r.noOfEsts) || null,
     lastYearDate: r.lastYearRptDt || "",
-    lastYearEps: r.lastYearEPS || ""
+    lastYearEps: r.lastYearEPS || "",
   }));
   const today = new Date().toISOString().slice(0, 10);
   writeCache(db, key, rows, date < today ? 30 * DAY : 12 * HOUR);
@@ -64,7 +64,8 @@ async function earningsDay(db, date) {
 }
 
 export const EARNINGS_SOURCE = "SEC EDGAR 8-K item 2.02 (issuer submissions)";
-export const EARNINGS_LATENCY = "Results 8-Ks are due within 4 business days of the release; dates are filed dates. Submissions rechecked every 12 h.";
+export const EARNINGS_LATENCY =
+  "Results 8-Ks are due within 4 business days of the release; dates are filed dates. Submissions rechecked every 12 h.";
 
 export async function earningsHistory(db, ticker) {
   return (await earningsFiled(db, ticker)).items;
@@ -82,12 +83,17 @@ function earningsRows(ticker, recent) {
   const out = [];
   for (let i = 0; i < recent.form.length; i += 1) {
     if (recent.form[i] !== "8-K") continue;
-    if (!String(recent.items?.[i] || "").split(",").includes("2.02")) continue;
+    if (
+      !String(recent.items?.[i] || "")
+        .split(",")
+        .includes("2.02")
+    )
+      continue;
     const acc = recent.accessionNumber[i];
     out.push({
       date: recent.filingDate[i],
       report: recent.reportDate?.[i] || "",
-      link: `https://www.sec.gov/Archives/edgar/data/${Number(ticker.cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`
+      link: `https://www.sec.gov/Archives/edgar/data/${Number(ticker.cik)}/${acc.replace(/-/g, "")}/${acc}-index.htm`,
     });
   }
   return out;
@@ -97,8 +103,16 @@ async function secSubmissions(db, cik) {
   const key = KEY.secSubsV1(cik);
   const hit = readCache(db, key);
   if (hit) return hit.asOf ? hit : { ...hit, asOf: new Date(readStale(db, key).storedAt).toISOString() };
-  const body = await secJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, { timeoutMs: 30000 });
-  const slim = { name: body.name, asOf: new Date().toISOString(), filings: { recent: pick(body.filings?.recent || {}, ["form", "items", "accessionNumber", "filingDate", "reportDate"]) } };
+  const body = await secJson(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, "0")}.json`, {
+    timeoutMs: 30000,
+  });
+  const slim = {
+    name: body.name,
+    asOf: new Date().toISOString(),
+    filings: {
+      recent: pick(body.filings?.recent || {}, ["form", "items", "accessionNumber", "filingDate", "reportDate"]),
+    },
+  };
   writeCache(db, key, slim, 12 * HOUR);
   return slim;
 }

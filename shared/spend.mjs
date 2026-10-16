@@ -21,7 +21,7 @@ export const PRICES = [
   [/gpt-5/i, 1.25, 10],
   [/gemini-[\d.]+-flash-lite/i, 0.1, 0.4],
   [/gemini-[\d.]+-flash/i, 0.3, 2.5],
-  [/gemini-[\d.]+-pro/i, 1.25, 10]
+  [/gemini-[\d.]+-pro/i, 1.25, 10],
 ];
 /** A model the table does not know is priced like Sonnet, so an estimate errs high. */
 export const FALLBACK_PRICE = [3, 15];
@@ -34,7 +34,9 @@ export const CHEAP_MODEL = { openrouter: "openai/gpt-4o-mini", anthropic: "claud
 export function priceOf(model) {
   const id = String(model || "");
   const hit = PRICES.find(([re]) => re.test(id));
-  return hit ? { input: hit[1], output: hit[2], known: true } : { input: FALLBACK_PRICE[0], output: FALLBACK_PRICE[1], known: false };
+  return hit
+    ? { input: hit[1], output: hit[2], known: true }
+    : { input: FALLBACK_PRICE[0], output: FALLBACK_PRICE[1], known: false };
 }
 
 /**
@@ -62,7 +64,10 @@ export function webSearchCost({ provider = "", results = 0, model = "", input = 
   if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0) return { usd: cost, priced: "reported" };
   if (provider === "openrouter") {
     const carrier = callCost({ model, input, output }).usd;
-    return { usd: carrier + Math.max(0, Number(results) || 0) * WEB_SEARCH_USD.openrouterPerResult, priced: "web-estimate" };
+    return {
+      usd: carrier + Math.max(0, Number(results) || 0) * WEB_SEARCH_USD.openrouterPerResult,
+      priced: "web-estimate",
+    };
   }
   return { usd: WEB_SEARCH_USD[provider] ?? 0, priced: "web-estimate" };
 }
@@ -106,9 +111,12 @@ const usd = (v) => `$${(Number(v) || 0).toFixed(Number(v) >= 100 ? 0 : 2)}`;
 /** The sentence an answer carries when the budget matters, or "". */
 export function budgetNote({ level, spent, budget, cheap, month }) {
   const of = `${usd(spent)} of the ${usd(budget)} monthly Ask budget`;
-  if (level === "stop") return `Ask is paused: ${of} is spent (ASK_BUDGET_HARD_STOP is on). It resets ${resetDay(month)}.`;
-  if (level === "over") return `${of} is spent, so every answer uses ${cheap || "the cheap model"} until ${resetDay(month)}. Answers may be less thorough.`;
-  if (level === "warn") return `Ask has used ${of} (${Math.round((spent / budget) * 100)}%). At 100% every answer moves to ${cheap || "the cheap model"}.`;
+  if (level === "stop")
+    return `Ask is paused: ${of} is spent (ASK_BUDGET_HARD_STOP is on). It resets ${resetDay(month)}.`;
+  if (level === "over")
+    return `${of} is spent, so every answer uses ${cheap || "the cheap model"} until ${resetDay(month)}. Answers may be less thorough.`;
+  if (level === "warn")
+    return `Ask has used ${of} (${Math.round((spent / budget) * 100)}%). At 100% every answer moves to ${cheap || "the cheap model"}.`;
   return "";
 }
 

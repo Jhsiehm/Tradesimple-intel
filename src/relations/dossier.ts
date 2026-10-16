@@ -1,11 +1,29 @@
-import { CATEGORIES, counts, parseNode, type CategoryId, type Graph, type RelEdge, type RelNode, type Theory } from "../../shared/relations.mjs";
+import {
+  CATEGORIES,
+  counts,
+  parseNode,
+  type CategoryId,
+  type Graph,
+  type RelEdge,
+  type RelNode,
+  type Theory,
+} from "../../shared/relations.mjs";
 import { when } from "../lib/api";
 import type { DrawerLink, DrawerModel, DrawerTable, ListItem, StatusLine } from "../types";
 import type { IconName } from "../ui/icons/names";
 import { CATEGORY_LOOK, NODE_LOOK, THEORY_LOOK } from "./palette";
 
 export type RelItem = ListItem & { icon: IconName; tint: string };
-export type Loaded = { shown: number; total: number; more: boolean; source: string; asOf: string; latency: string; note?: string; error?: string };
+export type Loaded = {
+  shown: number;
+  total: number;
+  more: boolean;
+  source: string;
+  asOf: string;
+  latency: string;
+  note?: string;
+  error?: string;
+};
 
 const CONF = { low: "Low", medium: "Medium", high: "High" };
 export const theoryId = (id: string) => `theory:${id}`;
@@ -20,7 +38,7 @@ export function listItems(graph: Graph): RelItem[] {
     meta: `Your theory${t.label ? ` · ${t.label}` : ""} · ${CONF[t.confidence]} confidence`,
     tag: "THEORY",
     icon: THEORY_LOOK.icon,
-    tint: THEORY_LOOK.color
+    tint: THEORY_LOOK.color,
   }));
   const degree = new Map<string, number>();
   for (const e of graph.edges) {
@@ -29,13 +47,18 @@ export function listItems(graph: Graph): RelItem[] {
   }
   const order = Object.keys(NODE_LOOK);
   const nodes: RelItem[] = [...graph.nodes]
-    .sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type) || (degree.get(b.id) || 0) - (degree.get(a.id) || 0) || a.label.localeCompare(b.label))
+    .sort(
+      (a, b) =>
+        order.indexOf(a.type) - order.indexOf(b.type) ||
+        (degree.get(b.id) || 0) - (degree.get(a.id) || 0) ||
+        a.label.localeCompare(b.label),
+    )
     .map((n) => ({
       id: n.id,
       title: n.label,
       meta: `${NODE_LOOK[n.type].label}${n.sub ? ` · ${n.sub}` : ""} · ${n.user ? "added by you" : `${degree.get(n.id) || 0} links`}`,
       icon: NODE_LOOK[n.type].icon,
-      tint: NODE_LOOK[n.type].color
+      tint: NODE_LOOK[n.type].color,
     }));
   return [...theories, ...nodes];
 }
@@ -44,14 +67,33 @@ export function listItems(graph: Graph): RelItem[] {
 function opens(node: RelNode): DrawerLink[] {
   const p = parseNode(node.id);
   if (!p) return [];
-  if (p.type === "member") return [{ label: "Member", value: "Card, trades, votes", action: `member:${p.key}` }, { label: "Timeline", value: "Trades against hearings", action: `timeline:${p.key}` }, { label: "Backtest", value: "Their buys, entered after each filing", action: `bt:member:${p.key}` }];
-  if (p.type === "ticker") return [{ label: "Dossier", value: `${p.key} chart and case file`, action: `ticker:${p.key}` }, { label: "Supply chain", value: "SPLC board", action: `supply:${p.key}` }, { label: "Contracts", value: "USAspending actions", action: `contracts:symbol:${p.key}` }, { label: "Backtest", value: "Congress and insider buys, entered after each filing", action: `bt:ticker:${p.key}` }];
-  if (p.type === "district" && p.key.includes("-")) return [{ label: "District", value: `${p.key} dossier`, action: `district:${p.key}` }];
+  if (p.type === "member")
+    return [
+      { label: "Member", value: "Card, trades, votes", action: `member:${p.key}` },
+      { label: "Timeline", value: "Trades against hearings", action: `timeline:${p.key}` },
+      { label: "Backtest", value: "Their buys, entered after each filing", action: `bt:member:${p.key}` },
+    ];
+  if (p.type === "ticker")
+    return [
+      { label: "Dossier", value: `${p.key} chart and case file`, action: `ticker:${p.key}` },
+      { label: "Supply chain", value: "SPLC board", action: `supply:${p.key}` },
+      { label: "Contracts", value: "USAspending actions", action: `contracts:symbol:${p.key}` },
+      {
+        label: "Backtest",
+        value: "Congress and insider buys, entered after each filing",
+        action: `bt:ticker:${p.key}`,
+      },
+    ];
+  if (p.type === "district" && p.key.includes("-"))
+    return [{ label: "District", value: `${p.key} dossier`, action: `district:${p.key}` }];
   return [];
 }
 
 function edgeRow(e: RelEdge, other: RelNode | undefined): DrawerTable["rows"][number] {
-  return { cells: [other?.label || "—", e.label, e.last || (e.asOf ? when(e.asOf).slice(0, 10) : "—")], ...(e.link ? { href: e.link } : {}) };
+  return {
+    cells: [other?.label || "—", e.label, e.last || (e.asOf ? when(e.asOf).slice(0, 10) : "—")],
+    ...(e.link ? { href: e.link } : {}),
+  };
 }
 
 export function nodeDrawer(graph: Graph, node: RelNode, loaded: Record<string, Loaded>): DrawerModel {
@@ -68,25 +110,29 @@ export function nodeDrawer(graph: Graph, node: RelNode, loaded: Record<string, L
       title: `${CATEGORY_LOOK[cat.id].label} · ${list.length}${meta ? ` of ${meta.total}` : ""} on canvas`,
       cols: ["With", "Relationship", "Date"],
       rows: list.slice(0, 40).map((e) => edgeRow(e, byId.get(e.from === node.id ? e.to : e.from))),
-      note: `${first?.source || meta?.source || cat.source} · as of ${first?.asOf || meta?.asOf ? when(first?.asOf || meta!.asOf) : "—"} · ${first?.latency || meta?.latency || ""}${meta?.note ? ` · ${meta.note}` : ""}`
+      note: `${first?.source || meta?.source || cat.source} · as of ${first?.asOf || meta?.asOf ? when(first?.asOf || meta!.asOf) : "—"} · ${first?.latency || meta?.latency || ""}${meta?.note ? ` · ${meta.note}` : ""}`,
     });
   }
   const theories = graph.theories.filter((t) => t.a.id === node.id || t.b.id === node.id);
   return {
     title: node.label,
-    meta: node.user ? `Added by you · ${node.kind || "note"} · not from a data source` : `${look.label}${node.sub ? ` · ${node.sub}` : ""}`,
+    meta: node.user
+      ? `Added by you · ${node.kind || "note"} · not from a data source`
+      : `${look.label}${node.sub ? ` · ${node.sub}` : ""}`,
     icon: look.icon,
     tint: look.color,
     rows: [
       { label: "Kind", value: node.user ? "Your node" : look.label },
       { label: "Data links", value: String(mine.length) },
       ...(node.note ? [{ label: "Note", value: node.note }] : []),
-      ...(theories.length ? [{ label: "Your theories", value: `${theories.length} (not counted as data)` }] : [])
+      ...(theories.length ? [{ label: "Your theories", value: `${theories.length} (not counted as data)` }] : []),
     ],
     tables,
-    blocks: theories.length ? [{ title: "Your theories · not from a data source", lines: theories.map((t) => theoryLine(t, byId)) }] : undefined,
+    blocks: theories.length
+      ? [{ title: "Your theories · not from a data source", lines: theories.map((t) => theoryLine(t, byId)) }]
+      : undefined,
     links: opens(node),
-    source: node.user ? "Added by you in this browser" : "Each table names its feed, as-of time, and lag"
+    source: node.user ? "Added by you in this browser" : "Each table names its feed, as-of time, and lag",
   };
 }
 
@@ -105,9 +151,9 @@ export function theoryDrawer(graph: Graph, t: Theory): DrawerModel {
       { label: "Between", value: `${byId.get(t.a.id)?.label || t.a.label} ↔ ${byId.get(t.b.id)?.label || t.b.label}` },
       { label: "Confidence", value: CONF[t.confidence] },
       { label: "Note", value: t.note || "—" },
-      { label: "Saved", value: t.updated ? `${when(t.updated)} UTC · this browser only` : "This browser only" }
+      { label: "Saved", value: t.updated ? `${when(t.updated)} UTC · this browser only` : "This browser only" },
     ],
-    source: "Drawn by you. Never counted with feed data or case files. Edit or delete it on the map."
+    source: "Drawn by you. Never counted with feed data or case files. Edit or delete it on the map.",
   };
 }
 
@@ -124,10 +170,10 @@ export function edgeDrawer(graph: Graph, e: RelEdge): DrawerModel {
       ...(e.last ? [{ label: "Latest", value: e.last }] : []),
       { label: "Source", value: e.source },
       { label: "As of", value: e.asOf ? `${when(e.asOf)} UTC` : "Curated file" },
-      { label: "Lag", value: e.latency || "—" }
+      { label: "Lag", value: e.latency || "—" },
     ],
     links: e.link ? [{ label: "Filing", value: "Open the source record", href: e.link }] : [],
-    source: e.source
+    source: e.source,
   };
 }
 
@@ -138,11 +184,28 @@ export function findEdge(graph: Graph, sel: string) {
 export function status(graph: Graph, loaded: Record<string, Loaded>): StatusLine {
   const c = counts(graph);
   const feeds = new Set(graph.edges.map((e) => e.source));
-  const latest = Object.values(loaded).map((l) => l.asOf).filter(Boolean).sort().at(-1) || graph.edges.map((e) => e.asOf).filter(Boolean).sort().at(-1) || "";
-  const cats = (Object.entries(c.byCat) as [CategoryId, number][]).filter(([, n]) => n).map(([k, n]) => `${CATEGORY_LOOK[k].label} ${n}`).join(" · ");
+  const latest =
+    Object.values(loaded)
+      .map((l) => l.asOf)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ||
+    graph.edges
+      .map((e) => e.asOf)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ||
+    "";
+  const cats = (Object.entries(c.byCat) as [CategoryId, number][])
+    .filter(([, n]) => n)
+    .map(([k, n]) => `${CATEGORY_LOOK[k].label} ${n}`)
+    .join(" · ");
   return {
-    source: graph.nodes.length ? `Relationship map · ${c.data} data links from ${feeds.size} feed${feeds.size === 1 ? "" : "s"}${cats ? ` (${cats})` : ""} · ${c.theories} theor${c.theories === 1 ? "y" : "ies"} of yours, not counted` : "Relationship map",
+    source: graph.nodes.length
+      ? `Relationship map · ${c.data} data links from ${feeds.size} feed${feeds.size === 1 ? "" : "s"}${cats ? ` (${cats})` : ""} · ${c.theories} theor${c.theories === 1 ? "y" : "ies"} of yours, not counted`
+      : "Relationship map",
     asOf: latest ? `${when(latest)} UTC` : "",
-    latency: "The mark on a line is the filing lag, or the days between a trade and a hearing. Hover for the feed and as-of time. Magenta dashed lines are your theories, saved only in this browser."
+    latency:
+      "The mark on a line is the filing lag, or the days between a trade and a hearing. Hover for the feed and as-of time. Magenta dashed lines are your theories, saved only in this browser.",
   };
 }

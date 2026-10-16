@@ -8,5 +8,11 @@ test("uniqueEconIds keeps case-only name variants as separate rows and drops exa
   const mom = { id, t, country: "United States", event: "PCE price index", actual: "0.3%" };
   const yoy = { id, t, country: "United States", event: "PCE Price index", actual: "3.4%" };
   const out = uniqueEconIds([mom, yoy, { ...mom }]);
-  assert.deepEqual(out.map((e) => [e.id, e.actual]), [[id, "0.3%"], [`${id}:2`, "3.4%"]]);
+  assert.deepEqual(
+    out.map((e) => [e.id, e.actual]),
+    [
+      [id, "0.3%"],
+      [`${id}:2`, "3.4%"],
+    ],
+  );
 });

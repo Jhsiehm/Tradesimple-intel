@@ -26,14 +26,24 @@ export const SCHEDULE = [
   { name: "returns", delay: 20000, every: 12 * HOUR, run: refreshReturns },
   { name: "watchlist", delay: 30000, every: 15 * MINUTE, run: refreshWatched },
   { name: "insider-history", delay: 60000, every: 6 * HOUR, run: refreshInsiderHistory },
-  { name: "backtest-bars", delay: 90000, every: 12 * HOUR, run: (db) => warmBars(db).catch((err) => console.error("bars warm", err.message)) }
+  {
+    name: "backtest-bars",
+    delay: 90000,
+    every: 12 * HOUR,
+    run: (db) => warmBars(db).catch((err) => console.error("bars warm", err.message)),
+  },
 ];
 
 export function startWarm(db) {
   if (!warmEnabled()) return false;
   for (const job of SCHEDULE) {
-    setTimeout(() => { void job.run(db); }, job.delay);
-    if (job.every) setInterval(() => { void job.run(db); }, job.every).unref();
+    setTimeout(() => {
+      void job.run(db);
+    }, job.delay);
+    if (job.every)
+      setInterval(() => {
+        void job.run(db);
+      }, job.every).unref();
   }
   return true;
 }

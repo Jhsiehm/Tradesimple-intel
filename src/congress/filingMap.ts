@@ -105,15 +105,23 @@ export function useWeekFilings(on: boolean) {
         setStatus({
           source: body.source || "House Clerk · Senate eFD",
           asOf: body.asOf ? when(body.asOf) : "",
-          latency: body.ok ? body.latency || "Filed up to 45 days after the trade." : `Feed unavailable: ${body.error || "no rows returned"}`
+          latency: body.ok
+            ? body.latency || "Filed up to 45 days after the trade."
+            : `Feed unavailable: ${body.error || "no rows returned"}`,
         });
       })
       .catch((err: Error) => {
         if (cancel) return;
         setRows([]);
-        setStatus({ source: "House Clerk · Senate eFD", asOf: "", latency: `Feed unavailable: ${err.message || "request failed"}` });
+        setStatus({
+          source: "House Clerk · Senate eFD",
+          asOf: "",
+          latency: `Feed unavailable: ${err.message || "request failed"}`,
+        });
       });
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [on]);
 
   return { rows, status };

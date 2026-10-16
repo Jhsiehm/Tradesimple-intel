@@ -30,17 +30,27 @@ export function econModel(e: EconEvent): DrawerModel {
       { label: "Consensus", value: e.consensus || "—" },
       { label: "Previous", value: e.previous || "—" },
       { label: "Surprise", value: e.surprise ? `${e.surprise} consensus` : "—" },
-      { label: "Currency", value: code || "—" }
+      { label: "Currency", value: code || "—" },
     ],
     blocks: e.description ? [{ title: "What it measures", lines: [e.description] }] : undefined,
     links: [
-      ...(pair ? [{ label: "Chart", value: `${code === "USD" ? "US Dollar Index" : pair.replace("=X", "")} with Fed, CPI, and macro marks`, action: `inst:${pair}` }] : []),
+      ...(pair
+        ? [
+            {
+              label: "Chart",
+              value: `${code === "USD" ? "US Dollar Index" : pair.replace("=X", "")} with Fed, CPI, and macro marks`,
+              action: `inst:${pair}`,
+            },
+          ]
+        : []),
       ...(code && code !== "USD" ? [{ label: "Chart", value: "US Dollar Index (DXY)", action: "inst:DX-Y.NYB" }] : []),
-      ...(code === "USD" ? [
-        { label: "Chart", value: "EUR/USD", action: "inst:EURUSD=X" },
-        { label: "Chart", value: "USD/JPY", action: "inst:USDJPY=X" },
-        { label: "Chart", value: "Bitcoin", action: "inst:BTC-USD" }
-      ] : [])
-    ]
+      ...(code === "USD"
+        ? [
+            { label: "Chart", value: "EUR/USD", action: "inst:EURUSD=X" },
+            { label: "Chart", value: "USD/JPY", action: "inst:USDJPY=X" },
+            { label: "Chart", value: "Bitcoin", action: "inst:BTC-USD" },
+          ]
+        : []),
+    ],
   };
 }

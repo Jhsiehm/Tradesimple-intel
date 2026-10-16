@@ -33,12 +33,26 @@ function ensure(db) {
  * Writes one call. `{ model, input, output, cost?, estimated? }` → the row's `{ usd, priced }`. `priced` (a
  * `{ usd, priced }` already worked out, e.g. by webSearchCost) skips the token pricing.
  */
-export function recordSpend(db, { at, kind = "ask", askId = "", model, input = 0, output = 0, cost = null, estimated = false, priced: given = null }) {
+export function recordSpend(
+  db,
+  { at, kind = "ask", askId = "", model, input = 0, output = 0, cost = null, estimated = false, priced: given = null },
+) {
   const priced = given || callCost({ model, input, output, cost });
   if (!usable(db)) return priced;
   ensure(db);
-  db.prepare("INSERT INTO ask_spend (at, month, kind, ask_id, model, input, output, usd, priced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(at, monthKey(at), kind, askId, String(model || ""), Math.round(input), Math.round(output), priced.usd, estimated && priced.priced !== "reported" ? `${priced.priced}-estimated` : priced.priced);
+  db.prepare(
+    "INSERT INTO ask_spend (at, month, kind, ask_id, model, input, output, usd, priced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    at,
+    monthKey(at),
+    kind,
+    askId,
+    String(model || ""),
+    Math.round(input),
+    Math.round(output),
+    priced.usd,
+    estimated && priced.priced !== "reported" ? `${priced.priced}-estimated` : priced.priced,
+  );
   return priced;
 }
 
@@ -46,11 +60,15 @@ export function recordSpend(db, { at, kind = "ask", askId = "", model, input = 0
 export function monthSpend(db, month) {
   if (!usable(db)) return { spent: 0, calls: 0, tasks: 0, web: 0, estimated: 0 };
   ensure(db);
-  const row = db.prepare(`SELECT COALESCE(SUM(usd), 0) AS spent, COUNT(*) AS calls,
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(usd), 0) AS spent, COUNT(*) AS calls,
     COALESCE(SUM(CASE WHEN kind = 'task' THEN usd ELSE 0 END), 0) AS tasks,
     COALESCE(SUM(CASE WHEN kind = 'web' THEN usd ELSE 0 END), 0) AS web,
     COALESCE(SUM(CASE WHEN priced = 'reported' THEN 0 ELSE usd END), 0) AS estimated
-    FROM ask_spend WHERE month = ?`).get(month);
+    FROM ask_spend WHERE month = ?`,
+    )
+    .get(month);
   return { spent: row.spent, calls: row.calls, tasks: row.tasks, web: row.web, estimated: row.estimated };
 }
 
@@ -59,7 +77,15 @@ export function recordWebSearch(db, search, { at = Date.now(), askId = "" } = {}
   const s = search?.spend;
   if (!s || !usable(db)) return null;
   try {
-    return recordSpend(db, { at, kind: "web", askId, model: `web:${s.provider}${s.model ? `:${s.model}` : ""}`, input: s.input || 0, output: s.output || 0, priced: webSearchCost(s) });
+    return recordSpend(db, {
+      at,
+      kind: "web",
+      askId,
+      model: `web:${s.provider}${s.model ? `:${s.model}` : ""}`,
+      input: s.input || 0,
+      output: s.output || 0,
+      priced: webSearchCost(s),
+    });
   } catch {
     return null;
   }
@@ -73,10 +99,29 @@ export function spendState(db, env = process.env, now = Date.now(), provider = "
   const m = monthSpend(db, month);
   const { level, pct } = budgetLevel({ spent: m.spent, budget, hardStop });
   const round = (v) => Math.round(v * 10_000) / 10_000;
-  return { month, spent: round(m.spent), budget, pct: Math.round(pct * 1000) / 1000, level, calls: m.calls, tasks: round(m.tasks), web: round(m.web), estimated: round(m.estimated), cheap, hardStop, note: budgetNote({ level, spent: m.spent, budget, cheap, month }) };
+  return {
+    month,
+    spent: round(m.spent),
+    budget,
+    pct: Math.round(pct * 1000) / 1000,
+    level,
+    calls: m.calls,
+    tasks: round(m.tasks),
+    web: round(m.web),
+    estimated: round(m.estimated),
+    cheap,
+    hardStop,
+    note: budgetNote({ level, spent: m.spent, budget, cheap, month }),
+  };
 }
 
-const chars = (v) => { try { return JSON.stringify(v ?? "").length; } catch { return 0; } };
+const chars = (v) => {
+  try {
+    return JSON.stringify(v ?? "").length;
+  } catch {
+    return 0;
+  }
+};
 
 /**
  * A provider whose every `chat` call lands in the ledger once it ends. Usage the stream reports wins; a call that
@@ -101,13 +146,20 @@ export function metered(provider, { db, kind = "ask", askId = "", now = Date.now
         if (got || usage) {
           const call = usage
             ? { input: usage.input || 0, output: usage.output || 0, cost: usage.cost ?? null, estimated: false }
-            : { input: Math.ceil((chars(messages) + chars(tools)) / 4), output: Math.ceil(out / 4), cost: null, estimated: true };
+            : {
+                input: Math.ceil((chars(messages) + chars(tools)) / 4),
+                output: Math.ceil(out / 4),
+                cost: null,
+                estimated: true,
+              };
           try {
             const priced = recordSpend(db, { at: now(), kind, askId, model: provider.model, ...call });
             onCall({ model: provider.model, ...call, ...priced });
-          } catch { /* the ledger never breaks an answer */ }
+          } catch {
+            /* the ledger never breaks an answer */
+          }
         }
       }
-    }
+    },
   };
 }

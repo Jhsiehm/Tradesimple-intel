@@ -14,7 +14,7 @@ const PANEL_SIZE: Record<PanelKind, { w: number; h: number }> = {
   lastbuy: { w: 420, h: 520 },
   wire: { w: 380, h: 560 },
   globals: { w: 420, h: 560 },
-  supply: { w: 380, h: 640 }
+  supply: { w: 380, h: 640 },
 };
 
 const isSplit = (card: WidgetCard) => card.id.startsWith("split:");
@@ -40,19 +40,24 @@ function admit(list: WidgetCard[], card: WidgetCard) {
 
 function bringUp(list: WidgetCard[], id: string) {
   const z = topZ(list) + 1;
-  return capOpen(list.map((c) => (c.id === id ? { ...c, min: false, z } : c)), id);
+  return capOpen(
+    list.map((c) => (c.id === id ? { ...c, min: false, z } : c)),
+    id,
+  );
 }
 
 function storedCards(): WidgetCard[] {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || "[]");
-    const kept: WidgetCard[] = Array.isArray(raw) ? raw.filter((c) => c && c.pinned && !String(c.id).startsWith("split:")) : [];
+    const kept: WidgetCard[] = Array.isArray(raw)
+      ? raw.filter((c) => c && c.pinned && !String(c.id).startsWith("split:"))
+      : [];
     const phone = isPhone();
     return kept.map((c, i) => ({
       ...c,
       ...(c.z ? null : cornerSpot(c.id, defaultSize(c.w, c.h), i)),
       z: c.z || i + 1,
-      min: phone ? true : c.min
+      min: phone ? true : c.min,
     }));
   } catch {
     return [];
@@ -69,13 +74,23 @@ export function useCards() {
     localStorage.setItem(KEY, JSON.stringify(cards.filter((c) => c.pinned && !isSplit(c))));
   }, [cards]);
 
-  const memberPair = cards.filter((card) => card.memberId).slice(0, 2).map((card) => `${card.memberId}:${card.chamber || "house"}`).join("|");
+  const memberPair = cards
+    .filter((card) => card.memberId)
+    .slice(0, 2)
+    .map((card) => `${card.memberId}:${card.chamber || "house"}`)
+    .join("|");
   useEffect(() => splitCompare(memberPair, setCards), [memberPair]);
 
   function placeCard(id: string, model: DrawerModel, size: { w: number; h: number }) {
     setCards((current) => {
       const rest = current.filter((card) => card.id !== id);
-      return admit(rest, { id, title: model.title, pinned: true, model, ...cornerSpot(id, defaultSize(size.w, size.h), openCount(rest)) });
+      return admit(rest, {
+        id,
+        title: model.title,
+        pinned: true,
+        model,
+        ...cornerSpot(id, defaultSize(size.w, size.h), openCount(rest)),
+      });
     });
   }
 
@@ -83,14 +98,24 @@ export function useCards() {
     const id = `${partial.memberId || partial.title}-${Date.now()}`;
     const wide = Boolean(partial.model?.tables?.length);
     const size = defaultSize(partial.memberId ? 400 : wide ? 420 : 340, partial.memberId ? 520 : 560);
-    setCards((current) => admit(current, { ...partial, id, pinned: true, ...cornerSpot(id, size, openCount(current)) }));
+    setCards((current) =>
+      admit(current, { ...partial, id, pinned: true, ...cornerSpot(id, size, openCount(current)) }),
+    );
   }
 
   function openMember(bioguide: string, seat: Chamber, name?: string) {
     setCards((current) => {
-      if (current.some((card) => card.memberId === bioguide)) return bringUp(current, current.find((card) => card.memberId === bioguide)!.id);
+      if (current.some((card) => card.memberId === bioguide))
+        return bringUp(current, current.find((card) => card.memberId === bioguide)!.id);
       const spot = cornerSpot(bioguide, defaultSize(400, 600), openCount(current));
-      return admit(current, { id: bioguide, title: name || "Member", pinned: true, memberId: bioguide, chamber: seat, ...spot });
+      return admit(current, {
+        id: bioguide,
+        title: name || "Member",
+        pinned: true,
+        memberId: bioguide,
+        chamber: seat,
+        ...spot,
+      });
     });
   }
 
@@ -113,7 +138,9 @@ export function useCards() {
     setCards((current) => current.map((card) => (card.id === id ? { ...card, title: model.title, model } : card)));
     if (!lobbyClient) return;
     const lines = await loadLobby(lobbyClient);
-    setCards((current) => current.map((card) => (card.id === id && card.model ? { ...card, model: withLobby(card.model, lines) } : card)));
+    setCards((current) =>
+      current.map((card) => (card.id === id && card.model ? { ...card, model: withLobby(card.model, lines) } : card)),
+    );
   }
 
   async function openPositions(symbol: string) {
@@ -129,13 +156,14 @@ export function useCards() {
     pinSymbol,
     openPositions,
     close: (id: string) => setCards((current) => current.filter((card) => card.id !== id)),
-    change: (id: string, next: Partial<WidgetCard>) => setCards((current) => {
-      const merged = current.map((card) => (card.id === id ? { ...card, ...next } : card));
-      return next.min === false ? bringUp(merged, id) : merged;
-    }),
+    change: (id: string, next: Partial<WidgetCard>) =>
+      setCards((current) => {
+        const merged = current.map((card) => (card.id === id ? { ...card, ...next } : card));
+        return next.min === false ? bringUp(merged, id) : merged;
+      }),
     collapseAll: () => setCards((current) => current.map((card) => ({ ...card, min: true }))),
     closeAll: () => setCards([]),
-    dropUnpinned: () => setCards((current) => current.filter((card) => card.pinned))
+    dropUnpinned: () => setCards((current) => current.filter((card) => card.pinned)),
   };
 }
 
@@ -156,13 +184,21 @@ function splitCompare(memberPair: string, setCards: Dispatch<SetStateAction<Widg
     setCards((current) => {
       const prev = current.find(isSplit);
       const rest = current.filter((card) => !isSplit(card));
-      const spot = prev ? { x: prev.x, y: prev.y, w: prev.w, h: prev.h } : cornerSpot(cardId, defaultSize(400, 480), openCount(rest));
+      const spot = prev
+        ? { x: prev.x, y: prev.y, w: prev.w, h: prev.h }
+        : cornerSpot(cardId, defaultSize(400, 480), openCount(rest));
       return admit(rest, { id: cardId, title: model.title, pinned: true, model, ...spot });
     });
   };
   if (left.side !== right.side) {
-    place({ title: "Split", meta: "Different chambers", rows: [{ label: "Roll calls", value: "These two seats are not on the same roll-call list." }] });
-    return () => { cancel = true; };
+    place({
+      title: "Split",
+      meta: "Different chambers",
+      rows: [{ label: "Roll calls", value: "These two seats are not on the same roll-call list." }],
+    });
+    return () => {
+      cancel = true;
+    };
   }
   api<{
     ok: boolean;
@@ -180,10 +216,23 @@ function splitCompare(memberPair: string, setCards: Dispatch<SetStateAction<Widg
         meta: res.latency,
         rows: splits.length
           ? splits.map((row) => ({ label: `${row.a} / ${row.b}`, value: row.question || "Roll call" }))
-          : [{ label: "Split", value: res.shared ? "Same vote on every shared roll call in this window." : "No shared roll call in this window." }],
-        links: splits.map((row) => ({ label: (row.date || "").slice(0, 10), value: row.question || "Roll call", action: `vote:${row.id}` }))
+          : [
+              {
+                label: "Split",
+                value: res.shared
+                  ? "Same vote on every shared roll call in this window."
+                  : "No shared roll call in this window.",
+              },
+            ],
+        links: splits.map((row) => ({
+          label: (row.date || "").slice(0, 10),
+          value: row.question || "Roll call",
+          action: `vote:${row.id}`,
+        })),
       });
     })
     .catch(() => null);
-  return () => { cancel = true; };
+  return () => {
+    cancel = true;
+  };
 }

@@ -12,14 +12,28 @@ export type LiveState = {
   fresh: Fresh;
   retryAt: number;
 };
-type Overview = { ok: boolean; poller?: "on" | "off"; symbols?: string[]; checks?: LiveStatus[]; fresh?: Fresh; invalid?: string[] };
+type Overview = {
+  ok: boolean;
+  poller?: "on" | "off";
+  symbols?: string[];
+  checks?: LiveStatus[];
+  fresh?: Fresh;
+  invalid?: string[];
+};
 
 const STREAM = "/api/live/stream";
 const MAX_RETRY_MS = 30_000;
 /** The server pings every 15 s; silence this long means the dev proxy is holding a stream whose API is gone. */
 const SILENT_MS = 45_000;
 
-let state: LiveState = { link: DEMO ? "off" : "connecting", poller: "", symbols: [], checks: [], fresh: {}, retryAt: 0 };
+let state: LiveState = {
+  link: DEMO ? "off" : "connecting",
+  poller: "",
+  symbols: [],
+  checks: [],
+  fresh: {},
+  retryAt: 0,
+};
 const watchers = new Set<() => void>();
 const pushListeners = new Set<(row: LivePush) => void>();
 let source: EventSource | null = null;
@@ -36,11 +50,21 @@ function set(patch: Partial<LiveState>) {
 
 function apply(o: Overview) {
   if (!o?.ok) return;
-  set({ poller: o.poller || state.poller, symbols: o.symbols || state.symbols, checks: o.checks || state.checks, fresh: o.fresh || state.fresh });
+  set({
+    poller: o.poller || state.poller,
+    symbols: o.symbols || state.symbols,
+    checks: o.checks || state.checks,
+    fresh: o.fresh || state.fresh,
+  });
 }
 
 async function send(method: "GET" | "PUT" | "POST", path: string, body?: unknown): Promise<Overview> {
-  const res = await fetch(path, body === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  const res = await fetch(
+    path,
+    body === undefined
+      ? { method }
+      : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+  ).catch(() => null);
   return res ? res.json().catch(() => ({ ok: false })) : { ok: false };
 }
 
@@ -105,7 +129,10 @@ function connect() {
   es.addEventListener("status", (e) => set({ checks: JSON.parse((e as MessageEvent).data).checks || [] }));
   es.addEventListener("list", (e) => set({ symbols: JSON.parse((e as MessageEvent).data).symbols || state.symbols }));
   es.onerror = () => {
-    if (es.readyState !== EventSource.CLOSED) { set({ link: "retrying" }); return; }
+    if (es.readyState !== EventSource.CLOSED) {
+      set({ link: "retrying" });
+      return;
+    }
     // The browser gives up after a non-stream answer (the dev proxy's 502 while `node --watch` restarts); retry ourselves.
     retryLater();
   };
@@ -139,7 +166,10 @@ function retain() {
 const subscribeLive = (w: () => void) => {
   watchers.add(w);
   const release = retain();
-  return () => { watchers.delete(w); release(); };
+  return () => {
+    watchers.delete(w);
+    release();
+  };
 };
 const getLiveSnapshot = () => state;
 
@@ -152,5 +182,8 @@ export function useLive(): LiveState {
 export function onLivePush(listener: (row: LivePush) => void): () => void {
   pushListeners.add(listener);
   const release = retain();
-  return () => { pushListeners.delete(listener); release(); };
+  return () => {
+    pushListeners.delete(listener);
+    release();
+  };
 }

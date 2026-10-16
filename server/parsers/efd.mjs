@@ -6,7 +6,14 @@ export function parseEfd(html) {
   const body = /<tbody>([\s\S]*?)<\/tbody>/.exec(html)?.[1] || "";
   return [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((row) => {
     const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((c) => c[1]);
-    const text = (value) => String(value || "").replace(/<div[\s\S]*?<\/div>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+    const text = (value) =>
+      String(value || "")
+        .replace(/<div[\s\S]*?<\/div>/g, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/\s+/g, " ")
+        .trim();
     const ticker = text(cells[3]);
     const type = text(cells[6]);
     const amount = text(cells[7]);
@@ -19,7 +26,7 @@ export function parseEfd(html) {
       type,
       side: /purchase/i.test(type) ? "buy" : /sale/i.test(type) ? "sell" : "exchange",
       amount,
-      amountLow: Number((amount.match(/\$([\d,]+)/)?.[1] || "0").replace(/,/g, "")) || 0
+      amountLow: Number((amount.match(/\$([\d,]+)/)?.[1] || "0").replace(/,/g, "")) || 0,
     };
   });
 }

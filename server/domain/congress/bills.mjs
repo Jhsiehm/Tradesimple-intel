@@ -33,8 +33,8 @@ export async function billDetail(db, id) {
       ...billRow(bill),
       summary: bill.policyArea?.name || "",
       committees: (bill.committees?.url ? [] : bill.committees) || [],
-      ladder
-    }
+      ladder,
+    },
   };
 }
 
@@ -53,7 +53,7 @@ export async function billVote(db, id, chamber) {
         congress: rv.congress || parsed.congress,
         session: rv.sessionNumber || rv.session || 1,
         roll: rv.rollNumber,
-        date: rv.date || action.actionDate || ""
+        date: rv.date || action.actionDate || "",
       });
     }
   }
@@ -64,11 +64,12 @@ export async function billVote(db, id, chamber) {
       ok: true,
       source: "Congress.gov",
       vote: null,
-      note: `No recorded ${chamber} roll call on this bill.`
+      note: `No recorded ${chamber} roll call on this bill.`,
     };
   }
   const detail = await voteDetail(db, chamber, latest.congress, latest.session, latest.roll);
-  if (detail.vote) detail.vote.note = "Latest recorded roll call for this bill. Seats are members, not a full roster in the list.";
+  if (detail.vote)
+    detail.vote.note = "Latest recorded roll call for this bill. Seats are members, not a full roster in the list.";
   return detail;
 }
 
@@ -92,12 +93,14 @@ function billRow(bill) {
     chamber: bill.originChamber || "",
     updated: bill.updateDate || bill.latestAction?.actionDate || "",
     latest: bill.latestAction?.text || "",
-    stage: ladderFromActions(bill.latestAction ? [bill.latestAction] : []).current
+    stage: ladderFromActions(bill.latestAction ? [bill.latestAction] : []).current,
   };
 }
 
 function parseBillId(id) {
-  const m = String(id).toLowerCase().match(/^([a-z]+)-(\d+)-(\d+)$/);
+  const m = String(id)
+    .toLowerCase()
+    .match(/^([a-z]+)-(\d+)-(\d+)$/);
   if (!m) return null;
   return { type: m[1], congress: m[2], number: m[3] };
 }

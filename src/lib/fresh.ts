@@ -11,7 +11,7 @@ export function sessionOpen(now = Date.now()) {
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
-    hourCycle: "h23"
+    hourCycle: "h23",
   }).formatToParts(new Date(now));
   const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
   const weekday = get("weekday");

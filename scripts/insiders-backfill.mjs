@@ -19,7 +19,9 @@ loadEnv(root);
 const db = openDb(root);
 const show = () => {
   const s = storeStatus(db, Date.now() + 120_000);
-  console.log(`insiders: store ${s.rows} rows, ${s.forms} forms, ${s.tickers} tickers; filed ${s.filed.from || "—"} to ${s.filed.to || "—"}; quarters ${s.quarters.count} (${s.quarters.first || "—"}..${s.quarters.last || "—"}), daily days ${s.days.count}; covered ${s.coveredFrom || "—"} to ${s.coveredThrough || "—"}; last update ${s.lastUpdate || "—"}${s.lastError ? `; last error: ${s.lastError}` : ""}`);
+  console.log(
+    `insiders: store ${s.rows} rows, ${s.forms} forms, ${s.tickers} tickers; filed ${s.filed.from || "—"} to ${s.filed.to || "—"}; quarters ${s.quarters.count} (${s.quarters.first || "—"}..${s.quarters.last || "—"}), daily days ${s.days.count}; covered ${s.coveredFrom || "—"} to ${s.coveredThrough || "—"}; last update ${s.lastUpdate || "—"}${s.lastError ? `; last error: ${s.lastError}` : ""}`,
+  );
 };
 
 if (!args.includes("--status")) {
@@ -28,7 +30,12 @@ if (!args.includes("--status")) {
     console.error("--since takes a quarter like 2020q1");
     process.exit(2);
   }
-  const out = await updateInsiderHistory(db, { since, quarters: !args.includes("--no-quarters"), daily: !args.includes("--no-daily"), log: (s) => console.log(s) });
+  const out = await updateInsiderHistory(db, {
+    since,
+    quarters: !args.includes("--no-quarters"),
+    daily: !args.includes("--no-daily"),
+    log: (s) => console.log(s),
+  });
   if (out.skipped) console.log(`insiders: skipped (${out.skipped})`);
   for (const e of out.errors || []) console.error(`insiders: error: ${e}`);
   if (out.ms != null) console.log(`insiders: pass took ${(out.ms / 1000).toFixed(0)} s`);

@@ -6,13 +6,21 @@ import { siteRegistry } from "./sites.mjs";
 export async function search(db, q) {
   const query = q.trim();
   const upper = query.toUpperCase();
-  const tickers = listTickers(db).filter((t) =>
-    t.symbol.includes(upper) || t.name.toLowerCase().includes(query.toLowerCase())
-  ).sort((a, b) => Number(b.symbol === upper) - Number(a.symbol === upper) || Number(b.symbol.startsWith(upper)) - Number(a.symbol.startsWith(upper)) || a.symbol.localeCompare(b.symbol)).slice(0, 6);
-  const sites = siteRegistry().filter((s) => {
-    const blob = `${s.name} ${s.symbol} ${s.district} ${s.state}`.toLowerCase();
-    return blob.includes(query.toLowerCase());
-  }).slice(0, 6);
+  const tickers = listTickers(db)
+    .filter((t) => t.symbol.includes(upper) || t.name.toLowerCase().includes(query.toLowerCase()))
+    .sort(
+      (a, b) =>
+        Number(b.symbol === upper) - Number(a.symbol === upper) ||
+        Number(b.symbol.startsWith(upper)) - Number(a.symbol.startsWith(upper)) ||
+        a.symbol.localeCompare(b.symbol),
+    )
+    .slice(0, 6);
+  const sites = siteRegistry()
+    .filter((s) => {
+      const blob = `${s.name} ${s.symbol} ${s.district} ${s.state}`.toLowerCase();
+      return blob.includes(query.toLowerCase());
+    })
+    .slice(0, 6);
   let members = [];
   if (query.length >= 2) {
     try {

@@ -27,20 +27,32 @@ test("passageRank puts concurrence above passage and procedure at zero", () => {
 
 test("markFinal flags one roll per chamber: best rank, then latest", () => {
   const rolls = markFinal([
-    { chamber: "house", roll: 190, date: "2025-07-03", question: "On motion that the House agree to the Senate amendment", final: false },
+    {
+      chamber: "house",
+      roll: 190,
+      date: "2025-07-03",
+      question: "On motion that the House agree to the Senate amendment",
+      final: false,
+    },
     { chamber: "house", roll: 145, date: "2025-05-22", question: "On Passage", final: false },
     { chamber: "senate", roll: 372, date: "2025-07-01", question: "On Passage of the Bill", final: false },
     { chamber: "senate", roll: 371, date: "2025-07-01", question: "On the Amendment S.Amdt. 2360", final: false },
-    { chamber: "senate", roll: 300, date: "2025-06-28", question: "On the Motion to Proceed", final: false }
+    { chamber: "senate", roll: 300, date: "2025-06-28", question: "On the Motion to Proceed", final: false },
   ]);
-  assert.deepEqual(rolls.filter((r) => r.final).map((r) => `${r.chamber}-${r.roll}`), ["house-190", "senate-372"]);
+  assert.deepEqual(
+    rolls.filter((r) => r.final).map((r) => `${r.chamber}-${r.roll}`),
+    ["house-190", "senate-372"],
+  );
 });
 
 test("geocodeStreets spells number words, drops suites and PO boxes, numbered lines first", () => {
   assert.deepEqual(geocodeStreets("ONE APPLE PARK WAY", ""), ["1 APPLE PARK WAY"]);
   assert.deepEqual(geocodeStreets("2788 SAN TOMAS EXPRESSWAY", "SUITE 400"), ["2788 SAN TOMAS EXPRESSWAY"]);
   assert.deepEqual(geocodeStreets("P.O. BOX 8999", ""), []);
-  assert.deepEqual(geocodeStreets("PRUDENTIAL TOWER", "800 BOYLSTON ST., 34TH FLOOR"), ["800 BOYLSTON ST", "PRUDENTIAL TOWER"]);
+  assert.deepEqual(geocodeStreets("PRUDENTIAL TOWER", "800 BOYLSTON ST., 34TH FLOOR"), [
+    "800 BOYLSTON ST",
+    "PRUDENTIAL TOWER",
+  ]);
 });
 
 test("districtCode formats GEOIDs and at-large seats", () => {
@@ -61,7 +73,10 @@ test("Alaska at-large uses the same west-of-antimeridian convention as the state
   const geo = JSON.parse(fs.readFileSync(new URL("../data/geo/cd119.geojson", import.meta.url), "utf8"));
   const ak = geo.features.find((f) => String(f.properties.GEOID) === "0200");
   const xs = ak.geometry.coordinates.flat(3).filter((_, i) => i % 2 === 0);
-  assert.ok(xs.every((x) => x < 0), "no positive longitudes left to draw a band across Canada");
+  assert.ok(
+    xs.every((x) => x < 0),
+    "no positive longitudes left to draw a band across Canada",
+  );
 });
 
 test("houseCategory: delegate, vacant, party filter, best cast", () => {
@@ -69,7 +84,13 @@ test("houseCategory: delegate, vacant, party filter, best cast", () => {
   assert.equal(houseCategory("0617", []), "Vacant");
   assert.equal(houseCategory("0617", [{ party: "D", vote: "Nay" }]), "Nay");
   assert.equal(houseCategory("0617", [{ party: "D", vote: "Nay" }], "R"), "");
-  assert.equal(houseCategory("0617", [{ party: "R", vote: "Not voting" }, { party: "R", vote: "Yea" }]), "Yea");
+  assert.equal(
+    houseCategory("0617", [
+      { party: "R", vote: "Not voting" },
+      { party: "R", vote: "Yea" },
+    ]),
+    "Yea",
+  );
 });
 
 test("senateCategory: both, split, half, absent, filtered", () => {
