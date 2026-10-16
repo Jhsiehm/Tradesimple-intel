@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {dayOf} from '../shared/backtest.mjs';
 import {DEFAULT_RULES} from '../shared/backtestSpec.mjs';
-import {cleanEventStudy,runEventStudy} from '../shared/eventStudy.mjs';
+import {cleanEventStudy,runEventStudy,eventStudyUncertainty} from '../shared/eventStudy.mjs';
 import {openDb} from '../server/lib/db.mjs';
 import {importDataset,datasetSource} from '../server/domain/research-events.mjs';
 import {runSpec} from '../server/domain/backtest/index.mjs';
@@ -98,6 +98,36 @@ test('registered market model exports estimation evidence and replays without it
   fs.writeFileSync(path.join(dir,'run.zip'),exportRun(db,done.run));db.close();db=null;
   assert.equal(spawnSync('unzip',['-q','run.zip'],{cwd:dir}).status,0);
   const replay=spawnSync(process.execPath,['replay.mjs'],{cwd:dir,encoding:'utf8'});assert.equal(replay.status,0,replay.stderr);assert.equal(JSON.parse(replay.stdout).matches,true);
-  const saved=JSON.parse(fs.readFileSync(path.join(dir,'run.json'),'utf8'));assert.equal(saved.result.eventStudy.events[0].estimation.samples.length,30);
+  const saved=JSON.parse(fs.readFileSync(path.join(dir,'run.json'),'utf8'));assert.equal(saved.result.eventStudy.events[0].estimation.samples.length,30);assert.equal(saved.result.eventStudy.uncertainty.groups,1);assert.equal(saved.result.eventStudy.uncertainty.standardError,null);
  }finally{db?.close();if(prior===undefined)delete process.env.INTEL_CACHE;else process.env.INTEL_CACHE=prior;fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('event uncertainty uses connected ticker and calendar clusters with intercept-only CR1',()=>{
+ const event=(id,symbol,from,to,car)=>({id,symbol,from,to,car});
+ const rows=[event('a','AAA','2025-01-01','2025-01-02',0),event('b','AAA','2025-02-01','2025-02-02',0),event('c','BBB','2025-03-01','2025-03-02',4),event('d','BBB','2025-04-01','2025-04-02',4)];
+ const result=eventStudyUncertainty(rows);
+ assert.equal(result.groups,2);assert.equal(result.largestGroup,2);near(result.meanCar,2);
+ // Cluster score sums are -4 and +4; CR1 variance = (2/1)*(16+16)/4² = 4.
+ near(result.standardError,2);assert.equal(result.status,'estimated');
+ assert.deepEqual(eventStudyUncertainty([...rows].reverse()),result);
+ assert.deepEqual(result.blocks.map(b=>b.eventIds),[['a','b'],['c','d']]);
+ const bridge=event('bridge','CCC','2025-02-02','2025-03-01',1);
+ const connected=eventStudyUncertainty([...rows,bridge]);
+ assert.equal(connected.groups,1,'cross-ticker calendar overlap joins transitive same-ticker links');
+ assert.equal(connected.largestGroup,5);assert.equal(connected.standardError,null);assert.equal(connected.status,'insufficient-groups');
+ assert.equal(eventStudyUncertainty([]).meanCar,null);assert.equal(eventStudyUncertainty([]).standardError,null);
+ const identical=eventStudyUncertainty(rows.map(r=>({...r,car:1})));
+ assert.equal(identical.status,'zero-variance');assert.equal(identical.standardError,0);
+});
+
+test('event uncertainty includes only the measured cohort and merges simultaneous cross-security windows',()=>{
+ const signals=[...base.signals,{...base.signals[0],id:'other',symbol:'OTHER'}];
+ const report=runEventStudy({base:{...base,signals,bars:{...base.bars,OTHER:bars}},spec});
+ assert.equal(report.uncertainty.n,3);assert.equal(report.uncertainty.groups,1);
+ assert.deepEqual(report.uncertainty.blocks[0].symbols,['AAPL','OTHER']);
+ assert.deepEqual(report.uncertainty.blocks[0].eventIds,[...report.events.map(e=>e.id)].sort());
+ const excluded=runEventStudy({base:{...base,signals},spec});
+ assert.equal(excluded.uncertainty.n,2);assert.deepEqual(excluded.uncertainty.blocks[0].symbols,['AAPL']);
+ assert.equal(excluded.exclusions['missing-security-close'],1);
 });

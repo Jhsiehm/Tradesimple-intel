@@ -1,6 +1,6 @@
 /** Descriptive market-adjusted event windows over immutable daily close snapshots. */
 import {dayOf,isoOf} from './backtest.mjs';
-export const EVENT_STUDY_VERSION=2;
+export const EVENT_STUDY_VERSION=3;
 const date=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&dayOf(s)!==null&&isoOf(dayOf(s))===s;
 export function cleanEventStudy(raw){
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).some(k=>!['from','to','before','after','sides','model','estimationSessions','estimationGap'].includes(k)))throw Error('Provide only event dates, before/after sessions, sides and expected-return model settings.');
@@ -34,6 +34,31 @@ function fitMarket(samples){
  const sse=samples.reduce((sum,p)=>sum+(p.securityReturn-alpha-beta*p.benchmarkReturn)**2,0);
  if(![alpha,beta,sse].every(Number.isFinite))return null;
  return {alpha,beta,rSquared:yy>1e-14?Math.max(0,Math.min(1,1-sse/yy)):null,residualStdDev:Math.sqrt(sse/(n-2)),n};
+}
+/** Intercept-only CR1 variance, with connected ticker/calendar-window clusters.
+ * Same-ticker dependence and overlapping windows across tickers are retained together.
+ * Separate components are assumed independent; no p-value or confidence claim is made.
+ */
+export function eventStudyUncertainty(events){
+ const ordered=[...events].sort((a,b)=>a.id.localeCompare(b.id));
+ const parent=ordered.map((_,i)=>i);
+ const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+ for(let i=0;i<ordered.length;i++)for(let j=i+1;j<ordered.length;j++){
+  const a=ordered[i],b=ordered[j];
+  if(a.symbol===b.symbol||(a.from<=b.to&&b.from<=a.to))parent[root(j)]=root(i);
+ }
+ const components=new Map();
+ ordered.forEach((e,i)=>{const key=root(i);if(!components.has(key))components.set(key,[]);components.get(key).push(e);});
+ const blocks=[...components.values()].map(rows=>({id:rows[0].id,eventIds:rows.map(e=>e.id),symbols:[...new Set(rows.map(e=>e.symbol))].sort(),from:rows.reduce((v,e)=>e.from<v?e.from:v,rows[0].from),to:rows.reduce((v,e)=>e.to>v?e.to:v,rows[0].to)}));
+ const n=ordered.length,groups=blocks.length,meanCar=n?ordered.reduce((sum,e)=>sum+e.car,0)/n:null;
+ let standardError=null,status='insufficient-groups';
+ if(groups>=2){
+  const scoreSquares=[...components.values()].reduce((sum,rows)=>sum+rows.reduce((score,e)=>score+e.car-meanCar,0)**2,0);
+  const variance=groups/(groups-1)*scoreSquares/(n*n);
+  if(!Number.isFinite(variance)){status='nonfinite-variance';}
+  else {standardError=Math.sqrt(variance);status=standardError>0?'estimated':'zero-variance';}
+ }
+ return {method:'connected-ticker-window-cr1',n,groups,largestGroup:Math.max(0,...blocks.map(b=>b.eventIds.length)),meanCar,standardError,status,blocks};
 }
 export function runEventStudy({base,spec:raw}){
  const spec=cleanEventStudy(raw);
@@ -97,7 +122,7 @@ export function runEventStudy({base,spec:raw}){
  const mean=xs=>xs.reduce((a,b)=>a+b,0)/xs.length;
  const curve=events.length?events[0].path.map((p,i)=>({offset:p.offset,n:events.length,meanSecurityReturn:mean(events.map(e=>e.path[i].securityReturn)),meanBenchmarkReturn:mean(events.map(e=>e.path[i].benchmarkReturn)),meanExpectedReturn:mean(events.map(e=>e.path[i].expectedReturn)),marketAdjustedAar:mean(events.map(e=>e.path[i].marketAdjustedReturn)),marketAdjustedCaar:mean(events.map(e=>e.path[i].marketAdjustedCar)),aar:mean(events.map(e=>e.path[i].abnormalReturn)),caar:mean(events.map(e=>e.path[i].cumulativeAbnormalReturn))})):[];
  const exclusions={};for(const d of decisions)if(d.reason!=='included')exclusions[d.reason]=(exclusions[d.reason]||0)+1;
- return {version:EVENT_STUDY_VERSION,spec,benchmark:'SPY',counts:{publications:base.signals.length,eligiblePublications:[...groups.values()].reduce((n,g)=>n+g.records.length,0),candidateEvents:groups.size,completeEvents:events.length,excludedEvents:groups.size-events.length,includedPublications:events.reduce((n,e)=>n+e.signalIds.length,0),overlappingEvents:events.filter(e=>e.overlappingEventIds.length).length},exclusions,decisions,events,curve,summary:events.length?{marketAdjustedMeanCar:mean(events.map(e=>e.marketAdjustedCar)),meanCar:mean(events.map(e=>e.car)),meanBuyHoldAbnormalReturn:mean(events.map(e=>e.buyHoldAbnormalReturn))}:null,caveats:[
+ return {version:EVENT_STUDY_VERSION,uncertainty:eventStudyUncertainty(events),spec,benchmark:'SPY',counts:{publications:base.signals.length,eligiblePublications:[...groups.values()].reduce((n,g)=>n+g.records.length,0),candidateEvents:groups.size,completeEvents:events.length,excludedEvents:groups.size-events.length,includedPublications:events.reduce((n,e)=>n+e.signalIds.length,0),overlappingEvents:events.filter(e=>e.overlappingEventIds.length).length},exclusions,decisions,events,curve,summary:events.length?{marketAdjustedMeanCar:mean(events.map(e=>e.marketAdjustedCar)),meanCar:mean(events.map(e=>e.car)),meanBuyHoldAbnormalReturn:mean(events.map(e=>e.buyHoldAbnormalReturn))}:null,caveats:[
   'Descriptive association around public disclosure, not a causal estimate, trading strategy, multi-factor model or new out-of-sample evaluation.',
   'Session zero is the first saved SPY session strictly after the publication date. Intraday release times are unavailable; same-day reactions can precede session zero.',
   'Windows use saved SPY session dates and close-to-close returns. A complete window requires each security and benchmark close plus the preceding close; missing windows are excluded as a whole without imputation. Calendar completeness is not independently certified.',
@@ -107,7 +132,8 @@ export function runEventStudy({base,spec:raw}){
   'Market-adjusted comparison returns use the same complete-event cohort as the selected model. Estimation exclusions can change the cohort relative to a separately registered market-adjusted study.',
   'Market-model estimation requires every registered close and refuses fits with benchmark daily-return variance at or below 1e-14 or nonfinite coefficients. Coefficients, residual dispersion and R-squared describe the estimation sample, not significance or predictive validity.',
   'Every relative-session mean uses the same complete-event cohort. Excluded coverage can bias that cohort. No transaction costs, portfolio capital allocation or investability claims apply.',
-  'Overlapping same-ticker windows are flagged and retained. Cross-security and time dependence also remain; no independent-event p-values or confidence intervals are reported.',
+  'Uncertainty uses the intercept-only CR1 standard error of mean CAR. Events connected by a common ticker or overlapping calendar windows form one cluster, including transitive links. The correction is G/(G-1); at least two clusters are required. Cluster membership is preserved.',
+  'Separate dependence clusters are assumed independent. Distant market shocks, few or unbalanced clusters, estimated-model uncertainty and selected coverage can undermine this estimate. Zero estimated variance does not establish certainty. No p-values, confidence intervals, multiple-testing adjustment or significance verdict are reported.',
   'The original source selection, caps, public-date assertions, current security identities and saved price-adjustment limitations remain. Pre-event observations are descriptive and must not enter historical decision rules.'
  ]};
 }
