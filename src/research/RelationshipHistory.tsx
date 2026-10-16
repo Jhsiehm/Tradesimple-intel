@@ -1,3 +1,4 @@
+import { ActivityFeedback } from './ActivityFeedback';
 import { useEffect, useState } from 'react';
 import { read, write, message } from './api';
 
@@ -54,9 +55,9 @@ export function RelationshipHistory() {
   return <section className="research-content relationship-history">
     <div><h2>Relationship history</h2><p>Inspect ownership, operations and exposure using what was known at a particular date.</p></div>
     <p className="bt-note">These are researcher-supplied assertions. Evidence links and archived documents do not independently verify a claim. This lookup does not change backtest eligibility or current ticker mappings.</p>
-    {loading && <p role="status" className="research-working">Loading relationship snapshots…</p>}
+    {loading && <ActivityFeedback className="research-working">Loading relationship snapshots…</ActivityFeedback>}
     {error && <p className="bt-note warn" role="alert">{error}</p>}
-    {notice && <p className="bt-note" role="status">{notice}</p>}
+    {notice && <ActivityFeedback className="bt-note">{notice}</ActivityFeedback>}
     <details open={!loading && !items.length ? true : undefined}>
       <summary>Import a relationship snapshot</summary>
       <fieldset disabled={busy} className="research-form"><legend>New immutable version</legend>
@@ -80,7 +81,7 @@ export function RelationshipHistory() {
       <details><summary>How the two dates work</summary><p>“Effective on” selects when the relationship applied. “Known by” excludes later publications and corrections. Date-only availability is eligible at the end of that UTC day.</p></details>
       <div className="research-actions"><button className="bt-run" disabled={!selected || !draft.effectiveAt || !draft.knownAt} onClick={() => void query()}>Look up relationships</button><button className="panels-btn" disabled={!selected} onClick={() => void exportSnapshot()}>Export snapshot JSON</button></div>
     </fieldset>}
-    {busy && <p role="status" className="research-working">Working…</p>}
+    {busy && <ActivityFeedback className="research-working">Working…</ActivityFeedback>}
     {result && <section aria-live="polite"><h3>{result.items.length} resolved · {result.ambiguous.length} ambiguous</h3><p>Effective {result.effectiveAt} · known by {result.knownAt}</p>
       {!result.items.length && <p>No resolved relationships match this lookup. This does not prove that no relationship existed.</p>}
       {result.items.length > 0 && <div className="research-table" tabIndex={0} role="region" aria-label="Resolved historical relationships"><table><thead><tr><th scope="col">Subject and relationship</th><th scope="col">Object</th><th scope="col">Effective interval</th><th scope="col">Available / evidence</th></tr></thead><tbody>{result.items.map(r => <tr key={r.id}><td>{r.subject}<small>{r.predicate} · {r.relationshipId}</small></td><td>{r.object}{r.exposureWeight!==undefined&&<small>Weight: {r.exposureWeight} · {r.weightBasis}</small>}</td><td>{r.effectiveFrom}<small>Until {r.effectiveTo || 'unspecified'}{r.effectiveTo ? ' (exclusive)' : ''}</small></td><td>{r.availableAt}<small><a href={r.sourceUrl} target="_blank" rel="noreferrer">Source evidence</a> · {r.documentHash ? 'Document archived' : 'Link only'}</small></td></tr>)}</tbody></table></div>}

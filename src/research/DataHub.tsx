@@ -1,3 +1,4 @@
+import { ActivityFeedback } from './ActivityFeedback';
 import { ValidationSummary } from './ValidationSummary';
 import {ConnectorRetrievals} from './ConnectorRetrievals';
 import { useEffect, useRef, useState } from 'react';
@@ -57,7 +58,7 @@ export function DataHub({ onRun }: { onRun: (dataset: DatasetSummary) => void })
       <div className="research-actions"><button className="bt-run" disabled={!name.trim() || (!connector && (!content || !source.trim()))} onClick={() => void check()}>Preview and validate</button>{preview?.ok && <button className="bt-run" onClick={() => void commit()}>Import validated snapshot</button>}</div>
     </fieldset></details>
     {!connectors.length && <p className="bt-note">CSV and JSON imports available. No API or database connections configured.</p>}
-    {busy && <p role="status" className="research-working">Working…</p>}{error && <p role="alert" className="bt-note warn">{error}</p>}{notice && <p role="status">{notice}</p>}
+    {busy && <ActivityFeedback className="research-working">Working…</ActivityFeedback>}{error && <p role="alert" className="bt-note warn">{error}</p>}{notice && <ActivityFeedback>{notice}</ActivityFeedback>}
     {preview && <section><h3>Validation preview</h3>{preview.retrieval && <p>API retrieval completed: {preview.retrieval.pages} pages · {preview.retrieval.rows} records. Historical completeness is not certified.</p>}<ValidationSummary {...preview.coverage} />{preview.errors.length > 0 && <ul>{preview.errors.slice(0, 3).map((e, i) => <li key={i}>Data row {e.row} · {e.field}: {e.message}</li>)}</ul>}{preview.errors.length > 3 && <details><summary>Show {preview.errors.length - 3} more validation issues</summary><ul>{preview.errors.slice(3).map((e, i) => <li key={i}>Data row {e.row} · {e.field}: {e.message}</li>)}</ul></details>}{preview.errorCount > 100 && <p>Showing the first 100 of {preview.errorCount} errors.</p>}{preview.preview.length > 0 && <details><summary>Inspect {preview.preview.length} preview records</summary><EventTable events={preview.preview} /></details>}</section>}
     <div className="data-workbench" data-selected={Boolean(selected)}><aside className="data-library" aria-label="Saved datasets">    <h3>Your transaction datasets <span className="research-count">{datasets.length}</span></h3>{!datasets.length ? <p>No datasets imported yet. Preview a file above to begin.</p> : <div className="research-list">{datasets.map(d => <button className="research-item" key={d.id} aria-pressed={selected?.id === d.id} onClick={() => void inspect(d.id)}><strong>{d.name} · v{d.version}</strong><span>{d.rows} rows · {d.createdAt.slice(0, 10)}</span></button>)}</div>}
 </aside>

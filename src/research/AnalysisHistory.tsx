@@ -1,3 +1,4 @@
+import { ActivityFeedback } from './ActivityFeedback';
 import { useEffect, useRef, useState } from 'react';
 import { read, message } from './api';
 import { describeAnalysis, analysisEventLabel, type Analysis, type AnalysisEvent, type AnalysisSummary } from './analysis-records';
@@ -40,7 +41,7 @@ export function AnalysisHistory() {
     <p>Inspect what a controlled analysis received and produced. Includes isolated, context-aware and paired runs; ordinary conversations are not included.</p>
     <div className="research-form research-mapping"><label>Search executions<input value={query} onChange={e => setQuery(e.target.value)} placeholder="Question, memory mode or execution ID" /></label><label>Execution status<select value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option>{['completed', 'failed', 'aborted', 'clarification', 'incomplete'].map(value => <option key={value}>{value}</option>)}</select></label></div>
     <div className="research-actions"><button className="panels-btn" disabled={busy || loading} onClick={() => void refresh()}>Refresh executions</button><span>Latest 200 records · {shown.length} match{shown.length === 1 ? '' : 'es'}</span></div>
-    {(loading || busy) && <p role="status" className="research-working">Loading execution records…</p>}
+    {(loading || busy) && <ActivityFeedback className="research-working">Loading execution records…</ActivityFeedback>}
     {error && <p role="alert">{error}</p>}
     {!loading && !error && !shown.length && <p>{items.length ? 'No executions match these filters.' : 'No controlled executions yet. Start an isolated or context-aware analysis from Memory.'}</p>}
     <div className="data-workbench" data-selected={Boolean(selected)}>
@@ -48,7 +49,7 @@ export function AnalysisHistory() {
       {selected && summary && <section className="research-content" key={selected.id}>
         <h3 tabIndex={-1} ref={heading}>{summary.question || 'Recorded analysis'}</h3>
         <p><strong>{selected.status}</strong> · {summary.mode || 'Mode not recorded'} · {summary.provider || 'Provider not recorded'} / {summary.model || 'Model not recorded'}</p>
-        {selected.status === 'incomplete' && <p role="status">No terminal record exists. This may be running or interrupted. Refresh to check; this view will not restart it.</p>}
+        {selected.status === 'incomplete' && <ActivityFeedback>No terminal record exists. This may be running or interrupted. Refresh to check; this view will not restart it.</ActivityFeedback>}
         {summary.error && <p role="alert">Recorded error: {summary.error}</p>}
         <p>{summary.modelCalls} model request{summary.modelCalls === 1 ? '' : 's'} · {summary.toolCalls} tool request{summary.toolCalls === 1 ? '' : 's'} · {selected.events.length} journal events</p>
         <h3>{selected.status === 'completed' ? 'Recorded answer' : 'Recorded text · may be partial'}</h3>

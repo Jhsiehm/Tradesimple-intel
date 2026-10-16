@@ -1,3 +1,4 @@
+import { ActivityFeedback } from './ActivityFeedback';
 import { RelationshipEligibility, emptyRelationshipDraft, parseRelationshipDraft } from './RelationshipEligibility';
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_RULES, type BacktestSource } from '../../shared/backtestSpec.mjs';
@@ -52,7 +53,7 @@ export function GuidedExperiment({ onOpen, onTool }: { onOpen: (id: string) => v
       {issues.length > 0 && <ul aria-label="Before checking">{issues.map(s => <li key={String(s)}>{s}</li>)}</ul>}
       <button className="bt-run" disabled={issues.length > 0 || busy} onClick={() => void run()}>{busy ? 'Checking sources and prices…' : experiment ? 'Check again as a new experiment' : 'Check inputs and save diagnostic run'}</button>
     </fieldset>
-    {busy && <p role="status" className="research-working">Source and price retrieval can take a minute. Progress percentages are not supplied by the feeds. The saved result reports any unfinished loading.</p>}
+    {busy && <ActivityFeedback className="research-working">Source and price retrieval can take a minute. Progress percentages are not supplied by the feeds. The saved result reports any unfinished loading.</ActivityFeedback>}
     {error && <p role="alert" className="bt-note warn">{error}</p>}
     <section className="research-readiness" aria-label="Data readiness"><h3>{readiness.label}</h3><p>{readiness.next}</p>{readiness.sourceWarnings.map((text, i) => <p className="bt-note warn" key={i}>{text}</p>)}
     {result && <><p>Checked {experiment?.createdAt} · {result.counts?.signals ?? '—'} signals · {result.counts?.used ?? '—'} trades · {result.counts?.skipped ?? '—'} excluded · {result.counts?.priced ?? '—'} priced signal tickers.</p>{result.error && <p role="alert">{result.error}</p>}
