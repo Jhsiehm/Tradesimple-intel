@@ -491,7 +491,7 @@ API: `/api/weather/hazards` returns independent feed states, source coverage and
 
 Commodity notes describe conditional exposure channels and locations to investigate. They do not match events to facilities, estimate lost production, forecast prices, or provide push/emergency notifications. This release does not include global radar, marine-wave forecasts, every national warning system, or gridded drought/soil-moisture products.
 
-## Phase 1: experiments and Data Hub
+## Experiments and Data Hub
 
 Open **Research** in the navigation or enter `RESEARCH` in Find. The research workspace uses the existing center stage.
 
@@ -541,7 +541,7 @@ Research is stored in **`data/research.sqlite`**, independently of `data/cache.s
 
 For a consistent backup, stop the API and copy `research.sqlite` and any `research.sqlite-wal` / `research.sqlite-shm` files together, or use SQLite’s online backup mechanism. Restore to the configured research location before restarting. Do not treat this file as a disposable cache. A cache reset cannot delete saved experiments. Checksums detect corruption but are not a signature against a malicious database administrator.
 
-This phase inherits the app’s single-owner authentication and same-origin write protections. Imported private data and saved experiments are visible to that server’s owner; organizational RBAC and isolated project tenants are later work. Isolated/context-aware/paired AI memory, historical relationship validity, held-out validation, and multi-source signal composition are not added by Phase 1.
+Research inherits the app’s single-owner authentication and same-origin write protections. Imported private data and saved experiments are visible to that server’s owner; organizational RBAC and isolated project tenants are later work. Isolated/context-aware/paired AI memory, historical relationship validity, held-out validation, and multi-source signal composition are not yet supported.
 
 API endpoints:
 

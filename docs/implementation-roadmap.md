@@ -2,12 +2,6 @@
 
 This ledger tracks the full October 2026 executive blueprint. Completed slices do not imply completion of a stage. Dates and tests below describe the local checkout, not a deployed release.
 
-## Coordination
-
-- Assess implementation quality chat: historical integrity and blueprint sequencing.
-- Fix research tab functionality chat: current ticker expansion, contractor ranking, and Research usability fixes.
-- Shared checkout: preserve other work. The user authorized committing all project changes on main after implementation, with conflict checks. The other chat confirmed no outstanding edits and will not commit independently during integration. A fetched origin/main currently matches local main; repeat that check before the final commit.
-
 ## Stage 1: stabilize existing workflows — in progress
 
 Acceptance: import → experiment → comparison → notebook → export → offline replay succeeds in the browser; live-source failures recover; database backups restore successfully.

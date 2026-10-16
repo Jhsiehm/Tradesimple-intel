@@ -17,3 +17,9 @@ Product rules:
 - Label every feed with source, as-of time, and real latency.
 - Do not invent ticker joins. Use `data/tickers.json`.
 - China, Europe, the Middle East, Eastern Europe, South Asia, and Southeast Asia stay empty until a feed is real.
+
+Repository hygiene:
+
+- Keep notes between agents or chats (who is working on what, handoffs, commit permissions) in `.cursor/coordination/`, which is gitignored. Do not put them in `docs/`, the README, or other committed files; the repository is public.
+- Run `npm run format` before committing. CI runs `npm run format:check` and fails on unformatted files.
+- Do not commit duplicate copies of folders or zip archives of folders already in the repository.
