@@ -1,0 +1,1 @@
+import{jt as e}from"./index-Dm34OPsf.js";var t=e();function n({days:e,due:n}){if(e==null)return(0,t.jsx)(`span`,{className:`dim`,children:`—`});let r=e>n*2?`lag-late`:e>n?`lag-slow`:`lag-ok`;return(0,t.jsxs)(`span`,{className:`lag ${r}`,title:`${e} days from event to public filing`,children:[e,`d`]})}export{n as t};

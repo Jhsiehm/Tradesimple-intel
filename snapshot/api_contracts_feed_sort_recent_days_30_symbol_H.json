@@ -1,0 +1,1 @@
+{"ok":true,"source":"USAspending.gov","asOf":"2026-10-19T04:34:01.921Z","latency":"USAspending prime contract actions by action date. Civilian agencies report within days; DoD actions are published about 90 days after award. Negative amounts are de-obligations.","scope":{"symbol":"H","parents":[]},"note":"H has no USAspending parent recipient in data/tickers.json.","items":[]}
