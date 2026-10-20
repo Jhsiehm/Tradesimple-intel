@@ -202,6 +202,9 @@ export function useAskSize() {
     event.preventDefault();
     event.stopPropagation();
     stopGesture.current?.();
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    target.setPointerCapture(pointerId);
     const from = geomRef.current.box;
     const sx = event.clientX;
     const sy = event.clientY;
@@ -209,6 +212,7 @@ export function useAskSize() {
     clearSizing();
     document.body.classList.add("ask-sizing", edge ? CURSOR[edge] : "ask-moving");
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (!moved && Math.abs(dx) + Math.abs(dy) < 2) return;
@@ -218,14 +222,20 @@ export function useAskSize() {
     };
     const up = () => {
       clearSizing();
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+      window.removeEventListener("blur", up);
+      target.removeEventListener("lostpointercapture", up);
+      if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
+      stopGesture.current = null;
     };
     stopGesture.current = up;
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
+    window.addEventListener("pointermove", move, { capture: true, passive: false });
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    window.addEventListener("blur", up);
+    target.addEventListener("lostpointercapture", up);
   }
 
   const nudge = (dx: number, dy: number) => setGeom(cur => ({ snap: null, box: clampBox({ ...cur.box, x: cur.box.x + dx, y: cur.box.y + dy }) }));
