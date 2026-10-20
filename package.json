@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:hot": "node scripts/dev.mjs --hot",
@@ -23,6 +25,7 @@
   },
   "dependencies": {
     "katex": "^0.19.0",
+    "lightweight-charts": "^5.2.1",
     "maplibre-gl": "^6.11.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

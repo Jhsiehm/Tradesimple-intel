@@ -2,6 +2,7 @@
  * Ask sheet helpers, pure: which model a run may use, what the screen attaches, greetings, and whether a finished
  * answer actually carries the numbers its tools returned. Nothing here reads env, the network, or the clock.
  */
+import { cleanChartContext } from "./chartWorkspace.mjs";
 import { cleanTheory } from "./theories.mjs";
 
 /** OpenRouter menu. Strong tool-callers first; the small ones stay available but carry a warning badge. */
@@ -41,7 +42,8 @@ export function cleanContext(raw) {
   const theory = cleanTheory(raw.theory);
   const okNode = NODE.test(node) ? node : "";
   if (!okNode && !theory) return null;
-  return { node: okNode, label: text(raw.label, 120), theory };
+  const chart=cleanChartContext(raw.chart);
+  return { node: okNode, label: text(raw.label, 120), theory, ...(chart ? {chart} : {}) };
 }
 
 /** Members and tickers by id; bills, roll calls, committees, districts, map links and nodes, and other cards by key. */
@@ -59,6 +61,7 @@ export function contextNote(ctx) {
     bits.push(keyed ? `${NODE_KIND[kind]} ${id}${ctx.label ? ` (${ctx.label})` : ""}` : `${NODE_KIND[kind] || "Card"}: ${ctx.label || id}`);
   }
   if (ctx.theory) bits.push(`the user's own theory, not a filing: ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}${ctx.theory.label ? ` — ${ctx.theory.label}` : ""}`);
+  if (ctx.chart) bits.push(`Reviewed chart parameters (user-provided context, verify source facts through tools): ${JSON.stringify(ctx.chart)}. Transaction dates are descriptive, not tradable availability. If only a filing date is known, review next regular session execution in the venue calendar. Exclude unknown publication dates from availability-based tests; do not invent release times`);
   return `The user attached what is on screen: ${bits.join("; ")}. Use it only when the question refers to it.`;
 }
 

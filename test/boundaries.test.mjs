@@ -24,7 +24,6 @@ const MAX_LINES = 600;
 const KNOWN_LARGE = new Set([
   "src/styles.css",
   "src/App.tsx",
-  "src/markets/CandleChart.tsx",
 ]);
 
 function walk(dir, out = []) {

@@ -6,7 +6,7 @@ export type ModelCfg = { provider: string; model: string; strong?: string };
 export function modelOptions(cfg: ModelCfg): string[];
 export function resolveModel(requested: unknown, cfg: ModelCfg): string;
 
-export type AskContext = { node: string; label: string; theory: Theory | null };
+export type AskContext = { node: string; label: string; theory: Theory | null; chart?: import("./chartWorkspace.mjs").ChartContext };
 export function cleanContext(raw: unknown): AskContext | null;
 export function contextNote(ctx: AskContext | null): string;
 export type AttachedChat = { title: string; turns: { role: "user" | "assistant"; content: string }[] };

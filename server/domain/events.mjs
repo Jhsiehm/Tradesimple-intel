@@ -31,6 +31,7 @@ export async function marketEvents(db, rawSymbol, kinds) {
       ? `${corp.pending.join(", ")} still loading; the rest as of each feed. ${feeds.map((f) => `${f.id}: ${f.latency}`).join(" ")}`
       : feeds.map((f) => `${f.id}: ${f.latency}`).join(" "),
     feeds,
+    failed: corp.failed,
     ...(corp.pending.length ? { pending: corp.pending } : {}),
     marks: [...corp.marks, ...macro].sort((a, b) => a.t - b.t)
   };

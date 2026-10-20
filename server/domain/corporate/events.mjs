@@ -36,7 +36,7 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
   };
   if (want("earn")) {
     run("earn", () => earningsFiled(db, ticker), (res) => {
-      for (const r of res.items) marks.push({ t: Date.parse(`${r.date}T21:00:00Z`), label: "Earnings 8-K", tone: "earn", detail: `8-K item 2.02 filed ${r.date}`, href: r.link });
+      for (const r of res.items) marks.push({ t: Date.parse(`${r.date}T21:00:00Z`), label: "Earnings 8-K", tone: "earn", eventDate: r.date, publicationDate: r.date, dateBasis: "SEC filing date (date only)", limitation: "21:00 UTC is a chart coordinate, not the actual publication time; verify the filing timestamp before availability-based testing.", detail: `8-K item 2.02 filed ${r.date}`, href: r.link });
     }, { source: "SEC EDGAR 8-K item 2.02", latency: "8-K filed within 4 business days of the release; marked on the filed date." });
     run("next", () => earningsCalendar(db, 0, 60), (res) => {
       const next = res.items.find((r) => r.symbol === symbol);
@@ -47,15 +47,16 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
     run("lobby", () => lobbyingFor(db, ticker, 5), (res) => {
       const byPost = new Map();
       for (const f of res.filings || []) {
-        const cur = byPost.get(f.posted) || { amount: 0, firms: new Set(), issues: new Set() };
+        const cur = byPost.get(f.posted) || { amount: 0, firms: new Set(), issues: new Set(), links: new Set() };
         cur.amount += f.amount;
         cur.firms.add(f.registrant);
+        if(f.link) cur.links.add(f.link);
         f.issues.forEach((i) => cur.issues.add(i));
         byPost.set(f.posted, cur);
       }
       for (const [date, v] of byPost) {
         if (!date) continue;
-        marks.push({ t: Date.parse(`${date}T16:00:00Z`), label: `LDA ${compact(v.amount)}`, tone: "lobby", detail: `${v.firms.size} filing firm(s) · ${[...v.issues].slice(0, 3).join(", ")}` });
+        marks.push({ t: Date.parse(`${date}T16:00:00Z`), label: `LDA ${compact(v.amount)}`, tone: "lobby", href: [...v.links][0], eventDate: date, limitation: "Grouped by posted date, not transaction time. Source links to the first filing in this group; the grouped amount can include other filings.", publicationDate: date, dateBasis: "Posted date (date only)", actor: [...v.firms].join("; "), amount: String(v.amount), detail: `${v.firms.size} filing firm(s) · ${[...v.issues].slice(0, 3).join(", ")}` });
       }
     }, { source: "LDA.gov LD-2", latency: "Quarterly reports due 20 days after quarter end; marked on the posted date." });
   }
@@ -81,7 +82,7 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
     run("gov", () => contractsFor(db, ticker), (res) => {
       for (const a of (res.awards || []).slice(0, 12)) {
         if (!a.start) continue;
-        marks.push({ t: Date.parse(`${a.start}T16:00:00Z`), label: `${agencyCode(a.agency)} ${compact(a.amount)}`, tone: "gov", detail: `${a.agency} · ${a.description.slice(0, 80)}`, href: a.link });
+        marks.push({ t: Date.parse(`${a.start}T16:00:00Z`), label: `${agencyCode(a.agency)} ${compact(a.amount)}`, tone: "gov", actor: a.agency, amount: String(a.amount), eventDate: a.start, dateBasis: "Award start date", detail: `${a.agency} · ${a.description.slice(0, 80)}`, href: a.link });
       }
     }, { source: "USAspending.gov prime awards", latency: "DoD actions published about 90 days after award; marked on the award start date." });
   }

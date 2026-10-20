@@ -1,3 +1,4 @@
+import { cleanChartContext } from "../shared/chartWorkspace.mjs";
 import { useWeather } from "./weather/useWeather";
 import { WeatherControls } from "./weather/WeatherControls";
 import type { Point as WeatherPoint } from "./weather/model";
@@ -341,6 +342,16 @@ export function App() {
     if (action.startsWith("ask:saved:")) { openAsk(); return ask.openSaved(action.slice(10)); }
     if (action.startsWith("ask:research:")) { openAsk(); return void openStored(action.slice(13), ask.openTurns); }
     if (action.startsWith("ask:q:")) { openAsk(); return void ask.run(decodeURIComponent(action.slice(6))); }
+    if (action.startsWith("ask:chart:")) {
+      try {
+        const payload=JSON.parse(decodeURIComponent(action.slice(10)));
+        const chart=cleanChartContext(payload.chart);
+        if (!chart) return;
+        setAskAbout({section:"markets",node:`item:chart-${chart.symbol}`,theory:null,label:`${chart.symbol} · ${chart.interval} · reviewed chart window`,chart});
+        ask.setDetached(false);
+        return openAsk(payload.backtest ? "Review the attached chart window and evidence as a backtest specification. Do not execute until I confirm the availability assumptions." : "Research the attached chart window and selected evidence. Distinguish transaction history from information available after publication.");
+      } catch { return; }
+    }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
     if (action.split(":")[0] === "ask") return openAsk();
     record(action, label);
@@ -566,7 +577,7 @@ export function App() {
   useEffect(() => { setDetached(false); }, [askKey, setDetached]);
 
   return (
-    <div data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section} className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}>
+    <div data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section} className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today || (section === "markets" && marketView === "chart")) ? " tl" : ""}`}>
       <header className="topbar">
         <div className="brand">
           <BrandHome onHome={() => go("today:research")} />
@@ -693,7 +704,7 @@ export function App() {
           </div>
           <div className="map-body">
             <ErrorBoundary name={timelineId || today || calendarTab || !showMap ? "Board" : "Map"} resetKey={`${section}|${timelineId}|${today}|${calendarTab}|${marketView}|${voteView}|${newsView}`}><Suspense fallback={<p className="stage-loading">Loading…</p>}>
-            {phone && !timelineId && !today && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
+            {phone && !timelineId && !today && !(section === "markets" && marketView === "chart") && section !== "map" && !(weatherOn && weather.phoneMap) ? null : timelineId ? (
               <MemberTimeline bioguide={timelineId} onClose={closeTimeline} onFollow={follow} onStatus={reportTimeline} />
             ) : today === "research" ? (
               <ResearchBoard ask={ask} context={askContext} onFollow={follow} onClose={closeToday} onList={reportList} />

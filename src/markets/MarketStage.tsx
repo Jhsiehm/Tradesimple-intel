@@ -35,7 +35,7 @@ export function MarketStage(props: Props) {
 }
 
 function Board({ view, chart, supplySymbol, onSupplySymbol, showChart, openPositions, openMember, pinSymbol, onDossier, onFollow }: Props) {
-  if (view === "chart") return <CandleChart symbol={chart.symbol} span={chart.span} onSpan={chart.onSpan} onBack={chart.onBack} marks={chart.marks} />;
+  if (view === "chart") return <CandleChart symbol={chart.symbol} span={chart.span} onSpan={chart.onSpan} onBack={chart.onBack} marks={chart.marks} onFollow={onFollow} onDossier={onDossier} />;
   if (view === "positions") return <PositionsBoard onOpen={openPositions} onMember={openMember} />;
   if (view === "globals") return <GlobalBoard onOpen={(symbol) => showChart(symbol, "6mo")} />;
   if (view === "supply") return <SupplyBoard symbol={supplySymbol} onSymbol={onSupplySymbol} onOpen={onFollow} />;
