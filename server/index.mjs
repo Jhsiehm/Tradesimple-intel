@@ -32,7 +32,7 @@ if (front.production) server.keepAliveTimeout = 75_000;
 process.on("unhandledRejection", (err) => console.error("unhandled", err instanceof Error ? err.message : err));
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`intel api http://127.0.0.1:${port}`);
+  console.log(`intel api http://127.0.0.1:${server.address().port}`);
   startWarm(db);
   startTasks(db);
   startLive(db);
