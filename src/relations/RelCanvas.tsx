@@ -1,3 +1,4 @@
+import { canvasTypography } from "../design/typography";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { CATEGORY_IDS, neighborhood, type CategoryId, type Graph, type RelEdge, type RelNode, type Theory } from "../../shared/relations.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK } from "./palette";
@@ -207,6 +208,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     const ctx = cv?.getContext("2d");
     if (!cv || !ctx) return;
     const t0 = performance.now();
+    const typography = canvasTypography(cv);
     const { w, h, dpr } = size.current;
     const { x, y, k } = view.current;
     const { selectedId: sel, pendingFrom: pend } = live.current;
@@ -304,7 +306,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
 
     // Nodes, then labels on top.
     const labels = k > 0.55;
-    ctx.font = `${11 / k}px "IBM Plex Mono", ui-monospace, Menlo, monospace`;
+    ctx.font = `400 ${typography.size / k}px ${typography.family}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (const n of scene.nodes) {
@@ -344,7 +346,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       }
     }
     if (labels) {
-      ctx.font = `${10 / k}px "IBM Plex Mono", ui-monospace, Menlo, monospace`;
+      ctx.font = `400 ${typography.size / k}px ${typography.family}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (const e of scene.edges) {

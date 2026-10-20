@@ -30,18 +30,18 @@
   touch-action: none;
   user-select: none;
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .widget.moving .widget-bar, body.card-dragging { cursor: grabbing; }
 body.card-dragging, body.card-dragging * { user-select: none; }
-.widget-grip { color: var(--faint); font-size: 12px; line-height: 1; }
+.widget-grip { color: var(--faint); font-size: var(--text-meta); line-height: 1; }
 .widget-bar strong {
   flex: 1 1 auto;
   min-width: 0;
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.04em;
-  font-size: 12px;
+  font-size: var(--text-meta);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -53,13 +53,13 @@ body.card-dragging, body.card-dragging * { user-select: none; }
   padding: 0 6px;
   border: 1px solid transparent;
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1;
 }
 .widget-btn:hover, .widget-btn:focus-visible { color: var(--ink); border-color: var(--line); }
-.widget-btn.pin { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.widget-btn.pin { font-size: var(--text-meta); letter-spacing: .025em; text-transform: uppercase; }
 .widget-btn.pin[aria-pressed="true"] { color: var(--amber); }
-.widget-btn.close { font-size: 16px; }
+.widget-btn.close { font-size: var(--text-panel); }
 .widget-btn.close:hover { color: var(--nay); }
 .widget-body { position: relative; min-height: 0; overflow: auto; padding: 10px 12px; }
 .widget-body .board { height: 100%; }
@@ -82,7 +82,7 @@ body.card-dragging, body.card-dragging * { user-select: none; }
 /* Collapsed: a slim title chip that stays where the card was. One click opens it again. */
 .widget.min { grid-template-rows: auto; width: auto; max-width: 240px; min-width: 0; height: auto; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); }
 .widget.min .widget-bar { border-bottom: none; cursor: pointer; }
-.widget.min .widget-bar strong { font-size: 11px; }
+.widget.min .widget-bar strong { font-size: var(--text-meta); }
 
 /* Phone: chips in a tray; one card at a time opens as a bottom sheet. */
 .widgets.phone { z-index: 30; }
@@ -106,8 +106,8 @@ body.card-dragging, body.card-dragging * { user-select: none; }
   padding-bottom: env(safe-area-inset-bottom);
 }
 .widget.sheet .widget-bar { cursor: default; padding: 6px 6px 6px 12px; }
-.widget.sheet .widget-btn { min-width: 40px; height: 40px; font-size: 14px; }
-.widget.sheet .widget-btn.close { font-size: 22px; }
+.widget.sheet .widget-btn { min-width: 40px; height: 40px; font-size: var(--text-body); }
+.widget.sheet .widget-btn.close { font-size: var(--text-page); }
 .widget.sheet .widget-body { height: min(64dvh, 600px); }
 .widget-tray {
   padding: 8px;
@@ -135,14 +135,14 @@ body.card-dragging, body.card-dragging * { user-select: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
-.widget-chip .widget-btn { min-width: 40px; height: 40px; font-size: 18px; }
+.widget-chip .widget-btn { min-width: 40px; height: 40px; font-size: var(--text-panel); }
 
 /* Supply chain inside a card: the graph first, one source line, details behind the i. */
 .supply.compact .sc-body { display: block; }
 .supply.compact .sc-body > * + * { margin-top: 12px; }
-.supply.compact .sc-graph { font-size: 15px; height: auto !important; }
+.supply.compact .sc-graph { font-size: var(--text-prose); height: auto !important; }
 .sc-src1 { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .sc-src1 span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc-info {
@@ -152,7 +152,7 @@ body.card-dragging, body.card-dragging * { user-select: none; }
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--dim);
-  font: italic 600 11px/16px Georgia, serif;
+  font: 600 var(--text-meta)/16px var(--font-ui);
   text-align: center;
 }
 .sc-info[aria-expanded="true"], .sc-info:hover { color: var(--amber); border-color: var(--amber); }

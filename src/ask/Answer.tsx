@@ -31,6 +31,12 @@ function Inline({ text, steps, onChip }: { text: string; steps: Map<string, Step
   return <>{out}</>;
 }
 
+// Align comparable numerical columns without changing the reported values or units.
+const numericColumns = (rows: unknown[][], count: number) => Array.from({ length: count }, (_, j) => {
+  const values = rows.map(row => String(row[j] ?? "").replace(/\*\*/g, "").trim()).filter(value => value && !/^(—|–|-|N\/A|null)$/i.test(value));
+  return values.length > 0 && values.every(value => /^[+−-]?[$€£]?\(?\d[\d,.]*(?:\s*(?:%|bp|bps|[KMBT]))?\)?$/i.test(value));
+});
+
 const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 
 /** The small markdown the prompt asks for: paragraphs, bullet lists, and pipe tables. */
@@ -49,10 +55,11 @@ export function Answer({ text, steps, onChip }: { text: string; steps: Step[]; o
         i++;
       }
       const [head, ...body] = rows;
+      const numeric = numericColumns(body, head.length);
       blocks.push(
         <div key={k++} className="ans-table"><table>
-          <thead><tr>{head.map((c, j) => <th key={j}><Inline text={c} steps={byId} onChip={onChip} /></th>)}</tr></thead>
-          <tbody>{body.map((r, n) => <tr key={n}>{r.map((c, j) => <td key={j}><Inline text={c} steps={byId} onChip={onChip} /></td>)}</tr>)}</tbody>
+          <thead><tr>{head.map((c, j) => <th key={j} className={numeric[j] ? "numeric" : undefined}><Inline text={c} steps={byId} onChip={onChip} /></th>)}</tr></thead>
+          <tbody>{body.map((r, n) => <tr key={n}>{r.map((c, j) => <td key={j} className={numeric[j] ? "numeric" : undefined}><Inline text={c} steps={byId} onChip={onChip} /></td>)}</tr>)}</tbody>
         </table></div>
       );
       continue;
@@ -86,12 +93,13 @@ const latencyOf = (steps: Step[], ref: string) => {
 
 /** When the answer carried no figures, the tool's own rows, labeled with where they came from. Return-like columns hold fractions. */
 export function ToolTable({ table, steps, onChip }: { table: FallbackTable; steps: Step[]; onChip: (s: Step) => void }) {
+  const numeric = numericColumns(table.rows, table.columns.length);
   return (
     <section className="ans-fallback" aria-label="Tool rows">
       <h4>{table.label} <Chip id={table.ref} steps={new Map(steps.map((s) => [s.id, s]))} onChip={onChip} /></h4>
       <div className="ans-table"><table>
-        <thead><tr>{table.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-        <tbody>{table.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{cellText(table.columns[j], c)}</td>)}</tr>)}</tbody>
+        <thead><tr>{table.columns.map((c, j) => <th key={c} className={numeric[j] ? "numeric" : undefined}>{c}</th>)}</tr></thead>
+        <tbody>{table.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={numeric[j] ? "numeric" : undefined}>{cellText(table.columns[j], c)}</td>)}</tr>)}</tbody>
       </table></div>
       <p className="ans-src">{table.source || "no source reported"}{table.asOf ? ` · as of ${table.asOf}` : ""}{latencyOf(steps, table.ref)}{table.total > table.rows.length ? ` · ${table.rows.length} of ${table.total} rows` : ""}</p>
     </section>

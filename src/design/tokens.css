@@ -1,4 +1,41 @@
-/* Opt-in scope. Does not overwrite any production semantic token. */
+/* Shared operational geometry and typography; color semantics remain in the theme. */
+:root {
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --text-page: 24px;
+  --text-panel: 16px;
+  --text-body: 14px;
+  --text-ui: 13px;
+  --text-prose: 15px;
+  --text-meta: 12px;
+  --text-code: 13px;
+  --leading-ui: 1.45;
+  --leading-heading: 1.25;
+  --leading-panel: 1.35;
+  --leading-prose: 1.6;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --panel-padding: var(--space-4);
+  --table-cell-padding: 5px 10px;
+  --row-height: 34px;
+  --control-height: 32px;
+  --radius-control: 2px;
+  --radius-panel: 3px;
+  --shadow-overlay: 0 8px 24px rgb(0 0 0 / .32);
+  --accent: #c7b58e;
+  --focus: #d8c69f;
+  --control-border: #637c70;
+  --surface-raised: #0b130f;
+  --surface-hover: #101c15;
+  --surface-selected: #16271e;
+}
+/* Brand pigments and optional static materials. */
 .tsi-theme {
   --tsi-core-midnight: #0B1F1A;
   --tsi-core-atlas: #1F4D43;
@@ -46,12 +83,12 @@
   --tsi-chroma-pink-dark: color-mix(in srgb, var(--tsi-chroma-pink) 40%, var(--tsi-core-midnight));
   --tsi-chroma-pink-muted: color-mix(in srgb, var(--tsi-chroma-pink) 45%, var(--tsi-core-slate));
   --tsi-chroma-pink-alpha: color-mix(in srgb, var(--tsi-chroma-pink) 16%, transparent);
-  --tsi-surface-deep: #050c09;
-  --tsi-surface-panel: #0a1712;
+  --tsi-surface-deep: #030705;
+  --tsi-surface-panel: #060c08;
   --tsi-surface-line: #29473c;
   --tsi-text: var(--tsi-core-ivory);
   --tsi-text-secondary: #a9b9b0;
-  --tsi-grain-opacity: .18;
-  --tsi-wear-opacity: .10;
+  --tsi-grain-opacity: .035;
+  --tsi-wear-opacity: .025;
   --tsi-material-direction: 112deg;
 }

@@ -1,26 +1,5 @@
-.research-emblem { display: inline-block; width: 42px; height: 42px; flex: none; vertical-align: middle; }
-.research-emblem-lens { transform-origin: 296px 371px; }
-.research-emblem-ray { transform-origin: 266px 373px; }
-.research-emblem.executing .research-emblem-lens { animation: research-lens-breathe 2400ms ease-in-out infinite; }
-.research-emblem.executing .research-emblem-ray { animation: research-ray-unfold 2400ms cubic-bezier(.45, 0, .25, 1) infinite; animation-delay: var(--ray-delay); }
-.research-emblem .ray-one { --ray-angle: -9deg; --ray-delay: -2400ms; }
-.research-emblem .ray-two { --ray-angle: -3deg; --ray-delay: -2220ms; }
-.research-emblem .ray-three { --ray-angle: 3deg; --ray-delay: -2040ms; }
-.research-emblem .ray-four { --ray-angle: 9deg; --ray-delay: -1860ms; }
+/* Static geometric identity; execution state is described by the adjacent step text. */
+.research-emblem { display: inline-block; width: 32px; height: 32px; flex: none; vertical-align: middle; }
 .research-emblem.research-emblem-compact { width: 18px; height: 18px; }
 .st-phases > .research-emblem { margin-right: 6px; }
 .st-row > .research-emblem { margin-top: 2px; }
-@keyframes research-lens-breathe {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  45% { transform: scale(.94); opacity: .72; }
-  70% { transform: scale(1); opacity: 1; }
-}
-@keyframes research-ray-unfold {
-  0%, 100% { transform: rotate(0deg) scaleX(1); opacity: 1; }
-  35% { transform: rotate(var(--ray-angle)) scaleX(.64); opacity: .3; }
-  65% { transform: rotate(0deg) scaleX(1); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .research-emblem.executing .research-emblem-lens,
-  .research-emblem.executing .research-emblem-ray { animation: none; }
-}

@@ -1,18 +1,18 @@
 .palette-preview { max-width: 1280px; margin: auto; padding: 36px 24px 60px; line-height: 1.6; }
 .palette-preview header { border-top: 3px double var(--tsi-core-brass); border-bottom: 1px solid var(--line); padding: 24px 0; }
-.palette-preview h1 { font-size: clamp(24px, 4vw, 42px); font-weight: 500; margin: 8px 0; }
-.palette-preview h2 { font-size: 18px; font-weight: 500; margin: 30px 0 16px; }
-.palette-preview h3 { font-size: 14px; margin: 12px 0 4px; }
+.palette-preview h1 { font-size: clamp(24px, 4vw, 42px); font-weight: var(--weight-medium); margin: 8px 0; }
+.palette-preview h2 { font-size: var(--text-panel); font-weight: var(--weight-medium); margin: 30px 0 16px; }
+.palette-preview h3 { font-size: var(--text-body); margin: 12px 0 4px; }
 .palette-preview p { margin: 8px 0; }
 .palette-preview a { color: var(--amber); }
-.palette-eyebrow { color: var(--tsi-core-stone); font-size: 11px; letter-spacing: .15em; }
+.palette-eyebrow { color: var(--tsi-core-stone); font-size: var(--text-meta); letter-spacing: .15em; }
 .palette-controls { margin: 24px 0; }
 .palette-controls select { background: var(--panel); border: 1px solid var(--line); padding: 8px; max-width: 100%; }
-.palette-controls p, .palette-card p { color: var(--dim); font-size: 12px; }
+.palette-controls p, .palette-card p { color: var(--dim); font-size: var(--text-meta); }
 .palette-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 16px; }
 .palette-card { min-width: 0; padding: 14px; border: 1px solid var(--line); background: var(--panel); }
 .palette-color { height: 74px; background: var(--swatch); border: 1px solid var(--line); }
-.palette-card code { display: block; font-size: 11px; overflow-wrap: anywhere; }
+.palette-card code { display: block; font-size: var(--text-meta); overflow-wrap: anywhere; }
 .palette-tones { display: flex; margin: 16px 0 6px; height: 34px; }
 .palette-tones span { flex: 1; background: var(--swatch); font-size: 0; }
 .palette-tones span:first-child { background: color-mix(in srgb, var(--swatch) 75%, var(--tsi-core-ivory)); }
@@ -23,5 +23,5 @@
 .palette-pairings article { background: var(--tsi-core-midnight); color: var(--tsi-core-ivory); }
 .palette-pairings article:nth-child(2) { background: var(--tsi-core-atlas); color: var(--tsi-chroma-cyan); }
 .palette-pairings article:nth-child(3) { color: var(--tsi-core-brass); }
-.palette-preview footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+.palette-preview footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: var(--text-meta); }
 @media (max-width: 520px) { .palette-preview { padding: 20px 14px 36px; } .palette-controls label { display: grid; gap: 8px; } }

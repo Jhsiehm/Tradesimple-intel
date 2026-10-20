@@ -10,7 +10,7 @@
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .ask-saved-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
 .ask-saved .ask-saved-open b { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -34,9 +34,9 @@
   background: var(--bg);
   border: 1px solid var(--amber);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
-.ask-undo { margin: 0 0 4px; display: flex; align-items: baseline; gap: 6px; color: var(--dim); font-size: 11px; }
+.ask-undo { margin: 0 0 4px; display: flex; align-items: baseline; gap: 6px; color: var(--dim); font-size: var(--text-meta); }
 .ask-saved .ask-undo button { width: auto; display: inline; padding: 0 2px; border: 0; color: var(--amber); }
 .ask-turn .ask-retry { justify-self: start; }
 .ask-ctx-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

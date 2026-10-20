@@ -1,7 +1,7 @@
-.weather-controls { flex-basis: 100%; min-width: 0; border-top: 1px solid var(--line); padding-top: 9px; font-size: 11px; }
+.weather-controls { flex-basis: 100%; min-width: 0; border-top: 1px solid var(--line); padding-top: 9px; font-size: var(--text-meta); }
 .weather-overview, .weather-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 .weather-overview { margin-bottom: 7px; }
-.weather-overview strong { color: var(--amber); letter-spacing: .09em; font-size: 11px; }
+.weather-overview strong { color: var(--amber); letter-spacing: .09em; font-size: var(--text-meta); }
 .weather-overview > span { color: var(--dim); }
 .weather-overview > button { margin-left: auto; }
 .weather-actions > button, .weather-actions summary, .weather-location button, .weather-overview > button { border: 1px solid var(--line); padding: 6px 9px; cursor: pointer; }
@@ -22,7 +22,7 @@
 .weather-location { display: flex; flex-wrap: wrap; align-items: end; gap: 9px 12px; padding: 10px 0 2px; }
 .weather-location label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); }
 .weather-location form { display: flex; align-items: end; flex-wrap: wrap; gap: 6px; }
-.weather-location input, .weather-location select { background: var(--tsi-terminal-bg, #090d11); color: var(--ink); border: 1px solid var(--line); padding: 7px; min-height: 32px; }
+.weather-location input, .weather-location select { background: var(--tsi-terminal-bg, #090d11); color: var(--ink); border: 1px solid var(--control-border); padding: 7px; min-height: 32px; }
 .weather-location input { width: 95px; }
 .weather-location select { max-width: 250px; }
 .weather-location > p { flex-basis: 100%; margin: 0; color: var(--dim); line-height: 1.4; }
@@ -31,7 +31,7 @@
 .app.phone.weather-map .map-wrap { grid-template-rows: auto minmax(220px, 1fr); overflow: visible; }
 .app.phone.weather-map .stage { grid-template-rows: minmax(0, 1fr); }
 .app.phone.weather-map .rail { display: none; }
-.app.phone .weather-controls { font-size: 12px; }
+.app.phone .weather-controls { font-size: var(--text-meta); }
 .app.phone .weather-actions { gap: 6px; }
 .app.phone .weather-actions > button, .app.phone .weather-actions summary, .app.phone .weather-location button, .app.phone .weather-overview > button { min-height: 44px; }
 .app.phone .weather-disclosure { position: static; }
