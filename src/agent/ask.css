@@ -3,9 +3,11 @@
   position: fixed;
   inset: 0;
   z-index: 85;
-  background: rgba(3, 4, 6, 0.55);
+  background: transparent;
+  pointer-events: none;
 }
 .ask {
+  pointer-events: auto;
   position: absolute;
   container-type: inline-size;
   min-width: 0;
@@ -325,3 +327,9 @@ body.ask-sizing-ew, body.ask-sizing-ew * { cursor: ew-resize !important; }
 body.ask-sizing-ns, body.ask-sizing-ns * { cursor: ns-resize !important; }
 body.ask-sizing-nwse, body.ask-sizing-nwse * { cursor: nwse-resize !important; }
 body.ask-sizing-nesw, body.ask-sizing-nesw * { cursor: nesw-resize !important; }
+
+/* Floating research stays usable alongside the chart. */
+.ask-head { cursor: grab; touch-action: none; }
+.ask-move { cursor: grab; touch-action: none; color: var(--dim); background: transparent; border: 1px solid var(--control-border); padding: 4px 6px; font: inherit; }
+.ask-move:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+body.ask-moving, body.ask-moving * { cursor: grabbing !important; }

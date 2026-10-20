@@ -36,7 +36,7 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
   const [fault, setFault] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const log = useRef<HTMLDivElement>(null);
-  const { box, snap, applySnap, drag } = useAskSize();
+  const { box, snap, applySnap, drag, nudge } = useAskSize();
 
   useEffect(() => {
     if (!open) return;
@@ -105,11 +105,11 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
   const keep = () => setFault(ask.keep() ? "" : "This browser refused to store the chat.");
 
   return (
-    <div className="ask-scrim" data-snap={snap || undefined} onMouseDown={ask.close}>
+    <div className="ask-scrim" data-snap={snap || undefined}>
       <div
         className="ask"
         role="dialog"
-        aria-modal={!docked}
+        aria-modal={false}
         data-snap={snap || undefined}
         aria-label="Ask"
         aria-busy={busy}
@@ -118,7 +118,18 @@ export function AskSheet({ ask, context: ctx, region, onFollow }: { ask: AskApi;
         onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); ask.close(); } }}
       >
         <div className="ask-frame">
-          <header className="ask-head">
+          <header className="ask-head" onPointerDown={event => {
+            if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+            drag(event);
+          }}>
+            <button type="button" className="ask-move" aria-label="Move research panel" title="Drag to move · arrow keys move · Shift moves farther" onPointerDown={event => drag(event)} onKeyDown={event => {
+              const directions: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+              const direction = directions[event.key];
+              if (!direction) return;
+              event.preventDefault(); event.stopPropagation();
+              const step = event.shiftKey ? 40 : 10;
+              nudge(direction[0] * step, direction[1] * step);
+            }}>⠿ Move</button>
             <span className="portable-emblem"><ResearchEmblem active={busy}/></span><b className="ask-mark">RESEARCH</b><button className="panels-btn" onClick={() => { ask.close(); onFollow("today:research"); }}>Research home</button>
             <div className="ask-context">
               {attachedCtx ? (
