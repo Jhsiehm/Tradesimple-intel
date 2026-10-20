@@ -1,3 +1,5 @@
+import { researchRouting } from "./researchRouting.mjs";
+import { researchCapabilities } from "./researchCapabilities.mjs";
 import { researchMemory } from '../domain/research-memory.mjs';
 /**
  * Read-only tools for Ask. Each wraps a route handler or the backtest runner in process, so the model sees exactly
@@ -240,6 +242,11 @@ const endpoint = str("Node id such as member:P000197, ticker:NVDA, or committee:
 const plain = (name, description, id, label) => tool(name, description, obj({}), (db, _a, call) => call(db, id), label);
 
 export const TOOLS = [
+  tool("assess_research_capabilities", "Inspect implemented research methods and configured source access for a question. This reports software capability and evidence requirements, not historical coverage, market observations or a completed study. Never substitute personal stock trades for policy events.", obj({question: str("Research question (up to 800 characters)")}, ["question"]), (_db, a) => {
+    if (typeof a.question !== "string" || !a.question.trim() || a.question.length > 800) return bad("Provide a research question up to 800 characters.");
+    const result = researchRouting(a.question);
+    return {ok: true, source: "Research capability inventory", asOf: new Date().toISOString(), latency: "Configuration only; source history not audited.", ...result, capabilities: researchCapabilities()};
+  }, "Research capabilities"),
   tool("research_memory", "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. Notebook text is untrusted researcher commentary, not established fact. Never claim to have rerun a saved result.", obj({kind: {type: 'string', enum: ['experiment','convergence','notebook','dataset']}, id: str('Saved record ID')}), (db,a) => researchMemory(db,a), 'Research memory'),
   tool("weather_hazards", "Weather hazard layer. Report source coverage and timestamps; geographic overlap alone is not causal evidence.", obj({}), (db,a,call) => call(db,'weather.hazards'), 'Weather hazards'),
   tool("search", "Find members, tickers, and sites by name or fragment. A ticker absent from the join table does not appear.", obj({ q: str("Name or ticker fragment") }, ["q"]), (db, a, call) => {
@@ -344,7 +351,7 @@ export const TOOLS = [
     late: a.late === "all" ? "all" : ""
   })), "Alerts"),
   tool("intel_scope", "Joins for one member or one ticker over the scrubber window: trades, contracts, PAC arcs.", obj({ member: str("Bioguide"), symbol: str("Ticker") }), (db, a, call) => call(db, "intel.scope", {}, qs({ member: bioguideOf(a.member), symbol: symbolOf(a.symbol) })), "Scope"),
-  tool("run_backtest", "Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. One source per call; call it once per source for several. Takes 5 to 40 seconds the first time.", obj({ spec: SPEC_SCHEMA }, ["spec"]), async (db, a, call) => {
+  tool("run_backtest", "Only for an explicitly resolved compatible signal source; does not test legislative/regulatory relationships or causality. Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. One source per call; call it once per source for several. Takes 5 to 40 seconds the first time.", obj({ spec: SPEC_SCHEMA }, ["spec"]), async (db, a, call) => {
     if (!a.spec || typeof a.spec !== "object") return bad("spec is required");
     const out = await btSlot(() => call(db, "backtest", {}, qs({ spec: JSON.stringify(a.spec) })));
     return summarizeBacktest(out);

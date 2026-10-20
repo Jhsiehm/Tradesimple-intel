@@ -47,7 +47,7 @@ test("questions name sources and windows", () => {
   assert.deepEqual(questionSources("backtest the last 30 days from all data sources"), ["congress", "form4", "contracts"]);
   assert.deepEqual(questionSources("backtest insider buys"), ["form4"]);
   assert.deepEqual(questionSources("backtest contract awards"), ["contracts"]);
-  assert.deepEqual(questionSources("backtest it"), ["congress"]);
+  assert.deepEqual(questionSources("backtest it"), []);
   const h = questionHints("Backtest the last 30 days", TODAY).fields;
   assert.equal(h["filters.from"], "2026-09-09");
   assert.equal(h["filters.to"], TODAY);
@@ -103,7 +103,7 @@ test("chips only for result-changing fields nothing settles", () => {
   assert.deepEqual(clarifyQuestions({ question: "what did Pelosi buy?", today: TODAY }), []);
   const last30 = clarifyQuestions({ question: "backtest the last 30 days from all data sources", today: TODAY });
   assert.deepEqual(last30.map((x) => x.path), ["rules.benchmark"]);
-  const committee = clarifyQuestions({ question: "backtest Armed Services members, hold 90 days vs SPY", today: TODAY });
+  const committee = clarifyQuestions({ question: "backtest disclosed stock buys by Armed Services members, hold 90 days vs SPY", today: TODAY });
   assert.deepEqual(committee.map((x) => x.path), ["filters.nearHearingDays"]);
   assert.deepEqual(clarifyQuestions({ question: "backtest insider buys, hold 90 days vs SPY", today: TODAY }).map((x) => x.path), ["filters.include10b51"]);
   assert.deepEqual(clarifyQuestions({ question: "backtest contract awards, hold 90 days vs SPY", today: TODAY }).map((x) => x.path), ["filters.contractLagDays"]);

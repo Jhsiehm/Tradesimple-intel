@@ -2,6 +2,7 @@ export function asOfText(asOf: string, now?: number): string;
 
 export type ConfidenceStep = { tool: string; state: string; asOf?: string };
 export type ConfidenceDone = {
+  research?: {kind: string};
   greeting?: boolean;
   clarify?: boolean;
   noTools?: boolean;

@@ -1,3 +1,4 @@
+import { interpretResearch } from "./researchIntent.mjs";
 /**
  * Scheduled research tasks, pure. Schedule math in US Eastern time (DST-aware through Intl), the boot catch-up rule,
  * "every morning at 8 …" parsing, task cleaning, and the summary and severity a run posts to Alerts.
@@ -178,6 +179,10 @@ export function draftFromQuestion({ question, today, prefs = null, priors = [], 
   if (!parsed) return null;
   if (!parsed.schedule) return { ok: false, error: parsed.error };
   const rest = parsed.rest;
+  const scheduledQuestion = BACK_REF.test(rest) ? lastQuestion : rest;
+  if (scheduledQuestion && interpretResearch(scheduledQuestion).route === "assessment") {
+    return { ok: false, error: "This research question needs a resolved design and evidence assessment before a replay can be scheduled. No stock-disclosure strategy has been substituted." };
+  }
   const base = { schedule: parsed.schedule, enabled: true, thresholds: { excessPct: null, newSignals: null } };
   if (BACK_REF.test(rest)) {
     if (priors.length) return { ok: true, draft: { ...base, kind: "backtest", title: titleOf(describeSpec(priors.at(-1))), prompt: "", specs: priors.slice(-TASK_LIMITS.specs), window: null, useWatchlist: false } };

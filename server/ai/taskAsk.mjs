@@ -26,6 +26,7 @@ export async function runPromptTask({ db, task, env = process.env, now = Date.no
   askLog({ event: "task_ask", task: task.id, question: task.prompt.slice(0, 160), provider: cfg.provider, model, budget: spend?.level || "" });
   try {
     await runAsk({
+      researchEnv: env,
       question: task.prompt,
       model,
       provider: metered(makeProvider({ ...cfg, model }), { db, kind: "task", askId: task.id, now }),

@@ -1,6 +1,6 @@
 # A research terminal that answers the intended question
 
-Status: implementation plan, October 20, 2026. Runtime behavior is not changed by this document.
+Status: implementation plan, October 20, 2026. The [first routing/capability delivery](routing-release.md) is implemented; later stages remain planned.
 
 ## Objective and success criterion
 

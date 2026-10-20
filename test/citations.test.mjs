@@ -129,7 +129,7 @@ test("runAsk: a multi-source backtest turn gives each run its own ref, and a fig
     ["congress", "form4", "contracts"].map((src, i) => TOOL("run_backtest", { spec: { source: src } }, `b${i}`)),
     TEXT("Congress returned 4.12% [t1], Form 4 −2.33% [t2], contracts 8.77% [t3]. Form 4 trailed by 5.44% [t1].")
   );
-  const events = await ask(p, async (_n, args) => ({ ok: true, source: `${args.spec.source} feed`, asOf: "2026-10-09", latency: "daily", spec: args.spec, stats: stats[args.spec.source], description: args.spec.source }));
+  const events = await ask(p, async (_n, args) => ({ ok: true, source: `${args.spec.source} feed`, asOf: "2026-10-09", latency: "daily", spec: args.spec, stats: stats[args.spec.source], description: args.spec.source }), {question: "Backtest all data sources", acceptDefaults: true});
   const done = events.at(-1);
   assert.deepEqual(done.backtests.map((b) => [b.id, b.spec.source]), [["t1", "congress"], ["t2", "form4"], ["t3", "contracts"]]);
   assert.deepEqual(done.grounding.miscited.map((m) => [m.raw, m.cited, m.foundIn]), [["5.44%", ["t1"], ["t2"]]]);

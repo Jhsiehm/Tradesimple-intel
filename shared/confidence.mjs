@@ -36,6 +36,7 @@ const stamp = (asOf) => {
  */
 export function confidenceLine({ steps = [], done, model = "", now = NaN }) {
   if (!done || done.greeting || done.clarify) return null;
+  if (done.research?.kind === "capability-assessment") return { parts: ["Capability assessment · no study executed · source history not audited"], tone: "neutral", text: "Capability assessment · no study executed · source history not audited" };
   const g = done.grounding || {};
   const parts = [];
   let warn = false;

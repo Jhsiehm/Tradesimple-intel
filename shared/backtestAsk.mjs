@@ -5,6 +5,8 @@
  */
 import { BENCHMARKS, DEFAULT_FILTERS, DEFAULT_RULES, SOURCES, SOURCE_LABEL, cleanSpec } from "./backtestSpec.mjs";
 
+import { explicitSignalSources, interpretResearch } from "./researchIntent.mjs";
+
 export const PREFS_VERSION = 1;
 export const PREFS_KEY = "intel:ask:prefs:v1";
 
@@ -125,16 +127,9 @@ function setPath(obj, path, v) {
 const COMMITTEES = ["armed services", "financial services", "energy and commerce", "intelligence", "judiciary", "appropriations", "ways and means", "agriculture", "banking", "finance", "foreign affairs", "foreign relations", "homeland security", "commerce", "science", "transportation", "veterans", "budget", "health", "oversight", "small business", "natural resources", "energy and natural resources", "education and the workforce", "rules"];
 const title = (s) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bAnd\b/g, "and");
 
-/** Sources a question names. "All data sources" → every source that runs without tickers. */
+/** Explicit compatible replay sources; unresolved or policy questions never default to Congress. */
 export function questionSources(q) {
-  const s = lc(q);
-  if (/\ball (data )?sources\b|\bevery source\b|\beach source\b/.test(s)) return ["congress", "form4", "contracts"];
-  const out = [];
-  if (/\binsiders?\b|\bform ?4\b|\bexecutives?\b|\bofficers?\b|\bceo\b/.test(s)) out.push("form4");
-  if (/\bcontracts?\b|\bawards?\b|\busaspending\b/.test(s)) out.push("contracts");
-  if (/\blobby(ing)?\b/.test(s)) out.push("lobbying");
-  if (/\bcongress|\bmembers?\b|\bsenators?\b|\brepresentatives?\b|\bhouse\b|\bsenate\b|\bpoliticians?\b|\bdisclos|\bptrs?\b|\bcommittee/.test(s) || !out.length) out.unshift("congress");
-  return [...new Set(out)];
+  return interpretResearch(q).route === "assessment" ? [] : explicitSignalSources(q);
 }
 
 /** Every spec field the words of a question set, by path, plus the sources it names. */
@@ -188,9 +183,12 @@ export const wantsBacktest = (q) => /\bback-?test|\breplay\b|\bhow would .* (hav
  * answers, each field labeled with where it came from. `answers` are `{ path: value }`.
  */
 export function buildSpec({ question, today, prefs = null, prior = null, answers = {} }) {
+  if (interpretResearch(question, {prior}).route === "assessment") throw new Error("This question needs a research design or source clarification before replay.");
   const hints = questionHints(question, today);
-  const follow = isFollowUp(question, prior);
+  const named = namedSources(question);
+  const follow = isFollowUp(question, prior) && (!named.length || named.includes(prior.source));
   const sources = follow ? [prior.source] : hints.sources;
+  if (!sources.length) throw new Error("Choose a supported signal source; no default source is assumed.");
   let spec = follow ? JSON.parse(JSON.stringify(prior)) : { source: sources[0], filters: { ...DEFAULT_FILTERS }, rules: { ...DEFAULT_RULES } };
   const from = {};
   if (!follow) {
