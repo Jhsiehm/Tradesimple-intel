@@ -24,9 +24,17 @@ function Inline({ text, steps, onChip }: { text: string; steps: Map<string, Step
     }
     out.push(s.slice(last));
   };
+  const linked = (s: string) => {
+    const marker = '[Open Policy research](#research/policy)';
+    const pieces = s.split(marker);
+    pieces.forEach((piece, index) => {
+      if (index) out.push(<a key={k++} href="#research/policy">Open Policy research</a>);
+      bolded(piece);
+    });
+  };
   for (const part of splitRefs(text)) {
     if (part.ref) out.push(<Chip key={k++} id={part.ref} steps={steps} onChip={onChip} />);
-    else bolded(part.text ?? "");
+    else linked(part.text ?? "");
   }
   return <>{out}</>;
 }

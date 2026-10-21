@@ -7,11 +7,11 @@ import { SavedChats } from '../ask/SavedChats';
 import { ScheduledTaskList } from '../tasks/ScheduledTasks';
 import { useTasks } from '../tasks/useTasks';
 import { Icon, type IconName } from '../ui/icons/Icon';
-export type ResearchTool = 'experiments'|'data'|'convergence'|'notebooks'|'guided'|'contractEvidence'|'memory'|'stress'|'eventStudies'|'paper';
+export type ResearchTool = 'experiments'|'data'|'convergence'|'notebooks'|'guided'|'contractEvidence'|'policy'|'memory'|'stress'|'eventStudies'|'paper';
 export type Registry = { asOf: string; experiments: {id:string}[]; datasets: {id:string}[]; notebooks: {id:string;status?:string}[]; plans: {id:string;evaluated?:boolean}[] };
 const groups: {title:string;items:{id:ResearchTool;title:string;icon:IconName}[]}[] = [
  {title:'Evidence',items:[{id:'data',title:'Data Hub',icon:'feed'},{id:'contractEvidence',title:'Contract evidence',icon:'contracts'}]},
- {title:'Experimentation',items:[{id:'guided',title:'Design an experiment',icon:'draw'},{id:'experiments',title:'Experiments',icon:'backtest'},{id:'convergence',title:'Convergence',icon:'arc'},{id:'eventStudies',title:'Event studies',icon:'timeline'},{id:'stress',title:'Stress tests',icon:'filter'},{id:'paper',title:'Paper trading',icon:'backtest'}]},
+ {title:'Experimentation',items:[{id:'policy',title:'Policy research',icon:'congress'},{id:'guided',title:'Design an experiment',icon:'draw'},{id:'experiments',title:'Experiments',icon:'backtest'},{id:'convergence',title:'Convergence',icon:'arc'},{id:'eventStudies',title:'Event studies',icon:'timeline'},{id:'stress',title:'Stress tests',icon:'filter'},{id:'paper',title:'Paper trading',icon:'backtest'}]},
  {title:'Knowledge',items:[{id:'notebooks',title:'Notebooks',icon:'dossier'},{id:'memory',title:'Research memory',icon:'research'}]}
 ];
 export function useResearchSidebar() {

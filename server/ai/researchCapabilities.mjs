@@ -5,8 +5,8 @@ export function researchCapabilities(env = process.env) {
     {
       domain: 'legislation', label: 'Legislative actions and bill text',
       lookup: configured('CONGRESS_API_KEY') ? 'configured' : 'not-configured',
-      analysis: 'unavailable', coverage: 'not-audited',
-      limitation: 'Bill/committee lookups exist, but there is no validated historical policy-event dataset with publication timing and company exposure for automated replay.'
+      analysis: 'conditional-policy-pilot', coverage: 'not-audited',
+      limitation: 'Policy research can freeze a bill-specific protocol, collect versioned legislative/news records and compare paired event returns on complete supplied minute-price, reviewed exposure and news-timing inputs. Historical public availability and archive completeness are not certified; collection alone cannot establish a pre-news edge.'
     },
     {
       domain: 'regulation', label: 'Regulatory changes',

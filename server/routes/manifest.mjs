@@ -6,6 +6,15 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  { id: 'policy.investigations', path: '/api/research/policy' },
+  { id: 'policy.investigation', path: '/api/research/policy/:id(policy_[a-f0-9]+)' },
+  { id: 'policy.collect', path: '/api/research/policy/:id(policy_[a-f0-9]+)/collect' },
+  { id: 'policy.cancel', path: '/api/research/policy/:id(policy_[a-f0-9]+)/cancel' },
+  { id: 'policy.import', path: '/api/research/policy/:id(policy_[a-f0-9]+)/import' },
+  { id: 'policy.evaluate', path: '/api/research/policy/:id(policy_[a-f0-9]+)/evaluate' },
+  { id: 'policy.replay', path: '/api/research/policy/:id(policy_[a-f0-9]+)/replay' },
+  { id: 'policy.export', path: '/api/research/policy/:id(policy_[a-f0-9]+)/export' },
+  { id: 'policy.archive', path: '/api/research/policy/:id(policy_[a-f0-9]+)/archive' },
   {id:'research.paperAccounts',path:'/api/research/paper'},
   {id:'research.paperAccount',path:'/api/research/paper/:id(paper_[a-f0-9]+)'},
   {id:'research.paperAction',path:'/api/research/paper/:id(paper_[a-f0-9]+)/actions'},

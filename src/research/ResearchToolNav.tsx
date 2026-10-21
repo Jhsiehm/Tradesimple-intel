@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 const groups = [
   { title: 'Get started', tools: [['guided', 'Guided experiment', 'Turn a question into a saved test.']] },
   { title: 'Gather evidence', tools: [['data', 'Data Hub', 'Import, check and version your data.'], ['contractEvidence', 'Contract evidence', 'Inspect awards and their source records.'], ['relationships', 'Relationships', 'Connect entities using dated evidence.']] },
-  { title: 'Test an idea', tools: [['experiments', 'Experiments', 'Review saved runs and replay results.'], ['convergence', 'Convergence', 'Compare signals together and separately.'], ['eventStudies', 'Event studies', 'Measure price behavior around events.'], ['stress', 'Stress tests', 'Check sensitivity to changed assumptions.'], ['paper', 'Paper trading', 'Review and record manual simulated fills.']] },
+  { title: 'Test an idea', tools: [['policy', 'Policy research', 'Test legislative actions before news coverage.'], ['experiments', 'Experiments', 'Review saved runs and replay results.'], ['convergence', 'Convergence', 'Compare signals together and separately.'], ['eventStudies', 'Event studies', 'Measure price behavior around events.'], ['stress', 'Stress tests', 'Check sensitivity to changed assumptions.'], ['paper', 'Paper trading', 'Review and record manual simulated fills.']] },
   { title: 'Keep and reuse findings', tools: [['notebooks', 'Notebooks', 'Keep evidence, conclusions and follow-ups.'], ['memory', 'Memory', 'Approve findings for future analyses.'], ['pairs', 'Paired research', 'Compare answers with and without memory.'], ['analyses', 'Execution history', 'Inspect what an analysis actually did.']] },
 ] as const;
 export type ResearchTool = typeof groups[number]['tools'][number][0];

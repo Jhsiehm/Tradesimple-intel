@@ -49,6 +49,7 @@ export function assessmentAnswer(assessment) {
   if (unsupportedRules.length) lines.push('**Unsupported execution rules:**', ...unsupportedRules.map(rule => `- ${rule}`), 'No default holding period has been substituted.', '');
   const preNews = intent.domains.includes('legislation') ? preNewsRequirements(scopedQuestion) : [];
   if (preNews.length) lines.push('**Pre-news study gaps:**', ...preNews.map(gap => `- ${gap}`), '');
+  if (intent.domains.includes('legislation')) lines.push('**Policy research workflow:** [Open Policy research](#research/policy) to lock the question and rules, collect cited legislative/news records, inspect exact gaps, and import reviewed exposures and one-minute prices. Complete inputs support a conditional paired event-return comparison and a frozen export with offline replay. This is not a verified historical strategy result.', '');
   if (capabilities.length) {
     lines.push('**Available pieces and exact gaps:**');
     for (const item of capabilities) {

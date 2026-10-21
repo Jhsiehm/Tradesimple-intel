@@ -1,6 +1,6 @@
 # A research terminal that answers the intended question
 
-Status: implementation plan, October 20, 2026. The [first routing/capability delivery](routing-release.md) is implemented; later stages remain planned.
+Status: implementation plan, October 20, 2026. The [first routing/capability delivery](routing-release.md) and [bounded legislative policy pilot](policy-pilot.md) are implemented. The pilot delivers locked protocols, versioned collection, conditional paired-event calculations and frozen replay; audited historical pre-news coverage and broader methods remain incomplete.
 
 ## Objective and success criterion
 
