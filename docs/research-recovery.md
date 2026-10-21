@@ -41,3 +41,15 @@ The report records per-run outcomes, engine/input hashes for matches, elapsed re
 Each calculation has a 60-second limit and a 2 MiB process-output limit. The original archived engine runs in a separate Node process with an empty environment and filesystem access restricted to its temporary replay directory. Use trusted backups: [Node's permission model](https://nodejs.org/download/release/v22.17.0/docs/api/permissions.html) limits accidental resource access and is not a sandbox for hostile code. A matching calculation is evidence of reproducibility, not source authenticity or investment validity.
 
 These timings measure this machine and this snapshot. They exclude incident detection, retrieving an offsite backup, application/configuration recovery, provider reconnection and live cutover. Repeat on deployment-equivalent infrastructure before setting a recovery-time objective. Retain the private report as drill evidence and remove the restored copy when it is no longer needed.
+
+## API restart acceptance gate
+
+```sh
+INTEL_TEST=1 node --test test/researchRecoveryApi.test.mjs
+```
+
+This integration test boots the actual `server/index.mjs` entry point on an OS-assigned loopback port. It uses temporary synthetic databases, disables background providers and replaces outbound fetch with an offline failure. It saves a notebook with pinned evidence and a manual paper fill through the HTTP API, takes a backup while the API is running, writes a later notebook revision, and abruptly stops the process.
+
+The recovery process uses a new research path and an empty feed cache, with the original research path retired. Acceptance requires the snapshot's dataset, experiment, notebook revision and exact evidence pins to load through their normal endpoints; the later revision must be absent. Calculation replay and a downloaded standalone archive must match. Retrying the original paper request must not duplicate the fill. A new fill and notebook revision must persist across a second abrupt restart, and a backup of that recovered database must verify.
+
+This is automated API recovery evidence with synthetic data and providers offline. It does not establish browser acceptance, production authentication/configuration recovery, live provider reconnection, a production outage cutover or a recovery-time guarantee. For a deployment cutover, retain the old file, configure the restored `INTEL_RESEARCH` path, restart the service and check the same saved evidence before accepting new work.

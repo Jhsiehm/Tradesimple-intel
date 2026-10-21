@@ -192,7 +192,10 @@ test("if the rewrite still has no figures, done carries the tool's own table", a
 });
 
 test("a backtest question that skipped run_backtest is pushed to run it", async () => {
-  assert.match(retryReason("backtest the last 30 days", "The platform cannot backtest.", []), /run_backtest/);
+  assert.match(
+    retryReason("backtest congress buys in the last 30 days", "The platform cannot backtest.", []),
+    /run_backtest/,
+  );
   const spec = {
     source: "congress",
     filters: { from: "2026-09-09", to: "2026-10-09" },
@@ -294,6 +297,8 @@ test("tool calls in one turn run in parallel and stream start, routes, and end w
 test("run_backtest is a computing step", async () => {
   const p = scripted([TOOL("run_backtest", { spec: { source: "form4" } })], TEXT("4.10% [t1] over 12 trades."));
   const events = await ask(p, {
+    question: "Backtest insider buys",
+    acceptDefaults: true,
     execute: async () => ({
       ok: true,
       source: "SEC",

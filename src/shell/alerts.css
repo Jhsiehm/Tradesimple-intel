@@ -17,7 +17,7 @@
 }
 .alerts-menu button,
 .alerts-menu summary {
-  font-size: 12px;
+  font-size: var(--text-ui);
   letter-spacing: 0;
 }
 .alerts-menu button:disabled {
@@ -44,17 +44,17 @@
   align-items: baseline;
   gap: 12px;
   margin: 0;
-  font-size: 17px;
-  font-weight: 500;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-medium);
 }
 .alerts-heading h2 span {
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .alerts-heading p {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .alerts-close {
@@ -117,9 +117,9 @@
   white-space: nowrap;
 }
 .alerts-filter b {
-  font-size: 11px;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .alerts-filter button[aria-pressed="true"] {
   border-color: var(--dim);
@@ -141,13 +141,13 @@
   gap: 8px;
   margin-top: 8px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .alerts-bulk button {
   min-height: 32px;
   padding: 4px 0 4px 8px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-ui);
 }
 .alerts-queue {
   padding: 0 20px;
@@ -172,12 +172,12 @@
 }
 .alerts-group > summary b {
   padding-left: 4px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: var(--dim);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .alerts-group > summary small {
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .alerts-group > summary .ic {
@@ -214,25 +214,25 @@
 }
 .alerts-kind {
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
   letter-spacing: 0.06em;
 }
 .alerts-unread {
   color: var(--blue);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .alerts-date {
   margin-left: auto;
   color: var(--dim);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-meta);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .alerts-menu .alerts-title {
   padding: 0;
   border: 0;
   color: var(--ink);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
   line-height: 1.45;
   text-align: left;
   overflow-wrap: anywhere;
@@ -243,9 +243,9 @@
 .alerts-detail {
   margin: 0;
   color: var(--dim, #a8b2b9);
-  font-size: 12px;
+  font-size: var(--text-meta);
   overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .alerts-row .age-line,
 .alerts-row .age-down {
@@ -259,13 +259,13 @@
   padding: 4px 0;
   color: var(--dim);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .alerts-meta,
 .alerts-latency {
   margin: 6px 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   overflow-wrap: anywhere;
 }
 .alerts-meta {
@@ -289,7 +289,7 @@
   min-height: 32px;
   border: 1px solid var(--line);
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-ui);
   text-decoration: none;
   overflow-wrap: anywhere;
 }
@@ -313,16 +313,16 @@
   padding: 12px 20px;
   border-top: 1px solid var(--line);
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .alerts-footer small {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .alerts-footer button {
   min-height: 32px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-ui);
   padding: 4px 0;
 }
 .alerts-footer button[aria-pressed="true"] {
@@ -340,14 +340,14 @@
 }
 .alerts-empty h3 {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .alerts-empty p {
   max-width: 36ch;
   margin: 0 auto 12px;
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .alerts-empty button {
   min-height: 36px;
@@ -360,8 +360,8 @@
 }
 .alerts-settings h3 {
   margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
 }
 .alerts-setting + h3 {
   margin-top: 26px;
@@ -369,14 +369,14 @@
 .alerts-intro {
   margin: 0 0 16px;
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .alerts-setting {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
-  font-size: 12px;
+  font-size: var(--text-meta);
   cursor: pointer;
 }
 .alerts-setting input {
@@ -390,13 +390,13 @@
   display: block;
   margin-top: 4px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .alerts-opts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .alerts-opts input {
@@ -414,7 +414,7 @@
   letter-spacing: 0;
 }
 .alerts-settings .alerts-phone .note {
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.6;
   color: var(--dim);
 }
@@ -422,7 +422,7 @@
   border-color: var(--line);
   min-height: 32px;
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--text-ui);
 }
 .alerts-guide {
   padding: 20px;
@@ -438,19 +438,19 @@
   display: block;
   margin: 4px 0 0 16px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .alerts-guide details p {
   margin: 0 0 16px;
   color: var(--dim, #a8b2b9);
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1.7;
 }
 .alerts-guide ul {
   margin: 0 0 16px;
   padding-left: 18px;
   color: var(--dim, #a8b2b9);
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1.7;
 }
 .alerts-guide li + li {
@@ -464,13 +464,13 @@
 }
 .alerts-sources dt {
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--ink);
 }
 .alerts-sources dd {
   margin: 2px 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .app.phone .tools .alerts-btn {
   display: inline-flex;
@@ -507,7 +507,7 @@
     gap: 5px;
     padding: 6px 3px;
     min-height: 44px;
-    font-size: 11px;
+    font-size: var(--text-ui);
   }
   .alerts-queue,
   .alerts-guide,

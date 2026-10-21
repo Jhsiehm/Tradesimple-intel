@@ -13,10 +13,10 @@
   box-sizing: border-box;
   padding: 5px 8px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-ui);
   color: inherit;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
 }
 .watch-add input:focus {
   outline: none;
@@ -41,7 +41,7 @@
   width: 100%;
   text-align: left;
   padding: 4px 6px;
-  font-size: 12px;
+  font-size: var(--text-ui);
   color: var(--dim);
   background: none;
   border: 0;
@@ -58,7 +58,7 @@
 }
 .watch-err {
   margin: 4px 0;
-  font-size: 11.5px;
+  font-size: var(--text-meta);
   color: var(--nay, #e57373);
 }
 
@@ -82,7 +82,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .watch-sym {
   display: flex;
@@ -109,12 +109,12 @@
 }
 .watch-px {
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .watch-px small,
 .watch-badge small {
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .watch-badges {
   display: flex;
@@ -127,14 +127,14 @@
   align-items: baseline;
   gap: 3px;
   padding: 1px 5px;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   letter-spacing: 0.04em;
   color: var(--dim);
   border: 1px solid var(--line);
 }
 .watch-badge b {
   color: inherit;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .watch-badge.quiet {
   border-style: dashed;
@@ -187,7 +187,7 @@
 }
 .watch-sections button {
   padding: 2px 7px;
-  font-size: 10.5px;
+  font-size: var(--text-ui);
   color: var(--dim);
   background: none;
   border: 1px solid var(--line);
@@ -202,12 +202,12 @@
   opacity: 0.6;
 }
 .watch-sections button b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   margin-left: 2px;
 }
 .watch-note {
   margin: 3px 0;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--faint);
 }
 .watch-note.st-not-configured b,
@@ -227,13 +227,13 @@
   gap: 6px;
   padding: 5px 0;
   border-top: 1px dotted var(--line);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .watch-event a {
   color: var(--amber);
 }
 .watch-src {
-  font-size: 10px;
+  font-size: var(--text-meta);
   letter-spacing: 0.05em;
   color: var(--dim);
   padding-top: 1px;
@@ -245,14 +245,14 @@
 .watch-detail {
   margin: 1px 0 0;
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: var(--text-meta);
   line-height: 1.35;
 }
 .watch-when {
   display: block;
   margin-top: 2px;
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: var(--text-meta);
 }
 .watch-when .late,
 .watch-title .late {
@@ -262,12 +262,12 @@
   margin: 2px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .watch-srcs {
   margin-top: 6px;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   color: var(--faint);
 }
 .watch-srcs summary {
@@ -282,7 +282,7 @@
 }
 .watch-foot {
   margin: 6px 0 0;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   color: var(--faint);
 }
 

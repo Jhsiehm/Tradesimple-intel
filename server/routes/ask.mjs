@@ -226,6 +226,7 @@ export function makeAskHandler({
       const events = [];
       const rec = recordingExecutor(exec);
       const out = await runAsk({
+        researchEnv: env,
         question: asked.question,
         memory,
         history: asked.history,

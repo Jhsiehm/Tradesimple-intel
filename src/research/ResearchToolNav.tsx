@@ -13,6 +13,7 @@ const groups = [
   {
     title: "Test an idea",
     tools: [
+      ["policy", "Policy research", "Test legislative actions before news coverage."],
       ["experiments", "Experiments", "Review saved runs and replay results."],
       ["convergence", "Convergence", "Compare signals together and separately."],
       ["eventStudies", "Event studies", "Measure price behavior around events."],

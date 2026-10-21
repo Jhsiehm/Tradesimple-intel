@@ -70,7 +70,7 @@
   border: none;
   outline: none;
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-ui);
 }
 .relmap-search:focus-within {
   border-color: var(--amber);
@@ -102,7 +102,7 @@
   background: rgba(255, 193, 74, 0.08);
 }
 .relmap-search li b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--ink);
   white-space: nowrap;
 }
@@ -136,11 +136,11 @@
   padding: 3px 8px;
   border: 1px solid color-mix(in srgb, var(--tint) 45%, transparent);
   color: var(--tint);
-  font-size: 11px;
+  font-size: var(--text-meta);
   background: color-mix(in srgb, var(--tint) 8%, transparent);
 }
 .relmap-chip b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--ink);
 }
 .relmap-chip[aria-pressed="false"] {
@@ -164,16 +164,16 @@
   background: rgba(7, 9, 12, 0.96);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.4;
   pointer-events: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 .relmap-tip b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--text-meta);
   margin-right: 4px;
 }
 .relmap-tip span {
@@ -195,7 +195,7 @@
   border: 1px solid var(--line);
   border-top: 2px solid var(--tint, var(--line));
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .relmap-menu header,
 .relmap-pop header {
@@ -209,7 +209,7 @@
 .relmap-menu header strong,
 .relmap-pop header strong {
   display: block;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--ink);
   line-height: 1.25;
 }
@@ -229,8 +229,8 @@
 .relmap-menu-h {
   margin: 0;
   padding: 7px 10px 3px;
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
   color: var(--faint);
 }
@@ -260,12 +260,12 @@
 }
 .relmap-cat-n {
   color: var(--ink);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .relmap-cat-act {
   color: var(--tint);
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
   text-align: right;
   white-space: nowrap;
@@ -274,7 +274,7 @@
   display: block;
   padding: 0 10px 6px 38px;
   color: var(--nay);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .relmap-menu-row {
   display: flex;
@@ -291,7 +291,7 @@
 }
 .relmap-menu-row kbd {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--text-meta);
   color: var(--faint);
 }
 .relmap-menu > :last-child {
@@ -306,8 +306,8 @@
   gap: 4px;
   padding: 8px 10px 0;
   color: var(--dim);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .relmap-pop input,
@@ -315,10 +315,10 @@
   width: 100%;
   padding: 6px 7px;
   background: var(--tsi-terminal-bg, #07090c);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-ui);
   letter-spacing: 0;
   text-transform: none;
   resize: vertical;
@@ -343,7 +343,7 @@
 }
 .relmap-pop footer small {
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-meta);
   line-height: 1.35;
 }
 .relmap-pop .danger {
@@ -398,7 +398,7 @@
   margin: 0;
   padding: 7px 12px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-meta);
   background: rgba(7, 9, 12, 0.94);
   border: 1px dashed var(--tint);
 }
@@ -408,7 +408,7 @@
 }
 .relmap-hint b {
   color: var(--tint);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .relmap-notice {
   position: absolute;
@@ -422,7 +422,7 @@
   border: 1px solid var(--line);
   border-left: 2px solid var(--amber);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.4;
 }
 .relmap-empty {
@@ -443,7 +443,7 @@
 .relmap-empty p {
   margin: 0;
   line-height: 1.55;
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .relmap-starts {
   display: flex;
@@ -470,13 +470,13 @@
   padding: 4px 8px 6px;
   background: rgba(7, 9, 12, 0.9);
   border: 1px solid var(--line);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .relmap-legend-h {
   padding: 2px 0;
   color: var(--dim);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .relmap-legend ul {

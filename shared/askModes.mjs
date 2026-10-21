@@ -27,6 +27,7 @@ const lc = (s) => String(s ?? "").toLowerCase();
 /** Platform-only tools: every in-app feed Ask may call. Web tools are separate. */
 export const PLATFORM_TOOLS = new Set([
   "research_memory",
+  "assess_research_capabilities",
   "weather_hazards",
   "search",
   "member_profile",

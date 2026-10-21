@@ -1,9 +1,14 @@
+import { specDiff } from "./backtestDiff.mjs";
+export { specDiff } from "./backtestDiff.mjs";
 /**
  * Backtests asked in plain words, pure. What a question says about the spec, the user's saved preferences, the
  * clarifying chips worth asking (only for result-changing fields nothing else settles), the spec a run starts from
  * with where each field came from, and what changed against the previous run. No env, no clock, no storage.
  */
 import { BENCHMARKS, DEFAULT_FILTERS, DEFAULT_RULES, SOURCES, SOURCE_LABEL, cleanSpec } from "./backtestSpec.mjs";
+
+import { explicitSignalSources, interpretResearch } from "./researchIntent.mjs";
+import { replayTickerList } from "./replayRequirements.mjs";
 
 export const PREFS_VERSION = 1;
 export const PREFS_KEY = "intel:ask:prefs:v1";
@@ -28,7 +33,9 @@ const minus = (today, n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * DAY_
 
 /** Hold, benchmark, sides, sizing, entry, costs, 10b5-1, hearing window, contract lag: what plain words set. */
 function parseRuleWords(q) {
-  const s = lc(q);
+  const s = lc(q)
+    .replace(/\bcalendar[- ]days?\b/g, "days")
+    .replace(/\bequal position weights?\b/g, "equal weight");
   const out = {};
   const hold = s.match(
     /\b(\d{1,3})[- ]?(day|d|week|wk|month|mo)s?\b[^.,;]{0,12}\bhold|\bhold(?:ing)?(?: (?:for|period of))? (\d{1,3})[- ]?(day|d|week|wk|month|mo)s?\b|\bhold(?:ing)?(?: for)? (?:a|one|1) (year|quarter|month)\b|\b(\d{1,3})[- ]?(day|week|month)s?[- ]holds?\b/,
@@ -190,22 +197,9 @@ const COMMITTEES = [
 ];
 const title = (s) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bAnd\b/g, "and");
 
-/** Sources a question names. "All data sources" → every source that runs without tickers. */
+/** Explicit compatible replay sources; unresolved or policy questions never default to Congress. */
 export function questionSources(q) {
-  const s = lc(q);
-  if (/\ball (data )?sources\b|\bevery source\b|\beach source\b/.test(s)) return ["congress", "form4", "contracts"];
-  const out = [];
-  if (/\binsiders?\b|\bform ?4\b|\bexecutives?\b|\bofficers?\b|\bceo\b/.test(s)) out.push("form4");
-  if (/\bcontracts?\b|\bawards?\b|\busaspending\b/.test(s)) out.push("contracts");
-  if (/\blobby(ing)?\b/.test(s)) out.push("lobbying");
-  if (
-    /\bcongress|\bmembers?\b|\bsenators?\b|\brepresentatives?\b|\bhouse\b|\bsenate\b|\bpoliticians?\b|\bdisclos|\bptrs?\b|\bcommittee/.test(
-      s,
-    ) ||
-    !out.length
-  )
-    out.unshift("congress");
-  return [...new Set(out)];
+  return interpretResearch(q).route === "assessment" ? [] : explicitSignalSources(q);
 }
 
 /** Every spec field the words of a question set, by path, plus the sources it names. */
@@ -233,8 +227,17 @@ export function questionHints(q, today) {
     fields["filters.from"] = `${year[1]}-01-01`;
     fields["filters.to"] = `${year[1]}-12-31`;
   }
-  const committee = COMMITTEES.find((c) => new RegExp(`\\b${c}\\b`).test(s));
+  const sources = explicitSignalSources(q);
+  const committee =
+    (!sources.length || sources.includes("congress")) &&
+    COMMITTEES.find(
+      (c) =>
+        new RegExp(`\\b${c}\\b`).test(s) &&
+        (c !== "rules" || /\brules committee\b|\bcommittee (?:on )?rules\b/.test(s)),
+    );
   if (committee) fields["filters.committee"] = title(committee);
+  const tickers = replayTickerList(q);
+  if (tickers.length) fields["filters.tickers"] = tickers;
   if (/\bdemocrats?\b/.test(s)) fields["filters.party"] = "D";
   else if (/\brepublicans?\b|\bgop\b/.test(s)) fields["filters.party"] = "R";
   if (/\bsenators?\b|\bsenate\b/.test(s)) fields["filters.chamber"] = "senate";
@@ -280,9 +283,13 @@ export const wantsBacktest = (q) =>
  * answers, each field labeled with where it came from. `answers` are `{ path: value }`.
  */
 export function buildSpec({ question, today, prefs = null, prior = null, answers = {} }) {
+  if (interpretResearch(question, { prior }).route === "assessment")
+    throw new Error("This question needs a research design or source clarification before replay.");
   const hints = questionHints(question, today);
-  const follow = isFollowUp(question, prior);
+  const named = namedSources(question);
+  const follow = isFollowUp(question, prior) && (!named.length || named.includes(prior.source));
   const sources = follow ? [prior.source] : hints.sources;
+  if (!sources.length) throw new Error("Choose a supported signal source; no default source is assumed.");
   let spec = follow
     ? JSON.parse(JSON.stringify(prior))
     : { source: sources[0], filters: { ...DEFAULT_FILTERS }, rules: { ...DEFAULT_RULES } };
@@ -503,45 +510,6 @@ export function clarifyQuestions({
 }
 
 /* ---------- what changed ---------- */
-
-const FIELD_WORD = {
-  "rules.holdDays": (v) => `hold ${v} d`,
-  "rules.benchmark": (v) => `vs ${BENCH_WORD[v] || v}`,
-  "rules.sides": (v) => SIDE_WORD[v] || v,
-  "rules.sizing": (v) => (v === "amountMid" ? "range-midpoint weights" : "equal weight"),
-  "rules.entry": (v) => (v === "nextClose" ? "next close" : "next open"),
-  "rules.costBps": (v) => `${v} bps commission`,
-  "rules.slippageBps": (v) => `${v} bps slippage`,
-  "rules.stopLossPct": (v) => (v ? `stop −${v}%` : "no stop"),
-  "rules.takeProfitPct": (v) => (v ? `take +${v}%` : "no take-profit"),
-  "rules.openTrades": (v) => (v === "mark" ? "open trades marked" : "open trades left out"),
-  "filters.excludeMembers": (v) => (v?.length ? `excluding ${v.join(", ")}` : "nobody excluded"),
-  "filters.include10b51": (v) => (v ? "10b5-1 included" : "10b5-1 excluded"),
-  "filters.nearHearingDays": (v) => (v ? `within ${v} d of a hearing` : "any time"),
-  "filters.contractLagDays": (v) => (v ? `${v} d award lag` : "default award lag"),
-};
-
-/** "hold 90 d → hold 30 d" lines between two specs. */
-export function specDiff(rawPrev, rawNext) {
-  const prev = rawPrev && cleanSpec(rawPrev).spec;
-  const next = rawNext && cleanSpec(rawNext).spec;
-  if (!prev || !next) return [];
-  const out = [];
-  if (prev.source !== next.source) out.push(`${SOURCE_LABEL[prev.source]} → ${SOURCE_LABEL[next.source]}`);
-  for (const group of ["filters", "rules"]) {
-    const keys = new Set([...Object.keys(prev[group] || {}), ...Object.keys(next[group] || {})]);
-    for (const k of keys) {
-      const a = prev[group]?.[k];
-      const b = next[group]?.[k];
-      if (JSON.stringify(a) === JSON.stringify(b)) continue;
-      const word =
-        FIELD_WORD[`${group}.${k}`] ||
-        ((v) => `${k} ${Array.isArray(v) ? v.join(", ") || "none" : v === "" || v == null ? "none" : v}`);
-      out.push(`${word(a)} → ${word(b)}`);
-    }
-  }
-  return out;
-}
 
 /** "Using: …" plus the fields that came from preferences or the previous run. */
 export function provenanceLine(from) {

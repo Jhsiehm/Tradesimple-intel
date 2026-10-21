@@ -1,3 +1,4 @@
+import { chartWindow } from "../chartWindow.mjs";
 import { shortInterest } from "../markets.mjs";
 import {
   congressTrades,
@@ -33,7 +34,15 @@ export const handlers = {
   "markets.supplyChain": ({ db, params }) => supplyChain(db, params.symbol),
   "markets.board": ({ db }) => quoteBoard(db),
   "markets.chart": ({ db, query }) =>
-    priceChart(db, query.str("symbol"), query.str("span") || query.str("range", "6mo")),
+    query.str("interval")
+      ? chartWindow(db, query.str("symbol").toUpperCase(), {
+          interval: query.str("interval"),
+          from: query.str("from"),
+          to: query.str("to"),
+          adjusted: query.str("adjusted"),
+          extended: query.str("extended"),
+        })
+      : priceChart(db, query.str("symbol"), query.str("span") || query.str("range", "6mo")),
   "markets.events": ({ db, query }) =>
     marketEvents(db, query.str("symbol"), query.params.get("kinds")?.split(",").filter(Boolean)),
   "fx.board": ({ db }) => fxBoard(db),

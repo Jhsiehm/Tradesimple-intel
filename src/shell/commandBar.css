@@ -12,7 +12,7 @@ dialog.research-command {
   color: var(--ink);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius-control);
   box-shadow: 0 22px 70px #0009;
   overflow: hidden;
 }
@@ -31,7 +31,7 @@ dialog.research-command {
   width: 100%;
   text-transform: none;
   letter-spacing: 0;
-  font-size: 15px;
+  font-size: var(--text-prose);
 }
 .research-command .cmd-input input::placeholder {
   color: var(--dim);
@@ -57,8 +57,8 @@ dialog.research-command {
 .research-command .cmd-group {
   margin: 18px 12px 8px;
   color: var(--dim);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
 }
 .research-command .cmd-result {
   display: grid;
@@ -86,24 +86,24 @@ dialog.research-command {
   gap: 4px;
 }
 .research-command .cmd-copy strong {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .research-command .cmd-copy small {
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .research-command .cmd-type {
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .research-command code {
   color: var(--amber);
-  font-size: 10px;
+  font-size: var(--text-meta);
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -120,7 +120,7 @@ dialog.research-command {
 .research-command .cmd-notice {
   margin: 12px 20px;
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1.6;
 }
 @media (max-width: 600px) {
@@ -134,7 +134,7 @@ dialog.research-command {
     gap: 8px;
   }
   .research-command .cmd-input input {
-    font-size: 16px;
+    font-size: var(--text-panel);
   }
   .research-command .cmd-close {
     min-width: 44px;

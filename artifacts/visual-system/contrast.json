@@ -1,0 +1,47 @@
+{
+  "ink": {
+    "panel": 15.83,
+    "selected": 12.54,
+    "raised": 15.11
+  },
+  "dim": {
+    "panel": 10.13,
+    "selected": 8.02,
+    "raised": 9.67
+  },
+  "faint": {
+    "panel": 7.52,
+    "selected": 5.95,
+    "raised": 7.18
+  },
+  "positive": {
+    "panel": 10.16,
+    "selected": 8.05,
+    "raised": 9.7
+  },
+  "negative": {
+    "panel": 8.63,
+    "selected": 6.83,
+    "raised": 8.24
+  },
+  "warning": {
+    "panel": 10.32,
+    "selected": 8.17,
+    "raised": 9.85
+  },
+  "info": {
+    "panel": 10.81,
+    "selected": 8.56,
+    "raised": 10.32
+  },
+  "focus": {
+    "panel": 11.75,
+    "selected": 9.31,
+    "raised": 11.22
+  },
+  "control-border": {
+    "panel": 4.37,
+    "selected": 3.46,
+    "raised": 4.17
+  }
+}

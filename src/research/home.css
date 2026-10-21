@@ -8,13 +8,8 @@
   display: none;
 }
 .research[data-home="true"] {
-  --bg: #151515;
-  --panel: #202020;
-  --ink: #e8e6df;
-  --dim: #aaa9a3;
-  --line: #30302e;
   background: var(--bg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
 }
 .research[data-home="true"] > .board-head {
   display: none;
@@ -28,7 +23,7 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
-  --research-accent: #d6c9a8;
+  --research-accent: var(--accent);
 }
 .research-home button {
   letter-spacing: 0;
@@ -40,8 +35,8 @@
   outline-offset: 3px;
 }
 .research-sidebar {
-  background: #111111;
-  border-right: 1px solid #252524;
+  background: var(--panel);
+  border-right: 1px solid var(--surface-raised);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
@@ -55,8 +50,8 @@
   gap: 9px;
 }
 .research-sidebar-title strong {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-medium);
 }
 .research-sidebar .research-emblem {
   width: 30px;
@@ -67,11 +62,11 @@
   align-items: center;
   gap: 10px;
   padding: 11px 12px;
-  background: #292928;
-  border: 1px solid #343432;
-  border-radius: 7px;
+  background: var(--surface-raised);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   text-align: left;
-  font-size: 14px !important;
+  font-size: var(--text-ui);
 }
 .research-sidebar nav {
   display: grid;
@@ -81,22 +76,22 @@
   padding: 9px 12px;
   text-align: left;
   color: var(--dim);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
 }
 .research-sidebar nav button:hover,
 .research-sidebar .ask-saved-open:hover {
-  background: #242423;
+  background: var(--surface-hover);
   color: var(--ink);
 }
 .research-sidebar summary {
   padding: 8px 12px;
   color: var(--dim);
-  font-size: 13px;
+  font-size: var(--text-ui);
 }
 .research-sidebar .research-local-note {
   margin-top: auto;
   padding: 16px 8px 0;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .research-saved {
   min-width: 0;
@@ -111,9 +106,9 @@
   gap: 8px;
 }
 .research-saved .ask-saved-head h2 {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   text-transform: none;
   letter-spacing: 0;
 }
@@ -127,15 +122,15 @@
   min-width: 0;
   padding: 9px 8px;
   text-align: left;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
 }
 .research-saved .ask-saved-open b {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 400;
-  font-size: 13px;
+  font-weight: var(--weight-regular);
+  font-size: var(--text-ui);
 }
 .research-saved time {
   display: none;
@@ -159,7 +154,7 @@
   gap: 12px;
   padding: 18px 24px;
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .research-home-top > button:last-child {
   margin-left: auto;
@@ -167,35 +162,35 @@
   padding: 6px;
 }
 .research-chat-stage {
-  width: min(760px, calc(100% - 64px));
-  margin: auto;
-  padding: 52px 0;
+  width: min(960px, calc(100% - 48px));
+  margin: 24px auto auto;
+  padding: 16px 0 32px;
 }
 .research-hero {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 28px;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 .research-hero h1 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(26px, 3vw, 38px);
-  line-height: 1.2;
-  font-weight: 400;
-  letter-spacing: -0.025em;
+  font-family: var(--font-ui);
+  font-size: var(--text-page);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
   margin: 0;
   color: var(--ink);
   text-wrap: balance;
 }
 .research-composer {
   padding: 18px;
-  border: 1px solid #444440;
-  border-radius: 16px;
-  background: #212120;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
 }
 .research-composer:focus-within {
-  border-color: #8c8c81;
+  border-color: var(--focus);
 }
 .research-question-label {
   position: absolute;
@@ -213,14 +208,14 @@
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--text-panel);
   line-height: 1.6;
 }
 .research-composer textarea:focus-visible {
   outline: none;
 }
 .research-composer textarea::placeholder {
-  color: #aaa9a3;
+  color: var(--dim);
 }
 .research-composer-controls {
   display: flex;
@@ -233,31 +228,31 @@
   gap: 4px;
   min-width: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .research-composer-controls .ask-model {
-  flex: 1 1 180px;
-  max-width: 310px;
+  flex: 1 1 260px;
+  max-width: 100%;
 }
 .research-home select,
 .research-home input {
   min-width: 0;
   max-width: 100%;
   padding: 7px;
-  background: #252524;
+  background: var(--surface-raised);
   color: var(--ink);
-  border: 1px solid #444440;
-  border-radius: 5px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-ui);
 }
 .research-home .research-submit {
   margin-left: auto;
   padding: 9px 14px;
-  border-radius: 7px;
-  background: #e8e6df;
-  color: #202020;
-  font-size: 13px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--bg);
+  font-size: var(--text-ui);
 }
 .research-home .research-submit:disabled {
   opacity: 0.4;
@@ -265,7 +260,7 @@
 }
 .research .research-options > summary {
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   padding: 12px 0 0;
 }
 .research-extra-options {
@@ -277,15 +272,15 @@
 .research-extra-options label {
   display: grid;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .research .research-starters {
   margin-top: 18px;
 }
 .research .research-starters > summary {
   color: var(--dim);
-  text-align: center;
-  font-size: 12px;
+  text-align: left;
+  font-size: var(--text-meta);
 }
 .research-recommendations {
   display: grid;
@@ -298,22 +293,22 @@
   gap: 6px;
   text-align: left;
   padding: 12px;
-  border-radius: 6px;
-  background: #202020;
+  border-radius: var(--radius-control);
+  background: var(--panel);
 }
 .research-recommendations strong {
-  font-weight: 400;
-  font-size: 13px;
+  font-weight: var(--weight-regular);
+  font-size: var(--text-ui);
 }
 .research-recommendations small {
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .research-reference {
   margin: 12px 24px 20px;
 }
 .research .research-reference > summary {
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .method-grid {
@@ -327,8 +322,8 @@
   overflow-wrap: anywhere;
 }
 .method-grid h3 {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
 }
 .method-grid code {
   white-space: normal;
@@ -352,7 +347,7 @@
   gap: 7px;
   padding: 7px 9px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius-control);
 }
 .portable-emblem .research-emblem {
   width: 28px;
@@ -436,34 +431,30 @@
   display: none;
 }
 .research-sidebar {
-  --ink: #e1e8ec;
-  --dim: #a6b4bd;
-  --bg: #12191e;
-  --line: #303d46;
-  background: var(--bg);
+  background: var(--panel);
   color: var(--ink);
   padding: 16px 14px;
   gap: 16px;
   border-right-color: var(--line);
-  scrollbar-color: #45545f var(--bg);
+  scrollbar-color: var(--control-border) var(--bg);
   scrollbar-width: thin;
 }
 .research-sidebar-title {
   position: sticky;
   top: -16px;
   z-index: 2;
-  background: var(--bg);
+  background: var(--panel);
   padding: 12px 0;
   margin-top: -12px;
   gap: 8px;
 }
 .research-sidebar-title strong {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
 }
 .research-sidebar-title > .ic {
-  color: #96b9c9;
+  color: var(--dim);
 }
 .research-sidebar-title .research-library-toggle {
   margin-left: auto;
@@ -474,14 +465,14 @@
 }
 .research-sidebar .research-new {
   min-height: 38px;
-  font-size: 13px !important;
-  border-radius: 3px;
-  border-color: #3d4d58;
-  background: #202d36;
+  font-size: var(--text-ui);
+  border-radius: var(--radius-control);
+  border-color: var(--control-border);
+  background: var(--surface-raised);
   padding: 8px 10px;
 }
 .research-sidebar .research-new:hover:not(:disabled) {
-  background: #2b3c48;
+  background: var(--surface-hover);
 }
 .research-awareness {
   border-block: 1px solid var(--line);
@@ -495,25 +486,25 @@
 }
 .research-awareness h2,
 .research-nav-group h2 {
-  font-size: 11px;
+  font-size: var(--text-meta);
   margin: 0;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.025em;
   color: var(--dim);
 }
 .research-state {
-  font-size: 10px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .research-state[data-state="active"] {
-  color: #a4d5df;
+  color: var(--cyan);
 }
 .research-state[data-state="error"] {
-  color: #f3bf9b;
+  color: var(--amber);
 }
 .research-current-question {
   margin: 8px 0 12px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.5;
   overflow-wrap: anywhere;
   max-height: 5.9em;
@@ -523,7 +514,7 @@
   margin: 0;
   display: grid;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .research-awareness dl > div {
   display: flex;
@@ -539,7 +530,7 @@
 }
 .research-context-note {
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.5;
   margin: 10px 0 0;
   overflow-wrap: anywhere;
@@ -548,21 +539,21 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 11px;
+  font-size: var(--text-meta);
   margin-top: 10px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .research-active-step {
-  color: #a4d5df;
-  font-size: 12px;
+  color: var(--cyan);
+  font-size: var(--text-meta);
   margin: 8px 0 0;
 }
 .research-sidebar .research-last-source summary {
   padding: 10px 0 0;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .research-last-source p {
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.5;
   overflow-wrap: anywhere;
   margin: 6px 0 0;
@@ -580,12 +571,12 @@
   width: 100%;
   min-height: 33px;
   padding: 7px 10px;
-  font-size: 12px;
-  border-radius: 3px;
+  font-size: var(--text-ui);
+  border-radius: var(--radius-control);
   color: var(--ink);
 }
 .research-sidebar nav button > .ic {
-  color: #8ea5b3;
+  color: var(--dim);
   flex-shrink: 0;
 }
 .research-sidebar nav button > span {
@@ -593,12 +584,12 @@
 }
 .research-sidebar nav button > small {
   color: var(--dim);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-meta);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .research-sidebar nav button:hover,
 .research-sidebar .ask-saved-open:hover {
-  background: #24323c;
+  background: var(--surface-hover);
   color: #fff;
 }
 .research-registry-status {
@@ -606,7 +597,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 10px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .research-registry-status button {
@@ -616,11 +607,11 @@
 }
 .research-registry-status small {
   flex-basis: 100%;
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .research-registry-status p {
   margin: 4px 0 0;
-  color: #f3bf9b;
+  color: var(--amber);
 }
 .research-scheduled {
   border-block: 1px solid var(--line);
@@ -631,7 +622,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 0;
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .research-scheduled > summary::before {
   content: "+";
@@ -645,7 +636,7 @@
 }
 .research-schedule-state {
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .research-sidebar .research-local-note {
   display: flex;
@@ -653,7 +644,7 @@
   gap: 8px;
   padding: 0;
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 .research-local-note .ic {
@@ -664,11 +655,11 @@
   display: block;
   margin-top: 4px;
   color: var(--dim);
-  font-size: 10px;
+  font-size: var(--text-meta);
 }
 .research-sidebar .research-saved .ask-saved-head h2 {
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-meta);
 }
 .research-sidebar-backdrop {
   position: absolute;
@@ -682,12 +673,12 @@
   flex-shrink: 0;
 }
 .research-sidebar :is(button, summary, a):focus-visible {
-  outline: 2px solid #b3d4e4;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .research-sidebar ::selection {
   color: #fff;
-  background: #375969;
+  background: var(--surface-selected);
 }
 @media (prefers-reduced-motion: no-preference) {
   .research-sidebar:not([hidden]) {
@@ -720,5 +711,14 @@
   }
   .research-sidebar nav button {
     min-height: 38px;
+  }
+}
+
+@media (max-width: 700px) {
+  .research-composer-controls label {
+    flex: 1 1 100%;
+  }
+  .research-composer-controls select {
+    width: 100%;
   }
 }

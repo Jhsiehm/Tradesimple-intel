@@ -1,0 +1,60 @@
+import type { ChartMark } from "../types";
+export type EvidenceMark = ChartMark & {
+  eventDate?: string;
+  publicationDate?: string;
+  ingestedAt?: string;
+  datasetVersion?: string;
+  dateBasis?: string;
+  amount?: string;
+  actor?: string;
+  limitation?: string;
+};
+export const EVENT_TYPES = [
+  ["trades", "Congress / insiders"],
+  ["earn", "Earnings"],
+  ["lobby", "Lobbying"],
+  ["pac", "PAC"],
+  ["gov", "Contracts"],
+  ["fomc", "Central banks"],
+  ["cpi", "Inflation"],
+  ["macro", "Macro"],
+] as const;
+export const eventKind = (m: ChartMark) => (!m.tone || ["buy", "sell", "file"].includes(m.tone) ? "trades" : m.tone);
+export const eventColor = (m: ChartMark) =>
+  ({
+    buy: "#82c9a0",
+    sell: "#ed929a",
+    file: "#d8b77a",
+    earn: "#b48ee8",
+    lobby: "#8ccbc9",
+    pac: "#e8955a",
+    gov: "#c7cf6e",
+    fomc: "#e7e7da",
+    cpi: "#ed929a",
+    macro: "#8fa597",
+  })[m.tone || "file"];
+export function describeEvent(m: EvidenceMark) {
+  return (
+    m.limitation ||
+    (
+      {
+        gov: "Award start date is not publication time. DoD reporting may lag around 90 days.",
+        pac: "Aggregated monthly gifts plotted at mid-month; not an exact event or availability timestamp.",
+        lobby: "Grouped by filing/post date; precise public availability time is not supplied.",
+        earn: "Provider filing or scheduled date; verify release timing at the source.",
+        trades: "Transaction date is descriptive. Publication time is unknown unless a filing date is supplied.",
+      } as Record<string, string>
+    )[eventKind(m)] ||
+    "Provider calendar date; precise historical availability is not supplied."
+  );
+}
+export function handoffText(
+  symbol: string,
+  interval: string,
+  from: string,
+  to: string,
+  events: EvidenceMark[],
+  backtest = false,
+) {
+  return `${backtest ? "Review a backtest specification before running anything" : "Research this chart window"}: ${symbol}, ${interval} bars, ${from} through ${to} (UTC bounds).\nSelected evidence:\n${events.length ? events.map((m) => JSON.stringify({ label: m.label, eventDate: m.eventDate || new Date(m.t).toISOString(), publicationDate: m.publicationDate || null, ingestedAt: m.ingestedAt || null, datasetVersion: m.datasetVersion || null, amount: m.amount || null, source: m.href || null, dateBasis: m.dateBasis || "provider marker", limitation: describeEvent(m) })).join("\n") : "No events selected."}\nTransaction-date markers describe history; they are not available-to-trade signals. Never trade on a marker before publication. If only a filing date is known, review a conservative next regular session assumption in the execution venue time zone; do not invent an intraday release time. Unknown publication dates must be excluded from availability-based tests. Preserve the requested window and review data coverage and adjustment basis before executing.`;
+}

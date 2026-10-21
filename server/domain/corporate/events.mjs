@@ -67,6 +67,11 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
             t: Date.parse(`${r.date}T21:00:00Z`),
             label: "Earnings 8-K",
             tone: "earn",
+            eventDate: r.date,
+            publicationDate: r.date,
+            dateBasis: "SEC filing date (date only)",
+            limitation:
+              "21:00 UTC is a chart coordinate, not the actual publication time; verify the filing timestamp before availability-based testing.",
             detail: `8-K item 2.02 filed ${r.date}`,
             href: r.link,
           });
@@ -102,9 +107,10 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
       (res) => {
         const byPost = new Map();
         for (const f of res.filings || []) {
-          const cur = byPost.get(f.posted) || { amount: 0, firms: new Set(), issues: new Set() };
+          const cur = byPost.get(f.posted) || { amount: 0, firms: new Set(), issues: new Set(), links: new Set() };
           cur.amount += f.amount;
           cur.firms.add(f.registrant);
+          if (f.link) cur.links.add(f.link);
           f.issues.forEach((i) => cur.issues.add(i));
           byPost.set(f.posted, cur);
         }
@@ -114,6 +120,14 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
             t: Date.parse(`${date}T16:00:00Z`),
             label: `LDA ${compact(v.amount)}`,
             tone: "lobby",
+            href: [...v.links][0],
+            eventDate: date,
+            limitation:
+              "Grouped by posted date, not transaction time. Source links to the first filing in this group; the grouped amount can include other filings.",
+            publicationDate: date,
+            dateBasis: "Posted date (date only)",
+            actor: [...v.firms].join("; "),
+            amount: String(v.amount),
             detail: `${v.firms.size} filing firm(s) · ${[...v.issues].slice(0, 3).join(", ")}`,
           });
         }
@@ -166,6 +180,10 @@ export async function equityEvents(db, symbol, kinds, { waitMs = EVENT_WAIT } = 
             t: Date.parse(`${a.start}T16:00:00Z`),
             label: `${agencyCode(a.agency)} ${compact(a.amount)}`,
             tone: "gov",
+            actor: a.agency,
+            amount: String(a.amount),
+            eventDate: a.start,
+            dateBasis: "Award start date",
             detail: `${a.agency} · ${a.description.slice(0, 80)}`,
             href: a.link,
           });

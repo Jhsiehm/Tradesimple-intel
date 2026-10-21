@@ -15,7 +15,7 @@ const PREFERRED_MIN_W = 340;
 /** Header, chat row, saved list, and the question row. The log can shrink; the question cannot. */
 const PREFERRED_MIN_H = 340;
 
-const SIZING = ["ask-sizing", "ask-sizing-ns", "ask-sizing-ew", "ask-sizing-nwse", "ask-sizing-nesw"];
+const SIZING = ["ask-sizing", "ask-moving", "ask-sizing-ns", "ask-sizing-ew", "ask-sizing-nwse", "ask-sizing-nesw"];
 
 const CURSOR: Record<Edge, string> = {
   n: "ask-sizing-ns",
@@ -173,6 +173,8 @@ function clearSizing() {
 export function useAskSize() {
   const [geom, setGeom] = useState<AskGeom>(readGeom);
   const geomRef = useRef(geom);
+  const stopGesture = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopGesture.current?.(), []);
   geomRef.current = geom;
 
   useEffect(() => {
@@ -194,34 +196,51 @@ export function useAskSize() {
 
   const applySnap = (snap: Snap) => setGeom({ snap, box: snapBox(snap) });
 
-  function drag(event: ReactPointerEvent, edge: Edge) {
+  function drag(event: ReactPointerEvent, edge?: Edge) {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    stopGesture.current?.();
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    target.setPointerCapture(pointerId);
     const from = geomRef.current.box;
     const sx = event.clientX;
     const sy = event.clientY;
     let moved = false;
     clearSizing();
-    document.body.classList.add("ask-sizing", CURSOR[edge]);
+    document.body.classList.add("ask-sizing", edge ? CURSOR[edge] : "ask-moving");
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (!moved && Math.abs(dx) + Math.abs(dy) < 2) return;
       moved = true;
       ev.preventDefault();
-      setGeom({ snap: null, box: resizeBox(from, edge, dx, dy) });
+      setGeom({
+        snap: null,
+        box: edge ? resizeBox(from, edge, dx, dy) : clampBox({ ...from, x: from.x + dx, y: from.y + dy }),
+      });
     };
     const up = () => {
       clearSizing();
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+      window.removeEventListener("blur", up);
+      target.removeEventListener("lostpointercapture", up);
+      if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
+      stopGesture.current = null;
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
+    stopGesture.current = up;
+    window.addEventListener("pointermove", move, { capture: true, passive: false });
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    window.addEventListener("blur", up);
+    target.addEventListener("lostpointercapture", up);
   }
 
-  return { box: geom.box, snap: geom.snap, applySnap, drag };
+  const nudge = (dx: number, dy: number) =>
+    setGeom((cur) => ({ snap: null, box: clampBox({ ...cur.box, x: cur.box.x + dx, y: cur.box.y + dy }) }));
+  return { box: geom.box, snap: geom.snap, applySnap, drag, nudge };
 }

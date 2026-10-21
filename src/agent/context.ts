@@ -10,6 +10,7 @@ export type AgentContext = {
   node: string | null;
   theory: Theory | null;
   label?: string;
+  chart?: import("../../shared/chartWorkspace.mjs").ChartContext;
 };
 
 export type ScreenFacts = {

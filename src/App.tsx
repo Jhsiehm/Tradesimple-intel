@@ -1,8 +1,10 @@
+import * as AppModules from "./appModules";
+import { cleanChartContext } from "../shared/chartWorkspace.mjs";
 import { useWeather } from "./weather/useWeather";
 import { WeatherControls } from "./weather/WeatherControls";
 import type { Point as WeatherPoint } from "./weather/model";
 import { NewsControls } from "./news/NewsControls";
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { BrandHome } from "./shell/BrandHome";
 import { DeferredAskSheet } from "./agent/DeferredAskSheet";
 import { contextLine, screenContext, type AgentContext } from "./agent/context";
@@ -68,34 +70,6 @@ import { ErrorBoundary } from "./ui/ErrorBoundary";
 import type { ArcKind } from "../shared/intel.mjs";
 import type { Chamber, ChartMark, DrawerModel, NewsDesk, PartyFilter, Section, StageList, StatusLine } from "./types";
 
-const MapFrame = lazy(() => import("./shell/MapFrame").then((m) => ({ default: m.MapFrame })));
-const RelationsMap = lazy(() => import("./relations/RelationsMap").then((m) => ({ default: m.RelationsMap })));
-const FloorMap = lazy(() => import("./congress/FloorMap").then((m) => ({ default: m.FloorMap })));
-const CalendarBoard = lazy(() => import("./markets/CalendarBoard").then((m) => ({ default: m.CalendarBoard })));
-const MarketStage = lazy(() => import("./markets/MarketStage").then((m) => ({ default: m.MarketStage })));
-const MemberTimeline = lazy(() => import("./congress/MemberTimeline").then((m) => ({ default: m.MemberTimeline })));
-const NewsBoard = lazy(() => import("./news/NewsBoard").then((m) => ({ default: m.NewsBoard })));
-const TodayBoard = lazy(() => import("./congress/TodayBoard").then((m) => ({ default: m.TodayBoard })));
-const ContractsBoard = lazy(() => import("./contracts/ContractsBoard").then((m) => ({ default: m.ContractsBoard })));
-const ResearchBoard = lazy(() => import("./research/ResearchBoard").then((m) => ({ default: m.ResearchBoard })));
-const BacktestBoard = lazy(() => import("./backtest/BacktestBoard").then((m) => ({ default: m.BacktestBoard })));
-/** The demo snapshot has no intraday bars. */
-const OPEN_SPAN: ChartSpan = DEMO ? "1y" : "5m";
-
-const TRAIL_KEY = "intel:trail:v1";
-const TODAY_SEEN = "intel:today:seen";
-const TODAY_STATUS: StatusLine = {
-  source: "House Clerk · Senate eFD",
-  asOf: "",
-  latency: "Filed up to 45 days after the trade.",
-};
-const TIMELINE_STATUS: StatusLine = {
-  source: "House Clerk PTR PDFs / Senate eFD",
-  asOf: "",
-  latency: "Trade date as disclosed; filed up to 45 days later by law.",
-};
-type TodayTab = "week" | "leaders" | "bt" | "research";
-
 export function App() {
   const nav = useView();
   const { section, chamber, mode, voteView, mapLayer, districtLayer, marketView, layer, newsView, selectedId } =
@@ -116,7 +90,7 @@ export function App() {
   const [party, setParty] = useState<PartyFilter>("all");
   const [filingId, setFilingId] = useState<string | null>(null);
   const [chartSymbol, setChartSymbol] = useState("AAPL");
-  const [chartSpan, setChartSpan] = useState<ChartSpan>(OPEN_SPAN);
+  const [chartSpan, setChartSpan] = useState<ChartSpan>(AppModules.OPEN_SPAN);
   const [chartMarks, setChartMarks] = useState<ChartMark[]>([]);
   const [chartFrom, setChartFrom] = useState<MarketView>("board");
   const [supplySymbol, setSupplySymbol] = useState("AAPL");
@@ -146,8 +120,8 @@ export function App() {
   const [timelineStatus, setTimelineStatus] = useState<StatusLine | null>(null);
   const reportList = useCallback((list: StageList) => setStageList(list), []);
   const reportTimeline = useCallback((status: StatusLine) => setTimelineStatus(status), []);
-  const [today, setToday] = useState<TodayTab | null>(() => {
-    const hash = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
+  const [today, setToday] = useState<AppModules.TodayTab | null>(() => {
+    const hash = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as AppModules.TodayTab | undefined;
     if (hash) return hash;
     if (location.hash) return null;
     return DEMO ? "week" : "research";
@@ -164,7 +138,7 @@ export function App() {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [trail, setTrail] = useState<(TrailEntry & { view?: View })[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem(TRAIL_KEY) || "[]");
+      return JSON.parse(localStorage.getItem(AppModules.TRAIL_KEY) || "[]");
     } catch {
       return [];
     }
@@ -172,11 +146,11 @@ export function App() {
   const trailRef = useRef(trail);
   trailRef.current = trail;
   useEffect(() => {
-    localStorage.setItem(TRAIL_KEY, JSON.stringify(trail));
+    localStorage.setItem(AppModules.TRAIL_KEY, JSON.stringify(trail));
   }, [trail]);
   useEffect(() => {
     try {
-      localStorage.setItem(TODAY_SEEN, "1");
+      localStorage.setItem(AppModules.TODAY_SEEN, "1");
     } catch {
       /* private mode */
     }
@@ -282,7 +256,7 @@ export function App() {
     const timer = window.setInterval(() => setClock(utcNow()), 1000);
     const onHash = () => {
       const id = location.hash.match(/^#timeline\/([A-Z]\d{6})$/)?.[1] || null;
-      const board = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as TodayTab | undefined;
+      const board = location.hash.match(/^#(week|leaders|bt|research)\b/)?.[1] as AppModules.TodayTab | undefined;
       if (board === "bt" && location.hash.startsWith("#bt=")) setBtSeed(`token:${location.hash.slice(4)}`);
       if (id || board) recordRef.current(id ? `timeline:${id}` : `today:${board}`);
       if (id) {
@@ -472,6 +446,28 @@ export function App() {
       openAsk();
       return void ask.run(decodeURIComponent(action.slice(6)));
     }
+    if (action.startsWith("ask:chart:")) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(action.slice(10)));
+        const chart = cleanChartContext(payload.chart);
+        if (!chart) return;
+        setAskAbout({
+          section: "markets",
+          node: `item:chart-${chart.symbol}`,
+          theory: null,
+          label: `${chart.symbol} · ${chart.interval} · reviewed chart window`,
+          chart,
+        });
+        ask.setDetached(false);
+        return openAsk(
+          payload.backtest
+            ? "Review the attached chart window and evidence as a backtest specification. Do not execute until I confirm the availability assumptions."
+            : "Research the attached chart window and selected evidence. Distinguish transaction history from information available after publication.",
+        );
+      } catch {
+        return;
+      }
+    }
     if (action.startsWith("ask:draft:")) return openAsk(decodeURIComponent(action.slice(10)));
     if (action.split(":")[0] === "ask") return openAsk();
     record(action, label);
@@ -515,7 +511,7 @@ export function App() {
           if (meeting) setDossier(meetingModel(meeting));
         },
         ticker: (symbol) => {
-          showChart(symbol, OPEN_SPAN);
+          showChart(symbol, AppModules.OPEN_SPAN);
           setSelectedId(null);
           void openTickerDossier(symbol, "");
         },
@@ -571,7 +567,7 @@ export function App() {
       history.replaceState(null, "", location.pathname + location.search);
   }
 
-  function openToday(tab: TodayTab) {
+  function openToday(tab: AppModules.TodayTab) {
     setTimelineId(null);
     setCalendarTab(null);
     setSelectedId(null);
@@ -636,7 +632,7 @@ export function App() {
     if (hit.kind === "ask") return go(`ask:q:${encodeURIComponent(hit.id)}`);
     if (hit.kind === "ticker") {
       record(`ticker:${hit.id}`);
-      showChart(hit.id, OPEN_SPAN);
+      showChart(hit.id, AppModules.OPEN_SPAN);
       setSelectedId(null);
       await openTickerDossier(hit.id, hit.label.slice(hit.id.length + 1));
     } else if (hit.kind === "district") {
@@ -731,9 +727,9 @@ export function App() {
         : chartSymbol
       : drawer?.watch || "";
   const foot = timelineId
-    ? timelineStatus || TIMELINE_STATUS
+    ? timelineStatus || AppModules.TIMELINE_STATUS
     : onToday
-      ? stageList?.status || TODAY_STATUS
+      ? stageList?.status || AppModules.TODAY_STATUS
       : view.status;
   const footLabel = timelineId
     ? "TIMELINE"
@@ -787,7 +783,7 @@ export function App() {
   return (
     <div
       data-color-section={calendarTab ? "calendar" : today === "research" ? "research" : today ? "today" : section}
-      className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today) ? " tl" : ""}`}
+      className={`app${weatherOn && weather.phoneMap ? " weather-map" : ""}${phone ? " phone" : ""}${phone && (timelineId || today || (section === "markets" && marketView === "chart")) ? " tl" : ""}`}
     >
       <header className="topbar">
         <div className="brand">
@@ -1127,16 +1123,17 @@ export function App() {
                 {phone &&
                 !timelineId &&
                 !today &&
+                !(section === "markets" && marketView === "chart") &&
                 section !== "map" &&
                 !(weatherOn && weather.phoneMap) ? null : timelineId ? (
-                  <MemberTimeline
+                  <AppModules.MemberTimeline
                     bioguide={timelineId}
                     onClose={closeTimeline}
                     onFollow={follow}
                     onStatus={reportTimeline}
                   />
                 ) : today === "research" ? (
-                  <ResearchBoard
+                  <AppModules.ResearchBoard
                     ask={ask}
                     context={askContext}
                     onFollow={follow}
@@ -1144,7 +1141,7 @@ export function App() {
                     onList={reportList}
                   />
                 ) : today === "bt" ? (
-                  <BacktestBoard
+                  <AppModules.BacktestBoard
                     key={btSeed}
                     seed={btSeed}
                     onFollow={follow}
@@ -1152,7 +1149,7 @@ export function App() {
                     onList={reportList}
                   />
                 ) : today ? (
-                  <TodayBoard
+                  <AppModules.TodayBoard
                     tab={today}
                     onTab={(t) => go(`today:${t}`)}
                     onFollow={follow}
@@ -1160,7 +1157,7 @@ export function App() {
                     onList={reportList}
                   />
                 ) : calendarTab ? (
-                  <CalendarBoard
+                  <AppModules.CalendarBoard
                     tab={calendarTab}
                     onTab={setCalendarTab}
                     meetings={calendar}
@@ -1170,7 +1167,7 @@ export function App() {
                     onClose={() => setCalendarTab(null)}
                   />
                 ) : section === "markets" ? (
-                  <MarketStage
+                  <AppModules.MarketStage
                     view={marketView}
                     chart={{
                       symbol: chartSymbol,
@@ -1189,13 +1186,13 @@ export function App() {
                     onFollow={follow}
                   />
                 ) : section === "contracts" ? (
-                  <ContractsBoard
+                  <AppModules.ContractsBoard
                     board={contracts.board}
                     dod={contracts.dod}
                     onSymbol={(s) => follow(`contracts:symbol:${s}`)}
                   />
                 ) : section === "news" && !newsGlobe ? (
-                  <NewsBoard
+                  <AppModules.NewsBoard
                     wire={news.wire}
                     x={news.x}
                     items={news.all}
@@ -1207,7 +1204,7 @@ export function App() {
                     onTicker={(symbol) => void cards.openPositions(symbol)}
                   />
                 ) : section === "congress" && voteView === "floor" ? (
-                  <FloorMap
+                  <AppModules.FloorMap
                     chamber={chamber}
                     members={congress.positions.length ? congress.positions : seatRoster}
                     party={party}
@@ -1225,7 +1222,7 @@ export function App() {
                     }
                   />
                 ) : section === "map" ? (
-                  <RelationsMap
+                  <AppModules.RelationsMap
                     rel={board}
                     selectedId={selectedId}
                     onSelect={(id) => {
@@ -1237,7 +1234,7 @@ export function App() {
                   />
                 ) : (
                   <>
-                    <MapFrame
+                    <AppModules.MapFrame
                       geojson={map.geojson}
                       colorProp={map.colorProp}
                       fill={look.fill}

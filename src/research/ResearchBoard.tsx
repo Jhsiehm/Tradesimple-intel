@@ -12,6 +12,7 @@ import type { AskApi } from "../ask/useAsk";
 import type { AgentContext } from "../agent/context";
 import { GuidedExperiment } from "./GuidedExperiment";
 import { ContractEvidence } from "./ContractEvidence";
+import { PolicyWorkspace } from "./policy/PolicyWorkspace";
 import { ResearchHome } from "./ResearchHome";
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_RULES } from "../../shared/backtestSpec.mjs";
@@ -46,6 +47,7 @@ export function ResearchBoard({
     | "home"
     | "guided"
     | "contractEvidence"
+    | "policy"
     | "relationships"
     | "memory"
     | "pairs"
@@ -125,6 +127,10 @@ export function ResearchBoard({
   };
   useEffect(() => {
     const onHash = () => {
+      if (/^#research\/policy(?:\/|$)/.test(location.hash)) {
+        setTab("policy");
+        return;
+      }
       const id = location.hash.match(/^#research\/(exp_[a-f0-9]+)$/)?.[1];
       if (id) void open(id);
     };
@@ -216,6 +222,7 @@ export function ResearchBoard({
             </button>
             <button onClick={() => setTab("guided")}>Guided experiment</button>
             <button onClick={() => setTab("contractEvidence")}>Contract evidence</button>
+            <button onClick={() => setTab("policy")}>Policy research</button>
             <button onClick={() => setTab("experiments")}>Experiments</button>
             <button onClick={() => setTab("data")}>Data Hub</button>
             <button onClick={() => setTab("convergence")}>Convergence</button>
@@ -250,6 +257,8 @@ export function ResearchBoard({
           ) : (
             <ResearchHome ask={ask} context={context} onFollow={onFollow} onTool={setTab} />
           )
+        ) : tab === "policy" ? (
+          <PolicyWorkspace />
         ) : tab === "guided" ? (
           <GuidedExperiment onOpen={(id) => void open(id)} onTool={setTab} />
         ) : tab === "contractEvidence" ? (

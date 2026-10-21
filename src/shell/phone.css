@@ -2,7 +2,7 @@
   margin: 0 0 10px;
   padding: 6px 8px;
   border: 1px solid var(--line);
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .alerts-phone summary {
@@ -17,10 +17,10 @@
 .alerts-phone select,
 .alerts-phone-quiet {
   background: var(--tsi-terminal-panel, #0b0f13);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   color: var(--ink);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--text-ui);
   padding: 2px 4px;
 }
 .alerts-phone-quiet {
@@ -42,7 +42,7 @@
   margin: 6px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   color: var(--faint);
 }
 .alerts-phone-recent li {
@@ -52,9 +52,9 @@
 }
 .alerts-phone-recent b {
   color: var(--dim);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.025em;
 }
 .alerts-phone-note {
   margin: 6px 0 0;

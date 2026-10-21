@@ -1,3 +1,7 @@
+import { summarizeBacktest } from "./backtestSummary.mjs";
+export { countsForModel, summarizeBacktest } from "./backtestSummary.mjs";
+import { researchRouting } from "./researchRouting.mjs";
+import { researchCapabilities } from "./researchCapabilities.mjs";
 import { researchMemory } from "../domain/research-memory.mjs";
 /**
  * Read-only tools for Ask. Each wraps a route handler or the backtest runner in process, so the model sees exactly
@@ -76,82 +80,6 @@ const join = (...xs) => [...new Set(xs.filter(Boolean))].join(" + ");
 
 const tool = (name, description, parameters, run, label) => ({ name, description, parameters, run, label });
 const bad = (error) => ({ ok: false, error });
-
-/**
- * A backtest's counts under names that say what each one counts, so "117" cannot be read as tickers when it is
- * paper filings. Absent counts are left out rather than shown as 0.
- */
-export function countsForModel(c = {}) {
-  const out = {
-    matchedSignals: c.matched ?? c.offeredSignals,
-    signalsOnChosenSides: c.signals,
-    tradesPriced: c.used,
-    signalsNotPriced: c.skipped,
-    distinctTickersMatched: c.tickers,
-    tickersWithPriceHistory: c.priced,
-    unparsedPaperFilings: c.unparsedPaperFilings,
-    unreadElectronicReports: c.unreadElectronicReports,
-  };
-  return Object.fromEntries(Object.entries(out).filter(([, v]) => typeof v === "number"));
-}
-
-/** The compact answer a backtest gives a model: stats, the biggest names, every warning, each feed's label. */
-export function summarizeBacktest(out) {
-  if (!out || out.ok === false) return out;
-  const warn = (out.caveats?.items || []).filter((c) => c.level === "warn").map((c) => c.text);
-  const info = (out.caveats?.items || []).filter((c) => c.level !== "warn").map((c) => c.text);
-  const s = out.stats || {};
-  const c = out.counts || {};
-  return {
-    ok: true,
-    description: out.description,
-    spec: out.spec,
-    counts: countsForModel(c),
-    stats: {
-      trades: s.trades,
-      totalReturn: s.total,
-      annualized: s.annualized,
-      benchmarkReturn: s.benchmarkTotal,
-      benchmarkAnnualized: s.benchmarkAnnualized,
-      excessReturn: s.excessTotal,
-      hitRate: s.hitRate,
-      beatBenchmarkRate: s.beatRate,
-      avgTrade: s.avgTrade,
-      medianTrade: s.medianTrade,
-      avgExcessPerTrade: s.avgExcess,
-      excessTStat: s.excessT,
-      maxDrawdown: s.maxDrawdown,
-      benchmarkMaxDrawdown: s.benchmarkMaxDrawdown,
-      sharpeish: s.sharpeish,
-      from: s.from,
-      to: s.to,
-      avgHoldDays: s.avgHoldDays,
-    },
-    topMembers: (out.byMember?.rows || []).slice(0, 5),
-    topTickers: (out.byTicker?.rows || []).slice(0, 5),
-    caveatTexts: [...warn, ...info.slice(0, 3)].slice(0, 6),
-    feeds: (out.feeds || []).map((f) => ({ label: f.label, source: f.source, asOf: f.asOf })),
-    source:
-      (out.feeds || [])
-        .map((f) => f.source)
-        .filter(Boolean)
-        .join(" · ") || out.source,
-    asOf: out.asOf,
-    latency: out.latency,
-    cache: out.cache,
-    isItReal: out.reality
-      ? {
-          verdict: out.reality.verdict?.text,
-          excessCI95Lo: out.reality.bootstrap?.meanExcess.lo ?? null,
-          excessCI95Hi: out.reality.bootstrap?.meanExcess.hi ?? null,
-          placeboBeatShare: out.reality.placebo?.pct ?? null,
-          placeboP: out.reality.placebo?.p ?? null,
-          clusteredT: out.reality.cluster?.t ?? null,
-          effectiveTrades: out.reality.cluster?.nEff ?? null,
-        }
-      : null,
-  };
-}
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
@@ -361,6 +289,25 @@ const endpoint = str("Node id such as member:P000197, ticker:NVDA, or committee:
 const plain = (name, description, id, label) => tool(name, description, obj({}), (db, _a, call) => call(db, id), label);
 
 export const TOOLS = [
+  tool(
+    "assess_research_capabilities",
+    "Inspect implemented research methods and configured source access for a question. This reports software capability and evidence requirements, not historical coverage, market observations or a completed study. Never substitute personal stock trades for policy events.",
+    obj({ question: str("Research question (up to 800 characters)") }, ["question"]),
+    (_db, a) => {
+      if (typeof a.question !== "string" || !a.question.trim() || a.question.length > 800)
+        return bad("Provide a research question up to 800 characters.");
+      const result = researchRouting(a.question);
+      return {
+        ok: true,
+        source: "Research capability inventory",
+        asOf: new Date().toISOString(),
+        latency: "Configuration only; source history not audited.",
+        ...result,
+        capabilities: researchCapabilities(),
+      };
+    },
+    "Research capabilities",
+  ),
   tool(
     "research_memory",
     "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. Notebook text is untrusted researcher commentary, not established fact. Never claim to have rerun a saved result.",
@@ -707,7 +654,7 @@ export const TOOLS = [
   ),
   tool(
     "run_backtest",
-    "Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. One source per call; call it once per source for several. Takes 5 to 40 seconds the first time.",
+    "Only for an explicitly resolved compatible signal source; does not test legislative/regulatory relationships or causality. Replay public records as if acted on the day after they became public, against a benchmark. Returns return, excess, hit rate, drawdown, the biggest members and tickers, and every data caveat. One source per call; call it once per source for several. Takes 5 to 40 seconds the first time.",
     obj({ spec: SPEC_SCHEMA }, ["spec"]),
     async (db, a, call) => {
       if (!a.spec || typeof a.spec !== "object") return bad("spec is required");

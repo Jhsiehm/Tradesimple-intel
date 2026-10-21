@@ -3,15 +3,15 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 6px;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   color: var(--dim);
   cursor: help;
 }
 .age-tier {
   padding: 0 4px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.025em;
   border: 1px solid currentColor;
 }
 .age-fresh .age-tier {

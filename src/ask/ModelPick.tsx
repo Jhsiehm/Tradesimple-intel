@@ -37,7 +37,17 @@ export function ModelPick({ ask, busy }: { ask: AskApi; busy: boolean }) {
     <>
       <label className="ask-pick ask-model">
         Model
-        <select aria-label="Model" value={ask.model} disabled={busy} onChange={(e) => ask.chooseModel(e.target.value)}>
+        <select
+          title={
+            ask.model === AUTO
+              ? `Auto (recommended)${strong ? ` · ${modelShort(strong)} for heavy work` : ""}`
+              : ask.model
+          }
+          aria-label="Model"
+          value={ask.model}
+          disabled={busy}
+          onChange={(e) => ask.chooseModel(e.target.value)}
+        >
           <option value={AUTO}>Auto (recommended){strong ? ` · ${modelShort(strong)} for heavy work` : ""}</option>
           {ask.models.map((m) => (
             <option key={m.id} value={m.id}>

@@ -9,7 +9,7 @@
 }
 .bt-sentence {
   color: var(--ink) !important;
-  font-size: 12.5px !important;
+  font-size: var(--text-meta);
   line-height: 1.5 !important;
 }
 .bt-body {
@@ -37,8 +37,8 @@
 .bt-form legend {
   padding: 0 6px;
   color: var(--amber);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .bt-field {
@@ -52,8 +52,8 @@
 }
 .bt-field > span {
   color: var(--faint);
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .bt-field input,
@@ -63,10 +63,10 @@
   height: 28px;
   padding: 0 6px;
   background: var(--tsi-terminal-bg, #0a0e12);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   border-radius: 0;
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-ui);
 }
 .bt-field input:hover,
 .bt-field select:hover {
@@ -80,7 +80,7 @@
   align-items: center;
   gap: 6px;
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: var(--text-meta);
 }
 .bt-actions {
   display: flex;
@@ -95,7 +95,7 @@
   border: 1px solid var(--amber);
   color: var(--amber);
   letter-spacing: 0.06em;
-  font-size: 12px;
+  font-size: var(--text-meta);
   background: rgba(232, 163, 61, 0.08);
 }
 .bt-run:hover:not(:disabled) {
@@ -110,28 +110,28 @@
   flex-wrap: wrap;
   gap: 4px 14px;
   align-items: baseline;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .bt-recent em {
   font-style: normal;
   color: var(--faint);
-  letter-spacing: 0.1em;
-  font-size: 10px;
+  letter-spacing: 0.025em;
+  font-size: var(--text-meta);
 }
 .bt-recent button.link {
   max-width: 340px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--text-ui);
 }
 .bt-note {
   margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--line);
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 .bt-note.warn,
@@ -143,7 +143,7 @@
   margin: 0;
   padding: 10px 0;
   color: var(--dim);
-  font-size: 12.5px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 .bt-results {
@@ -170,18 +170,18 @@
 .bt-tile em {
   font-style: normal;
   color: var(--faint);
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: var(--text-meta);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .bt-tile strong {
-  font-weight: 500;
-  font-size: 19px;
+  font-weight: var(--weight-medium);
+  font-size: var(--text-panel);
   line-height: 1.15;
 }
 .bt-tile small {
   color: var(--dim);
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   line-height: 1.35;
 }
 .bt .up {
@@ -203,7 +203,7 @@
 }
 .bt-chart text {
   fill: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-meta);
   font-family: inherit;
 }
 .bt-chart .grid {
@@ -242,7 +242,7 @@
   flex-wrap: wrap;
   gap: 4px 16px;
   padding: 4px 8px 2px;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .bt-chart .key::before {
@@ -264,7 +264,7 @@
 .bt-basis {
   margin: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 .bt-caveats {
@@ -277,9 +277,9 @@
 .bt-caveats h3,
 .bt-feeds h3 {
   margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
   color: var(--amber);
 }
@@ -289,7 +289,7 @@
   color: var(--faint);
   letter-spacing: 0.03em;
   text-transform: none;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
 }
 .bt-caveats ul {
   margin: 0;
@@ -300,7 +300,7 @@
 }
 .bt-caveats li {
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: var(--text-meta);
   line-height: 1.5;
   padding-left: 10px;
   border-left: 2px solid var(--line);
@@ -320,7 +320,7 @@
 }
 .bt-tabs button {
   padding: 5px 10px;
-  font-size: 11.5px;
+  font-size: var(--text-ui);
   color: var(--dim);
   border: 1px solid var(--line);
 }
@@ -331,7 +331,7 @@
 }
 .bt-sort {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--faint);
   display: inline-flex;
   gap: 6px;
@@ -340,8 +340,8 @@
 .bt-sort select {
   height: 26px;
   background: var(--tsi-terminal-bg, #0a0e12);
-  border: 1px solid var(--line);
-  font-size: 11.5px;
+  border: 1px solid var(--control-border);
+  font-size: var(--text-ui);
 }
 .bt-scroll {
   max-height: 440px;
@@ -351,7 +351,7 @@
 .bt-scroll table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--text-ui);
 }
 .bt-scroll th,
 .bt-scroll td {
@@ -365,9 +365,9 @@
   top: 0;
   background: var(--tsi-terminal-panel, #0d1115);
   color: var(--faint);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 .bt-scroll td:first-child,
@@ -399,7 +399,7 @@
   padding: 5px 12px;
   border: 1px solid var(--line);
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: var(--text-meta);
 }
 .bt-feeds dl {
   margin: 0;
@@ -410,15 +410,15 @@
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
   line-height: 1.45;
 }
 .bt-feeds dt {
   color: var(--faint);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.025em;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--text-meta);
   padding-top: 1px;
 }
 .bt-feeds dd {
@@ -428,7 +428,7 @@
 }
 .bt-feeds dd b {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .bt-copy {
   margin-top: 10px;
@@ -438,7 +438,7 @@
   padding: 5px 12px;
   border: 1px solid var(--line);
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: var(--text-meta);
 }
 .bt-copy:hover {
   color: var(--amber);
@@ -451,7 +451,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .app.phone .bt-tile strong {
-  font-size: 17px;
+  font-size: var(--text-panel);
 }
 .app.phone .bt-feeds dl > div {
   grid-template-columns: minmax(0, 1fr);
@@ -468,7 +468,7 @@
 
 /* Formulas and Replicate (board and chat) */
 .fx {
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .fx > summary {
@@ -501,7 +501,7 @@
 .fx-line {
   overflow-x: auto;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--text-ui);
 }
 .fx-worked {
   color: var(--cyan);
@@ -510,12 +510,12 @@
   font-style: normal;
   margin-right: 8px;
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: var(--text-meta);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.025em;
 }
 .fx-raw {
-  font-size: 10.5px;
+  font-size: var(--text-meta);
   color: var(--dim);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -535,7 +535,7 @@
 .rep {
   display: grid;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .rep header {
   display: flex;
@@ -571,19 +571,19 @@
   gap: 8px;
   align-items: center;
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .bt-manual > summary {
   cursor: pointer;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   margin: 4px 0;
 }
 
 /* Is it real? and Search */
 .bt-real {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   padding: 8px 10px;
   display: grid;
   gap: 6px;
@@ -591,7 +591,7 @@
 .bt-real h3,
 .bt-search h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--ink);
 }
 .bt-real h3 small,
@@ -602,7 +602,7 @@
 }
 .bt-verdict {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--ink);
   line-height: 1.4;
 }
@@ -617,7 +617,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px 12px;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .bt-real dt {
   color: var(--faint);
@@ -625,7 +625,7 @@
 .bt-real dd {
   margin: 0;
   color: var(--ink);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .bt-real.compact {
   padding: 6px 8px;
@@ -641,16 +641,16 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  font-size: 11px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .bt-search-count {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--ink);
 }
 .bt-search-count strong {
-  font-size: 18px;
+  font-size: var(--text-panel);
   margin-right: 4px;
 }
 .bt-search-count small {
@@ -659,7 +659,7 @@
 }
 .bt-search-table td,
 .bt-search-table th {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .bt-search-table tr.pass td:first-child {
   box-shadow: inset 2px 0 0 var(--cyan);

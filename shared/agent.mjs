@@ -2,6 +2,8 @@
  * Ask sheet helpers, pure: which model a run may use, what the screen attaches, greetings, and whether a finished
  * answer actually carries the numbers its tools returned. Nothing here reads env, the network, or the clock.
  */
+import { interpretResearch } from "./researchIntent.mjs";
+import { cleanChartContext } from "./chartWorkspace.mjs";
 import { cleanTheory } from "./theories.mjs";
 
 /** OpenRouter menu. Strong tool-callers first; the small ones stay available but carry a warning badge. */
@@ -45,7 +47,8 @@ export function cleanContext(raw) {
   const theory = cleanTheory(raw.theory);
   const okNode = NODE.test(node) ? node : "";
   if (!okNode && !theory) return null;
-  return { node: okNode, label: text(raw.label, 120), theory };
+  const chart = cleanChartContext(raw.chart);
+  return { node: okNode, label: text(raw.label, 120), theory, ...(chart ? { chart } : {}) };
 }
 
 /** Members and tickers by id; bills, roll calls, committees, districts, map links and nodes, and other cards by key. */
@@ -86,6 +89,10 @@ export function contextNote(ctx) {
   if (ctx.theory)
     bits.push(
       `the user's own theory, not a filing: ${ctx.theory.a.label} ↔ ${ctx.theory.b.label}${ctx.theory.label ? ` — ${ctx.theory.label}` : ""}`,
+    );
+  if (ctx.chart)
+    bits.push(
+      `Reviewed chart parameters (user-provided context, verify source facts through tools): ${JSON.stringify(ctx.chart)}. Transaction dates are descriptive, not tradable availability. If only a filing date is known, review next regular session execution in the venue calendar. Exclude unknown publication dates from availability-based tests; do not invent release times`,
     );
   return `The user attached what is on screen: ${bits.join("; ")}. Use it only when the question refers to it.`;
 }
@@ -183,8 +190,19 @@ export const wantsBacktest = (q) => /\bback-?test/i.test(String(q || ""));
  * Why a finished answer should be rewritten once, or "". `evidence` items carry `tool`, `ok`, and `rows`.
  */
 export function retryReason(question, answer, evidence) {
-  const data = evidence.filter((e) => e.ok && e.rows > 0 && e.tool !== "search" && e.tool !== "propose_theory");
-  if (wantsBacktest(question) && !evidence.some((e) => e.tool === "run_backtest")) {
+  const data = evidence.filter(
+    (e) =>
+      e.ok &&
+      e.rows > 0 &&
+      e.tool !== "search" &&
+      e.tool !== "propose_theory" &&
+      e.tool !== "assess_research_capabilities",
+  );
+  if (
+    interpretResearch(question).route === "legacy" &&
+    wantsBacktest(question) &&
+    !evidence.some((e) => e.tool === "run_backtest")
+  ) {
     return "The user asked for a backtest and run_backtest was not called. Call run_backtest now with a sensible spec (see the rules), then answer with its numbers and state the spec you used.";
   }
   if (data.length && figureCount(answer) < 2) {

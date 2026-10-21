@@ -92,6 +92,7 @@ export function ResearchHome({
       | "notebooks"
       | "guided"
       | "contractEvidence"
+      | "policy"
       | "memory"
       | "stress"
       | "eventStudies"
@@ -214,7 +215,7 @@ export function ResearchHome({
           {!ask.turns.length ? (
             <div className="research-hero">
               <ResearchEmblem />
-              <h1>What would you like to research?</h1>
+              <h1>Research question</h1>
             </div>
           ) : (
             <div className="research-conversation" aria-label="Research conversation">

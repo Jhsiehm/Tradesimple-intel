@@ -42,6 +42,7 @@ export async function runPromptTask({
   });
   try {
     await runAsk({
+      researchEnv: env,
       question: task.prompt,
       model,
       provider: metered(makeProvider({ ...cfg, model }), { db, kind: "task", askId: task.id, now }),

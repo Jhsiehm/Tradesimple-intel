@@ -1,28 +1,22 @@
 /* Research tools use a readable operational surface; Research Home is untouched. */
 .research[data-home="false"] {
-  --bg: #12191e;
-  --ink: #e1e8ec;
-  --dim: #a6b4bd;
-  --faint: #96a6b2;
-  --line: #34424c;
-  --amber: #b7d9dd;
   background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   color-scheme: dark;
-  scrollbar-color: #526570 var(--bg);
-  caret-color: #b7d9dd;
+  scrollbar-color: var(--control-border) var(--bg);
+  caret-color: var(--accent);
 }
 .research[data-home="false"] ::selection {
-  background: #355765;
+  background: var(--surface-selected);
   color: #fff;
 }
 .research[data-home="false"] :focus-visible {
-  outline: 2px solid #b7d9dd;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .research[data-home="false"] .bt-body {
-  padding: 28px clamp(16px, 4vw, 56px) 56px;
+  padding: 20px clamp(16px, 2vw, 32px) 32px;
 }
 .research[data-home="false"] .bt-body > :is(section, .research-content, .convergence) {
   max-width: 1120px;
@@ -33,21 +27,21 @@
   gap: 18px;
 }
 .research[data-home="false"] :is(h2, .research-content h2) {
-  font-size: 26px;
+  font-size: var(--text-page);
   line-height: 1.2;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.025em;
   margin: 0;
   color: var(--ink);
 }
 .research[data-home="false"] :is(h3, .research-content h3) {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-semibold);
   color: var(--ink);
   margin: 16px 0 4px;
 }
 .research[data-home="false"] :is(p, li) {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.65;
   max-width: 76ch;
 }
@@ -62,28 +56,28 @@
   padding: 16px 0;
 }
 .research[data-home="false"] .research-form legend {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-semibold);
   padding: 0 12px 0 0;
   color: var(--ink);
 }
 .research[data-home="false"] label {
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--dim);
 }
 .research[data-home="false"] .research-form :is(input, select, textarea) {
-  padding: 11px 12px;
-  border-radius: 5px;
-  background: #182229;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--panel);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 .research[data-home="false"] .research-form textarea {
   min-height: 88px;
 }
 .research[data-home="false"] .research-form .research-data {
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
 }
 .research[data-home="false"] .research-mapping {
   gap: 16px;
@@ -95,7 +89,7 @@
   padding-bottom: 8px;
 }
 .research[data-home="false"] summary {
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--dim);
   padding: 12px 0;
 }
@@ -112,21 +106,21 @@
 .research[data-home="false"] :is(.bt-run, .panels-btn) {
   min-height: 40px;
   padding: 10px 16px;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-ui);
   max-width: 100%;
   white-space: normal;
 }
 .research[data-home="false"] .bt-run {
   justify-self: start;
-  background: #b7d9dd;
-  color: #14262d;
-  border: 1px solid #b7d9dd;
-  font-weight: 600;
+  background: var(--accent);
+  color: var(--bg);
+  border: 1px solid var(--accent);
+  font-weight: var(--weight-semibold);
 }
 .research[data-home="false"] .bt-run:hover:not(:disabled) {
-  background: #d1e8ea;
+  background: var(--ink);
 }
 .research[data-home="false"] button {
   transition:
@@ -154,40 +148,40 @@
   align-items: center;
 }
 .research[data-home="false"] .research-item strong {
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 .research[data-home="false"] .research-item span {
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .research[data-home="false"] .research-item:hover {
-  background: #1c2a32;
+  background: var(--surface-hover);
 }
 .research[data-home="false"] .research-item[aria-pressed="true"] {
-  background: #243943;
-  box-shadow: inset 1px 0 #b7d9dd;
+  background: var(--surface-selected);
+  box-shadow: inset 1px 0 var(--accent);
 }
 .research[data-home="false"] .research-table {
-  border-radius: 5px;
+  border-radius: var(--radius-control);
 }
 .research[data-home="false"] :is(.research-table, .convergence-table) table {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-ui);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .research[data-home="false"] .research-table :is(td, th) {
-  padding: 12px;
+  padding: var(--table-cell-padding);
 }
 .research[data-home="false"] .research-table th {
-  background: #1c2a32;
+  background: var(--surface-hover);
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .research[data-home="false"] .research-table tr:hover td {
-  background: #182229;
+  background: var(--panel);
 }
 .research[data-home="false"] [role="status"] {
   padding: 12px 16px;
-  background: #20323b;
-  border-radius: 5px;
+  background: var(--surface-raised);
+  border-radius: var(--radius-control);
   max-width: none;
   animation: research-feedback 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -195,7 +189,7 @@
   padding: 12px 16px;
   background: #35292a;
   color: #efc3b9;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
 }
 .research[data-home="false"] .research-working::before {
   content: "";
@@ -203,8 +197,8 @@
   width: 12px;
   height: 12px;
   margin-right: 10px;
-  border: 2px solid #526570;
-  border-top-color: #b7d9dd;
+  border: 2px solid var(--control-border);
+  border-top-color: var(--accent);
   border-radius: 50%;
   vertical-align: -2px;
   animation: research-working 900ms linear infinite;
@@ -217,10 +211,10 @@
   max-width: 100%;
 }
 .research-count {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
   padding-left: 8px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .data-kind {
   display: flex;
@@ -241,24 +235,24 @@
   background: transparent;
 }
 .data-kind button strong {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-prose);
+  font-weight: var(--weight-semibold);
   color: var(--ink);
 }
 .data-kind button span {
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--dim);
 }
 .research[data-home="false"] .data-kind button[aria-pressed="true"] {
-  border-bottom-color: #b7d9dd;
-  background: #1c2a32;
+  border-bottom-color: var(--accent);
+  background: var(--surface-hover);
 }
 .data-hub [hidden] {
   display: none !important;
 }
 .research[data-home="false"] .data-import > summary {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-semibold);
   color: var(--ink);
 }
 .research-tool-nav {
@@ -276,12 +270,12 @@
 }
 .research-tool-nav select {
   padding: 9px 12px;
-  background: #182229;
+  background: var(--panel);
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-body);
   max-width: 100%;
 }
 .research-tool-nav button {
@@ -290,7 +284,7 @@
   border: 0;
   padding: 10px 0;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-ui);
 }
 @keyframes research-feedback {
   from {
@@ -338,7 +332,7 @@
 }
 .data-workbench {
   display: grid;
-  gap: 32px;
+  gap: 24px;
   min-width: 0;
   align-items: start;
 }
@@ -356,7 +350,7 @@
 }
 .research[data-home="false"] .data-workbench > section > h3:first-child {
   margin-top: 0;
-  font-size: 20px;
+  font-size: var(--text-panel);
 }
 @media (max-width: 900px) {
   .data-workbench[data-selected="true"] {
@@ -368,7 +362,7 @@
 }
 
 .analysis-history time {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
   overflow-wrap: anywhere;
 }
@@ -381,9 +375,7 @@
   overflow-wrap: anywhere;
 }
 .analysis-history .analysis-payload {
-  font:
-    12px/1.6 ui-monospace,
-    monospace;
+  font: var(--text-code) / var(--leading-prose) var(--font-mono);
   max-height: 360px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -399,14 +391,14 @@
 }
 .research[data-home="false"] .research-library-disclosure > summary {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .research[data-home="false"] summary {
   cursor: pointer;
   transition: color 140ms ease-out;
 }
 .research[data-home="false"] summary::marker {
-  color: #b7d9dd;
+  color: var(--accent);
 }
 .research[data-home="false"] :is(input, select, textarea) {
   box-sizing: border-box;
@@ -423,11 +415,11 @@
   overflow-wrap: anywhere;
 }
 .research[data-home="false"] :is(.research-notebooks, .research-memory) > .research-mapping :is(input, select) {
-  padding: 11px 12px;
-  background: #182229;
+  padding: 8px 10px;
+  background: var(--panel);
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   font: inherit;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -468,20 +460,20 @@
 }
 .research-tool-picker summary strong {
   display: block;
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--ink);
 }
 .research-tool-picker summary small {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
-  font-weight: 400;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-regular);
 }
 .research-tool-switch {
   flex-shrink: 0;
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius-control);
 }
 .research-tool-switch::after {
   content: "";
@@ -507,7 +499,7 @@
   overflow-y: auto;
 }
 .research[data-home="false"] .research-tool-directory h3 {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
   margin: 12px 8px 6px;
 }
@@ -517,19 +509,19 @@
   text-align: left;
   gap: 4px;
   padding: 10px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-control);
 }
 .research-tool-directory button strong {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
 }
 .research-tool-directory button span {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
   line-height: 1.5;
 }
 .research-tool-directory button:is(:hover, [aria-current="page"]) {
-  background: #243943;
+  background: var(--surface-selected);
 }
 .research[data-home="false"] .research-validation {
   padding-block: 12px;
@@ -538,11 +530,11 @@
   display: flex;
   height: 6px;
   overflow: hidden;
-  background: #34424c;
+  background: var(--line);
   border-radius: 2px;
 }
 .research-validation-bar span {
-  background: #b7d9dd;
+  background: var(--accent);
   transform-origin: left;
   animation: research-validation-reveal 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -556,12 +548,12 @@
   margin: 16px 0 0;
 }
 .research-validation dt {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--dim);
 }
 .research-validation dd {
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-page);
+  font-variant-numeric: lining-nums tabular-nums;
   margin: 6px 0 0;
 }
 .research-validation [data-warning="true"] dd {
@@ -600,7 +592,7 @@
     display: none;
   }
   .research-tool-switch {
-    font-size: 12px;
+    font-size: var(--text-meta);
     padding: 8px;
   }
   .research[data-home="false"] .research-tool-picker > summary {
@@ -645,7 +637,7 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-  color: #b7d9dd;
+  color: var(--accent);
 }
 .research[data-home="false"] .research-feedback.research-working::before {
   content: none;
@@ -661,13 +653,13 @@
 }
 .research-tool-search input {
   width: 100%;
-  padding: 11px 12px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: #182229;
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--panel);
   color: var(--ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 .research-tool-search input::placeholder {
   color: var(--dim);

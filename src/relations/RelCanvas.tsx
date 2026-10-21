@@ -1,3 +1,6 @@
+import type { CanvasHandle, Props, View, Hit, Gesture } from "./canvasTypes";
+export type { CanvasHandle } from "./canvasTypes";
+import { canvasTypography } from "../design/typography";
 import {
   forwardRef,
   useEffect,
@@ -8,56 +11,11 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import {
-  CATEGORY_IDS,
-  neighborhood,
-  type CategoryId,
-  type Graph,
-  type RelEdge,
-  type RelNode,
-  type Theory,
-} from "../../shared/relations.mjs";
+import { CATEGORY_IDS, neighborhood, type RelEdge, type RelNode, type Theory } from "../../shared/relations.mjs";
 import { CATEGORY_LOOK, NODE_LOOK, PANEL, THEORY_LOOK } from "./palette";
 import { edgeSel, theoryId } from "./dossier";
 import { MAX_K, MIN_K, drawIcon, radius, segDist, shape } from "./canvasDraw";
 import type { Pt } from "./layout";
-
-export type CanvasHandle = {
-  fit: () => void;
-  zoom: (f: number) => void;
-  center: () => Pt;
-  focus: (id: string) => void;
-};
-
-type Props = {
-  graph: Graph;
-  hidden: Set<CategoryId>;
-  selectedId: string | null;
-  theoryMode: boolean;
-  pendingFrom: string | null;
-  onSelect: (id: string | null) => void;
-  onMenu: (id: string, at: { x: number; y: number }) => void;
-  onCloseMenu: () => void;
-  onExpand: (id: string) => void;
-  onMove: (moves: Map<string, Pt>) => void;
-  onLinkClick: (id: string) => void;
-  onLinkDrop: (from: string, to: string) => void;
-  onRemove: (id: string) => void;
-  onKey: (event: ReactKeyboardEvent) => void;
-};
-
-type View = { x: number; y: number; k: number };
-type Hit =
-  | { kind: "node"; node: RelNode }
-  | { kind: "edge"; edge: RelEdge }
-  | { kind: "theory"; theory: Theory }
-  | null;
-type Gesture =
-  | { mode: "pan"; sx: number; sy: number; vx: number; vy: number; moved: boolean }
-  | { mode: "node"; id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean; touch: boolean }
-  | { mode: "link"; id: string; moved: boolean; sx: number; sy: number }
-  | { mode: "pinch"; d: number; cx: number; cy: number; view: View }
-  | null;
 
 /** Relationship canvas. Draws on demand; your theories animate only while any are on screen. */
 export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(props, ref) {
@@ -266,6 +224,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
     const ctx = cv?.getContext("2d");
     if (!cv || !ctx) return;
     const t0 = performance.now();
+    const typography = canvasTypography(cv);
     const { w, h, dpr } = size.current;
     const { x, y, k } = view.current;
     const { selectedId: sel, pendingFrom: pend } = live.current;
@@ -375,7 +334,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
 
     // Nodes, then labels on top.
     const labels = k > 0.55;
-    ctx.font = `${11 / k}px "IBM Plex Mono", ui-monospace, Menlo, monospace`;
+    ctx.font = `400 ${typography.size / k}px ${typography.family}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (const n of scene.nodes) {
@@ -417,7 +376,7 @@ export const RelCanvas = forwardRef<CanvasHandle, Props>(function RelCanvas(prop
       }
     }
     if (labels) {
-      ctx.font = `${10 / k}px "IBM Plex Mono", ui-monospace, Menlo, monospace`;
+      ctx.font = `400 ${typography.size / k}px ${typography.family}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (const e of scene.edges) {

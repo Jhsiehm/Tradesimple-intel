@@ -15,7 +15,7 @@
   border-left: 2px solid var(--amber);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-meta);
   pointer-events: none;
 }
 .api-banner[hidden] {

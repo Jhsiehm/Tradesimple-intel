@@ -54,6 +54,8 @@ function Board({
         onSpan={chart.onSpan}
         onBack={chart.onBack}
         marks={chart.marks}
+        onFollow={onFollow}
+        onDossier={onDossier}
       />
     );
   if (view === "positions") return <PositionsBoard onOpen={openPositions} onMember={openMember} />;

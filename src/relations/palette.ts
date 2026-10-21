@@ -38,7 +38,7 @@ function light(hex: string) {
 }
 const pigment = (legacy: string, hue: keyof typeof chroma) => (chromaticPilot ? light(chroma[hue]) : legacy);
 
-export const PANEL = "#0d1115";
+export const PANEL = "#060c08";
 
 export const CATEGORY_LOOK: Record<CategoryId, EdgeLook> = {
   trade: { color: pigment("#4aa8ff", "blue"), icon: "trade", label: "Trades", dash: [] },

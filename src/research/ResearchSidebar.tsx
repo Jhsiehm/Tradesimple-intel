@@ -14,6 +14,7 @@ export type ResearchTool =
   | "notebooks"
   | "guided"
   | "contractEvidence"
+  | "policy"
   | "memory"
   | "stress"
   | "eventStudies"
@@ -36,6 +37,7 @@ const groups: { title: string; items: { id: ResearchTool; title: string; icon: I
   {
     title: "Experimentation",
     items: [
+      { id: "policy", title: "Policy research", icon: "congress" },
       { id: "guided", title: "Design an experiment", icon: "draw" },
       { id: "experiments", title: "Experiments", icon: "backtest" },
       { id: "convergence", title: "Convergence", icon: "arc" },

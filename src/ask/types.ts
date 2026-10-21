@@ -67,6 +67,14 @@ export type BacktestRef = {
 };
 
 export type Done = {
+  research?: {
+    version: number;
+    kind: string;
+    status: string;
+    executed: boolean;
+    coverageAudited: boolean;
+    intent: import("../../shared/researchIntent.mjs").ResearchIntent;
+  };
   answer: string;
   cited: string[];
   unknown: string[];

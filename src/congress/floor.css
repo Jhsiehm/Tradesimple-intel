@@ -1,6 +1,6 @@
 /* Research-focused chamber: geometry carries the data, framing stays quiet. */
 .app[data-color-section="congress"] {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
 }
 .app[data-color-section="congress"] .nav {
   letter-spacing: 0;
@@ -24,17 +24,17 @@
   padding: 0 0 12px;
   gap: 16px;
   letter-spacing: 0;
-  font-size: 13px;
+  font-size: var(--text-ui);
 }
 .floor .floor-bar strong {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-semibold);
   color: var(--ink);
   letter-spacing: -0.02em;
 }
 .floor .floor-bar em {
   letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .floor .floor-color {
   margin-left: auto;
@@ -42,7 +42,7 @@
 .floor .floor-color button {
   min-height: 32px;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   border-color: transparent;
 }
 .floor .floor-color button[aria-pressed="true"] {
@@ -54,14 +54,14 @@
   padding: 0;
   white-space: normal;
   overflow: visible;
-  font-size: 15px;
+  font-size: var(--text-prose);
   line-height: 1.5;
   color: var(--ink);
 }
 .floor-source,
 .floor-note {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--text-meta);
   line-height: 1.5;
   color: var(--dim);
   overflow-wrap: anywhere;
@@ -88,7 +88,7 @@
   padding: 12px 0 0;
   border: 0;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-meta);
   letter-spacing: 0;
   gap: 16px;
 }
@@ -103,12 +103,12 @@
   background: transparent;
 }
 .floor .floor-hud p {
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.45;
 }
 .floor .floor-hud strong {
   letter-spacing: 0;
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 .floor .floor-hover {
   grid-template-columns: 1fr;
@@ -125,7 +125,7 @@
     gap: 8px;
   }
   .floor .floor-bar strong {
-    font-size: 18px;
+    font-size: var(--text-panel);
   }
   .floor .floor-bar em {
     flex-basis: 100%;
@@ -135,6 +135,6 @@
     min-height: 220px;
   }
   .floor .floor-caption {
-    font-size: 14px;
+    font-size: var(--text-body);
   }
 }

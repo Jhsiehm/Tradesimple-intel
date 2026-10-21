@@ -4,15 +4,15 @@
   gap: 6px;
   margin: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .ask-confidence {
   margin: 0;
   padding: 3px 8px;
   border-left: 2px solid var(--line);
   color: var(--dim);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-meta);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .ask-confidence[data-tone="amber"] {
   border-left-color: var(--amber);
@@ -22,7 +22,7 @@
 .ask-revised-note {
   margin: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .ask-revised summary {
   cursor: pointer;
@@ -45,7 +45,7 @@
   padding: 1px 6px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 10.5px;
+  font-size: var(--text-meta);
 }
 .ask-diff .del {
   color: var(--nay);
@@ -65,5 +65,5 @@
   padding: 4px 8px;
   border-left: 2px solid var(--amber);
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }

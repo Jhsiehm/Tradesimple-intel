@@ -4,22 +4,22 @@
 .today-overview h2,
 .today-evidence h2 {
   margin: 0 0 10px;
-  font-size: 17px;
+  font-size: var(--text-panel);
   line-height: 1.4;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--ink);
   letter-spacing: 0;
 }
 .today-overview > p {
   margin: 0;
   max-width: 75ch;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.8;
   color: var(--dim);
 }
 .today-overview strong {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .today-overview-links {
   display: flex;
@@ -33,7 +33,7 @@
   gap: 6px;
   padding: 5px 0;
   color: var(--amber);
-  font-size: 12px;
+  font-size: var(--text-ui);
   text-align: left;
 }
 .today-overview-links button:hover {
@@ -42,7 +42,7 @@
 }
 .today-overview p.today-overview-note {
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .today-evidence {
   margin-top: 26px;
@@ -74,7 +74,7 @@
   color: var(--dim);
   padding: 8px 10px;
   border-bottom: 2px solid transparent;
-  font-size: 12px;
+  font-size: var(--text-ui);
 }
 .today-evidence-tabs button[aria-pressed="true"] {
   color: var(--amber);
@@ -87,7 +87,7 @@
 .today-evidence-scope {
   margin: 10px 0 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.6;
 }
 .today-evidence .today-grid {
@@ -150,14 +150,14 @@
 .today-provenance dt {
   margin-bottom: 5px;
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-meta);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.025em;
 }
 .today-provenance dd {
   margin: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -169,7 +169,7 @@
   padding: 10px 0 2px;
   width: fit-content;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--text-meta);
   line-height: 1.6;
   cursor: pointer;
 }
@@ -191,7 +191,7 @@
 }
 .today-coverage-body b {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 @media (max-width: 600px) {
   .today-provenance {

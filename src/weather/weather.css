@@ -3,7 +3,7 @@
   min-width: 0;
   border-top: 1px solid var(--line);
   padding-top: 9px;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .weather-overview,
 .weather-actions {
@@ -18,7 +18,7 @@
 .weather-overview strong {
   color: var(--amber);
   letter-spacing: 0.09em;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .weather-overview > span {
   color: var(--dim);
@@ -125,7 +125,7 @@
 .weather-location select {
   background: var(--tsi-terminal-bg, #090d11);
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   padding: 7px;
   min-height: 32px;
 }
@@ -159,7 +159,7 @@
   display: none;
 }
 .app.phone .weather-controls {
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .app.phone .weather-actions {
   gap: 6px;

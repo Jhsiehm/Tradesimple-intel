@@ -1,0 +1,593 @@
+import type { ChartPanelProps } from "./chartSettings";
+import { ChartControls } from "./ChartControls";
+import { saved, hasSavedSettings, type Settings } from "./chartSettings";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createChart,
+  CandlestickSeries,
+  LineSeries,
+  HistogramSeries,
+  createSeriesMarkers,
+  ColorType,
+  CrosshairMode,
+  PriceScaleMode,
+  LineStyle,
+  type IChartApi,
+  type ISeriesApi,
+  type SeriesType,
+  type Time,
+  type UTCTimestamp,
+  type ISeriesMarkersPluginApi,
+} from "lightweight-charts";
+import { DAY, indicators, calendarBucket, type Bar } from "../../shared/chartWorkspace.mjs";
+import { useChartData } from "./chartData";
+import { eventColor, type EvidenceMark } from "./chartEvents";
+
+type Drawing = { a: { t: number; p: number }; b?: { t: number; p: number } };
+const ts = (t: number) => Math.floor(t / 1000) as UTCTimestamp;
+export function ChartPanel({
+  id,
+  symbol,
+  group,
+  active,
+  marks,
+  onSelect,
+  onSymbol,
+  onGroup,
+  onActive,
+  onWindow,
+  initialSpan,
+  linkedWindow,
+}: ChartPanelProps) {
+  const [settings, setSettings] = useState<Settings>(() => {
+    const s = saved(id);
+    if (!hasSavedSettings(id) && initialSpan && ["1m", "5m", "15m", "1h"].includes(initialSpan))
+      return { ...s, interval: initialSpan, range: initialSpan === "1m" ? "1d" : initialSpan === "1h" ? "1mo" : "5d" };
+    return s;
+  });
+  const { interval, range, type, indicator, volume, adjusted, extended, zone, log } = settings;
+  const { data, error, loading, older, ended, loadOlder, refresh } = useChartData(
+    symbol,
+    interval,
+    range,
+    adjusted,
+    extended,
+  );
+  const [draft, setDraft] = useState(symbol),
+    [readout, setReadout] = useState<Bar | null>(null),
+    [follow, setFollow] = useState(true),
+    [drawMode, setDrawMode] = useState("none"),
+    [drawing, setDrawing] = useState<Drawing[]>([]),
+    [anchor, setAnchor] = useState<Drawing["a"] | null>(null);
+  const root = useRef<HTMLDivElement>(null),
+    chart = useRef<IChartApi | null>(null),
+    price = useRef<ISeriesApi<SeriesType> | null>(null),
+    vol = useRef<ISeriesApi<"Histogram"> | null>(null),
+    marker = useRef<ISeriesMarkersPluginApi<Time> | null>(null),
+    extra = useRef<ISeriesApi<"Line">[]>([]),
+    trend = useRef<ISeriesApi<"Line">[]>([]);
+  const refs = useRef({ data, loadOlder, marks, onSelect, onWindow, drawMode, anchor, follow });
+  refs.current = { data, loadOlder, marks, onSelect, onWindow, drawMode, anchor, follow };
+  const bars = data?.bars || [];
+  const study = useMemo(() => indicators(bars, data?.timezone || "UTC"), [bars, data?.timezone]);
+  const set = (patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch }));
+  useEffect(() => {
+    try {
+      localStorage.setItem(`intel:chart-settings:${id}`, JSON.stringify(settings));
+    } catch {
+      /* storage optional */
+    }
+  }, [id, settings]);
+  useEffect(() => {
+    setDraft(symbol);
+    setReadout(null);
+    setAnchor(null);
+    setFollow(true);
+    try {
+      const d = JSON.parse(localStorage.getItem(`intel:chart-drawings:${symbol}`) || "[]");
+      setDrawing(
+        Array.isArray(d)
+          ? d
+              .filter(
+                (v) =>
+                  Number.isFinite(v?.a?.t) &&
+                  Number.isFinite(v?.a?.p) &&
+                  (!v.b || (Number.isFinite(v.b.t) && Number.isFinite(v.b.p))),
+              )
+              .slice(0, 100)
+          : [],
+      );
+    } catch {
+      setDrawing([]);
+    }
+  }, [symbol]);
+  const persistDraw = (next: Drawing[]) => {
+    setDrawing(next);
+    try {
+      localStorage.setItem(`intel:chart-drawings:${symbol}`, JSON.stringify(next));
+    } catch {
+      /* storage optional */
+    }
+  };
+  const drawRef = useRef(persistDraw);
+  drawRef.current = persistDraw;
+  const drawingsRef = useRef(drawing);
+  drawingsRef.current = drawing;
+  useEffect(() => {
+    const host = root.current;
+    if (!host) return;
+    const css = getComputedStyle(host),
+      c = createChart(host, {
+        autoSize: true,
+        layout: {
+          background: { type: ColorType.Solid, color: css.getPropertyValue("--panel").trim() },
+          textColor: css.getPropertyValue("--dim").trim(),
+          fontFamily: css.getPropertyValue("--font-ui").trim(),
+          fontSize: 12,
+          attributionLogo: true,
+          panes: {
+            separatorColor: css.getPropertyValue("--line").trim(),
+            separatorHoverColor: "#637c70",
+            enableResize: true,
+          },
+        },
+        grid: { vertLines: { color: "#17231c" }, horzLines: { color: "#17231c" } },
+        rightPriceScale: { borderColor: "#233129", autoScale: true },
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 5,
+          shiftVisibleRangeOnNewBar: false,
+          borderColor: "#233129",
+        },
+        crosshair: { mode: CrosshairMode.Normal },
+        handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+        handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      });
+    chart.current = c;
+    const p = c.addSeries(
+      type === "line" ? LineSeries : CandlestickSeries,
+      type === "line"
+        ? { color: "#c7b58e", lineWidth: 2 }
+        : {
+            upColor: "#82c9a0",
+            downColor: "#ed929a",
+            borderVisible: false,
+            wickUpColor: "#82c9a0",
+            wickDownColor: "#ed929a",
+          },
+    );
+    price.current = p;
+    marker.current = createSeriesMarkers(p, []);
+    let pane = 1;
+    if (volume) {
+      vol.current = c.addSeries(
+        HistogramSeries,
+        { priceFormat: { type: "volume" }, priceLineVisible: false, lastValueVisible: false },
+        pane++,
+      );
+    }
+    extra.current = [];
+    if (["sma", "ema", "vwap"].includes(indicator))
+      extra.current.push(
+        c.addSeries(LineSeries, { color: "#d8b77a", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }),
+      );
+    if (indicator === "sma")
+      extra.current.push(
+        c.addSeries(LineSeries, { color: "#92b9e2", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }),
+      );
+    if (["rsi", "macd"].includes(indicator)) {
+      extra.current.push(
+        c.addSeries(
+          LineSeries,
+          { color: "#92b9e2", lineWidth: 1, priceLineVisible: false, title: indicator.toUpperCase() },
+          pane,
+        ),
+      );
+      if (indicator === "macd")
+        extra.current.push(
+          c.addSeries(LineSeries, { color: "#d8b77a", lineWidth: 1, priceLineVisible: false, title: "Signal" }, pane),
+        );
+    }
+    c.panes().forEach((p, i) => p.setStretchFactor(i === 0 ? 4 : 1));
+    c.subscribeCrosshairMove((param) => {
+      const b = refs.current.data?.bars.find((b) => ts(b.t) === param.time);
+      setReadout(b || null);
+    });
+    c.subscribeClick((param) => {
+      if (!param.time || !param.point) return;
+      const time = Number(param.time) * 1000,
+        pointPrice = p.coordinateToPrice(param.point.y);
+      if (refs.current.drawMode !== "none" && pointPrice != null) {
+        if (param.paneIndex !== 0) return;
+        const point = { t: time, p: pointPrice };
+        if (refs.current.drawMode === "horizontal") {
+          drawRef.current([...drawingsRef.current, { a: point }]);
+          setDrawMode("none");
+        } else if (!refs.current.anchor) setAnchor(point);
+        else if (refs.current.anchor.t !== time) {
+          const a = refs.current.anchor,
+            b = point;
+          drawRef.current([...drawingsRef.current, a.t < b.t ? { a, b } : { a: b, b: a }]);
+          setAnchor(null);
+          setDrawMode("none");
+        }
+        return;
+      }
+      const list = clusterRef.current.get(Number(param.time));
+      if (list?.length) refs.current.onSelect(list);
+    });
+    c.timeScale().subscribeVisibleLogicalRangeChange((r) => {
+      if (!r) return;
+      const list = refs.current.data?.bars || [];
+      if (!list.length) return;
+      setFollow(r.to >= list.length - 2);
+      if (r.from < 5) void refs.current.loadOlder();
+      const a = list[Math.max(0, Math.floor(r.from))],
+        b = list[Math.min(list.length - 1, Math.ceil(r.to))];
+      if (a && b)
+        refs.current.onWindow({ symbol, interval, from: new Date(a.t).toISOString(), to: new Date(b.t).toISOString() });
+    });
+    return () => {
+      viewMemory.current = { key: `${symbol}:${interval}`, bounds: c.timeScale().getVisibleRange() };
+      c.remove();
+      chart.current = null;
+      price.current = null;
+      vol.current = null;
+      marker.current = null;
+      extra.current = [];
+      trend.current = [];
+    };
+  }, [symbol, interval, type, indicator, volume]);
+  const viewMemory = useRef<{ key: string; bounds: { from: Time; to: Time } | null }>({ key: "", bounds: null });
+  const previous = useRef<{ key: string; first: number; count: number }>({ key: "", first: 0, count: 0 });
+  useEffect(() => {
+    const c = chart.current,
+      p = price.current;
+    if (!c || !p) return;
+    const key = `${symbol}:${interval}:${range}:${type}:${indicator}:${volume}:${adjusted}:${extended}`;
+    const prior = c.timeScale().getVisibleLogicalRange();
+    const newView = previous.current.key !== key;
+    const added = previous.current.first ? bars.filter((b) => b.t < previous.current.first).length : 0;
+    p.setData(bars.map((b) => ({ time: ts(b.t), open: b.o, high: b.h, low: b.l, close: b.c, value: b.c })));
+    vol.current?.setData(
+      bars
+        .filter((b) => b.v != null)
+        .map((b) => ({ time: ts(b.t), value: b.v!, color: b.c >= b.o ? "#426d52" : "#815259" })),
+    );
+    const names =
+      indicator === "sma"
+        ? (["sma", "sma50"] as const)
+        : indicator === "macd"
+          ? (["macd", "signal"] as const)
+          : [indicator as keyof typeof study];
+    extra.current.forEach((s, i) =>
+      s.setData((study[names[i]] || []).flatMap((v, j) => (v == null ? [] : [{ time: ts(bars[j].t), value: v }]))),
+    );
+    if (bars.length) {
+      if (newView) {
+        if (
+          previous.current.key.startsWith(`${symbol}:${interval}:${range}:`) &&
+          viewMemory.current.key === `${symbol}:${interval}` &&
+          viewMemory.current.bounds
+        )
+          c.timeScale().setVisibleRange(viewMemory.current.bounds);
+        else c.timeScale().fitContent();
+      } else if (prior) c.timeScale().setVisibleLogicalRange({ from: prior.from + added, to: prior.to + added });
+      if (!newView && refs.current.follow && !added) c.timeScale().scrollToRealTime();
+      previous.current = { key, first: bars[0].t, count: bars.length };
+    }
+  }, [bars, symbol, interval, range, type, indicator, volume, study, adjusted, extended]);
+  const clusterRef = useRef(new Map<number, EvidenceMark[]>());
+  useEffect(() => {
+    const grouped = new Map<number, EvidenceMark[]>();
+    const slack = interval === "1mo" ? 32 * DAY : interval === "1wk" ? 8 * DAY : DAY * 4;
+    for (const m of marks) {
+      if (!bars.length || m.t < bars[0].t || m.t > bars.at(-1)!.t + slack) continue;
+      const target = ["1wk", "1mo"].includes(interval) ? calendarBucket(m.t, interval, data?.timezone || "UTC") : m.t;
+      let lo = 0,
+        hi = bars.length - 1;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (bars[mid].t < target) lo = mid + 1;
+        else hi = mid;
+      }
+      if (Math.abs(bars[lo].t - m.t) > slack) continue;
+      const key = ts(bars[lo].t);
+      grouped.set(key, [...(grouped.get(key) || []), m]);
+    }
+    clusterRef.current = grouped;
+    marker.current?.setMarkers(
+      [...grouped]
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, ms]) => ({
+          time: time as UTCTimestamp,
+          position: "aboveBar",
+          shape: "circle",
+          color: eventColor(ms[0]),
+          text: grouped.size > 16 ? "" : ms.length > 1 ? `${ms.length} events` : ms[0].label.slice(0, 24),
+        })),
+    );
+  }, [marks, bars, type, indicator, volume, interval]);
+  useEffect(() => {
+    const c = chart.current,
+      p = price.current;
+    if (!c || !p) return;
+    const nonpositive = bars.some((b) => b.l <= 0);
+    c.priceScale("right").applyOptions({
+      mode: log && !nonpositive ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+    });
+    p.applyOptions({
+      priceFormat: { type: "price", precision: data?.digits ?? 2, minMove: 10 ** -(data?.digits ?? 2) },
+    });
+    const tz = ["1wk", "1mo"].includes(interval) ? "UTC" : zone === "Exchange" ? data?.timezone || "UTC" : "UTC";
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: (interval.includes("m") && interval !== "1mo") || interval === "1h" ? "2-digit" : undefined,
+      minute: (interval.includes("m") && interval !== "1mo") || interval === "1h" ? "2-digit" : undefined,
+    });
+    c.applyOptions({
+      localization: { timeFormatter: (t: Time) => fmt.format(Number(t) * 1000) },
+      timeScale: {
+        tickMarkFormatter: (t: Time, kind: number) =>
+          new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
+            ...(kind === 0
+              ? { year: "numeric" as const }
+              : kind === 1
+                ? { month: "short" as const, year: "2-digit" as const }
+                : kind === 2
+                  ? { month: "short" as const, day: "numeric" as const }
+                  : { hour: "2-digit" as const, minute: "2-digit" as const, hour12: false }),
+          }).format(Number(t) * 1000),
+      },
+    });
+  }, [data, log, zone, type, indicator, volume, interval, bars]);
+  useEffect(() => {
+    const c = chart.current,
+      p = price.current;
+    if (!c || !p) return;
+    const lines = drawing
+      .filter((d) => !d.b)
+      .map((d) =>
+        p.createPriceLine({
+          price: d.a.p,
+          color: "#d8b77a",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: "Drawing",
+        }),
+      );
+    const series = drawing
+      .filter((d) => d.b)
+      .map((d) => {
+        const s = c.addSeries(LineSeries, {
+          color: "#d8b77a",
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        s.setData([
+          { time: ts(d.a.t), value: d.a.p },
+          { time: ts(d.b!.t), value: d.b!.p },
+        ]);
+        return s;
+      });
+    trend.current = series;
+    return () => {
+      if (chart.current === c) {
+        lines.forEach((l) => p.removePriceLine(l));
+        series.forEach((s) => c.removeSeries(s));
+      }
+    };
+  }, [drawing, symbol, type, indicator, volume, interval]);
+  useEffect(() => {
+    if (!active || !bars.length) return;
+    const r = chart.current?.timeScale().getVisibleRange();
+    onWindow({
+      symbol,
+      interval,
+      from: r ? new Date(Number(r.from) * 1000).toISOString() : new Date(bars[0].t).toISOString(),
+      to: r ? new Date(Number(r.to) * 1000).toISOString() : new Date(bars.at(-1)!.t).toISOString(),
+    });
+  }, [active, symbol, interval, bars]);
+  useEffect(() => {
+    if (active || !linkedWindow || linkedWindow.interval !== interval || !bars.length || !chart.current) return;
+    const from = Date.parse(linkedWindow.from),
+      to = Date.parse(linkedWindow.to);
+    if (Number.isFinite(from) && Number.isFinite(to) && from < to)
+      chart.current.timeScale().setVisibleRange({ from: ts(from), to: ts(to) });
+  }, [linkedWindow, active, interval, bars]);
+  const shown = readout || bars.at(-1);
+  const priceText = (v: number) => v.toFixed(data?.digits ?? 2);
+  const intraday = !["1d", "1wk", "1mo"].includes(interval);
+  return (
+    <section className="chart-panel" data-active={active} onPointerDown={onActive} aria-label={`${symbol} chart panel`}>
+      <header className="chart-panel-head">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (/^[A-Za-z0-9.^=\-]{1,24}$/.test(draft)) onSymbol(draft.toUpperCase());
+          }}
+        >
+          <input
+            aria-label={`Symbol for chart ${id + 1}`}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            maxLength={24}
+          />
+          <button>Load</button>
+        </form>
+        <label>
+          Link{" "}
+          <select aria-label={`Link group for chart ${id + 1}`} value={group} onChange={(e) => onGroup(e.target.value)}>
+            {["Independent", "A", "B"].map((g) => (
+              <option key={g}>{g}</option>
+            ))}
+          </select>
+        </label>
+        <strong>
+          {shown ? priceText(shown.c) : "—"} <small>{data?.currency}</small>
+        </strong>
+      </header>
+      <ChartControls id={id} settings={settings} set={set} />
+      <div className="chart-actions">
+        <button onClick={() => chart.current?.timeScale().fitContent()}>Reset view</button>
+        <button onClick={() => chart.current?.priceScale("right").applyOptions({ autoScale: true })}>Fit price</button>
+        <button
+          aria-pressed={follow}
+          onClick={() => {
+            setFollow(true);
+            chart.current?.timeScale().scrollToRealTime();
+          }}
+        >
+          Latest
+        </button>
+        <button
+          aria-pressed={log && !bars.some((b) => b.l <= 0)}
+          disabled={bars.some((b) => b.l <= 0)}
+          title="Log scale requires positive prices"
+          onClick={() => set({ log: !log })}
+        >
+          Log
+        </button>
+        <button aria-pressed={volume} onClick={() => set({ volume: !volume })}>
+          Volume
+        </button>
+        <button onClick={() => void refresh()}>Refresh</button>
+        <details>
+          <summary>Settings & drawings</summary>
+          <div className="chart-settings">
+            <label>
+              Time zone{" "}
+              <select value={zone} onChange={(e) => set({ zone: e.target.value })}>
+                <option>UTC</option>
+                <option>Exchange</option>
+              </select>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={extended}
+                disabled={!intraday}
+                onChange={(e) => set({ extended: e.target.checked })}
+              />{" "}
+              Extended hours (provider coverage)
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={adjusted}
+                disabled={intraday}
+                onChange={(e) => set({ adjusted: e.target.checked })}
+              />{" "}
+              Dividend-adjusted OHLC (daily+)
+            </label>
+            <label>
+              Draw{" "}
+              <select
+                aria-label={`Drawing tool ${id + 1}`}
+                value={drawMode}
+                onChange={(e) => {
+                  setAnchor(null);
+                  setDrawMode(e.target.value);
+                }}
+              >
+                <option value="none">Inspect</option>
+                <option value="horizontal">Horizontal line · one click</option>
+                <option value="trend">Trendline · two clicks</option>
+              </select>
+            </label>
+            <button disabled={!drawing.length} onClick={() => persistDraw(drawing.slice(0, -1))}>
+              Undo drawing
+            </button>
+            <p>
+              4-hour bars are unavailable: the feed has no native session-aware 4h interval. Intraday retention: 1m ≤7
+              days, 5–30m ≤60 days, hourly ≤730 days.
+            </p>
+            <p>{data?.adjustment}</p>
+            <p>{data?.aggregation}</p>
+          </div>
+        </details>
+      </div>
+      <div className="chart-readout" aria-live="off">
+        {shown ? (
+          <>
+            <time>
+              {new Date(shown.t).toLocaleString("en-US", {
+                timeZone: ["1wk", "1mo"].includes(interval)
+                  ? "UTC"
+                  : zone === "Exchange"
+                    ? data?.timezone || "UTC"
+                    : "UTC",
+              })}
+            </time>
+            <span>O {priceText(shown.o)}</span>
+            <span>H {priceText(shown.h)}</span>
+            <span>L {priceText(shown.l)}</span>
+            <span>C {priceText(shown.c)}</span>
+            <span>V {shown.v == null ? "—" : shown.v.toLocaleString()}</span>
+          </>
+        ) : loading ? (
+          "Loading bars…"
+        ) : (
+          "No bars in this window"
+        )}
+      </div>
+      <div
+        className="financial-chart"
+        ref={root}
+        tabIndex={0}
+        aria-label={`${symbol} interactive price and volume chart. Drag to pan, wheel to zoom, drag price axis to scale.`}
+        onKeyDown={(e) => {
+          const t = chart.current?.timeScale(),
+            r = t?.getVisibleLogicalRange();
+          if (!t || !r) return;
+          if (["ArrowLeft", "ArrowRight", "+", "-", "Home", "End"].includes(e.key)) e.preventDefault();
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            const d = (r.to - r.from) * 0.2 * (e.key === "ArrowLeft" ? -1 : 1);
+            t.setVisibleLogicalRange({ from: r.from + d, to: r.to + d });
+          }
+          if (e.key === "+" || e.key === "-") {
+            const d = (r.to - r.from) * (e.key === "+" ? 0.1 : -0.1);
+            t.setVisibleLogicalRange({ from: r.from + d, to: r.to - d });
+          }
+          if (e.key === "Home") t.fitContent();
+          if (e.key === "End") t.scrollToRealTime();
+        }}
+      />
+      <div className="chart-status" role="status">
+        {error ? (
+          <>
+            <span className="down">
+              {data ? "Stale · " : ""}
+              {error}
+            </span>
+            <button onClick={() => void refresh()}>Retry</button>
+          </>
+        ) : (
+          <span>
+            {loading ? "Updating · " : older ? "Loading older history · " : ""}
+            {data?.status || "Loading"} · {data?.cacheStatus} · {data?.source || "Yahoo Finance"} ·{" "}
+            {zone === "Exchange" ? data?.timezone : zone}
+          </span>
+        )}
+        <span>
+          {bars.length.toLocaleString()} bars ·{" "}
+          {data?.fetchedAt ? `Fetched ${new Date(data.fetchedAt).toLocaleTimeString()}` : ""}
+        </span>
+        {ended ? (
+          <span>History boundary reached</span>
+        ) : (
+          <button disabled={older || loading || !bars.length} onClick={() => void loadOlder()}>
+            Load older
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}

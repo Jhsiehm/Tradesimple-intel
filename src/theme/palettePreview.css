@@ -11,16 +11,16 @@
 }
 .palette-preview h1 {
   font-size: clamp(24px, 4vw, 42px);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   margin: 8px 0;
 }
 .palette-preview h2 {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-medium);
   margin: 30px 0 16px;
 }
 .palette-preview h3 {
-  font-size: 14px;
+  font-size: var(--text-body);
   margin: 12px 0 4px;
 }
 .palette-preview p {
@@ -31,7 +31,7 @@
 }
 .palette-eyebrow {
   color: var(--tsi-core-stone);
-  font-size: 11px;
+  font-size: var(--text-meta);
   letter-spacing: 0.15em;
 }
 .palette-controls {
@@ -46,7 +46,7 @@
 .palette-controls p,
 .palette-card p {
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 .palette-grid {
   display: grid;
@@ -66,7 +66,7 @@
 }
 .palette-card code {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-meta);
   overflow-wrap: anywhere;
 }
 .palette-tones {
@@ -117,7 +117,7 @@
   padding-top: 20px;
   border-top: 1px solid var(--line);
   color: var(--dim);
-  font-size: 12px;
+  font-size: var(--text-meta);
 }
 @media (max-width: 520px) {
   .palette-preview {

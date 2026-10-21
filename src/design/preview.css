@@ -4,7 +4,7 @@
   color: var(--tsi-text);
   min-height: 100dvh;
   padding: 24px clamp(18px, 4vw, 64px) 40px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.65;
   color-scheme: dark;
 }
@@ -38,20 +38,20 @@
 .material-sheet h1 {
   font-size: clamp(30px, 4vw, 52px);
   line-height: 1.15;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.035em;
   margin: 0 0 20px;
 }
 .material-sheet h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 500;
+  font-size: var(--text-panel);
+  font-weight: var(--weight-medium);
   letter-spacing: -0.02em;
 }
 .material-sheet h3 {
-  font-size: 19px;
+  font-size: var(--text-panel);
   line-height: 1.4;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   margin: 0 0 8px;
 }
 .material-sheet p {
@@ -65,7 +65,7 @@
   border-top: 1px solid var(--tsi-surface-line);
 }
 .material-section-title > span {
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .material-controls {
   display: flex;
@@ -77,7 +77,7 @@
 .material-controls label {
   display: grid;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .material-controls .material-check {
   display: flex;
@@ -117,7 +117,7 @@
   min-width: 0;
 }
 .material-specimen > figcaption {
-  font-size: 12px;
+  font-size: var(--text-meta);
   padding-bottom: 10px;
   text-transform: capitalize;
 }
@@ -143,12 +143,12 @@
   max-width: 34ch;
 }
 .material-caption p {
-  font-size: 11px;
+  font-size: var(--text-meta);
   margin: 0;
 }
 .material-data {
   padding: 16px 0;
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 .material-data dl {
   margin: 12px 0 0;
@@ -176,7 +176,7 @@
   margin-top: 8px;
 }
 .material-sheet code {
-  font-size: 10px;
+  font-size: var(--text-meta);
   overflow-wrap: anywhere;
 }
 .material-swatch {
@@ -216,7 +216,7 @@
   height: 160px;
 }
 .material-studies figcaption {
-  font-size: 11px;
+  font-size: var(--text-meta);
   margin-top: 10px;
 }
 .material-rules {
@@ -227,7 +227,7 @@
   padding-top: 20px;
   border-top: 1px solid var(--tsi-surface-line);
   color: var(--tsi-text-secondary);
-  font-size: 11px;
+  font-size: var(--text-meta);
 }
 @media (max-width: 680px) {
   .material-comparison,
