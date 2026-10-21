@@ -1,4 +1,5 @@
 /** Conservative task interpretation. Unresolved inputs never select a default trading source. */
+import { unsupportedReplayRules } from './replayRequirements.mjs';
 export const RESEARCH_ROUTING_VERSION = 1;
 
 const SPELLING = [
@@ -19,6 +20,7 @@ export function researchWords(question) {
 // Explicit exclusions do not become requested sources or policy triggers.
 function positiveWords(question) {
   return researchWords(question)
+    .replace(/\b(?:do not|don't|never|without|excluding|exclude)\s+(?:(?:substitute|use|include)\s+)?(?:politicians?|officials?|members?|congressional)(?:'s?)?\s+(?:personal\s+)?stock\s+(?:trades?|portfolios?|disclosures?)\b/g, ' ')
     .replace(/\b(?:not|without|exclude|excluding|ignore|rather than)\s+(?:personal\s+|congressional\s+)?(?:stock\s+)?(?:trades?|portfolios?|legislation|legislative events?|regulation|regulatory changes?|lobbying|contracts?|insiders?)(?:\s+disclosures?)?/g, ' ');
 }
 
@@ -40,7 +42,9 @@ export function explicitSignalSources(question) {
   const sources = [];
   const officials = /\bcongress\w*|\bmembers?\b|\bsenators?\b|\brepresentatives?\b|\bhouse\b|\bsenate\b|\bpoliticians?\b|\bptrs?\b|\bpelosi\b/.test(q);
   const personal = /\btrades?\b|\bbuys?\b|\bsells?\b|\bpurchases?\b|\bportfolios?\b|\bdisclos\w*|\bptrs?\b/.test(q);
-  if ((officials || /\bcommittee/.test(q)) && personal) sources.push('congress');
+  const policy = domains.some(d => ['legislation', 'regulation'].includes(d));
+  const personalPolicy = /\b(?:congress\w*|politicians?|officials?|members?|senators?)(?:'s?)?\s+(?:personal\s+)?(?:stock\s+)?(?:trades?|buys?|sells?|portfolios?|disclosures?)\b/.test(q);
+  if ((officials || /\bcommittee/.test(q)) && personal && (!policy || personalPolicy)) sources.push('congress');
   if (/\binsiders?\b|\bform ?4\b|\bexecutives?\b|\bofficers?\b|\bceo\b/.test(q)) sources.push('form4');
   if (domains.includes('contracts')) sources.push('contracts');
   if (domains.includes('lobbying')) sources.push('lobbying');
@@ -72,9 +76,13 @@ export function interpretResearch(question, { prior = null, priors = [], history
   const policy = domains.some(d => ['legislation', 'regulation'].includes(d));
   const priorReference = prior && /\b(?:this|that|last|previous) (?:run|result|backtest)\b|\b(?:those|these) (?:trades|results|members|tickers|signals)\b/.test(current) && !policy;
   const chartReview = !!context?.chart && /\breview\b|\battached chart\b/.test(q);
+  const unsupportedRules = unsupportedReplayRules(scoped);
   let route = 'conversation';
   let reason = '';
-  if ((empirical && (policy || causal || procurement || combined || outcome === 'prediction')) || eventStudy) {
+  if (unsupportedRules.length && (empirical || prior)) {
+    route = 'assessment';
+    reason = unsupportedRules.join(' ');
+  } else if ((empirical && (policy || causal || procurement || combined || outcome === 'prediction')) || eventStudy) {
     route = 'assessment';
     reason = 'The requested policy, predictive or causal design is not an executable signal-replay specification.';
   } else if ((empirical || priorReference || (prior && REFINEMENT.test(current) && !policy)) && !chartReview) {
@@ -84,8 +92,8 @@ export function interpretResearch(question, { prior = null, priors = [], history
       reason = 'The strategy does not identify a supported signal source; no source was assumed.';
     }
   }
-  const windows = [...q.matchAll(/\b(\d+|one|two)\s*[- ]?(years?|months?|weeks?|days?)\b/g)]
-    .map(m => `${({ one: 1, two: 2 })[m[1]] || m[1]} ${m[2]}`);
+  const windows = [...q.matchAll(/\b(\d+|one|two|past|last)\s*[- ]?(years?|months?|weeks?|days?)\b/g)]
+    .map(m => `${({ one: 1, two: 2, past: 1, last: 1 })[m[1]] || m[1]} ${m[2]}`);
   const inheritSources = prior && (REFINEMENT.test(current) || priorReference) && !/\bcongress\w*|\binsiders?\b|\bform ?4\b|\bcontracts?\b|\blobby\w*/.test(current);
   const allowedSources = route === 'legacy' && (inheritSources || !sources.length)
     ? [...new Set(priors.length ? priors.map(p => p.source) : [prior.source])] : sources;

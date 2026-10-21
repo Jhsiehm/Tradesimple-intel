@@ -6,6 +6,7 @@
 import { BENCHMARKS, DEFAULT_FILTERS, DEFAULT_RULES, SOURCES, SOURCE_LABEL, cleanSpec } from "./backtestSpec.mjs";
 
 import { explicitSignalSources, interpretResearch } from "./researchIntent.mjs";
+import { replayTickerList } from "./replayRequirements.mjs";
 
 export const PREFS_VERSION = 1;
 export const PREFS_KEY = "intel:ask:prefs:v1";
@@ -30,7 +31,7 @@ const minus = (today, n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * DAY_
 
 /** Hold, benchmark, sides, sizing, entry, costs, 10b5-1, hearing window, contract lag: what plain words set. */
 function parseRuleWords(q) {
-  const s = lc(q);
+  const s = lc(q).replace(/\bcalendar[- ]days?\b/g, 'days').replace(/\bequal position weights?\b/g, 'equal weight');
   const out = {};
   const hold = s.match(/\b(\d{1,3})[- ]?(day|d|week|wk|month|mo)s?\b[^.,;]{0,12}\bhold|\bhold(?:ing)?(?: (?:for|period of))? (\d{1,3})[- ]?(day|d|week|wk|month|mo)s?\b|\bhold(?:ing)?(?: for)? (?:a|one|1) (year|quarter|month)\b|\b(\d{1,3})[- ]?(day|week|month)s?[- ]holds?\b/);
   if (hold) {
@@ -150,8 +151,12 @@ export function questionHints(q, today) {
   if (since) fields["filters.from"] = `${since[1]}-${since[2] || "01"}-01`;
   const year = s.match(/\bin (20\d{2})\b/);
   if (year && !since && !win) { fields["filters.from"] = `${year[1]}-01-01`; fields["filters.to"] = `${year[1]}-12-31`; }
-  const committee = COMMITTEES.find((c) => new RegExp(`\\b${c}\\b`).test(s));
+  const sources = explicitSignalSources(q);
+  const committee = (!sources.length || sources.includes('congress')) && COMMITTEES.find((c) =>
+    new RegExp(`\\b${c}\\b`).test(s) && (c !== 'rules' || /\brules committee\b|\bcommittee (?:on )?rules\b/.test(s)));
   if (committee) fields["filters.committee"] = title(committee);
+  const tickers = replayTickerList(q);
+  if (tickers.length) fields["filters.tickers"] = tickers;
   if (/\bdemocrats?\b/.test(s)) fields["filters.party"] = "D";
   else if (/\brepublicans?\b|\bgop\b/.test(s)) fields["filters.party"] = "R";
   if (/\bsenators?\b|\bsenate\b/.test(s)) fields["filters.chamber"] = "senate";

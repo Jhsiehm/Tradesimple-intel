@@ -2,6 +2,8 @@
 
 Implemented October 20, 2026. Scope: P0 plus a minimal capability assessment from P1 in [the plan](plan.md).
 
+The subsequent [debug verification](debug-verification.md) records the exact contract and pre-news request corrections, cache identity version 5, and current refresh limitations.
+
 ## User-visible behavior
 
 The actual failed legislative/lobbying/regulatory/procurement question now returns **Research capability assessment — no backtest executed**. It retains all four domains, the requested two-year and one-month periods, and SPY. It explains which lookups and replay components exist, which require configuration, and the historical timing, exposure and method requirements preventing the combined study.
