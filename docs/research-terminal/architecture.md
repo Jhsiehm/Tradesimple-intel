@@ -2,6 +2,8 @@
 
 Companion to [the delivery plan](plan.md) and [research methodology](methodology.md). File names below are proposed boundaries, not existing implemented features unless explicitly identified.
 
+October 21 scope extension: [open sandbox workflow composition](sandbox.md), [historical corpus acquisition](historical-corpus.md), and the [terminal-rs source audit](terminal-rs-reference.md). A later isolated scientific job service can support custom analyses after its validation/isolation gate; fixed trusted calculation engines remain the current execution boundary.
+
 ## Execution flow
 
 ```mermaid

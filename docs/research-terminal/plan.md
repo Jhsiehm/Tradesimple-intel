@@ -2,6 +2,8 @@
 
 Status: implementation plan, October 20, 2026. The [first routing/capability delivery](routing-release.md) and [bounded legislative policy pilot](policy-pilot.md) are implemented. The pilot delivers locked protocols, versioned collection, conditional paired-event calculations and frozen replay; audited historical pre-news coverage and broader methods remain incomplete.
 
+Scope expanded October 21: the target is an [open financial research sandbox](sandbox.md) using platform data and internet evidence, with [historical collection and saving](historical-corpus.md). It must construct new study workflows without a bespoke route per hypothesis. These additions are specifications, not delivered capabilities. The [terminal-rs reference audit](terminal-rs-reference.md) informs reusable patterns and explicitly records what that repository does not supply.
+
 ## Objective and success criterion
 
 Turn a question into a traceable investigation: preserve its meaning, establish what evidence exists, choose an appropriate method, execute validated calculations, assess the limitations, and produce an answer whose claims can be inspected and reproduced. Accept broad questions for investigation without promising that every question is empirically answerable.
@@ -13,7 +15,9 @@ The plan has two supporting specifications:
 - [Research methods, evidence, and the worked policy example](methodology.md).
 - [Architecture, module boundaries, and verification](architecture.md).
 
-## Findings from the current repository
+## Initial diagnosis before P0, October 20
+
+This table records the original diagnosis. The delivered routing correction now precedes legacy planning and removes unresolved default source selection; the policy pilot adds its bounded workflow. Consult [sandbox.md](sandbox.md) for the current capability audit and remaining orchestration gaps.
 
 | Existing capability | Reuse | Gap to address |
 | --- | --- | --- |
@@ -153,7 +157,7 @@ Do not represent this first batch as a completed general research terminal. Its 
 
 ## Decisions and deferred choices
 
-Use the current Node/React/SQLite structure and tested calculation engines first. Do not introduce a second research database, unrestricted code execution, or a distributed agent system for this work. If advanced methods later require a scientific runtime, isolate a pinned worker behind typed datasets/results and validate it against reference implementations before enabling it.
+Use the current Node/React/SQLite structure and tested calculation engines first. Do not introduce a second research database or execute arbitrary model-generated code in the application. The expanded sandbox requirement permits a later isolated scientific job runtime behind typed datasets/results, with pinned code/dependencies, independent numerical validation and explicit resource/data-access boundaries before enablement. Node worker threads alone do not provide that isolation. General composable study construction must not depend on a fixed menu of question-specific workflows; see sandbox.md for delivery and acceptance.
 
 Dataset licensing, required historical prices/security mappings, compute budgets and supported jurisdictions are resolved by the feasibility assessment for each capability. No purchase, subscription or new external credential is assumed by this plan.
 

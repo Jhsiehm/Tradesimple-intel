@@ -3,10 +3,10 @@ export function researchCapabilities(env = process.env) {
   const configured = name => Boolean(String(env[name] || '').trim());
   return [
     {
-      domain: 'legislation', label: 'Legislative actions and bill text',
+      domain: 'legislation', label: 'Bill metadata, legislative actions and votes',
       lookup: configured('CONGRESS_API_KEY') ? 'configured' : 'not-configured',
       analysis: 'conditional-policy-pilot', coverage: 'not-audited',
-      limitation: 'Policy research can freeze a bill-specific protocol, collect versioned legislative/news records and compare paired event returns on complete supplied minute-price, reviewed exposure and news-timing inputs. Historical public availability and archive completeness are not certified; collection alone cannot establish a pre-news edge.'
+      limitation: 'Policy research can freeze a bill-specific protocol, collect versioned action/news records and compare paired event returns on complete supplied minute-price, reviewed exposure and news-timing inputs. Full legislative text/PDF collection, OCR and AI document extraction are not connected. Historical public availability and archive completeness are not certified; collection alone cannot establish a pre-news edge.'
     },
     {
       domain: 'regulation', label: 'Regulatory changes',
