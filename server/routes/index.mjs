@@ -1,5 +1,6 @@
 import { handlers as research } from "./research.mjs";
 import { handlers as policy } from "./policy.mjs";
+import { handlers as workflows } from "./workflows.mjs";
 import { createRouter } from "../router.mjs";
 import { MANIFEST } from "./manifest.mjs";
 import { handlers as system } from "./system.mjs";
@@ -20,6 +21,7 @@ export { MANIFEST };
 export const handlers = {
   ...research,
   ...policy,
+  ...workflows,
   ...system,
   ...congress,
   ...markets,

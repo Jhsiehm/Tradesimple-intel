@@ -3,6 +3,8 @@ import { chipTitle, splitRefs } from "../../shared/citations.mjs";
 import type { FallbackTable, Step } from "./types";
 
 const BOLD = /\*\*([^*]+)\*\*/g;
+const STUDY_LINK =
+  /\[(Open Policy research|Export study JSON|Export replay ZIP)\]\((#research\/policy|\/api\/research\/investigations\/inv_[a-f0-9]{32}\/(?:export|archive))\)/g;
 
 /** One ref as a chip. A ref with no step in this turn is marked unverified, never shown as a source. */
 export function Chip({ id, steps, onChip }: { id: string; steps: Map<string, Step>; onChip: (s: Step) => void }) {
@@ -39,17 +41,26 @@ function Inline({ text, steps, onChip }: { text: string; steps: Map<string, Step
     out.push(s.slice(last));
   };
   const linked = (s: string) => {
-    const marker = "[Open Policy research](#research/policy)";
-    const pieces = s.split(marker);
-    pieces.forEach((piece, index) => {
-      if (index)
+    let last = 0;
+    for (const match of s.matchAll(STUDY_LINK)) {
+      bolded(s.slice(last, match.index));
+      const [label, href] = match.slice(1);
+      const valid =
+        label === "Open Policy research"
+          ? href === "#research/policy"
+          : label === "Export study JSON"
+            ? href.endsWith("/export")
+            : href.endsWith("/archive");
+      if (valid)
         out.push(
-          <a key={k++} href="#research/policy">
-            Open Policy research
+          <a key={k++} href={href} download={href.startsWith("/api/") || undefined}>
+            {label}
           </a>,
         );
-      bolded(piece);
-    });
+      else bolded(match[0]);
+      last = (match.index ?? 0) + match[0].length;
+    }
+    bolded(s.slice(last));
   };
   for (const part of splitRefs(text)) {
     if (part.ref) out.push(<Chip key={k++} id={part.ref} steps={steps} onChip={onChip} />);

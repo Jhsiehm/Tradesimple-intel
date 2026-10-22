@@ -1,4 +1,6 @@
 import { createQuickReply, handleQuickQuestion } from "./quickReply.mjs";
+import { canPlanInvestigation, investigationPlanningNote } from "./investigationPlanning.mjs";
+import { INVESTIGATION_TOOL_NAMES } from "../../shared/investigationAccess.mjs";
 import { researchRouting, assessmentAnswer, researchScopeNote } from "./researchRouting.mjs";
 import { researchToolRefusal } from "../../shared/researchCompatibility.mjs";
 import {
@@ -60,7 +62,7 @@ const estimate = (messages) =>
   Math.ceil(
     messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4,
   );
-const COMPUTE = new Set(["run_backtest"]);
+const COMPUTE = new Set(["run_backtest", "research_run_investigation"]);
 const WEB = new Set(["web_search", "web_fetch"]);
 const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
@@ -135,7 +137,8 @@ export async function runAsk({
   const activeTools = (tools || []).filter(
     (t) =>
       (allow.has(t.name) || (memory?.mode === "context-aware" && t.name === "research_memory")) &&
-      !(memory?.mode === "isolated" && t.name === "research_memory"),
+      !(memory?.mode === "isolated" && t.name === "research_memory") &&
+      !(memory && INVESTIGATION_TOOL_NAMES.has(t.name)),
   );
 
   const quick = createQuickReply({ emit, now, t0, model, modes });
@@ -151,7 +154,8 @@ export async function runAsk({
     env: researchEnv,
   });
   log({ event: "research_route", intent: research.intent, status: research.assessment?.status || "resolved" });
-  if (research.assessment)
+  const investigationMode = canPlanInvestigation(research.assessment, activeTools, memory, modes.sourcing);
+  if (research.assessment && !investigationMode)
     return quick(assessmentAnswer(research.assessment), { research: research.assessment, model: "" });
 
   const sourceQs = sourcingClarify({ question, session, answers, acceptDefaults });
@@ -257,6 +261,7 @@ export async function runAsk({
       : "",
     SLOT_NOTE,
     researchScopeNote(research.intent),
+    investigationMode ? investigationPlanningNote(research.assessment) : "",
     coverageNote(has("web_search")),
     contextNote(context),
     plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote,
@@ -508,6 +513,8 @@ export async function runAsk({
               emit({ type: "step_progress", id, request: r });
             },
             sourcing: modes.sourcing,
+            researchIntent: research.intent,
+            signal,
           });
         } finally {
           clearInterval(beat);

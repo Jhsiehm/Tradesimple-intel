@@ -1,4 +1,5 @@
 import { startAnalysis } from "../domain/research-analysis.mjs";
+import { investigationAccessRefusal } from "../../shared/investigationAccess.mjs";
 import { prepareAskMemory, scopedMemoryResult } from "../ai/researchContext.mjs";
 import { reply } from "../router.mjs";
 import { readJson } from "../lib/body.mjs";
@@ -57,7 +58,7 @@ const clientOf = (req, env) => {
 };
 
 const runToolTraced = (db, name, args, hooks) =>
-  runTool(db, name, args, callRoute, hooks?.onRoute || null, hooks?.sourcing || "both");
+  runTool(db, name, args, callRoute, hooks?.onRoute || null, hooks?.sourcing || "both", hooks?.research || {});
 
 /**
  * Everything the handler touches is injectable: env, the provider factory, the clock, the limiter, the log.
@@ -154,12 +155,17 @@ export function makeAskHandler({
     const key = ttl && !memory ? sha(answerIdentity(asked, { model, pinned: route.pinned })) : "";
     const fresh = body.value?.fresh === true;
     const exec = async (name, args, hooks) => {
+      const refusal = investigationAccessRefusal(name, { memory, sourcing: hooks?.sourcing });
+      if (refusal) return { ok: false, error: refusal };
       analysis?.append("tool_input", { name, args });
       try {
         const result =
           memory && name === "research_memory"
             ? scopedMemoryResult(db, memory, args)
-            : await execute(db, name, args, hooks);
+            : await execute(db, name, args, {
+                ...hooks,
+                research: { question: asked.question, memory, intent: hooks?.researchIntent, signal: hooks?.signal },
+              });
         analysis?.append("tool_output", { name, args, result });
         return result;
       } catch (error) {

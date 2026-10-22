@@ -4,6 +4,8 @@ Status: implementation plan, October 20, 2026. The [first routing/capability del
 
 Scope expanded October 21: the target is an [open financial research sandbox](sandbox.md) using platform data and internet evidence, with [historical collection and saving](historical-corpus.md). It must construct new study workflows without a bespoke route per hypothesis. These additions are specifications, not delivered capabilities. The [terminal-rs reference audit](terminal-rs-reference.md) informs reusable patterns and explicitly records what that repository does not supply.
 
+October 22: the [first composed workflow implementation](workflow-release.md) connects ordinary Ask requests to saved observations, immutable investigation plans, compatible descriptive graphs and offline replay. It replaces the assessment-only dead end when that toolchain is available while preserving source/family/access guards. Corpus acquisition, broader validated methods and isolated custom scientific execution remain unfinished.
+
 ## Objective and success criterion
 
 Turn a question into a traceable investigation: preserve its meaning, establish what evidence exists, choose an appropriate method, execute validated calculations, assess the limitations, and produce an answer whose claims can be inspected and reproduced. Accept broad questions for investigation without promising that every question is empirically answerable.

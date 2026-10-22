@@ -24,3 +24,16 @@ test("policy capability receipt opens the implemented workspace without enabling
   assert.doesNotMatch(html, /href="javascript:/);
   assert.match(html, /<b>Policy research workflow:<\/b>/);
 });
+
+test("saved investigation exports render only exact local download paths and matching labels", () => {
+  const base = "/api/research/investigations/inv_" + "a".repeat(32);
+  const text = `[Export study JSON](${base}/export) · [Export replay ZIP](${base}/archive)
+[Export study JSON](https://example.com/export)
+[Export replay ZIP](${base}/export)
+[Unsafe](javascript:alert(1))`;
+  const html = renderToStaticMarkup(createElement(Answer, { text, steps: [], onChip() {} }));
+  assert.match(html, new RegExp('href="' + base + '/export" download=""'));
+  assert.match(html, new RegExp('href="' + base + '/archive" download=""'));
+  assert.equal((html.match(/<a /g) || []).length, 2);
+  assert.doesNotMatch(html, /href="https:|href="javascript:/);
+});

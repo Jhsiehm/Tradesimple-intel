@@ -5,6 +5,7 @@ import { toolDefs, runTool } from "../server/ai/tools.mjs";
 import { confidenceLine } from "../shared/confidence.mjs";
 import { answerIdentity } from "../shared/answerCache.mjs";
 import { POLICY_QUESTION } from "./fixtures/policyQuestion.mjs";
+import { INVESTIGATION_TOOL_NAMES } from "../shared/investigationAccess.mjs";
 
 function scripted(...rounds) {
   const seen = [];
@@ -25,7 +26,9 @@ async function run(question, extra = {}) {
   await runAsk({
     question,
     provider,
-    tools: toolDefs(),
+    // These regressions cover the conservative fallback used without a general study toolchain.
+    // The enabled path and actual saved computations are covered in investigationAsk.test.mjs.
+    tools: toolDefs().filter((tool) => !INVESTIGATION_TOOL_NAMES.has(tool.name)),
     acceptDefaults: true,
     researchEnv: {},
     execute: async (name, args) => {
@@ -39,7 +42,7 @@ async function run(question, extra = {}) {
   return { events, calls, provider, done: events.findLast((e) => e.type === "done") };
 }
 
-test("the failed policy task ends with a truthful assessment before models, chips or computations", async () => {
+test("without study tools the failed policy task retains its truthful assessment before models or computations", async () => {
   const result = await run(POLICY_QUESTION, {
     prior: { source: "congress", filters: {}, rules: {} },
     priors: [{ source: "congress" }, { source: "contracts" }],
@@ -113,6 +116,6 @@ test("capability tool is read-only, typed and explicit about unaudited source hi
 
 test("new routing invalidates old answer identities without destroying saved conversations", () => {
   const identity = JSON.parse(answerIdentity({ question: POLICY_QUESTION }));
-  assert.equal(identity.v, 6);
+  assert.equal(identity.v, 7);
   assert.equal(typeof identity.q, "string");
 });

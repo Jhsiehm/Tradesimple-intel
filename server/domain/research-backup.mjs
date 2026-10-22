@@ -3,6 +3,7 @@ import { verifyRetrievalRecords } from "./connector-retrievals.mjs";
 import { verifyTaskControls } from "./tasks/control.mjs";
 import { verifyAttemptRow, verifyCompletion, verifyStopRequest } from "./tasks/integrity.mjs";
 import { verifyObservationDerivation, verifyObservationComposition } from "./research-observations.mjs";
+import { verifyWorkflowRows } from "./workflow/records.mjs";
 import { verifyAnalysisRows } from "./research-analysis.mjs";
 /** Portable research snapshots. Restores create a new database and never overwrite a live one. */
 import fs from "node:fs";
@@ -279,6 +280,20 @@ function inspect(file) {
             throw new Error("Memory snapshot approval reference mismatch.");
         }
       }
+    if (present.includes("workflow_revisions")) {
+      const lookupSnapshot = (id) => {
+        if (!present.includes("observation_snapshots")) throw Error("Workflow pinned source snapshot is missing.");
+        const row = db.prepare("SELECT id,body,body_hash FROM observation_snapshots WHERE id=?").get(id);
+        if (!row || hashOf(row.body) !== row.body_hash) throw Error("Workflow source snapshot missing or corrupted.");
+        const snapshot = JSON.parse(row.body);
+        if (snapshot.id !== id) throw Error("Workflow observation index mismatch.");
+        return snapshot;
+      };
+      for (const { id } of db.prepare("SELECT DISTINCT id FROM workflow_revisions").iterate())
+        verifyWorkflowRows(db.prepare("SELECT * FROM workflow_revisions WHERE id=? ORDER BY revision").all(id), {
+          lookupSnapshot,
+        });
+    }
     if (present.includes("observation_snapshots"))
       for (const row of db.prepare("SELECT body FROM observation_snapshots").iterate()) {
         const s = JSON.parse(row.body);

@@ -6,6 +6,7 @@ import { runAsk } from "../server/ai/run.mjs";
 import { toolDefs } from "../server/ai/tools.mjs";
 import { CONTRACT_QUESTION, PRE_NEWS_QUESTION } from "./fixtures/contractQuestion.mjs";
 import { explicitSignalSources } from "../shared/researchIntent.mjs";
+import { INVESTIGATION_TOOL_NAMES } from "../shared/investigationAccess.mjs";
 
 test("contract scope retains the ticker list and never invents a Rules Committee filter", () => {
   const hints = questionHints(CONTRACT_QUESTION, "2026-10-20");
@@ -75,7 +76,7 @@ test("pre-news legislative research requires publication, archive and intraday e
   assert.match(assessmentAnswer(follow.assessment), /Daily price bars cannot establish/);
 });
 
-test("both exact questions stop before any model call, clarification defaults or calculation", async () => {
+test("without a study toolchain both exact questions retain the safe assessment fallback", async () => {
   for (const question of [CONTRACT_QUESTION, PRE_NEWS_QUESTION]) {
     const events = [];
     await runAsk({
@@ -83,7 +84,7 @@ test("both exact questions stop before any model call, clarification defaults or
       today: "2026-10-20",
       acceptDefaults: true,
       researchEnv: {},
-      tools: toolDefs(),
+      tools: toolDefs().filter((tool) => !INVESTIGATION_TOOL_NAMES.has(tool.name)),
       provider: {
         async *chat() {
           throw Error("Unexpected paid model call");

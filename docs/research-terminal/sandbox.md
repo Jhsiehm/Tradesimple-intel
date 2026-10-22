@@ -2,6 +2,8 @@
 
 Status: design and source-code audit, October 21, 2026. This is the expanded product requirement, not a delivered execution engine. It complements [methodology](methodology.md), [architecture](architecture.md), and [historical collection](historical-corpus.md). The legislative pilot is one acceptance case, not the scope of the product.
 
+October 22 delivery: [composable descriptive investigations](workflow-release.md) now connect Ask to saved numeric sources, typed graph operations, durable study records and frozen replay. This is the first execution slice. The broader corpus, method selection/validation and custom scientific runtime below remain incomplete.
+
 ## Product objective
 
 Accept a financial question in ordinary language, construct a defensible operational design, discover platform and internet evidence, build and save the actual dataset, execute an appropriate analysis, and deliver inspectable findings plus a reproducibility package. A new question must not require another hard-coded question-to-workflow route.
@@ -10,7 +12,7 @@ Any financial hypothesis may be investigated. Whether it can be answered depends
 
 The assistant must distinguish exploratory iteration, a protocol locked before analysis, and later confirmation on genuinely untouched data. User corrections create linked revisions rather than erase the earlier choices or trials.
 
-## Audited current position
+## Audited baseline before the first workflow delivery
 
 | Layer | Implemented foundation | Remaining capability |
 | --- | --- | --- |
