@@ -16,13 +16,11 @@ export function ResearchQuestionGuide({
   records,
   busy,
   draft,
-  hasConversation,
   onDraft,
 }: {
   records: QuestionRecord[];
   busy: boolean;
   draft: string;
-  hasConversation: boolean;
   onDraft: (value: string) => void;
 }) {
   const [mode, setMode] = useState<QuestionMode>("inspect");
@@ -30,7 +28,7 @@ export function ResearchQuestionGuide({
   const [previous, setPrevious] = useState<string | null>(null);
   const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const [open, setOpen] = useState(!hasConversation);
+  const [open, setOpen] = useState(false);
   const generated = buildQuestionDraft(mode, brief, records);
   const issues = questionBriefIssues(brief);
   const overLimit = generated.length > QUESTION_LIMIT;
@@ -43,20 +41,25 @@ export function ResearchQuestionGuide({
     setPrevious(draft);
     setAppliedDraft(next);
     onDraft(next);
-    setNotice("Draft inserted below. Review and edit it before sending.");
+    setNotice("Draft inserted into your question. Review before sending.");
     document.getElementById("research-question")?.focus();
   };
   const exampleLabels = {
-    inspect: "Use LMT/HII comparison draft",
-    design: "Use legislation hypothesis draft",
-    execute: "Use contract analysis draft",
+    inspect: "Insert LMT/HII example",
+    design: "Insert legislation example",
+    execute: "Insert contract example",
+  };
+  const draftDescriptions = {
+    inspect: "Ask to compare saved evidence without new calculations.",
+    design: "Ask for a testable plan and a check of available evidence.",
+    execute: "Ask to run a supported method after inputs and coverage are checked.",
   };
   return (
     <details className="research-question-guide" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>Refine question & scope</summary>
+      <summary>Refine your question</summary>
       <fieldset disabled={busy}>
         <div className="research-question-intent">
-          <label htmlFor="research-question-intent">Research intent</label>
+          <label htmlFor="research-question-intent">Draft type</label>
           <select
             id="research-question-intent"
             value={mode}
@@ -72,13 +75,13 @@ export function ResearchQuestionGuide({
               </option>
             ))}
           </select>
-          <p id="research-question-intent-help">{questionModes.find((choice) => choice.id === mode)?.description}</p>
+          <p id="research-question-intent-help">{draftDescriptions[mode]}</p>
           <button type="button" onClick={() => apply(buildQuestionDraft(mode, exampleQuestionBrief(mode), records))}>
             {exampleLabels[mode]}
           </button>
         </div>
         <details className="research-question-scope">
-          <summary>Set your own scope</summary>
+          <summary>Customize the draft</summary>
           <div className="research-question-fields">
             <label className="research-question-wide">
               Question or hypothesis
@@ -165,8 +168,7 @@ export function ResearchQuestionGuide({
           )}
         </details>
         <p className="research-question-help">
-          Choosing a draft does not send a question or start a calculation. You can also type freely below. The Sources
-          control governs retrieval; naming a source does not establish coverage.
+          Drafts only fill your question; review before sending. Sources controls retrieval, not coverage.
         </p>
       </fieldset>
       {notice && draft === appliedDraft && (

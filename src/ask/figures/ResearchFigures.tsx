@@ -60,8 +60,8 @@ export function ResearchFigures({
             <StudyReview review={group.review} steps={byId} onChip={onChip} />
           ) : (
             <p className="rf-review-unavailable">
-              Study comparison checks are not attached to these figures. Review the notes and sources before comparing
-              studies.
+              These saved figures do not include a study comparison review. Check their notes and sources before
+              comparing results.
             </p>
           )}
           {group.figures.map((figure) => (

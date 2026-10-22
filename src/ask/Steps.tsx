@@ -1,5 +1,6 @@
 import { ResearchEmblem } from "../research/ResearchEmblem";
 import { stepAnchor } from "../../shared/citations.mjs";
+import { modelShort } from "../../shared/modelRoute.mjs";
 import { when } from "../lib/api";
 import type { Step, Turn } from "./types";
 
@@ -86,27 +87,26 @@ function StepRow({ s, turnId }: { s: Step; turnId: string }) {
 export function Steps({ turn }: { turn: Turn }) {
   const live = turn.phase !== "done" && turn.phase !== "error";
   if (!live && !turn.steps.length && !turn.notes.length) return null;
-  const at = PHASES.indexOf(turn.phase as (typeof PHASES)[number]);
+  const phase = PHASES.includes(turn.phase as (typeof PHASES)[number])
+    ? PHASE_WORD[turn.phase as (typeof PHASES)[number]]
+    : "Working";
   return (
     <details className="st" open={live || undefined}>
       <summary>
         {live ? (
           <span className="st-phases" role="status">
             <ResearchEmblem active compact />
-            {PHASES.map((p, i) => (
-              <span key={p} className={i < at ? "past" : i === at ? "now" : ""}>
-                {PHASE_WORD[p]}
-              </span>
-            ))}
+            <span className="now">{phase}</span>
           </span>
         ) : (
           <span>
             {turn.steps.length} step{turn.steps.length === 1 ? "" : "s"}
             {turn.done ? ` · ${secs(turn.done.ms)}` : ""}
-            {turn.model ? ` · ${turn.model}` : ""}
+            {turn.model ? ` · ${modelShort(turn.model)}` : ""}
           </span>
         )}
       </summary>
+      {turn.model ? <p className="st-note">Model: {turn.model}</p> : null}
       {turn.steps.length ? (
         <ol>
           {turn.steps.map((s) => (

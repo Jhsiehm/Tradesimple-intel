@@ -1,13 +1,17 @@
 .research-question-guide {
-  margin-bottom: 16px;
+  margin-top: 16px;
   color: var(--ink);
   font-size: var(--text-ui);
 }
 .research-question-guide > summary {
   width: fit-content;
   padding: 8px 0;
+  min-height: var(--control-height);
   color: var(--dim);
   cursor: pointer;
+}
+.research-question-guide > summary:hover {
+  color: var(--ink);
 }
 .research-question-guide fieldset {
   border: 0;
@@ -106,12 +110,6 @@
 }
 .research-question-notice button {
   margin-top: 4px;
-}
-.research-question-length {
-  margin: 6px 0 14px;
-  color: var(--dim);
-  font-size: var(--text-meta);
-  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 760px) {
   .research-question-intent,

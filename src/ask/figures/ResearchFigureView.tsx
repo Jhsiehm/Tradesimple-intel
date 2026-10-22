@@ -116,12 +116,15 @@ export function ResearchFigureView({ figure, steps, onChip }: Props) {
               {figure.xUnit ? ` ${figure.xUnit}` : ""}
             </p>
           ) : null}
-          {selected.point.detail ? <p>{selected.point.detail}</p> : null}
-          <p className="rf-provenance">
-            <span>Exact source</span>
+          <div className="rf-provenance">
+            <span>Source</span>
             <Chip id={selected.point.ref} steps={steps} onChip={onChip} />
-            <code>{selected.point.path}</code>
-          </p>
+            <details className="rf-point-details">
+              <summary>Observation details</summary>
+              {selected.point.detail ? <p>{selected.point.detail}</p> : null}
+              <code>{selected.point.path}</code>
+            </details>
+          </div>
         </div>
       ) : null}
       <figcaption>
@@ -131,7 +134,7 @@ export function ResearchFigureView({ figure, steps, onChip }: Props) {
           {figure.totalPoints > sourcePoints
             ? ` · ${figure.totalPoints.toLocaleString("en-US")} source points available`
             : ""}
-          . Select a point for its value and source.
+          .
         </p>
         {sourcePoints > allRows.length ? (
           <p className="rf-notice">

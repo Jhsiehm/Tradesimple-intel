@@ -13,6 +13,7 @@ import { ResearchQuestionGuide } from "./ResearchQuestionGuide";
 import { ResearchContextStarters } from "./ResearchContextStarters";
 import { QUESTION_LIMIT } from "./questionDraft";
 import "./home.css";
+import "./question-entry.css";
 type RecordSummary = { id: string; title?: string; name?: string; status?: string; evaluated?: boolean };
 type Catalog = {
   asOf: string;
@@ -194,28 +195,17 @@ export function ResearchHome({
               <ResearchEmblem active />
               <div>
                 <strong>{active?.label || last?.phase || "Working"}</strong>
-                <p>
-                  {active?.source || "Waiting for a tool observation or model response"} · elapsed progress, no
-                  estimated completion percentage
-                </p>
+                <p>{active?.source || "Waiting for the next research step."}</p>
               </div>
             </div>
           )}
-          <ResearchQuestionGuide
-            key={ask.chatId || ask.turns[0]?.id || "new"}
-            records={catalog?.experiments || []}
-            busy={ask.busy}
-            draft={ask.draft}
-            hasConversation={ask.turns.length > 0}
-            onDraft={ask.setDraft}
-          />
           <div className="research-composer">
             <label className="research-question-label" htmlFor="research-question">
               Your research question
             </label>
             <textarea
               id="research-question"
-              aria-describedby="research-question-length"
+              aria-describedby={`research-question-help${ask.draft.length ? " research-question-length" : ""}`}
               value={ask.draft}
               maxLength={QUESTION_LIMIT}
               onChange={(e) => ask.setDraft(e.target.value)}
@@ -227,9 +217,14 @@ export function ResearchHome({
                 }
               }}
             />
-            <p id="research-question-length" className="research-question-length">
-              {ask.draft.length}/{QUESTION_LIMIT} characters · review your draft, then Send
-            </p>
+            <div className="research-composer-help">
+              <p id="research-question-help">State your question, the evidence you need, and the outcome to measure.</p>
+              {ask.draft.length > 0 && (
+                <p id="research-question-length" className="research-question-length">
+                  {ask.draft.length}/{QUESTION_LIMIT} characters
+                </p>
+              )}
+            </div>
             <div className="research-composer-controls">
               <label>
                 Sources
@@ -245,14 +240,17 @@ export function ResearchHome({
               </label>
               <ModelPick ask={ask} busy={ask.busy} />
               {ask.busy ? (
-                <button onClick={ask.stop}>Stop execution</button>
+                <button className="research-stop" onClick={ask.stop}>
+                  Stop execution
+                </button>
               ) : (
                 <button
                   className="research-submit"
+                  title="Ask question (Ctrl+Enter or Command+Enter)"
                   disabled={!ask.draft.trim() || !ask.status?.configured}
                   onClick={submit}
                 >
-                  Send ↑
+                  Ask question
                 </button>
               )}
             </div>
@@ -294,13 +292,14 @@ export function ResearchHome({
               <SpendLine status={ask.status} />
             </details>
             {ask.status && !ask.status.configured && (
-              <p className="research-provider-note">
+              <p className="research-provider-note" role="alert">
                 AI execution unavailable: {ask.status.notice} Saved research and manual tools remain available.{" "}
                 <button onClick={() => void ask.refreshStatus()}>Retry connection</button>
               </p>
             )}
             {ask.turns.length > 0 && (
               <button
+                className="research-keep"
                 onClick={() => {
                   setError(ask.keep() ? "" : "Browser could not save this chat.");
                 }}
@@ -309,6 +308,13 @@ export function ResearchHome({
               </button>
             )}
           </div>
+          <ResearchQuestionGuide
+            key={ask.chatId || ask.turns[0]?.id || "new"}
+            records={catalog?.experiments || []}
+            busy={ask.busy}
+            draft={ask.draft}
+            onDraft={ask.setDraft}
+          />
           {!ask.turns.length && (
             <ResearchContextStarters
               chats={ask.chats}

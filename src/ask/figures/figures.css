@@ -20,7 +20,7 @@
 .rf-head,
 .rf-actions,
 .rf-legend,
-.rf-selection > div {
+.rf-selection > div:first-child {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -163,7 +163,7 @@
   padding: 10px 0;
   border-block: 1px solid var(--line);
 }
-.rf-selection > div {
+.rf-selection > div:first-child {
   justify-content: space-between;
 }
 .rf-selection strong {
@@ -180,6 +180,23 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+.rf-point-details {
+  min-width: 0;
+  max-width: 100%;
+}
+.rf-point-details summary {
+  color: var(--cyan);
+  cursor: pointer;
+  padding-block: 3px;
+}
+.rf-point-details[open] {
+  flex-basis: 100%;
+}
+.rf-point-details p {
+  margin-block: 4px;
 }
 .research-figure code {
   color: var(--dim);
