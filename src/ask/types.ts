@@ -84,7 +84,7 @@ export type Done = {
     mislabeled?: { raw: string; value: number; unit: string; foundAs: string[] }[];
     miscited?: Miscited[];
     uncitedRows?: string[];
-    scope?: { kind: "window" | "benchmark"; raw: string; refs: string[]; note: string }[];
+    scope?: { kind: "window" | "benchmark" | "research"; raw: string; refs: string[]; note: string }[];
   };
   uncited: boolean;
   noTools: boolean;

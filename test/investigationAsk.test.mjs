@@ -8,15 +8,16 @@ import { runTool, toolDefs } from "../server/ai/tools.mjs";
 import { listInvestigations } from "../server/domain/workflow/investigations.mjs";
 import { noReuseReason } from "../shared/answerCache.mjs";
 import { sameData } from "../server/ai/answerCache.mjs";
-import { INVESTIGATION_TOOL_NAMES } from "../shared/investigationAccess.mjs";
+import { INVESTIGATION_TOOL_NAMES, OWNER_RESEARCH_TOOL_NAMES } from "../shared/investigationAccess.mjs";
 import { investigationFixture } from "./fixtures/investigationAskFixture.mjs";
+import { DESCRIPTIVE_QUESTION } from "./fixtures/descriptiveQuestion.mjs";
 
 const ENV = { ASK_PROVIDER: "openrouter", OPENROUTER_API_KEY: "synthetic-key", ASK_MONTHLY_BUDGET_USD: "0" };
 const tool = (name, args) => ({ type: "tool_call", id: name, name, args });
 const text = (delta) => ({ type: "text", delta });
-function setup(script) {
+function setup(script, { seed = true } = {}) {
   const db = new DatabaseSync(":memory:"),
-    fixture = investigationFixture(db),
+    fixture = seed ? investigationFixture(db) : null,
     calls = [],
     seen = [];
   const state = { fixture, saved: null };
@@ -225,7 +226,7 @@ test("controlled memory excludes study tools in definitions and dispatch", async
   try {
     await s.ask({ question: "Describe saved numeric studies", memory: { mode: "isolated" } });
     assert.equal(s.calls.length, 0);
-    assert.ok(s.seen.every((round) => round.tools.every((name) => !INVESTIGATION_TOOL_NAMES.has(name))));
+    assert.ok(s.seen.every((round) => round.tools.every((name) => !OWNER_RESEARCH_TOOL_NAMES.has(name))));
     for (const mode of ["isolated", "context-aware"]) {
       const denied = await runTool(s.db, "research_sources", {}, undefined, null, "both", { memory: { mode } });
       assert.equal(denied.ok, false);
@@ -233,6 +234,59 @@ test("controlled memory excludes study tools in definitions and dispatch", async
     }
     assert.equal((await runTool(s.db, "research_sources", {}, undefined, null, "web")).ok, false);
     assert.equal((await runTool(s.db, "research_sources", {}, undefined, null, "both", { scheduled: true })).ok, false);
+  } finally {
+    s.db.close();
+  }
+});
+
+test("the actual revenue/cost prompt can save a blocked descriptive design with no observations", async () => {
+  const s = setup(
+    (round, state) => {
+      if (!round) return [tool("research_sources", {})];
+      if (round === 1)
+        return [
+          tool("research_create_investigation", {
+            protocol: {
+              title: "Revenue less operating costs",
+              question: DESCRIPTIVE_QUESTION,
+              hypothesis: "Describe revenue minus operating costs and the matched-company average.",
+              family: "descriptive",
+              population: "Companies with compatible financial reports",
+              unitOfAnalysis: "company-reporting period",
+              outcome: "Revenue minus operating costs in common units",
+              comparison: "Matched company and reporting period",
+              from: null,
+              to: null,
+              knownAt: null,
+              assumptions: [],
+              unresolved: [
+                "Import revenue and operating-cost observations with matching company IDs, periods, units and publication dates; define study period and knowledge cutoff.",
+              ],
+              nodes: [],
+              outputs: [],
+            },
+          }),
+        ];
+      return [
+        text(
+          "Saved a blocked descriptive design; no calculation executed. Compatible revenue and operating-cost observations, period and cutoff are missing [t2].",
+        ),
+      ];
+    },
+    { seed: false },
+  );
+  try {
+    const events = await s.ask({ question: DESCRIPTIVE_QUESTION });
+    assert.equal(s.state.saved.protocol.question, DESCRIPTIVE_QUESTION);
+    assert.equal(s.state.saved.protocol.family, "descriptive");
+    assert.equal(s.state.saved.status, "blocked");
+    assert.equal(s.state.saved.result, null);
+    assert.deepEqual(
+      s.calls.map((call) => call.name),
+      ["research_sources", "research_create_investigation"],
+    );
+    assert.equal(listInvestigations(s.db).items.length, 1);
+    assert.equal(events.findLast((event) => event.type === "done").backtests.length, 0);
   } finally {
     s.db.close();
   }

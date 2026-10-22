@@ -1,5 +1,5 @@
 import { askConfig, askKey } from "./config.mjs";
-import { INVESTIGATION_TOOL_NAMES, investigationAccessRefusal } from "../../shared/investigationAccess.mjs";
+import { OWNER_RESEARCH_TOOL_NAMES, investigationAccessRefusal } from "../../shared/investigationAccess.mjs";
 import { createProvider } from "./providers.mjs";
 import { runAsk } from "./run.mjs";
 import { callRoute, labelOf, runTool, toolDefs } from "./tools.mjs";
@@ -47,7 +47,7 @@ export async function runPromptTask({
       question: task.prompt,
       model,
       provider: metered(makeProvider({ ...cfg, model }), { db, kind: "task", askId: task.id, now }),
-      tools: toolDefs("both").filter((tool) => !INVESTIGATION_TOOL_NAMES.has(tool.name)),
+      tools: toolDefs("both").filter((tool) => !OWNER_RESEARCH_TOOL_NAMES.has(tool.name)),
       execute: (name, args, hooks) => {
         const refusal = investigationAccessRefusal(name, { scheduled: true, sourcing: hooks?.sourcing });
         return refusal

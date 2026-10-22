@@ -16,6 +16,8 @@ const wrapped = (investigation) => ({
   asOf: investigation.evaluation?.evaluatedAt || investigation.updatedAt || investigation.createdAt || "",
   latency: "Saved local-owner protocol/result; source assertions and historical completeness remain unverified.",
   investigation,
+  protocolLifecycle:
+    "Saved protocols are immutable. A blocked design does not automatically become executable after import; create a new resolved protocol with actual snapshot IDs and required design choices, then execute it.",
   downloads: {
     json: `/api/research/investigations/${investigation.id}/export`,
     archive: investigation.archiveAvailable ? `/api/research/investigations/${investigation.id}/archive` : null,
@@ -63,7 +65,7 @@ export const INVESTIGATION_TOOLS = [
     name: "research_create_investigation",
     label: "Save research design",
     description:
-      "Save an immutable general investigation protocol and composed workflow over exact saved observations. Retain the requested family and record missing requirements. Descriptive operations can execute; causal/predictive/strategy/document plans remain blocked until supported. This saves a design, not a result. Never submit invented rows.",
+      "Save an immutable general investigation protocol and composed workflow over exact saved observations. Retain the requested family and record missing requirements. Descriptive operations can execute; causal/predictive/strategy/document plans remain blocked until supported. A blocked design cannot automatically resume after import: create a new resolved protocol. Saving is not execution. Never submit invented rows. Render downloads.json as an exact Markdown link; offer downloads.archive only when non-null.",
     parameters: object({ protocol: INVESTIGATION_PROTOCOL_SCHEMA }, ["protocol"]),
     run(db, args, _call, context) {
       if (!context?.question) throw Error("An original user question is required to create a study through Ask.");

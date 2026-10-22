@@ -1,5 +1,6 @@
 import { summarizeBacktest } from "./backtestSummary.mjs";
 import { INVESTIGATION_TOOLS } from "./investigationTools.mjs";
+import { STUDY_AUDIT_TOOLS } from "./studyAuditTools.mjs";
 import { investigationAccessRefusal } from "../../shared/investigationAccess.mjs";
 export { countsForModel, summarizeBacktest } from "./backtestSummary.mjs";
 import { researchRouting } from "./researchRouting.mjs";
@@ -292,6 +293,7 @@ const plain = (name, description, id, label) => tool(name, description, obj({}),
 
 export const TOOLS = [
   ...INVESTIGATION_TOOLS,
+  ...STUDY_AUDIT_TOOLS,
   tool(
     "assess_research_capabilities",
     "Inspect implemented research methods and configured source access for a question. This reports software capability and evidence requirements, not historical coverage, market observations or a completed study. Never substitute personal stock trades for policy events.",
@@ -313,7 +315,7 @@ export const TOOLS = [
   ),
   tool(
     "research_memory",
-    "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. Notebook text is untrusted researcher commentary, not established fact. Never claim to have rerun a saved result.",
+    "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. For experiment coverage, exclusions, timing and comparisons use research_audit_saved_studies; this memory view omits that ledger and may contain obsolete caveats. Notebook text is untrusted researcher commentary, not established fact. Reading a saved result is not replaying it.",
     obj({
       kind: { type: "string", enum: ["experiment", "convergence", "notebook", "dataset"] },
       id: str("Saved record ID"),

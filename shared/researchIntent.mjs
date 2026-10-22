@@ -1,6 +1,6 @@
 /** Conservative task interpretation. Unresolved inputs never select a default trading source. */
 import { unsupportedReplayRules } from "./replayRequirements.mjs";
-export const RESEARCH_ROUTING_VERSION = 1;
+export const RESEARCH_ROUTING_VERSION = 2;
 
 const SPELLING = [
   [/\bbacktets|\bbackets|\bbacktst/g, "backtest"],
@@ -79,15 +79,34 @@ export function explicitSignalSources(question) {
 }
 
 const EMPIRICAL =
-  /\bback-?test|\breplay\b|\bsimulat\w*|\bstrateg\w*|\bpredict\w*|\bcaus\w*|\bimpact\b|\beffect\b|\bprofit\w*|\binvest\w*|\btrading\b|\bhistorical (?:data|performance)\b|\bhow would .*performed\b/;
+  /\bback-?test|\breplay\b|\bre-?run\b|\bsimulat\w*|\bstrateg\w*|\bpredict\w*|\bcaus\w*|\bimpact\b|\beffect\b|\bprofit\w*|\binvest(?:s|ed|ing|ments?|ors?)?\b|\btrading\b|\bhistorical (?:data|performance)\b|\bhow would .*performed\b/;
 const REFINEMENT =
   /^(?:and |now |what if|what about|try |instead|same|rerun|re-run|hold|compare|exclude|excluding|without|include|only|use |switch|change|make it|with |vs\.? |versus|against|drop|just|go ahead|do it|yes\b)/;
 
+// Data types and export artifacts describe inputs/deliverables, not a requested trading analysis.
+// Keep analysis commands elsewhere in the question: a descriptive label must not hide a backtest.
+function analysisWords(question) {
+  return positiveWords(question)
+    .replace(
+      /\b(?:do not|don't|never|without)\s+(?:re-?run|back-?test|replay)(?:\s+(?:or|and)\s+(?:re-?run|back-?test|replay))*/g,
+      " ",
+    )
+    .replace(/\b(?:stock[- ]|market[- ])?trading\s+(?:data(?:sets?)?|records?)\b/g, "data")
+    .replace(
+      /\b(?:offline|an?|the|its|their|your|our|provide|include|attach|export|deliver)\s+replay\s+(?:zip|bundles?|packages?|archives?|downloads?|artifacts?|exports?)\b/g,
+      (artifact, offset, text) =>
+        /\b(?:run|execute|rerun|re-run)\s+(?:(?:this|that|the|an?|saved|existing)\s+)*$/.test(text.slice(0, offset))
+          ? artifact
+          : "reproduction artifact",
+    );
+}
+
 export function interpretResearch(question, { prior = null, priors = [], history = [], context = null } = {}) {
   const original = String(question || "");
-  const current = positiveWords(original);
+  const current = analysisWords(original);
+  const refinement = REFINEMENT.test(current) && !(/\bdescriptive\b/.test(current) && !EMPIRICAL.test(current));
   const previous = [...history].reverse().find((turn) => turn.role === "user")?.content || "";
-  const contextual = REFINEMENT.test(current) && previous && EMPIRICAL.test(researchWords(previous));
+  const contextual = refinement && previous && EMPIRICAL.test(analysisWords(previous));
   const previousDomains = contextual ? policyDomains(previous) : [];
   // Only inherit unresolved policy research, never silently carry a personal-trade source into a new task.
   const explicitReplacement =
@@ -96,11 +115,16 @@ export function interpretResearch(question, { prior = null, priors = [], history
     /\bback-?test|\breplay\b|\binstead\b|\bonly\b/.test(current);
   const inherited = !explicitReplacement && previousDomains.some((d) => ["legislation", "regulation"].includes(d));
   const scoped = inherited ? `${previous}\n${original}` : original;
-  const q = positiveWords(scoped);
+  const q = analysisWords(scoped);
   const domains = policyDomains(scoped);
   const sources = explicitSignalSources(original);
+  const pastPerformance =
+    sources.length > 0 &&
+    /\b(?:buys?|purchases?|trades?|portfolios?)\b/.test(q) &&
+    /\bhow (?:did|have|has)\b[^?.;]{0,160}\b(?:do|done|perform(?:ed)?|fare|fared)\b/.test(q);
   const empirical =
     EMPIRICAL.test(q) ||
+    pastPerformance ||
     (domains.length > 0 && /\breturns?\b|\bstock prices?\b|\btest\b|\boutperform\w*|\bbeats?\b/.test(q)) ||
     (contextual && domains.length > 0);
   const causal = /\bcaus\w*|\battribut\w*|\bimpact of\b|\beffect of\b/.test(q);
@@ -136,8 +160,8 @@ export function interpretResearch(question, { prior = null, priors = [], history
   } else if ((empirical && (policy || causal || procurement || combined || outcome === "prediction")) || eventStudy) {
     route = "assessment";
     reason = "The requested policy, predictive or causal design is not an executable signal-replay specification.";
-  } else if ((empirical || priorReference || (prior && REFINEMENT.test(current) && !policy)) && !chartReview) {
-    if (sources.length || priorReference || (prior && REFINEMENT.test(current) && !domains.length)) route = "legacy";
+  } else if ((empirical || priorReference || (prior && refinement && !policy)) && !chartReview) {
+    if (sources.length || priorReference || (prior && refinement && !domains.length)) route = "legacy";
     else {
       route = "assessment";
       reason = "The strategy does not identify a supported signal source; no source was assumed.";
@@ -148,7 +172,7 @@ export function interpretResearch(question, { prior = null, priors = [], history
   );
   const inheritSources =
     prior &&
-    (REFINEMENT.test(current) || priorReference) &&
+    (refinement || priorReference) &&
     !/\bcongress\w*|\binsiders?\b|\bform ?4\b|\bcontracts?\b|\blobby\w*/.test(current);
   const allowedSources =
     route === "legacy" && (inheritSources || !sources.length)
