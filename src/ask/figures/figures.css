@@ -177,6 +177,7 @@
 }
 .rf-provenance {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
 }

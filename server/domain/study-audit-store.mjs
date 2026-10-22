@@ -16,12 +16,29 @@ export function auditInventory(db) {
     return [];
   return db
     .prepare(
-      `SELECT e.id, e.created_at AS createdAt,
-    json_extract(r.body, '$.provenance.dataset.id') AS datasetId
+      `SELECT e.id, e.created_at AS createdAt, substr(e.title, 1, 240) AS title,
+    json_extract(r.body, '$.provenance.dataset.id') AS datasetId,
+    substr(d.name, 1, 240) AS datasetName,
+    substr(json_extract(d.body, '$.manifest.scope.symbols'), 1, 2048) AS symbols
     FROM research.experiments e JOIN research.runs r ON r.id=e.run_id
+    LEFT JOIN research.datasets d ON d.id=json_extract(r.body, '$.provenance.dataset.id')
     ORDER BY e.created_at DESC, e.id DESC LIMIT 500`,
     )
-    .all();
+    .all()
+    .map((row) => {
+      let symbols = [];
+      try {
+        symbols = JSON.parse(row.symbols || "[]");
+      } catch {
+        /* Malformed metadata cannot establish a symbol match. */
+      }
+      return {
+        ...row,
+        symbols: Array.isArray(symbols)
+          ? symbols.slice(0, 8).filter((s) => typeof s === "string" && s.length <= 24)
+          : [],
+      };
+    });
 }
 export function auditRecord(db, id) {
   const experiment = db

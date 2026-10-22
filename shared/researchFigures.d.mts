@@ -7,6 +7,24 @@ export type ResearchFigurePoint = {
   detail?: string;
 };
 export type ResearchFigureSeries = { id: string; label: string; points: ResearchFigurePoint[] };
+export type ResearchFigureReviewItem = { label: string; ref: string; path: string };
+export type ResearchFigureReview = {
+  /** Recorded descriptive comparison only; never a causal or investability certification. */
+  status: "not-directly-comparable" | "listed-fields-match-only" | "single-study";
+  summary: string;
+  studies: {
+    id: string;
+    label: string;
+    coverage: string;
+    timing: string;
+    window: string;
+    rules: string;
+    ref: string;
+    path: string;
+  }[];
+  reasons: ResearchFigureReviewItem[];
+  missingEvidence: ResearchFigureReviewItem[];
+};
 export type ResearchFigure = {
   id: string;
   title: string;
@@ -22,6 +40,7 @@ export type ResearchFigure = {
   sourceRefs: string[];
   /** Full available source row/category count, before preview bounds, when known. */
   totalPoints: number;
+  review?: ResearchFigureReview;
 };
 export type FigureEvidence = { id: string; tool: string; ok: boolean; json?: string };
 export function researchFigures(evidence: FigureEvidence[], rawBodies?: Map<string, unknown>): ResearchFigure[];

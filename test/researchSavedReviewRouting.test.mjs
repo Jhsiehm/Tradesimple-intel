@@ -41,7 +41,7 @@ for (const [name, priors, history] of [
       },
       emit: (event) => events.push(event),
     });
-    assert.deepEqual(calls, [{ name: "research_audit_saved_studies", args: {} }]);
+    assert.deepEqual(calls, [{ name: "research_audit_saved_studies", args: { studyNames: ["LMT", "HII"] } }]);
     const done = events.findLast((event) => event.type === "done");
     assert.ok(done);
     assert.deepEqual(done.backtests, []);
@@ -78,8 +78,14 @@ test("saved-study inspection does not expose owner tools with web-only sourcing"
 test("a descriptive source reference does not authorize replay or optimization", () => {
   const intent = interpretResearch(QUESTION);
   assert.deepEqual(intent.allowedSources, ["contracts"], "mentioning a source is not a request to trade it");
-  assert.match(researchToolRefusal(intent, "run_backtest", { spec: prior("contracts") }), /evidence inspection/);
-  assert.match(researchToolRefusal(intent, "search_signals", { sources: ["contracts"] }), /evidence inspection/);
+  assert.match(
+    researchToolRefusal(intent, "run_backtest", { spec: prior("contracts") }),
+    /inspection of saved evidence/,
+  );
+  assert.match(
+    researchToolRefusal(intent, "search_signals", { sources: ["contracts"] }),
+    /inspection of saved evidence/,
+  );
   const refinement = interpretResearch("Hold 30 days instead", { prior: prior("contracts") });
   assert.equal(refinement.route, "legacy");
   assert.equal(refinement.family, "descriptive");
@@ -109,7 +115,7 @@ test("a model cannot replace saved-study inspection with a fresh backtest", asyn
     },
     emit: (event) => events.push(event),
   });
-  assert.deepEqual(calls, [{ name: "research_audit_saved_studies", args: {} }]);
+  assert.deepEqual(calls, [{ name: "research_audit_saved_studies", args: { studyNames: ["LMT", "HII"] } }]);
   assert.deepEqual(events.findLast((event) => event.type === "done").backtests, []);
   assert.match(JSON.stringify(seen), /inspection of saved evidence/);
   assert.ok(events.some((event) => event.type === "plan_note" && /Incompatible calculation blocked/.test(event.note)));
@@ -131,7 +137,11 @@ test("explicit new execution is not downgraded to saved-record inspection", () =
     "Inspect my saved LMT studies; do not rerun or replay them.",
     "Review my saved studies and provide an offline replay ZIP.",
   ]) {
-    assert.deepEqual(savedStudyAuditArgs(question), {}, question);
+    assert.deepEqual(
+      savedStudyAuditArgs(question),
+      question.includes("LMT") ? { studyNames: question.includes("HII") ? ["LMT", "HII"] : ["LMT"] } : {},
+      question,
+    );
     assert.equal(interpretResearch(question).family, "descriptive", question);
   }
 });

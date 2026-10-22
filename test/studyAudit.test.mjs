@@ -54,7 +54,11 @@ test("saved-study audit pins counters, assumptions and stats without replaying o
     });
     assert.equal(result.comparison.status, "different-designs-or-windows");
     assert.equal(result.claimLimits.newBacktestPerformed, false);
-    assert.deepEqual(trimForModel(result), result, "ordinary two-study evidence must survive model trimming intact");
+    assert.deepEqual(
+      trimForModel(result, { resultItems: 10, resultChars: 24_000 }),
+      result,
+      "ordinary two-study evidence must survive the audit context budget intact",
+    );
   }));
 test("audit chooses latest saved result per pinned dataset, never the strongest return", () =>
   withDb((db) => {

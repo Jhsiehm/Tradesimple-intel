@@ -15,7 +15,7 @@ Research answers can include interactive figures derived deterministically from 
 
 Executed outcomes and audits receive priority over input previews. The same investigation revision is not charted twice. A blocked design, failed tool result, unsupported output, or result with no finite numeric observations produces no figure.
 
-Each point retains its exact raw value, tool reference, and JSON source path. The contract contains labels, units, format, series, notes, and the reported source row/category count. It accepts bars, lines, and numeric scatter coordinates; the renderer's support does not imply that every adapter emits every representation.
+Each point retains its exact raw value, tool reference, and JSON source path. The contract contains labels, units, format, series, notes, and the reported source row/category count. Optional saved-study review metadata adds at most four studies, eight comparison reasons, and eight evidence gaps, with bounded text and source references. It accepts bars, lines, and numeric scatter coordinates; the renderer's support does not imply that every adapter emits every representation.
 
 Summary returns support categorical bar or dot comparisons. They never become an inferred daily performance curve. Actual curves require valid ordered calendar dates. The UI also rejects invalid or ambiguous saved time coordinates and falls back to labeled categories with a notice. Missing values remain `null`, not zero.
 
@@ -31,13 +31,13 @@ The exclusions adapter displays at most 20 known reason categories, balancing se
 
 ## Interaction and persistence
 
-`src/ask/figures/ResearchFigures.tsx` provides a figure selector and optional Show all figures view. `ResearchFigureView.tsx` provides bar/dot alternatives for categorical data, series controls that retain at least one visible series, an exact selected-value rail, source chips, notes, and an expandable data table. `FigurePlot.tsx` renders the bounded SVG and supports hover, touch selection, and keyboard point navigation with arrows, Home, and End.
+`src/ask/figures/ResearchFigures.tsx` provides a figure selector and optional Show all figures view. A recorded comparison review precedes its own figures; separate audits retain their own study identities, coverage, and source references in both views. `ResearchFigureView.tsx` provides bar/dot alternatives for categorical data, series controls that retain at least one visible series, an exact selected-value rail, source chips, notes, and an expandable data table. `FigurePlot.tsx` renders the bounded SVG and supports hover, touch selection, and keyboard point navigation with arrows, Home, and End.
 
 Filtering changes the display only. It does not edit a saved study, recalculate a result, or change its conclusions. Selection and view controls are transient UI state.
 
-The final Ask event includes `figures`; `src/agent/TurnView.tsx` places them before the answer narrative. `src/ask/chats.ts` preserves and normalizes figures when keeping and loading conversations. Older chats without figures still load. This is browser-local conversation persistence, not a new research archive or a replay guarantee. Answer cache identity 9 prevents reuse of answers from before this contract.
+The final Ask event includes `figures`; `src/agent/TurnView.tsx` places them before the answer narrative. `src/ask/chats.ts` preserves and normalizes figures when keeping and loading conversations. Older chats without figures still load. This is browser-local conversation persistence, not a new research archive or a replay guarantee. Answer cache identity 10 prevents reuse of answers from before the refined review and execution-scope contract. See [the refinement release](refinement-release.md).
 
-Download displayed CSV includes raw values, formatted values, units, references, source paths, notes, and scope. String cells that could become spreadsheet formulas are neutralized; real negative numeric values retain their numeric sign. CSV export explicitly describes itself as displayed data rather than the full underlying dataset.
+Download displayed CSV includes raw values, formatted values, units, references, source paths, notes, scope, and attached recorded-comparison context. String cells that could become spreadsheet formulas are neutralized; real negative numeric values retain their numeric sign. CSV export explicitly describes itself as displayed data rather than the full underlying dataset.
 
 ## Research limits
 
@@ -51,6 +51,8 @@ Figures inherit the terminal's matte near-black green surface, shared system fon
 
 ## Verification on 2026-10-22
 
+### Initial figures release
+
 The actual browser acceptance prompt was:
 
 > Compare my saved LMT and HII procurement studies. Show interactive graphs of recorded returns, excess returns, source coverage and exclusions. Explain partial coverage and assumed publication dates, and cite the saved evidence. Keep this to inspection of saved records.
@@ -62,3 +64,9 @@ Browser checks exercised figure selection, bars/dots, series toggles, point sele
 Desktop (1346×900) and narrow-screen (390×844) captures are saved at `.impeccable/review/desktop.png` and `.impeccable/review/mobile.png`. Two bounded inspection rounds corrected the displayed return-unit caption. The independent finish review marked that fix ready to ship, with no material fix remaining. The manual UI detector returned no findings.
 
 The final full suite passed all 1,186 tests with no failures, skips, or cancellations. `npm run build` (TypeScript and Vite) and `npm run format:check` passed. Relevant regression tests include `researchFigures`, `researchFiguresBounds`, `researchFiguresAsk`, `researchFiguresUi`, `savedStudyExecutionGuard`, and the descriptive investigation/routing tests. Fixtures verify software behavior; these checks do not establish scientific validity or historical completeness.
+
+### Comparison refinement
+
+The later [refinement acceptance](refinement-release.md) used a 457-character generated inspection draft and one audit call with `studyNames: ["LMT", "HII"]`. It resolved the exact named saved studies, produced four figures, and displayed Not directly comparable before returns. The review preserved partial LMT coverage, scoped HII count reconciliation, assumed publication delays, and differing rules/windows/engine records. No fresh calculation or arithmetic replay occurred; grounding flags led to the cited deterministic report rather than unchecked model prose.
+
+That run retained LMT excess `-0.0742` / `-7.42 pp` at `/studies/0/stats/excessTotal`; source order can differ from the initial release, so paths are meaningful within their own audit receipt. Its downloaded CSV included human-readable comparison status, full study IDs, checks, gaps, references, paths, and scope. The six refinement captures cover question, report, and chart at 1396×900 and 390×844. This later answer was not kept before a new conversation was started; the initial persistence acceptance above remains a separate check.

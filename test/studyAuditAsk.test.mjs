@@ -82,7 +82,9 @@ test("unresolved saved-study overclaims fall back to a cited report that passes 
     assert.match(result.done.answer, /partial/);
     for (const value of ["589", "44", "2163", "65", "130"]) assert.ok(result.done.answer.includes(value));
     assert.match(result.done.answer, /no new backtest or calculation replay was performed/);
-    assert.match(result.done.answer, /(?:not matched to|did not verify) the requested study names/);
+    assert.match(result.done.answer, /Named-study selection used exact saved/);
+    assert.match(result.done.answer, /LMT: matched/);
+    assert.match(result.done.answer, /HII: matched/);
     assert.deepEqual(result.done.grounding.unmatched, []);
     assert.deepEqual(result.done.grounding.mislabeled, []);
     assert.deepEqual(result.done.grounding.miscited, []);
@@ -97,7 +99,9 @@ test("four selected studies retain full statistics and exclusions in the model c
   const db = new DatabaseSync(":memory:");
   try {
     for (const name of ["One", "Two", "Three", "Four"]) studyAuditFixture(db, { name, partial: true });
-    const result = await ask(db, "The saved studies are partial and timing is assumed; exclusions are recorded [t1].");
+    const result = await ask(db, "The saved studies are partial and timing is assumed; exclusions are recorded [t1].", {
+      question: "Compare my saved studies and explain recorded coverage and timing.",
+    });
     const body = JSON.parse(result.seen[0].messages.find((message) => message.role === "tool").content);
     assert.equal(body.studies.length, 4);
     assert.ok(body.studies.every((study) => study.exclusions.cooldown === 2163 && study.stats.total === 0.0829));
@@ -109,7 +113,7 @@ test("four selected studies retain full statistics and exclusions in the model c
 
 test("numeric descriptive designs are not mistaken for saved-result comparisons", () => {
   assert.equal(savedStudyAuditArgs(DESCRIPTIVE_QUESTION), null);
-  assert.deepEqual(savedStudyAuditArgs(question), {});
+  assert.deepEqual(savedStudyAuditArgs(question), { studyNames: ["LMT", "HII"] });
   const id = `exp_${"a".repeat(32)}`;
   assert.deepEqual(savedStudyAuditArgs(`Inspect my saved study ${id}`), { experimentIds: [id] });
 });

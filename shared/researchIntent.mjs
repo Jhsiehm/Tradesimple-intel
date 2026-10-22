@@ -1,5 +1,6 @@
 /** Conservative task interpretation. Unresolved inputs never select a default trading source. */
 import { unsupportedReplayRules } from "./replayRequirements.mjs";
+import { inspectionOnlyRequested, resolveDesignOnly } from "./researchExecutionScope.mjs";
 export const RESEARCH_ROUTING_VERSION = 2;
 
 const SPELLING = [
@@ -103,6 +104,8 @@ function analysisWords(question) {
 
 export function interpretResearch(question, { prior = null, priors = [], history = [], context = null } = {}) {
   const original = String(question || "");
+  const designOnly = resolveDesignOnly(original, history);
+  const inspectionOnly = inspectionOnlyRequested(original);
   const current = analysisWords(original);
   const refinement = REFINEMENT.test(current) && !(/\bdescriptive\b/.test(current) && !EMPIRICAL.test(current));
   const previous = [...history].reverse().find((turn) => turn.role === "user")?.content || "";
@@ -167,6 +170,13 @@ export function interpretResearch(question, { prior = null, priors = [], history
       reason = "The strategy does not identify a supported signal source; no source was assumed.";
     }
   }
+  if (inspectionOnly) {
+    route = "conversation";
+    reason = "The user requested inspection of saved evidence without a new study or calculation.";
+  } else if (designOnly && route === "legacy") {
+    route = "conversation";
+    reason = "The user requested a research design without calculation execution.";
+  }
   const windows = [...q.matchAll(/\b(\d+|one|two|past|last)\s*[- ]?(years?|months?|weeks?|days?)\b/g)].map(
     (m) => `${{ one: 1, two: 2, past: 1, last: 1 }[m[1]] || m[1]} ${m[2]}`,
   );
@@ -196,5 +206,7 @@ export function interpretResearch(question, { prior = null, priors = [], history
     allowedSources,
     windows: [...new Set(windows)],
     benchmark: /\bs&p\s*(?:500)?|\bspy\b|\bsp500\b/.test(q) ? "SPY" : null,
+    ...(designOnly ? { designOnly: true } : {}),
+    ...(inspectionOnly ? { inspectionOnly: true } : {}),
   };
 }

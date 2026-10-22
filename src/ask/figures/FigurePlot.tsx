@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ResearchFigure } from "../../../shared/researchFigures.mjs";
-import { figureDateMs, formatValue, type FigureRow } from "./model";
+import { categoricalRows, figureDateMs, formatValue, type FigureRow } from "./model";
 
 type Props = {
   figure: ResearchFigure;
@@ -40,7 +40,7 @@ export function FigurePlot({ figure, rows, selected, view, onSelect }: Props) {
     return () => observer.disconnect();
   }, []);
   const categorical = view === "bar" || view === "dot";
-  const shown = categorical ? rows.slice(0, 80) : rows;
+  const shown = categorical ? categoricalRows(rows).slice(0, 80) : rows;
   const finite = shown.filter((row) => row.point.y != null && Number.isFinite(row.point.y));
   const [left, right, top, bottom] = categorical
     ? [Math.min(142, width * 0.35), width - 24, 16, 36]
@@ -215,7 +215,7 @@ export function FigurePlot({ figure, rows, selected, view, onSelect }: Props) {
       </svg>
       {categorical && shown.length < rows.length ? (
         <p className="rf-notice">
-          Plot shows the first {shown.length} displayed rows. The data table and CSV include all {rows.length} displayed
+          Plot limited to {shown.length} of {rows.length} displayed rows. The data table and CSV include all displayed
           rows.
         </p>
       ) : null}

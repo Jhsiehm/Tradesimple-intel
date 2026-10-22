@@ -1,8 +1,10 @@
+import { researchExecutionRefusal } from "./researchExecutionScope.mjs";
+
 /** Enforced at dispatch as well as during planning. A model cannot expand the user's study silently. */
 export function researchToolRefusal(intent, tool, args) {
+  const execution = researchExecutionRefusal(intent, tool);
+  if (execution) return execution;
   if (!["run_backtest", "search_signals"].includes(tool)) return "";
-  if (intent.inspectionOnly)
-    return "This task requests inspection of saved evidence, not a fresh calculation. Do not rerun a backtest or search signals unless the user explicitly requests a new execution.";
   if (intent.route === "assessment" || intent.domains.some((d) => ["legislation", "regulation"].includes(d))) {
     return "This question requires a research design and evidence assessment. Stock-disclosure replay and signal optimization do not test the requested policy relationship.";
   }

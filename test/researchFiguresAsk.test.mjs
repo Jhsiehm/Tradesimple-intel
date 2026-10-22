@@ -43,7 +43,7 @@ test("a saved-study answer includes exact interactive figure data without anothe
     assert.ok(points.some((point) => point.y === 0.0829));
     assert.ok(points.some((point) => point.y === 2163));
     assert.ok(points.every((point) => point.ref === "t1" && point.path.startsWith("/")));
-    assert.ok(done.figures.some((figure) => figure.notes.some((note) => /partial/i.test(note))));
+    assert.ok(done.figures.some((figure) => figure.review?.studies.some((study) => /partial/i.test(study.coverage))));
     assert.ok(!done.figures.some((figure) => /live performance|verified strategy/i.test(figure.title)));
   } finally {
     db.close();

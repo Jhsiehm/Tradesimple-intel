@@ -9,6 +9,37 @@ export type FigureRow = {
   color: string;
   point: ResearchFigurePoint;
 };
+export type FigureGroup = { key: string; review?: ResearchFigure["review"]; figures: ResearchFigure[] };
+
+/** Pair each chart with its own recorded audit; identical labels from different refs remain separate. */
+export function figureGroups(figures: ResearchFigure[]): FigureGroup[] {
+  const groups = new Map<string, FigureGroup>();
+  for (const figure of figures) {
+    const review = figure.review;
+    const key = review
+      ? JSON.stringify([
+          review.status,
+          review.summary,
+          review.studies.map((study) => [
+            study.id,
+            study.label,
+            study.coverage,
+            study.timing,
+            study.window,
+            study.rules,
+            study.ref,
+            study.path,
+          ]),
+          review.reasons.map((item) => [item.label, item.ref, item.path]),
+          review.missingEvidence.map((item) => [item.label, item.ref, item.path]),
+        ])
+      : "unreviewed";
+    const group = groups.get(key) || { key, review, figures: [] };
+    group.figures.push(figure);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
 
 /** Reject Date.parse calendar normalization and ambiguous/local timestamp offsets. */
 export function figureDateMs(value: unknown): number | null {
@@ -25,6 +56,16 @@ export function figureDateMs(value: unknown): number | null {
 }
 
 export const isFigureDate = (value: unknown): boolean => figureDateMs(value) !== null;
+
+export function reviewStatus(status: string): string {
+  return status === "not-directly-comparable"
+    ? "Not directly comparable"
+    : status === "listed-fields-match-only"
+      ? "Listed fields match only"
+      : status === "single-study"
+        ? "Single saved study"
+        : "Comparison status unavailable";
+}
 
 export function displayUnit(figure: Pick<ResearchFigure, "format" | "unit">): string {
   return figure.format === "percent" ? "%" : figure.format === "percentage-points" ? "percentage points" : figure.unit;
@@ -46,6 +87,18 @@ export function figureRows(figure: ResearchFigure): FigureRow[] {
   return rows;
 }
 
+/** Keep series for the same category adjacent without merging observations or changing their identities. */
+export function categoricalRows(rows: FigureRow[]): FigureRow[] {
+  const groups = new Map<string, FigureRow[]>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.point.x, row.point.label]);
+    const group = groups.get(key) || [];
+    group.push(row);
+    groups.set(key, group);
+  }
+  return [...groups.values()].flat();
+}
+
 export function formatValue(value: number | null, figure: ResearchFigure, compact = false): string {
   if (value == null || !Number.isFinite(value)) return "Missing";
   const scaled = figure.format === "number" ? value : value * 100;
@@ -64,6 +117,32 @@ const csvCell = (value: string | number) => {
 };
 
 export function figureCsv(figure: ResearchFigure, rows: FigureRow[]): string {
+  const review = figure.review;
+  const reviewRecords: (string | number)[][] = review
+    ? [
+        ["Study comparison", "", reviewStatus(review.status), "", "", "", "", "", "", review.summary],
+        ...review.studies
+          .slice(0, 4)
+          .map((study) => [
+            "Study design",
+            study.label,
+            study.id,
+            study.window,
+            "",
+            study.coverage,
+            "",
+            study.ref,
+            study.path,
+            `Public availability: ${study.timing}; Trading rules: ${study.rules}`,
+          ]),
+        ...review.reasons
+          .slice(0, 8)
+          .map((item) => ["Comparison check", "", "", "", "", "", "", item.ref, item.path, item.label]),
+        ...review.missingEvidence
+          .slice(0, 8)
+          .map((item) => ["Evidence gap", "", "", "", "", "", "", item.ref, item.path, item.label]),
+      ]
+    : [];
   const records: (string | number)[][] = [
     ["Record", "Series", "Label", "X", "Y raw", "Display value", "Unit", "Source ref", "Source path", "Detail"],
     [
@@ -90,6 +169,7 @@ export function figureCsv(figure: ResearchFigure, rows: FigureRow[]): string {
       "",
       "This export contains the displayed data, not the full underlying dataset.",
     ],
+    ...reviewRecords,
     ...figure.notes.map((note) => ["Note", "", "", "", "", "", "", "", "", note]),
     ...figure.sourceRefs.map((ref) => ["Source", "", "", "", "", "", "", ref, "", ""]),
     ...rows.map(({ series, point: p }) => [

@@ -23,6 +23,7 @@ export function ResearchFigureView({ figure, steps, onChip }: Props) {
   const kind = figure.kind === "line" && dates ? "line" : figure.kind === "scatter" && numericX ? "scatter" : "bar";
   const view = kind === "bar" && dots ? "dot" : kind;
   const unit = displayUnit(figure);
+  const missing = rows.filter((row) => row.point.y == null).length;
   const toggle = (id: string) => {
     if (hidden.includes(id)) setHidden(hidden.filter((value) => value !== id));
     else if (visibleSeries.length > 1) setHidden([...hidden, id]);
@@ -109,12 +110,15 @@ export function ResearchFigureView({ figure, steps, onChip }: Props) {
               {figure.format === "number" && figure.unit ? ` ${figure.unit}` : ""}
             </strong>
           </div>
-          <p>
-            {figure.xLabel}: {String(selected.point.x)}
-            {figure.xUnit ? ` ${figure.xUnit}` : ""}
-            {selected.point.detail ? ` · ${selected.point.detail}` : ""}
-          </p>
+          {String(selected.point.x) !== selected.point.label || figure.xUnit ? (
+            <p>
+              {figure.xLabel}: {String(selected.point.x)}
+              {figure.xUnit ? ` ${figure.xUnit}` : ""}
+            </p>
+          ) : null}
+          {selected.point.detail ? <p>{selected.point.detail}</p> : null}
           <p className="rf-provenance">
+            <span>Exact source</span>
             <Chip id={selected.point.ref} steps={steps} onChip={onChip} />
             <code>{selected.point.path}</code>
           </p>
@@ -123,6 +127,7 @@ export function ResearchFigureView({ figure, steps, onChip }: Props) {
       <figcaption>
         <p className="rf-scope">
           {rows.length} displayed values{hidden.length ? ` · ${hidden.length} series hidden` : ""}
+          {missing ? ` · ${missing} missing` : ""}
           {figure.totalPoints > sourcePoints
             ? ` · ${figure.totalPoints.toLocaleString("en-US")} source points available`
             : ""}

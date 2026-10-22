@@ -9,6 +9,9 @@ import { TurnView } from "../agent/AskSheet";
 import { ModelPick } from "../ask/ModelPick";
 import { SpendLine } from "../ask/Spend";
 import { read, message } from "./api";
+import { ResearchQuestionGuide } from "./ResearchQuestionGuide";
+import { ResearchContextStarters } from "./ResearchContextStarters";
+import { QUESTION_LIMIT } from "./questionDraft";
 import "./home.css";
 type RecordSummary = { id: string; title?: string; name?: string; status?: string; evaluated?: boolean };
 type Catalog = {
@@ -123,44 +126,6 @@ export function ResearchHome({
       .slice()
       .reverse()
       .find((s) => s.state === "running");
-  const suggestions = [
-    ...ask.chats
-      .filter((c) => c.id !== ask.chatId)
-      .slice(0, 2)
-      .map((c) => ({
-        label: "From saved chat · browser-local",
-        title: c.title,
-        question:
-          "Review the attached saved chat. Identify its unresolved hypotheses and propose a falsifiable follow-up. Separate prior assertions from newly retrieved evidence.",
-        chat: c.id,
-      })),
-    ...(catalog?.notebooks.slice(0, 1).map((n) => ({
-      label: "From notebook · researcher-authored",
-      title: n.title || n.id,
-      question: `Read notebook ${n.id} with research_memory. Identify evidence gaps and propose a test. Treat its conclusions as hypotheses.`,
-      chat: "",
-    })) || []),
-    ...(catalog?.plans.slice(0, 1).map((n) => ({
-      label: `From Convergence · ${n.evaluated ? "holdout recorded" : "development only"}`,
-      title: n.title || n.id,
-      question: `Inspect convergence ${n.id} using research_memory. Explain source ablations, exclusions and limits. Do not claim a new evaluation was run.`,
-      chat: "",
-    })) || []),
-    {
-      label: "Starter · filings × contracts",
-      title: "Where do independent signals meet?",
-      question:
-        "Compare insider filings and federal contract awards for a joined ticker. First ask which ticker and date range, check coverage and public-availability dates, then propose a convergence test. Do not infer causality.",
-      chat: "",
-    },
-    {
-      label: "Starter · all available layers",
-      title: "Build an evidence map",
-      question:
-        "Help me investigate a company across available data layers. Ask for the company and scope, inspect source availability, and distinguish records, market observations and unverified signals. Label sources, as-of, latency and missing coverage.",
-      chat: "",
-    },
-  ].slice(0, 4);
   const submit = () => {
     if (!ask.busy && ask.status?.configured && ask.draft.trim()) void ask.run(ask.draft);
   };
@@ -236,14 +201,23 @@ export function ResearchHome({
               </div>
             </div>
           )}
+          <ResearchQuestionGuide
+            key={ask.chatId || ask.turns[0]?.id || "new"}
+            records={catalog?.experiments || []}
+            busy={ask.busy}
+            draft={ask.draft}
+            hasConversation={ask.turns.length > 0}
+            onDraft={ask.setDraft}
+          />
           <div className="research-composer">
             <label className="research-question-label" htmlFor="research-question">
               Your research question
             </label>
             <textarea
               id="research-question"
+              aria-describedby="research-question-length"
               value={ask.draft}
-              maxLength={800}
+              maxLength={QUESTION_LIMIT}
               onChange={(e) => ask.setDraft(e.target.value)}
               placeholder="Ask about a company, explore a signal, or test an idea…"
               onKeyDown={(e) => {
@@ -253,6 +227,9 @@ export function ResearchHome({
                 }
               }}
             />
+            <p id="research-question-length" className="research-question-length">
+              {ask.draft.length}/{QUESTION_LIMIT} characters · review your draft, then Send
+            </p>
             <div className="research-composer-controls">
               <label>
                 Sources
@@ -333,25 +310,17 @@ export function ResearchHome({
             )}
           </div>
           {!ask.turns.length && (
-            <details className="research-starters">
-              <summary>Need a starting point?</summary>
-              <div className="research-recommendations">
-                {suggestions.map((s, i) => (
-                  <button
-                    key={`${s.title}-${i}`}
-                    onClick={() => {
-                      ask.setDraft(s.question);
-                      ask.setAttachId(s.chat);
-                      document.getElementById("research-question")?.focus();
-                    }}
-                  >
-                    <strong>{s.title}</strong>
-                    <small>{s.label}</small>
-                  </button>
-                ))}
-              </div>
-              <p>Suggested prompts, not findings. Selecting one fills the question box.</p>
-            </details>
+            <ResearchContextStarters
+              chats={ask.chats}
+              chatId={ask.chatId}
+              notebooks={catalog?.notebooks || []}
+              plans={catalog?.plans || []}
+              onSelect={(question, chat) => {
+                ask.setDraft(question);
+                ask.setAttachId(chat);
+                document.getElementById("research-question")?.focus();
+              }}
+            />
           )}
         </div>
         <details className="research-reference">

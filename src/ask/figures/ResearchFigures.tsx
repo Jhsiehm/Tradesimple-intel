@@ -2,8 +2,11 @@ import { useId, useMemo, useState } from "react";
 import type { ResearchFigure } from "../../../shared/researchFigures.mjs";
 import type { Step } from "../types";
 import { ResearchFigureView } from "./ResearchFigureView";
+import { StudyReview } from "./StudyReview";
+import { figureGroups } from "./model";
 import "./figures.css";
 import "./figure-picker.css";
+import "./study-review.css";
 
 export function ResearchFigures({
   figures,
@@ -21,6 +24,7 @@ export function ResearchFigures({
   const available = figures.slice(0, 12);
   const current = Math.min(selected, Math.max(0, available.length - 1));
   const displayed = showAll ? available : available.slice(current, current + 1);
+  const groups = figureGroups(displayed);
   if (!figures.length) return null;
   return (
     <div className="research-figures" role="region" aria-label="Interactive research figures">
@@ -50,8 +54,20 @@ export function ResearchFigures({
           {showAll ? `${available.length} figures` : `${current + 1} of ${available.length}`}
         </span>
       </div>
-      {displayed.map((figure) => (
-        <ResearchFigureView key={figure.id} figure={figure} steps={byId} onChip={onChip} />
+      {groups.map((group) => (
+        <div className="rf-group" key={group.key}>
+          {group.review ? (
+            <StudyReview review={group.review} steps={byId} onChip={onChip} />
+          ) : (
+            <p className="rf-review-unavailable">
+              Study comparison checks are not attached to these figures. Review the notes and sources before comparing
+              studies.
+            </p>
+          )}
+          {group.figures.map((figure) => (
+            <ResearchFigureView key={figure.id} figure={figure} steps={byId} onChip={onChip} />
+          ))}
+        </div>
       ))}
       {figures.length > 12 ? <p className="rf-notice">Showing the first 12 figures.</p> : null}
     </div>

@@ -11,6 +11,7 @@ import {
 import { auditFigures } from "./researchFiguresAudit.mjs";
 import { workflowFigures, observationFigures } from "./researchFiguresWorkflow.mjs";
 import { backtestFigures } from "./researchFiguresLegacy.mjs";
+import { cleanFigureReview } from "./researchFiguresReview.mjs";
 
 const adapters = {
   research_audit_saved_studies: auditFigures,
@@ -126,6 +127,8 @@ export function cleanResearchFigures(raw) {
       notes: Array.isArray(figure.notes) ? figure.notes.slice(0, 16).filter((note) => typeof note === "string") : [],
     });
     if (clean) {
+      const review = cleanFigureReview(figure.review, clean.sourceRefs);
+      if (review) clean.review = review;
       figures.push(clean);
       seen.add(figure.id);
     }

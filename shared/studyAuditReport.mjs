@@ -19,11 +19,25 @@ const ledger = (value) =>
 /** Conservative fallback when a model's saved-study narrative retains grounding errors after revision. */
 export function studyAuditReport(evidence) {
   const audits = savedAuditResults(evidence);
-  if (!audits.some((audit) => audit.body.studies.length)) return null;
+  if (!audits.some((audit) => audit.body.studies.length || audit.body.discovery?.unresolvedNames?.length)) return null;
   const lines = [
     "The narrative retained verification problems, so this answer shows the recorded evidence and its limits. It is an inspection of saved results; no new backtest or calculation replay was performed.",
   ];
   for (const { id, body } of audits) {
+    if (body.selection === "studyNames") {
+      lines.push(
+        "",
+        `Named-study selection used exact saved title/dataset-name or ticker matches in the bounded inventory. [${id}]`,
+      );
+      for (const item of body.discovery?.requestedNames || [])
+        lines.push(
+          `${cell(item.requested)}: ${cell(item.status)}${item.selectedId ? ` — ${cell(item.selectedId)}` : `; ${number(item.candidateCount)} candidate records; supply an exact experiment ID`}. [${id}]`,
+        );
+      if (body.discovery?.unresolvedNames?.length)
+        lines.push(
+          `No unrelated studies were substituted for unresolved names. A missing bounded match does not establish that the study never existed. [${id}]`,
+        );
+    }
     if (body.selection === "latest-per-dataset")
       lines.push(
         "",
@@ -72,6 +86,12 @@ export function studyAuditReport(evidence) {
       lines.push(
         `Comparison fields missing: ${body.comparison.missingFields.map(cell).join(", ")}; equivalence is not established. [${id}]`,
       );
+    if (body.comparison?.readiness) {
+      const readiness = body.comparison.readiness;
+      lines.push("", `Comparison readiness: ${cell(readiness.status)} — ${cell(readiness.summary)} [${id}]`);
+      for (const item of readiness.reasons || []) lines.push(`${cell(item.label)} [${id}]`);
+      for (const item of readiness.missingEvidence || []) lines.push(`Missing evidence: ${cell(item.label)} [${id}]`);
+    }
     lines.push(
       `This supports description of saved results and assumptions, not causal effects, predictive skill or an investable edge. [${id}]`,
     );

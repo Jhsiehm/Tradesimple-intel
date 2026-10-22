@@ -38,3 +38,8 @@
   font-size: var(--text-meta);
   font-variant-numeric: tabular-nums;
 }
+.rf-group {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}

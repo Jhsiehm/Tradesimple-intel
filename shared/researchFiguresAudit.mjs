@@ -1,14 +1,5 @@
 import { count, text, point, pointer, human, object } from "./researchFiguresCore.mjs";
-
-function studyLabel(study, index) {
-  const symbol = Array.isArray(study.symbols)
-    ? study.symbols
-        .map((s) => text(s))
-        .filter(Boolean)
-        .join("/")
-    : "";
-  return `${symbol || text(study.title) || "Study"} · ${text(study.id) || index + 1}`;
-}
+import { auditFigureReview, auditStudyLabels } from "./researchFiguresReview.mjs";
 function warnings(body, studies) {
   const notes = [
     "Recorded saved results; this inspection did not rerun a backtest or independently replay arithmetic.",
@@ -43,9 +34,21 @@ export function auditFigures(entry, body) {
     ref = entry.id;
   if (studies.some((study) => !object(study))) return [];
   if (!studies.length) return [];
-  const notes = warnings(body, studies),
-    labels = studies.map(studyLabel);
-  const base = { kind: "bar", xLabel: "Saved study", sourceRefs: [ref], totalPoints: studies.length, notes };
+  const labels = auditStudyLabels(studies),
+    review = auditFigureReview(entry, body, studies, labels);
+  const notes = review
+    ? [
+        "Recorded saved results; no new backtest or replay. Study review above states comparison, coverage and timing limits.",
+      ]
+    : warnings(body, studies);
+  const base = {
+    kind: "bar",
+    xLabel: "Saved study",
+    sourceRefs: [ref],
+    totalPoints: studies.length,
+    notes,
+    ...(review ? { review } : {}),
+  };
   const values = (key) =>
     studies.map((study, i) =>
       point(
@@ -53,7 +56,7 @@ export function auditFigures(entry, body) {
         `/studies/${i}/stats/${key}`,
         labels[i],
         study.calculation?.status === "completed-as-recorded" ? study.stats?.[key] : null,
-        `${text(study.window?.resultFrom, "unknown")} to ${text(study.window?.resultTo, "unknown")}; recorded, not replayed`,
+        `${text(study.id)} · ${text(study.window?.resultFrom, "unknown")} to ${text(study.window?.resultTo, "unknown")}; recorded, not replayed`,
       ),
     );
   const figures = [
@@ -100,14 +103,14 @@ export function auditFigures(entry, body) {
         id: key,
         label,
         points: studies.map((study, i) =>
-          point(ref, `/studies/${i}/coverage/${key}`, labels[i], count(study.coverage?.[key])),
+          point(ref, `/studies/${i}/coverage/${key}`, labels[i], count(study.coverage?.[key]), text(study.id)),
         ),
       })),
       {
         id: "signals",
         label: "Selected signals",
         points: studies.map((study, i) =>
-          point(ref, `/studies/${i}/counts/signals`, labels[i], count(study.counts?.signals)),
+          point(ref, `/studies/${i}/counts/signals`, labels[i], count(study.counts?.signals), text(study.id)),
         ),
       },
     ],
@@ -156,7 +159,13 @@ export function auditFigures(entry, body) {
         id: text(study.id, String(i)),
         label: labels[i],
         points: reasons.map((key) =>
-          point(ref, `/studies/${i}/exclusions/${pointer(key)}`, human(key), count(study.exclusions?.[key])),
+          point(
+            ref,
+            `/studies/${i}/exclusions/${pointer(key)}`,
+            human(key),
+            count(study.exclusions?.[key]),
+            text(study.id),
+          ),
         ),
       })),
     });

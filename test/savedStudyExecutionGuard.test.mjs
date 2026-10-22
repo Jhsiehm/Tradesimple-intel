@@ -47,11 +47,11 @@ async function ask(question, requested, extra = {}) {
 }
 
 test("saved review with returns/graph vocabulary refuses both fresh computations at dispatch", async () => {
-  assert.deepEqual(savedStudyAuditArgs(question), {});
+  assert.deepEqual(savedStudyAuditArgs(question), { studyNames: ["LMT", "HII"] });
   assert.equal(
     researchRouting(question).intent.route,
-    "legacy",
-    "the incidental vocabulary reproduces the classifier collision",
+    "conversation",
+    "pure saved inspection stays conversational despite incidental return vocabulary",
   );
   const result = await ask(question, [backtest, search], {
     priors: [{ source: "congress", filters: {}, rules: {} }],
@@ -92,4 +92,35 @@ test("inspection-only dispatch guard overrides compatible source vocabulary with
   assert.match(researchToolRefusal(intent, "run_backtest", backtest.args), /inspection of saved evidence/);
   assert.match(researchToolRefusal(intent, "search_signals", search.args), /inspection of saved evidence/);
   assert.equal(researchToolRefusal(intent, "research_audit_saved_studies", {}), "");
+});
+test("negated fresh executions keep saved inspection and block composed study creation/execution at dispatch", async () => {
+  const requested = [
+    { type: "tool_call", id: "create", name: "research_create_investigation", args: { title: "Replacement" } },
+    {
+      type: "tool_call",
+      id: "execute",
+      name: "research_run_investigation",
+      args: { investigationId: "inv_replacement" },
+    },
+    backtest,
+  ];
+  for (const text of [
+    "Review my saved LMT studies, but do not run a new analysis.",
+    "Inspect my saved LMT studies; do not execute a new backtest.",
+    "Review my saved LMT studies; never perform a new study.",
+  ]) {
+    const result = await ask(text, requested);
+    assert.deepEqual(
+      result.calls.map((call) => call.name),
+      ["research_audit_saved_studies"],
+      text,
+    );
+    assert.deepEqual(result.calls[0].args, { studyNames: ["LMT"] });
+    assert.deepEqual(result.done.backtests, []);
+    assert.equal(
+      result.events.filter((event) => event.type === "plan_note" && /Incompatible calculation blocked/.test(event.note))
+        .length,
+      requested.length,
+    );
+  }
 });

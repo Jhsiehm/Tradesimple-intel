@@ -140,6 +140,26 @@ export function studyAuditClaims(answer, evidence, question = "") {
   }
   const refs = audits.map((audit) => audit.id),
     studies = allStudies;
+  for (const audit of audits) {
+    for (const item of audit.body.discovery?.requestedNames || []) {
+      if (item.status === "matched") continue;
+      const needle = String(item.requested).toLowerCase();
+      if (
+        !units.some(
+          (unit) =>
+            unit.text.toLowerCase().includes(needle) &&
+            /unmatched|ambiguous|not found|not resolved|unresolved|no exact match|could not (?:find|match|resolve)|missing/i.test(
+              unit.text,
+            ),
+        )
+      )
+        add(
+          "Unresolved named-study selection",
+          [audit.id],
+          `Requested study ${item.requested} is ${item.status} in the bounded saved inventory. Disclose that selection gap and request an exact experiment ID; no unrelated study is a substitute.`,
+        );
+    }
+  }
   for (const study of studies) {
     const relevant = units.filter((unit) => belongs(unit, study));
     const name = (study.symbols || []).join("/") || study.id;
