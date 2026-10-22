@@ -10,6 +10,8 @@ export type ResearchIntent = {
   allowedSources: string[];
   windows: string[];
   benchmark: string | null;
+  /** Set by task orchestration for an explicit saved-evidence inspection; overrides replay vocabulary. */
+  inspectionOnly?: boolean;
 };
 export const RESEARCH_ROUTING_VERSION: number;
 export function researchWords(question: unknown): string;

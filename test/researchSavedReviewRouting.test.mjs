@@ -111,7 +111,8 @@ test("a model cannot replace saved-study inspection with a fresh backtest", asyn
   });
   assert.deepEqual(calls, [{ name: "research_audit_saved_studies", args: {} }]);
   assert.deepEqual(events.findLast((event) => event.type === "done").backtests, []);
-  assert.match(JSON.stringify(seen), /evidence inspection, not an executable signal replay/);
+  assert.match(JSON.stringify(seen), /inspection of saved evidence/);
+  assert.ok(events.some((event) => event.type === "plan_note" && /Incompatible calculation blocked/.test(event.note)));
 });
 
 test("explicit new execution is not downgraded to saved-record inspection", () => {

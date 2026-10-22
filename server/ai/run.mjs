@@ -2,6 +2,8 @@ import { createQuickReply, handleQuickQuestion } from "./quickReply.mjs";
 import { canPlanInvestigation, investigationPlanningNote } from "./investigationPlanning.mjs";
 import { OWNER_RESEARCH_TOOL_NAMES } from "../../shared/investigationAccess.mjs";
 import { savedStudyAuditArgs, STUDY_AUDIT_NOTE } from "./studyAuditPlanning.mjs";
+import { researchFigures } from "../../shared/researchFigures.mjs";
+import { RESEARCH_VISUAL_NOTE } from "./researchVisualNote.mjs";
 import { researchRouting, assessmentAnswer, researchScopeNote } from "./researchRouting.mjs";
 import { researchToolRefusal } from "../../shared/researchCompatibility.mjs";
 import { ASK_LIMITS, caveatsFor, evidenceOf, systemPrompt, toolMessage, trimForModel } from "../../shared/ask.mjs";
@@ -147,6 +149,10 @@ export async function runAsk({
     context,
     env: researchEnv,
   });
+  if (savedReview) {
+    research.intent = { ...research.intent, inspectionOnly: true };
+    research.assessment = null;
+  }
   log({ event: "research_route", intent: research.intent, status: research.assessment?.status || "resolved" });
   const investigationMode = canPlanInvestigation(research.assessment, activeTools, memory, modes.sourcing);
   if (research.assessment && !investigationMode)
@@ -170,7 +176,7 @@ export async function runAsk({
   // A follow-up on a turn that ran several sources changes each of them (or only the ones it names), all re-run here.
   const priorList = savedReview ? [] : priors?.length ? priors : prior ? [prior] : [];
   const lastPrior = priorList.at(-1) || null;
-  const follow = research.intent.route === "legacy" && isFollowUp(question, lastPrior);
+  const follow = !savedReview && research.intent.route === "legacy" && isFollowUp(question, lastPrior);
   const planned =
     follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
   // A follow-up that sets no spec field ("why did contracts do better?") goes to the model; one that changes nothing says which value already matched.
@@ -193,15 +199,17 @@ export async function runAsk({
         : [];
   if (multi && !reruns.length) return quick(outcome.text);
   for (const note of multi?.notes || []) emit({ type: "plan_note", note });
-  const plan = handOff
+  const plan = savedReview
     ? null
-    : multi
-      ? reruns.length === 1
-        ? reruns[0]
-        : null
-      : (wantsBacktest(question) && research.intent.route === "legacy") || follow
-        ? buildSpec({ question, today, prefs, prior: lastPrior, answers })
-        : null;
+    : handOff
+      ? null
+      : multi
+        ? reruns.length === 1
+          ? reruns[0]
+          : null
+        : (wantsBacktest(question) && research.intent.route === "legacy") || follow
+          ? buildSpec({ question, today, prefs, prior: lastPrior, answers })
+          : null;
   if (plan && !multi) {
     const questions = clarifyQuestions({ question, today, prefs, prior: lastPrior, answers, acceptDefaults });
     if (questions.length) {
@@ -258,6 +266,7 @@ export async function runAsk({
     researchScopeNote(research.intent),
     investigationMode ? investigationPlanningNote(research.assessment) : "",
     has("research_audit_saved_studies") ? STUDY_AUDIT_NOTE : "",
+    RESEARCH_VISUAL_NOTE,
     savedReview
       ? "This turn requests saved-study inspection. Earlier chat messages provide context, not frozen evidence or an instruction to rerun earlier strategies. Match the saved evidence to the current question."
       : "",
@@ -677,6 +686,7 @@ export async function runAsk({
   emit({
     type: "done",
     answer,
+    figures: researchFigures(evidence, raws),
     cited,
     unknown,
     grounding,

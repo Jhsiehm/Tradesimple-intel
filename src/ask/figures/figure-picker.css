@@ -1,0 +1,40 @@
+.rf-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  font: var(--text-ui) / var(--leading-ui) var(--font-ui);
+  color: var(--ink);
+}
+.rf-picker select {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 5px 26px 5px 8px;
+  border: 1px solid var(--control-border);
+  color: var(--ink);
+  background: var(--bg);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+.rf-picker-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  cursor: pointer;
+}
+.rf-picker input {
+  accent-color: var(--cyan);
+}
+.rf-picker :is(select, input):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.rf-picker-count {
+  color: var(--dim);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+}

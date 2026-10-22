@@ -1,0 +1,259 @@
+.research-figures {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.research-figure {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font: var(--text-ui) / var(--leading-ui) var(--font-ui);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.research-figure :is(p, h4, ul) {
+  margin: 0;
+}
+.rf-head,
+.rf-actions,
+.rf-legend,
+.rf-selection > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rf-head {
+  justify-content: space-between;
+  align-items: baseline;
+}
+.rf-head h4 {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-ui);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.rf-actions {
+  gap: 6px;
+}
+.research-figure button {
+  min-height: 30px;
+  padding: 4px 8px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.research-figure button:hover:not(:disabled) {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+.research-figure :is(button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.rf-views {
+  display: inline-flex;
+}
+.rf-views button + button {
+  margin-left: -1px;
+}
+.rf-views button[aria-pressed="true"] {
+  color: var(--cyan);
+  background: var(--surface-selected);
+  border-color: var(--cyan);
+  position: relative;
+}
+.rf-axis-labels,
+.rf-scope,
+.rf-notice,
+.rf-sources,
+.rf-notes,
+.rf-export-status {
+  color: var(--dim);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.rf-legend {
+  gap: 6px;
+}
+.rf-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.rf-legend button[aria-pressed="false"] {
+  color: var(--dim);
+  border-style: dashed;
+  text-decoration: line-through;
+}
+.rf-legend button[aria-pressed="false"] svg {
+  opacity: 0.45;
+}
+.rf-legend button:disabled {
+  cursor: default;
+}
+.rf-plot {
+  min-width: 0;
+  max-height: 380px;
+  overflow: auto;
+  background: var(--bg);
+  scrollbar-color: var(--line) var(--bg);
+  scrollbar-width: thin;
+}
+.rf-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.rf-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+.rf-grid text,
+.rf-axis,
+.rf-category,
+.rf-missing {
+  fill: var(--dim);
+  font: 11px var(--font-ui);
+}
+.rf-category {
+  fill: var(--ink);
+}
+.rf-zero {
+  stroke: var(--dim);
+  stroke-width: 1;
+}
+.rf-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.rf-hit {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+.rf-point {
+  cursor: crosshair;
+  outline: none;
+}
+.rf-point.is-selected .rf-hit,
+.rf-point:focus-visible .rf-hit {
+  stroke: var(--cyan);
+  stroke-width: 1.5;
+}
+.rf-selection {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--line);
+}
+.rf-selection > div {
+  justify-content: space-between;
+}
+.rf-selection strong {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+.rf-selection p {
+  color: var(--dim);
+  overflow-wrap: anywhere;
+  font-size: var(--text-meta);
+}
+.rf-provenance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.research-figure code {
+  color: var(--dim);
+  font: var(--text-meta) / 1.5 var(--font-mono);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.research-figure figcaption {
+  display: grid;
+  gap: 6px;
+}
+.research-figure .rf-notes {
+  padding-left: 18px;
+  list-style: disc;
+}
+.rf-data {
+  min-width: 0;
+}
+.rf-data > summary {
+  cursor: pointer;
+  padding-block: 6px;
+  color: var(--cyan);
+}
+.rf-table-wrap {
+  max-height: 340px;
+  overflow: auto;
+}
+.rf-data table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-meta);
+}
+.rf-data caption {
+  padding: 6px 0;
+  text-align: left;
+  color: var(--dim);
+}
+.rf-data :is(th, td) {
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-weight: var(--weight-regular);
+}
+.rf-data thead th {
+  color: var(--dim);
+}
+.rf-data th button {
+  border: 0;
+  padding: 0;
+  text-align: left;
+  min-width: 120px;
+}
+.rf-data :is(small, code) {
+  display: block;
+  margin-top: 3px;
+  max-width: 36ch;
+  color: var(--dim);
+}
+.rf-data .numeric {
+  text-align: right;
+  white-space: nowrap;
+}
+.rf-data tr.is-selected {
+  background: var(--surface-selected);
+}
+.rf-export-status:empty {
+  display: none;
+}
+@media (max-width: 600px) {
+  .rf-head {
+    display: grid;
+    gap: 10px;
+  }
+  .research-figure button {
+    min-height: 36px;
+  }
+}

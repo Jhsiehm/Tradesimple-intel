@@ -1,0 +1,13 @@
+import type { FigureEvidence, ResearchFigure, ResearchFigurePoint } from "./researchFigures.mjs";
+export const FIGURE_LIMITS: Readonly<{ figures: 6; points: 240; rows: 120; evidence: 32; text: 240 }>;
+export function object(value: unknown): value is Record<string, unknown>;
+export function finite(value: unknown): value is number;
+export function validRef(value: unknown): value is string;
+export function number(value: unknown): number | null;
+export function count(value: unknown): number | null;
+export function text(value: unknown, fallback?: string): string;
+export function pointer(value: unknown): string;
+export function human(value: unknown): string;
+export function point(ref: string, path: string, label: string, value: unknown, detail?: string): ResearchFigurePoint;
+export function finishFigure(figure: ResearchFigure): ResearchFigure | null;
+export function evidenceBody(entry: FigureEvidence, rawBodies?: Map<string, unknown>): Record<string, unknown> | null;

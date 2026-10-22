@@ -15,6 +15,7 @@ import type { Reused } from "../../shared/answerCache.mjs";
 import type { SlotMissing } from "../../shared/slots.mjs";
 import type { Spend } from "../../shared/spend.mjs";
 import type { Theory } from "../../shared/relations.mjs";
+import type { ResearchFigure } from "../../shared/researchFigures.mjs";
 
 /** What the server streams from POST /api/ask, and what a chat keeps. */
 export type Phase = "planning" | "fetching" | "computing" | "writing";
@@ -76,6 +77,7 @@ export type Done = {
     intent: import("../../shared/researchIntent.mjs").ResearchIntent;
   };
   answer: string;
+  figures?: ResearchFigure[];
   cited: string[];
   unknown: string[];
   grounding: {

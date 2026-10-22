@@ -99,6 +99,11 @@ test("Ask composes and executes a new multi-source study with the original quest
     assert.equal(s.state.saved.result.outputs.summary.preview[0].mean, 9.5);
     assert.equal(s.state.saved.result.outputs.summary.preview[0].n, 2);
     assert.ok(events.find((event) => event.type === "done").answer.includes("9.5"));
+    assert.ok(
+      events
+        .find((event) => event.type === "done")
+        .figures.some((figure) => figure.series.some((series) => series.points.some((point) => point.y === 9.5))),
+    );
     assert.equal(listInvestigations(s.db).items.length, 1);
   } finally {
     s.db.close();
@@ -287,6 +292,7 @@ test("the actual revenue/cost prompt can save a blocked descriptive design with 
     );
     assert.equal(listInvestigations(s.db).items.length, 1);
     assert.equal(events.findLast((event) => event.type === "done").backtests.length, 0);
+    assert.deepEqual(events.findLast((event) => event.type === "done").figures, []);
   } finally {
     s.db.close();
   }

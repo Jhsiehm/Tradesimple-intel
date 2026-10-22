@@ -2,6 +2,7 @@ import { cleanPrefs, mergePrefs, PREFS_KEY, type Prefs } from "../../shared/back
 import { stripRefs } from "../../shared/citations.mjs";
 import { ASK_SESSION_KEY, cleanSession, mergeSession } from "../../shared/askModes.mjs";
 import type { SavedChat, Step, Turn } from "./types";
+import { cleanResearchFigures } from "../../shared/researchFigures.mjs";
 
 /** Chats kept in this browser. v2 holds the step trace; v1 sheet chats and the old answer history migrate in once. */
 export const CHATS_KEY = "intel:ask:chats:v2";
@@ -49,7 +50,9 @@ const slimTurn = (t: Turn): Turn => ({
   ...t,
   text: t.text.slice(0, TEXT_CAP),
   steps: t.steps.map(slimStep),
-  done: t.done ? { ...t.done, answer: t.done.answer.slice(0, TEXT_CAP) } : null,
+  done: t.done
+    ? { ...t.done, answer: t.done.answer.slice(0, TEXT_CAP), figures: cleanResearchFigures(t.done.figures) }
+    : null,
 });
 
 function asTurn(raw: unknown): Turn | null {
@@ -59,6 +62,7 @@ function asTurn(raw: unknown): Turn | null {
   return {
     ...blankTurn(t.question),
     ...t,
+    done: t.done ? { ...t.done, figures: cleanResearchFigures(t.done.figures) } : null,
     steps: Array.isArray(t.steps) ? t.steps : [],
     notes: Array.isArray(t.notes) ? t.notes : [],
     phase: t.phase === "error" ? "error" : "done",
