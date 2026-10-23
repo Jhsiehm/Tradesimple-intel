@@ -52,6 +52,7 @@ export const MANIFEST = [
   { id: 'research.contractJobPause', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/pause' },
   { id: 'research.contractJobFreeze', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/freeze' },
   { id: 'research.contractJobExport', path: '/api/research/contract-jobs/:id(ev_[a-f0-9]+)/export' },
+  { id: 'research.trial', path: '/api/research/trials/:id(trial_[a-f0-9]+)' },
   { id: 'research.context', path: '/api/research/context' },
   { id: 'research.notebooks', path: '/api/research/notebooks' },
   { id: 'research.notebookExport', path: '/api/research/notebooks/:id(nb_[a-f0-9]+)/export' },

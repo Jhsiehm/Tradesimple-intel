@@ -1,6 +1,6 @@
 /**
  * Signal builders. Pure: records and lookups in, backtest signals out. Each signal's `signalDate` is the date
- * the record became public (filing, Form 4 filing, contract publication, LDA posting), never the event date.
+ * source-derived public date, or assumed publication date for contracts, never the event date.
  */
 import { amountMid, dayOf, isoOf } from "../../../shared/backtest.mjs";
 import { publicDateOf } from "../../../shared/disclosures.mjs";
@@ -78,7 +78,7 @@ function excluded(f, person, bioguide) {
 
 /**
  * True when `symbol` got a contract action within `days` after the trade AND that action was public (action date plus
- * the feed's posting lag) by the day the trade itself became public, so the rule could have been followed then.
+ * the feed's posting lag) by the day the trade itself became public, under that assumed delay; this does not establish actual historical availability.
  */
 export function awardFollowed(awards, symbol, tradeDay, publicDay, days) {
   return (awards?.get(symbol) || []).some((a) => a.day > tradeDay && a.day <= tradeDay + days && a.publicDay <= publicDay);
@@ -124,6 +124,7 @@ export function congressSignals({ trades, filters: f, sectorOf, committee = null
       id: t.id,
       symbol: t.symbol,
       signalDate: publicDate,
+      availabilityBasis: "source-derived-public-date",
       filedDate: t.filed,
       tradeDate: t.traded,
       side: t.side,
@@ -190,6 +191,7 @@ export function form4Signals({ rows, filters: f, sectorOf }) {
       id: r.id,
       symbol: r.symbol,
       signalDate: r.filed,
+      availabilityBasis: "source-derived-public-date",
       tradeDate: r.traded,
       side,
       sizeHint: r.value || null,
@@ -234,7 +236,7 @@ export function contractSignals({ rows, filters: f, sectorOf }) {
       id: r.id || `${r.award}:${r.date}`,
       symbol: r.symbol,
       signalDate,
-      tradeDate: r.date,
+      availabilityBasis: "assumed-publication-lag",      tradeDate: r.date,
       side: "buy",
       sizeHint: r.amount,
       sizeIsRange: false,
@@ -282,6 +284,7 @@ export function lobbySignals({ filingsBySymbol, filters: f, sectorOf }) {
         id: `lda:${symbol}:${keys[i]}`,
         symbol,
         signalDate: posted,
+        availabilityBasis: "source-derived-public-date",
         tradeDate: q.periodEnd || posted,
         side: "buy",
         sizeHint: now,

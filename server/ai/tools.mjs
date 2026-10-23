@@ -92,9 +92,22 @@ export function summarizeBacktest(out) {
   const info = (out.caveats?.items || []).filter((c) => c.level !== "warn").map((c) => c.text);
   const s = out.stats || {};
   const c = out.counts || {};
+  const validity = out.dataValidity;
+  const prices = validity?.priceCoverage;
+  const dataValidity = validity ? { ...validity,
+    sourceCoverage: { declared: validity.sourceCoverage.declared, certification: validity.sourceCoverage.certification,
+      gaps: validity.sourceCoverage.gaps, selection: validity.sourceCoverage.selection },
+    priceCoverage: prices ? { ...Object.fromEntries(['requested', 'loaded', 'absent', 'pending', 'missing', 'stale'].map(key => [key, prices[key].length])),
+      invalidRows: prices.series.reduce((n, series) => n + series.invalidRows, 0), sessionCompleteness: prices.sessionCompleteness,
+      adjustmentValidation: prices.adjustmentValidation, delistedCoverage: prices.delistedCoverage } : null
+  } : null;
   return {
     ok: true,
     description: out.description,
+    dataValidity,
+    executionAssessment: out.executionAssessment || null,
+    trial: out.trial || null,
+    claimPolicy: 'Exploratory simulation only. Do not claim a verified tradable, causal or predictive edge. Withheld statistical diagnostics cannot support significance claims.',
     spec: out.spec,
     counts: countsForModel(c),
     stats: {
@@ -111,7 +124,7 @@ export function summarizeBacktest(out) {
     asOf: out.asOf,
     latency: out.latency,
     cache: out.cache,
-    isItReal: out.reality ? { verdict: out.reality.verdict?.text, excessCI95Lo: out.reality.bootstrap?.meanExcess.lo ?? null, excessCI95Hi: out.reality.bootstrap?.meanExcess.hi ?? null, placeboBeatShare: out.reality.placebo?.pct ?? null, placeboP: out.reality.placebo?.p ?? null, clusteredT: out.reality.cluster?.t ?? null, effectiveTrades: out.reality.cluster?.nEff ?? null } : null
+    isItReal: out.reality?.inference?.status === 'withheld' ? { inference: out.reality.inference, verdict: out.reality.verdict?.text } : out.reality ? { inference: out.reality.inference, verdict: out.reality.verdict?.text, excessCI95Lo: out.reality.bootstrap?.meanExcess.lo ?? null, excessCI95Hi: out.reality.bootstrap?.meanExcess.hi ?? null, placeboBeatShare: out.reality.placebo?.pct ?? null, placeboP: out.reality.placebo?.p ?? null, clusteredT: out.reality.cluster?.t ?? null, effectiveTrades: out.reality.cluster?.nEff ?? null } : null
   };
 }
 

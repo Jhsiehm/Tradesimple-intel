@@ -29,7 +29,7 @@ export function backtestFormulas(run) {
   add("entry", "Entry rule",
     `t_{\\text{in}} = \\min\\{\\, d \\in \\text{trading days} : d > d_{\\text{public}} \\,\\},\\quad t_{\\text{in}} - d_{\\text{public}} \\le ${ENTRY_SLACK_DAYS},\\quad P_{\\text{in}} = \\text{${r.entry === "nextOpen" ? "Open" : "Close"}}(t_{\\text{in}})`,
     t ? `${tx(t.symbol)}:\\ d_{\\text{public}} = ${tx(t.signal)} \\Rightarrow t_{\\text{in}} = ${tx(t.entry)},\\ P_{\\text{in}} = ${fix(t.entryPrice)}` : "",
-    "The public date is the filing or posting date, never the trade date, so nothing enters before it was knowable.");
+    "Entry follows the recorded availability date. That date may be source-derived, importer-asserted or based on an assumed lag; this rule does not independently establish historical knowability.");
   add("exit", "Exit rule",
     `t_{\\text{out}} = \\min\\{\\, d \\ge t_{\\text{in}} : d - t_{\\text{in}} \\ge H${r.stopLossPct ? `\\ \\lor\\ s\\,(C_d/P_{\\text{in}} - 1) \\le -${r.stopLossPct / 100}` : ""}${r.takeProfitPct ? `\\ \\lor\\ s\\,(C_d/P_{\\text{in}} - 1) \\ge ${r.takeProfitPct / 100}` : ""} \\,\\},\\quad P_{\\text{out}} = C_{t_{\\text{out}}}`,
     t ? `H = ${r.holdDays}\\ \\text{days}:\\ ${tx(t.entry)} \\to ${tx(t.exit)}\\ (${t.days}\\ \\text{days}, ${tx(t.why)}),\\ P_{\\text{out}} = ${fix(t.exitPrice)}` : `H = ${r.holdDays}`,
@@ -44,10 +44,10 @@ export function backtestFormulas(run) {
     r.sizing === "amountMid" ? `w_i = \\min\\!\\left( \\frac{L_i + U_i}{2},\\ ${usd(SIZE_CAP)} \\right)\\quad \\text{(disclosed range } [L_i, U_i]\\text{)}` : "w_i = 1\\quad \\text{(equal weight)}",
     r.sizing === "amountMid" ? `\\text{e.g. } \\$15{,}001\\text{–}\\$50{,}000 \\Rightarrow w = \\frac{15001 + 50000}{2} = 32500.5${t?.weight ? `;\\ ${tx(t.symbol)}: w = ${fix(t.weight, 1)}` : ""}` : "w_i = 1\\ \\text{for all } i",
     r.sizing === "amountMid" ? "Ranges are disclosed, not amounts; the midpoint is an estimate. Missing amounts use the median size." : "");
-  add("daily", "Daily portfolio return",
+  add("daily", "Daily simulated return",
     `R_t = \\frac{\\sum_{i \\in O_t} w_i\\, r_{i,t}}{\\sum_{i \\in O_t} w_i},\\qquad R_t = 0 \\text{ when } O_t = \\varnothing`,
     `${s.sessions ?? "n"}\\ \\text{sessions},\\ \\text{average } ${fix(s.avgConcurrent, 2)}\\ \\text{open},\\ \\text{max } ${s.maxConcurrent}`,
-    `O_t is the set of positions open on day t; r_{i,t} is that day's close-to-close return (net of cost on the entry and exit day). The ${bench} leg holds the same weights on the same days.`);
+    `O_t is the set of signal paths with an observation on day t. Returns are signed changes between consecutive bars, with open-to-close on a next-open entry day and costs on the first/final path day. Missing bars remove that path from the daily weight denominator. The ${bench} leg uses the same weights on the same days. Funding, daily rebalance turnover and execution are not modeled.`);
   add("total", "Total return",
     "S_T = \\prod_{t=1}^{T} (1 + R_t),\\qquad \\text{Total} = S_T - 1",
     `S_T = ${fix(s.total == null ? null : 1 + s.total)} \\Rightarrow \\text{Total} = ${pct(s.total)}`);
@@ -72,14 +72,15 @@ export function backtestFormulas(run) {
     s.dailySd ? `\\frac{${fix(s.dailyMean, 6)}}{${fix(s.dailySd, 6)}} \\times ${fix(Math.sqrt(252), 4)} = ${fix(s.sharpeish, 2)}` : "\\text{n/a}",
     "Risk-free rate taken as 0; a rough score on a short, overlapping sample.");
   const q = run.reality;
-  if (q?.bootstrap) {
+  const inferenceAllowed = q?.inference?.status !== 'withheld';
+  if (q?.bootstrap && inferenceAllowed) {
     const b = q.bootstrap;
     add("bootstrap", "Block-bootstrap 95% interval",
       "\\bar e^{*(b)} = \\frac{\\sum_{j=1}^{W} \\sum_{i \\in w^{*}_{j}} e_i}{\\sum_{j=1}^{W} |w^{*}_{j}|},\\quad w^{*}_{j} \\sim \\text{Uniform}\\{w_1,\\dots,w_W\\},\\qquad \\text{CI} = \\big[\\bar e^{*}_{(0.025)},\\ \\bar e^{*}_{(0.975)}\\big]",
       `W = ${b.blocks}\\ \\text{entry weeks},\\ B = ${b.iters}:\\ \\bar r \\in [${pct(b.meanTrade.lo)}, ${pct(b.meanTrade.hi)}],\\ \\bar e \\in [${pct(b.meanExcess.lo)}, ${pct(b.meanExcess.hi)}]`,
       `Whole entry weeks (Monday-based) are resampled with replacement, so trades bunched in one week stay together. Seed ${q.seed} (mulberry32); the Replicate scripts draw the same sequence.`);
   }
-  if (q?.placebo) {
+  if (q?.placebo && inferenceAllowed) {
     const p = q.placebo;
     const span = p.window?.tradingDays;
     add("placebo", "Random-entry placebo",
@@ -87,7 +88,7 @@ export function backtestFormulas(run) {
       `\\bar e = ${pct(p.actual)},\\ K = ${p.iters},\\ \\text{placebo mean } ${pct(p.placeboMean)}\\ \\Rightarrow\\ \\text{pct} = ${pct(p.pct, 1)},\\ p = ${fix(p.p)}`,
       `Each trade keeps its ticker, side, benchmark and exit rules; its public date is redrawn from the ${span} trading days between the first and last real public date (up to 10 draws until the trade completes). Prices end at the last real exit. Seed ${p.seed}.`);
   }
-  if (q?.cluster && q.cluster.t != null) {
+  if (q?.cluster && q.cluster.t != null && inferenceAllowed) {
     const c = q.cluster;
     add("cluster", "t-statistic clustered by member",
       "\\text{SE}_{\\text{cl}} = \\frac{1}{N} \\sqrt{\\frac{G}{G-1} \\sum_{g=1}^{G} \\Big( \\sum_{i \\in g} (e_i - \\bar e) \\Big)^2},\\qquad t = \\frac{\\bar e}{\\max(\\text{SE}_{\\text{cl}},\\, \\text{SE}_{\\text{iid}})},\\ \\ \\text{df} = G - 1",

@@ -12,7 +12,7 @@ export function verifyNotebookArchive(directory){
  if(!manifest||typeof manifest!=='object'||Array.isArray(manifest))throw Error('Invalid checksum manifest.');
  for(const required of ['notebook.json','verify.mjs','README.txt'])if(!manifest[required])throw Error(`Missing manifest entry: ${required}`);
  for(const [name,digest] of Object.entries(manifest)){
-  if(!/^(notebook\.json|verify\.mjs|README\.txt|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/.test(name))throw Error('Unsafe archive path.');
+  if(!/^(notebook\.json|verify\.mjs|README\.txt|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|trials\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/.test(name))throw Error('Unsafe archive path.');
   if(hash(read(name))!==digest)throw Error(`Checksum mismatch: ${name}`);
  }
  const bundle=JSON.parse(read('notebook.json'));

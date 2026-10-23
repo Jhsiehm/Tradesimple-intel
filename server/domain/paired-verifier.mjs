@@ -76,7 +76,7 @@ export function verifyPairedDirectory(directory){
  const manifest=JSON.parse(read('checksums.json'));
  check(manifest&&typeof manifest==='object'&&!Array.isArray(manifest),'Invalid paired checksum manifest.');
  for(const name of ['pair.json','verify.mjs','README.txt'])check(manifest[name],`Missing manifest entry: ${name}`);
- const allowed=/^(pair\.json|verify\.mjs|README\.txt|notebooks\/nb_[a-f0-9]+-r[1-9][0-9]*\/(notebook\.json|verify\.mjs|README\.txt|checksums\.json|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs)))$/;
+ const allowed=/^(pair\.json|verify\.mjs|README\.txt|notebooks\/nb_[a-f0-9]+-r[1-9][0-9]*\/(notebook\.json|verify\.mjs|README\.txt|checksums\.json|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|trials\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs)))$/;
  for(const [name,digest] of Object.entries(manifest)){
   check(allowed.test(name),'Unsafe paired archive path.');
   check(hash(read(name))===digest,`Checksum mismatch: ${name}`);

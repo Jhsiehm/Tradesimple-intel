@@ -1,3 +1,4 @@
+import { assessResearchDataValidity } from "../../../shared/researchDataValidity.mjs";
 /** Reads the feeds a backtest's signals come from and hands the records to signals.mjs. No ranking, no joins of its own. */
 import { listTickers, tickerBySymbol } from "../../lib/db.mjs";
 import { pool } from "../../lib/pool.mjs";
@@ -34,7 +35,7 @@ export async function contractAwards(db, { feedFn = contractFeed } = {}) {
 }
 
 /** Congressional trades → signals. `error` is set when a filter cannot be honoured (unknown committee, hearing index missing). */
-export async function congressSource(db, f) {
+async function congressSourceRecords(db, f) {
   const board = await congressTrades(db).catch(() => null);
   if (!board?.items?.length) return { error: board?.errors?.[0] || "Congressional trades are not loaded yet. Try again in a minute.", building: Boolean(board?.building) };
   const feeds = [feed("Signals", board)];
@@ -67,7 +68,7 @@ export async function congressSource(db, f) {
     if (!got.count) return { error: got.res.error || "No contract actions came back from USAspending; the award filter needs them." };
     awards = got.awards;
     feeds.push(feed("Contracts", got.res));
-    notes.push({ level: "warn", id: "awardSample", text: `Award filter: a contract action to the same company within ${f.awardWithinDays} days after the trade, among USAspending's ${got.count} largest actions of the last 365 days (a sample of big awards, not every award), counted only when the award was public (action date + 90 days for Defense, + 7 civilian) by the day the trade was disclosed.` });
+    notes.push({ level: "warn", id: "awardSample", text: `Award filter: a contract action to the same company within ${f.awardWithinDays} days after the trade, among USAspending's ${got.count} largest actions of the last 365 days (a sample of big awards, not every award), counted only when its assumed public date (action date + 90 days for Defense, + 7 civilian) precedes disclosure. Actual historical availability is unverified.` });
   }
   const out = congressSignals({ trades: board.items, filters: f, sectorOf: sectorLookup(db), committee, lanes, hearings, awards });
   const h = board.progress?.house;
@@ -75,7 +76,7 @@ export async function congressSource(db, f) {
   return {
     signals: out.signals,
     records: board.items,
-    coverage: { kind: 'congress-disclosures', from: board.from || null, progress: board.progress || null, building: Boolean(board.building), completeness: 'not-certified' },
+    coverage: { kind: 'congress-disclosures', from: board.from || null, progress: board.progress || null, failures: board.errors || [], auxiliary: f.awardWithinDays ? { contracts: { completeness: 'sample', perRequestLimit: 100, windowDays: 365 } } : null, building: Boolean(board.building), completeness: 'not-certified' },
     dropped: out.dropped,
     feeds,
     building: Boolean(board.building),
@@ -102,7 +103,7 @@ const few = (xs, n = 8) => `${xs.slice(0, n).join(", ")}${xs.length > n ? "…" 
  * Form 4 history for the spec's window (the board's latest eight per issuer would leave every buy inside its hold).
  * Reads that miss `deadline` keep filling the cache; the run says how many and is not cached as complete.
  */
-export async function form4Source(db, f, { deadline = 0, history = insiderHistory } = {}) {
+async function form4SourceRecords(db, f, { deadline = 0, history = insiderHistory } = {}) {
   const from = f.from || daysAgo(FORM4_DEFAULT_DAYS);
   const res = await history(db, { from, to: f.to, deadline, symbols: f.tickers }).catch((err) => ({ items: [], errors: [err.message], filings: { wanted: 0, read: 0, failed: 0, pending: 0 }, coverage: { shortList: [], capped: [] } }));
   if (!res?.items?.length) {
@@ -115,7 +116,7 @@ export async function form4Source(db, f, { deadline = 0, history = insiderHistor
   return {
     signals: out.signals,
     records: res.items,
-    coverage: { kind: 'form4-history', from, to: f.to || null, filings: res.filings, issuers: res.issuers ?? null, providerCoverage: res.coverage, building: Boolean(res.building), completeness: 'not-certified' },
+    coverage: { kind: 'form4-history', from, to: f.to || null, filings: res.filings, issuers: res.issuers ?? null, providerCoverage: res.coverage, store: res.store || null, failures: res.errors || [], building: Boolean(res.building), completeness: 'not-certified' },
     dropped: out.dropped,
     feeds: [feed("Signals", res)],
     building: Boolean(res.building),
@@ -135,7 +136,7 @@ export async function form4Source(db, f, { deadline = 0, history = insiderHistor
   };
 }
 
-export async function contractsSource(db, f) {
+async function contractsSourceRecords(db, f) {
   const symbols = f.tickers.length ? f.tickers : [""];
   const feeds = [];
   const rows = [];
@@ -164,7 +165,7 @@ export async function contractsSource(db, f) {
   };
 }
 
-export async function lobbyingSource(db, f) {
+async function lobbyingSourceRecords(db, f) {
   if (!process.env.LDA_API_KEY) return { error: "Lobbying needs LDA_API_KEY in .env.local.", missing: "LDA_API_KEY" };
   const filingsBySymbol = {};
   const feeds = [];
@@ -192,4 +193,25 @@ export async function lobbyingSource(db, f) {
       ]
     }
   };
+}
+
+export async function congressSource(...args) {
+  return withValidity("congress", args[1], await congressSourceRecords(...args));
+}
+
+export async function form4Source(...args) {
+  return withValidity("form4", args[1], await form4SourceRecords(...args));
+}
+
+export async function contractsSource(...args) {
+  return withValidity("contracts", args[1], await contractsSourceRecords(...args));
+}
+
+export async function lobbyingSource(...args) {
+  return withValidity("lobbying", args[1], await lobbyingSourceRecords(...args));
+}
+
+function withValidity(source, filters, result) {
+  if (result.error) return result;
+  return { ...result, context: { ...result.context, dataValidity: assessResearchDataValidity({ source, filters, coverage: result.coverage, signals: result.signals }) } };
 }

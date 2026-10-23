@@ -13,9 +13,10 @@ export async function verifyPaperDirectory(directory){
  check(manifest&&typeof manifest==='object'&&!Array.isArray(manifest),'Invalid paper manifest.');
  const required=['paper.json','source-experiment.json','paper-engine.mjs','verify.mjs','README.txt','source/run.json','source/evidence.json','source/checksums.json','source/replay.mjs','source/README.txt','source/engine/backtest.mjs','source/engine/backtestSpec.mjs','source/engine/backtestStats.mjs'];
  for(const name of required)check(Object.hasOwn(manifest,name),`Missing paper archive file: ${name}`);
- const allowed=/^(paper\.json|source-experiment\.json|paper-engine\.mjs|verify\.mjs|README\.txt|source\/(run\.json|evidence\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/;
+ const allowed=/^(paper\.json|source-experiment\.json|paper-engine\.mjs|verify\.mjs|README\.txt|source\/(run\.json|evidence\.json|trials\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/;
  for(const [name,digest] of Object.entries(manifest)){check(allowed.test(name),'Unsafe paper archive path.');check(hash(read(name))===digest,`Checksum mismatch: ${name}`);}
  const sourceManifest=JSON.parse(read('source/checksums.json'));
+ check(sourceManifest&&typeof sourceManifest==='object'&&!Array.isArray(sourceManifest),'Invalid source manifest.');
  for(const [name,digest] of Object.entries(sourceManifest)){check(allowed.test(`source/${name}`)&&manifest[`source/${name}`]===digest,'Source manifest differs from paper manifest.');}
  const bundle=JSON.parse(read('paper.json'));
  check(bundle?.schemaVersion===1&&bundle.ledgerHash===hash(bundle.ledger),'Paper ledger payload checksum mismatch.');
@@ -27,7 +28,9 @@ export async function verifyPaperDirectory(directory){
  check(experiment.id===account.experimentId&&experiment.runId===account.sourceRunId,'Paper experiment reference mismatch.');
  const source=JSON.parse(read('source/run.json'));
  check(source.id===account.sourceRunId&&source.inputHash===account.sourceInputHash&&hash(source.inputs)===account.sourceInputHash,'Paper source input reference mismatch.');
- const engine=Object.fromEntries(['backtest.mjs','backtestSpec.mjs','backtestStats.mjs'].map(name=>[name,read(`source/engine/${name}`)]));
+ // Engine hashes include insertion order: retain the source manifest's frozen order.
+ // The nested manifest entries were validated against the strict outer path allowlist above.
+ const engine=Object.fromEntries(Object.keys(sourceManifest).filter(name=>/^engine\/[A-Za-z0-9_-]+\.mjs$/.test(name)).map(name=>[name.slice('engine/'.length),read(`source/${name}`)]));
  check(hash(engine)===source.engineId,'Source engine differs from its pinned checksum.');
  check(source.inputs&&!source.inputs.kind&&source.result?.ok,'Paper source must be a completed single-source calculation.');
  const replay=spawnSync(process.execPath,['replay.mjs'],{cwd:path.join(root,'source'),encoding:'utf8',timeout:60000,maxBuffer:2*1024*1024});

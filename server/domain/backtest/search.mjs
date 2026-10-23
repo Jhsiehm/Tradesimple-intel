@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { beginResearchTrial, finishResearchTrial, researchTrialReceipt } from '../research-trials.mjs';
+import { hashOf } from '../research-store.mjs';
+import { ENGINE } from '../research-replay.mjs';
 /**
  * Automatic signal search: builds many backtest variants from the same records a single backtest reads, prices them
  * once, and ranks them in a worker thread with Benjamini–Hochberg q-values (shared/signalSearch.mjs). One search runs
@@ -87,6 +91,8 @@ export function buildVariants({ trades = [], committees = [], form4Rows = [], aw
 /* ---------- jobs ---------- */
 
 const jobs = new Map();
+const SEARCH_ENGINE_ID = hashOf({ calculation: ENGINE.id, ranking: readFileSync(new URL('../../../shared/signalSearch.mjs', import.meta.url), 'utf8'), orchestration: readFileSync(new URL('./search.mjs', import.meta.url), 'utf8') });
+const compatible = hit => hit?.searchEngineId === SEARCH_ENGINE_ID && hit?.trial?.id;
 const daysAgo = (n, now = Date.now()) => new Date(now - n * 86_400_000).toISOString().slice(0, 10);
 const iso = (ms) => new Date(ms).toISOString();
 const feedOf = (label, res) => ({ label, source: res?.source || "", asOf: res?.asOf || "", latency: res?.latency || "" });
@@ -101,7 +107,7 @@ export function searchView(db, id) {
   const job = jobs.get(id);
   if (job) return view(job);
   const hit = readCache(db, KEY.signalSearch(id));
-  return hit ? { ...hit, state: "done", cache: "hit" } : null;
+  return compatible(hit) ? { ...hit, state: "done", cache: "hit" } : null;
 }
 
 /** The most recent search this process ran, or the default options' cached result. */
@@ -110,7 +116,7 @@ export function latestSearch(db) {
   if (last) return view(last);
   const id = specHash(cleanSearch({}));
   const hit = readCache(db, KEY.signalSearch(id));
-  return hit ? { ...hit, state: "done", cache: "hit" } : { ok: true, state: "idle", defaults: cleanSearch({}) };
+  return compatible(hit) ? { ...hit, state: "done", cache: "hit" } : { ok: true, state: "idle", defaults: cleanSearch({}) };
 }
 
 /** Resolves when the job finishes or after `ms`, whichever is first. */
@@ -132,17 +138,25 @@ export function startSearch(db, raw, { fresh = false, inline = false, deps = {},
   const other = [...jobs.values()].find((j) => j.state === "running");
   if (other) return { ok: false, error: "Another signal search is running. One runs at a time; try again when it finishes.", busy: other.id };
   const hit = readCache(db, KEY.signalSearch(id));
-  if (hit && !fresh && now - Date.parse(hit.ranAt) < FRESH_MS) return { ...hit, state: "done", cache: "hit" };
-  const job = { id, opts, state: "running", phase: "data", progress: { done: 0, total: 0 }, startedAt: now, result: null, error: "" };
+  if (compatible(hit) && !fresh && now - Date.parse(hit.ranAt) < FRESH_MS) return { ...hit, state: "done", cache: "hit" };
+  const trial = beginResearchTrial(db, { kind: 'signal-search', spec: opts });
+  const job = { id, opts, trial, variantTrials: [], state: "running", phase: "data", progress: { done: 0, total: 0 }, startedAt: now, result: null, error: "" };
   jobs.set(id, job);
-  job.promise = runJob(db, job, { inline, deps, cached: hit }).then(
-    (result) => { job.result = result; job.state = "done"; },
-    (err) => { job.state = "error"; job.error = err.message; }
+  job.promise = runJob(db, job, { inline, deps, cached: !fresh && compatible(hit) ? hit : null }).then(
+    (result) => {
+      finishResearchTrial(db, trial, { status: 'completed', detail: { cache: result.cache, built: result.built, tested: result.tested, passing: result.passing } });
+      job.result = { ...result, trial: researchTrialReceipt(trial) }; job.state = "done";
+    },
+    (err) => {
+      for (const variant of job.variantTrials) finishResearchTrial(db, variant, { status: 'failed', detail: err.message });
+      finishResearchTrial(db, trial, { status: 'failed', detail: err.message });
+      job.state = "error"; job.error = err.message;
+    }
   );
   return view(job);
 }
 
-async function runJob(db, job, { inline, deps, cached }) {
+async function runJob(db, job, { inline, deps }) {
   const { opts } = job;
   const t0 = Date.now();
   const deadline = t0 + SEARCH_BUDGET_MS;
@@ -176,11 +190,10 @@ async function runJob(db, job, { inline, deps, cached }) {
     if (res?.building) notes.push(`Form 4 history was still loading from SEC EDGAR (${res.filings?.read ?? "?"} of ${res.filings?.wanted ?? "?"} filings read); Form 4 variants use what was read.`);
     if (!form4Rows.length) notes.push("No Form 4 rows were available, so no Form 4 variants were built.");
   }
-  const lastOf = (xs, k) => xs.reduce((m, x) => (String(x[k] || "") > m ? String(x[k]) : m), "");
-  const fingerprint = [trades.length, lastOf(trades, "filed"), form4Rows.length, lastOf(form4Rows, "filed"), awards?.size || 0, iso(Date.now()).slice(0, 10), `r${REALITY.version}`].join("|");
-  if (cached && cached.fingerprint === fingerprint) return { ...cached, cache: "snapshot" };
+  const fingerprint = hashOf({ trades, committees, form4Rows, awards: awards ? [...awards] : null, day: iso(Date.now()).slice(0, 10), engine: ENGINE.id, statistics: REALITY.version });
 
   const variants = buildVariants({ trades, committees, form4Rows, awards, sectorOf: d.sectorOf, opts });
+  job.variantTrials = variants.map(v => beginResearchTrial(db, { kind: 'search-variant', spec: v.spec, parentId: job.trial.id }));
   job.phase = "prices";
   job.progress = { done: 0, total: variants.length };
   const benchIds = opts.benchmark === "SECTOR" ? ["SPY", ...SECTOR_ETFS] : [opts.benchmark];
@@ -197,6 +210,13 @@ async function runJob(db, job, { inline, deps, cached }) {
   const outcome = inline
     ? evaluateVariants({ ...input, onProgress: (done, total) => { job.progress = { done, total }; } })
     : await inWorker(input, (done, total) => { job.progress = { done, total }; });
+  for (let i = 0; i < variants.length; i++) {
+    const finding = outcome.findings.find(f => f.id === variants[i].id);
+    const untested = outcome.untested.find(f => f.id === variants[i].id);
+    finishResearchTrial(db, job.variantTrials[0], { status: finding ? 'completed' : 'untested', detail: finding || untested || { reason: 'No inferential result' } });
+    job.variantTrials.shift();
+  }
+  job.variantTrials = [];
   const tDone = Date.now();
   feeds.push({ label: "Prices", source: "Yahoo Finance v8 chart, daily bars adjusted for splits and dividends", asOf: priced.oldestStoredAt ? iso(priced.oldestStoredAt) : iso(tPrices), latency: `Daily bars through ${lastBarDay({ ...bars, ...benchBars }) || "—"}; cached 12 h.` });
   const link = (r) => ({ ...r, description: describeSpec(r.spec), open: `bt:token:${encodeSpec(r.spec)}` });
@@ -205,6 +225,10 @@ async function runJob(db, job, { inline, deps, cached }) {
     id: job.id,
     opts,
     fingerprint,
+    engineId: ENGINE.id,
+    searchEngineId: SEARCH_ENGINE_ID,
+    realityVersion: REALITY.version,
+    trial: researchTrialReceipt(job.trial),
     ...outcome,
     findings: outcome.findings.map(link),
     notes,

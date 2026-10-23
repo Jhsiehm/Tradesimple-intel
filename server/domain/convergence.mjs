@@ -1,3 +1,4 @@
+import { beginResearchTrial, finishResearchTrial, researchTrialReceipt } from './research-trials.mjs';
 import { requireAuditedSource, INTEGRITY_VERSION } from './research-integrity.mjs';
 import { cleanConvergence, runConvergence } from '../../shared/convergence.mjs';
 import { dayOf } from '../../shared/backtest.mjs';
@@ -27,7 +28,7 @@ export function getPlan(db, id) {
   const plan = storedPlan(db, id);
   const evaluation = db.prepare('SELECT run_id FROM research.convergence_evaluations WHERE plan_id=?').get(id);
   const run = getRun(db, evaluation?.run_id || plan.developmentRunId);
-  return { ...plan, evaluated: !!evaluation, runId: run.id, inputHash: run.inputHash, report: run.result.convergence, priorEvaluations: run.provenance.priorEvaluations };
+  return { ...plan, evaluated: !!evaluation, runId: run.id, inputHash: run.inputHash, report: run.result.convergence, priorEvaluations: run.provenance.priorEvaluations, trial: run.provenance.trial };
 }
 function validatePrices(rows, symbol, spec) {
   if (!Array.isArray(rows) || rows.length < 2 || rows[0][0] > dayOf(spec.from) + 7 || rows.at(-1)[0] < dayOf(spec.to) - 7) throw new Error(`First experiment needs price coverage for ${symbol} across both periods. Choose a covered date range or rerun that source.`);
@@ -36,7 +37,8 @@ function validatePrices(rows, symbol, spec) {
     if (!Number.isInteger(d) || (i && d <= rows[i - 1][0]) || !Number.isFinite(c) || c <= 0 || (spec.rules.entry === 'nextOpen' && (!Number.isFinite(o) || o <= 0))) throw new Error(`Invalid or missing adjusted prices for ${symbol}; refresh the source experiment.`);
   }
 }
-export function createPlan(db, body) {
+export function createPlan(db, body) { return getPlan(db, createPlanRecord(db, body)); }
+function createPlanRecord(db, body) {
   researchStore(db);
   if (typeof body.title !== 'string' || !body.title.trim() || body.title.length > 200) throw new Error('Provide a title of 1–200 characters.');
   const spec = cleanConvergence(body.spec);
@@ -61,17 +63,20 @@ export function createPlan(db, body) {
   const bars = Object.fromEntries(spec.universe.map(s => { validatePrices(reference.bars[s], s, spec); return [s, reference.bars[s]]; }));
   validatePrices(reference.benchBars.SPY, 'SPY', spec);
   const inputs = { kind: 'convergence', phase: 'development', spec, sources, bars, benchBars: { SPY: reference.benchBars.SPY } };
-  const report = runConvergence(inputs);
-  const provenance = { integrityVersion: INTEGRITY_VERSION, sourceAudits, sourceRuns: experiments.map(e => ({ experimentId: e.id, runId: e.run.id, inputHash: e.run.inputHash, caveats: e.run.result.caveats, feeds: e.run.provenance.feeds })), priceRunId: experiments[0].run.id, priorEvaluations: exposure(db, spec) };
+  const trial = beginResearchTrial(db, { kind: 'convergence-development', spec });
+  let report;
+  try { report = runConvergence(inputs); } catch (error) { finishResearchTrial(db, trial, { status: 'failed', detail: error.message }); throw error; }
+  const provenance = { trial: researchTrialReceipt(trial), integrityVersion: INTEGRITY_VERSION, sourceAudits, sourceRuns: experiments.map(e => ({ experimentId: e.id, runId: e.run.id, inputHash: e.run.inputHash, caveats: e.run.result.caveats, feeds: e.run.provenance.feeds })), priceRunId: experiments[0].run.id, priorEvaluations: exposure(db, spec) };
   db.exec('SAVEPOINT convergence_create');
   try {
     const developmentRunId = putRun(db, { inputs, result: { ok: true, convergence: report }, provenance, engine: CONVERGENCE_ENGINE });
     const plan = { id: newId('cv'), title: body.title.trim(), createdAt: new Date().toISOString(), spec, sources: sources.map(({ signals, ...s }) => s), developmentRunId, provenance };
     const text = JSON.stringify(plan);
     db.prepare('INSERT INTO research.convergence_plans VALUES (?,?,?,?)').run(plan.id, plan.createdAt, hashOf(text), text);
+    finishResearchTrial(db, trial, { status: 'completed', runId: developmentRunId });
     db.exec('RELEASE convergence_create');
-    return getPlan(db, plan.id);
-  } catch (e) { db.exec('ROLLBACK TO convergence_create; RELEASE convergence_create'); throw e; }
+    return plan.id;
+  } catch (e) { db.exec('ROLLBACK TO convergence_create; RELEASE convergence_create'); finishResearchTrial(db, trial, { status: 'failed', detail: e.message }); throw e; }
 }
 export function evaluatePlan(db, id) {
   const plan = storedPlan(db, id);
@@ -80,13 +85,16 @@ export function evaluatePlan(db, id) {
   if (original.provenance.integrityVersion !== INTEGRITY_VERSION) throw new Error('This plan predates current historical-integrity checks. Create a new plan from newly audited source experiments. Its original report and export remain available.');
   if (original.engineId !== CONVERGENCE_ENGINE.id) throw new Error('Engine changed since lock. Create a new plan with the current engine.');
   const inputs = { ...original.inputs, phase: 'evaluation' };
-  const report = runConvergence(inputs);
-  const provenance = { ...original.provenance, priorEvaluations: exposure(db, plan.spec) };
+  const trial = beginResearchTrial(db, { kind: 'convergence-holdout', spec: { ...plan.spec, from: plan.spec.split } });
+  let report;
+  try { report = runConvergence(inputs); } catch (error) { finishResearchTrial(db, trial, { status: 'failed', detail: error.message }); throw error; }
+  const provenance = { ...original.provenance, trial: researchTrialReceipt(trial), priorEvaluations: exposure(db, plan.spec) };
   db.exec('SAVEPOINT convergence_evaluate');
   try {
     const runId = putRun(db, { inputs, result: { ok: true, convergence: report }, provenance, engine: CONVERGENCE_ENGINE });
     db.prepare('INSERT INTO research.convergence_evaluations VALUES (?,?,?)').run(id, runId, new Date().toISOString());
+    finishResearchTrial(db, trial, { status: 'completed', runId });
     db.exec('RELEASE convergence_evaluate');
-    return getPlan(db, id);
-  } catch (e) { db.exec('ROLLBACK TO convergence_evaluate; RELEASE convergence_evaluate'); throw e; }
+  } catch (e) { db.exec('ROLLBACK TO convergence_evaluate; RELEASE convergence_evaluate'); finishResearchTrial(db, trial, { status: 'failed', detail: e.message }); throw e; }
+  return getPlan(db, id);
 }

@@ -44,13 +44,16 @@ export function BacktestResults({ run, onFollow, onCopy, copied, frozen = false 
   return (
     <div className="bt-results">
       {run.building ? <p className="bt-note warn">Partial run: {run.pending.length ? `${run.pending.length} tickers were still loading prices` : "disclosures are still being read"}. {frozen ? "This saved snapshot will not change. Rerun to try newer data." : "Asking again every few seconds until it settles."}</p> : null}
+      {run.dataValidity ? <p className="bt-note warn">Exploratory research. Historical tradability is not established. {run.dataValidity.limitations.slice(0, 2).map(l => l.text).join(' ')}</p> : null}
+      {run.executionAssessment ? <p className="bt-note warn">Signal-return simulation: fills, funding and rebalancing are assumed. This curve is not a validated executable portfolio.</p> : null}
+      {run.trial ? <p className="bt-basis">{run.trial.priorOverlappingAttempts} earlier local attempts and {run.trial.priorOverlappingVariants} search variants overlap this period and universe. Earlier or external inspection is unknown; this is not a count of independent tests. <a href={`/api/research/trials/${run.trial.id}`} target="_blank" rel="noreferrer">Inspect recorded attempts</a></p> : null}
       {!s ? (
         <p className="bt-empty">{run.counts.matched === 0 || run.counts.signals === 0 ? "No signals matched these filters." : `${run.counts.signals} signals matched but none could be priced and held to an exit. See the notes below.`}</p>
       ) : (
         <>
           <div className="bt-tiles">
-            <Tile label="Strategy" value={pts(s.total)} sub={`${pts(s.annualized)} /yr · ${s.from} → ${s.to}`} cls={tone(s.total)} title="Calendar-time portfolio: open positions at equal (or range-midpoint) weight, idle days earn 0." />
-            <Tile label={bench === "SECTOR" ? "Sector ETFs" : bench} value={pts(s.benchmarkTotal)} sub={`${pts(s.benchmarkAnnualized)} /yr · same days, same weights`} title="The benchmark holds exactly the same positions on exactly the same days." />
+            <Tile label="Simulated return" value={pts(s.total)} sub={`${pts(s.annualized)} /yr · ${s.from} → ${s.to}`} cls={tone(s.total)} title="Synthetic daily weighted signal-return curve; funding and daily rebalance turnover are not modeled. Idle days earn 0." />
+            <Tile label={bench === "SECTOR" ? "Sector ETFs" : bench} value={pts(s.benchmarkTotal)} sub={`${pts(s.benchmarkAnnualized)} /yr · same days, same weights`} title="The benchmark uses corresponding signed return paths, weights and observation days; these are simulated exposures." />
             <Tile label="Excess" value={pts(s.excessTotal)} sub={s.excessAnnualized == null ? "span under 90 days" : `${pts(s.excessAnnualized)} /yr`} cls={tone(s.excessTotal)} />
             <Tile label="Trades" value={String(s.trades)} sub={`${run.counts.signals} signals · ${run.counts.skipped} left out`} />
             <Tile label="Hit rate" value={pc(s.hitRate)} sub={`${pc(s.beatRate)} beat the benchmark`} title="Share of trades with a positive net return, and share that beat the benchmark on the same days." />
@@ -61,10 +64,15 @@ export function BacktestResults({ run, onFollow, onCopy, copied, frozen = false 
           <IsItReal reality={run.reality} />
           <EquityChart curve={run.curve} benchmark={bench} />
           <Formulas formulas={backtestFormulas(run)} />
-          <p className="bt-basis">{s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not; the clustered t above does not.</p>
+          <p className="bt-basis">{s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not; clustering and bootstrap diagnostics also require assumptions; see their applicability status above.</p>
         </>
       )}
 
+      {run.executionAssessment ? <details className="bt-basis"><summary>Execution assumptions and trade-cost sensitivity</summary>
+        {run.executionAssessment.gates.map(gate => <p key={gate.id}>{gate.detail}</p>)}
+        <p>Mean trade return at alternative costs per side; excludes daily rebalancing, borrow and market impact. These are not portfolio returns.</p>
+        <ul>{run.executionAssessment.costSensitivity.scenarios.map(scenario => <li key={scenario.oneWayBps}>{scenario.oneWayBps} bps per side: {pts(scenario.meanTradeReturn)}</li>)}</ul>
+      </details> : null}
       <section className={warn.length ? "bt-caveats has-warn" : "bt-caveats"} aria-label="Data caveats">
         <h3>Data caveats <small>read before trusting any number above</small></h3>
         <ul>{warn.map((c) => <li key={c.id} className="warn">{c.text}</li>)}{info.map((c) => <li key={c.id}>{c.text}</li>)}</ul>

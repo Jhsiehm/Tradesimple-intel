@@ -38,8 +38,8 @@ test("ranking: minimum sample, m = tested only, sorted by excess, passes needs q
   assert.equal(by.d.passes, false, "negative excess never passes");
   assert.equal(by.b.passes, false);
   const w = searchWarning(r, { minTrades: 30, fdr: 0.1 });
-  assert.match(w, /^3 variants were tested \(5 built; 2 had fewer than 30 priced trades/);
-  assert.match(w, /1 pass a false discovery rate of 10%/);
+  assert.match(w, /^3 variants were tested \(5 built; 2 were not tested: fewer than 30 priced trades/);
+  assert.match(w, /1 meet the nominal Benjamini–Hochberg threshold/);
 });
 
 test("Form 4 filters: plan only, role, cluster buys counted by filing date", () => {
@@ -134,7 +134,7 @@ test("end to end on fixture data: the planted member ranks first with a small q;
   await waitForSearch(started.id, 30_000);
   const out = searchView(db, started.id);
   assert.equal(out.state, "done", JSON.stringify(out).slice(0, 300));
-  assert.ok(out.tested >= 6 && out.tested < out.built, `${out.tested} of ${out.built}`);
+  assert.ok(out.tested >= 2 && out.tested < out.built, `${out.tested} of ${out.built}`);
   assert.ok(out.untested.some((u) => u.dim === "sector" || u.dim === "size"), "small variants are counted as not tested");
   const top = out.findings[0];
   assert.ok(["congress:member:A000001", "congress:committee:HSAS"].includes(top.id), top.id);
@@ -144,8 +144,8 @@ test("end to end on fixture data: the planted member ranks first with a small q;
   assert.equal(top.verdict.level, "beat");
   assert.equal(decodeSpec(top.open.replace("bt:token:", "")).filters[top.dim === "member" ? "member" : "committee"], top.dim === "member" ? "A000001" : "HSAS");
   for (const f of out.findings) assert.ok(f.q >= f.p - 1e-9, "q ≥ p");
-  const noise = out.findings.find((f) => f.id === "congress:member:B000002");
-  assert.equal(noise.passes, false, "a random walk does not pass");
+  const noise = out.untested.find((f) => f.id === "congress:member:B000002");
+  assert.ok(noise.reasons.some(reason => /overlap/.test(reason)), "overlapping noisy variants cannot claim calibrated significance");
   assert.match(out.warning, new RegExp(`^${out.tested} variants were tested`));
   const again = startSearch(db, opts, { inline: true, deps: deps(fx) });
   assert.equal(again.cache, "hit");

@@ -443,3 +443,16 @@ The audit identifies an important current restriction: broad-hypothesis requests
 This batch documents requirements and corrects the capability inventory's misleading bill-text label: full legislative text/PDF collection, OCR and AI extraction are explicitly unavailable. It does not deliver a historical corpus, generic planner, custom scientific runtime or newly validated financial study. Provider-advertised historical ranges remain separate from actual collected/parsed/eligible coverage.
 
 Verification: all 1,074 existing tests and the production build passed after the capability wording correction. Local documentation links and whitespace checks passed. The reference audit pinned commit `2ae060d2d0b608aad910ed855039f6795a3322c2`, verified its source links, and used independent read-only reviews. No reference software was executed and no historical corpus was collected for this documentation batch. These checks establish repository consistency, not scientific validation of a study.
+
+
+### Research validity controls — 2026-10-22
+
+Three parallel agents audited source evidence, statistical validity and execution accounting, then independently reviewed integrations. The [remediation record](research-terminal/research-hardening.md) maps each concern to implementation, verification and unresolved evidence requirements.
+
+New runs carry structured data-validity and execution assessments; dates, assumed lags, current identities, missing source partitions and price limitations remain explicit. Statistical inference is withheld when holding intervals cross entry-week blocks or other applicability checks fail. FDR wording, numerical tail stability and full-precision search decisions are corrected. A durable attempt inventory tracks new backtests, search variants and Convergence evaluations, including failures and untested variants. It does not claim to track all research workflows or independent trials.
+
+Integration adds model/UI claim limits, inspectable attempt history, portable trial inventories and compatible nested archive verification. Independent review also corrected explicit-refresh price reuse, search implementation cache invalidation and Convergence transaction ordering.
+
+Validation: all 1,104 tests passed, including offline replay, independent statistical reference fixtures, economic hand calculations and UI inference suppression. TypeScript, production and demo builds passed. Final tooltip/formula copy adjustments passed the eight focused rendering/replication tests. No live feed refresh, historical population certification, capital-constrained simulator or prospective trading evidence is claimed by this delivery.
+
+The dependency audit also identified a preexisting high-severity Vite advisory. The compatible patch update to Vite 8.3.5 passed the full 1,104-test suite and both builds; `npm audit --audit-level=high` then reported zero vulnerabilities.

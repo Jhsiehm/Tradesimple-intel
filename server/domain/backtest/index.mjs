@@ -1,3 +1,5 @@
+import { beginResearchTrial, finishResearchTrial, researchTrialReceipt } from '../research-trials.mjs';
+import { assessResearchDataValidity, dataValidityNote, DATA_VALIDITY_VERSION } from '../../../shared/researchDataValidity.mjs';
 import { relationshipEligibility } from '../relationship-history.mjs';
 import { auditSignals, INTEGRITY_VERSION } from '../research-integrity.mjs';
 import { putRun, getRun, getDataset } from '../research-store.mjs';
@@ -66,7 +68,21 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const spec = cleaned.spec;
   const hash = specHash(spec);
   const hit = fresh || sourceFn ? null : readCache(db, KEY.backtest(hash));
-  if (hit && hit.integrityVersion === INTEGRITY_VERSION && hit.realityVersion === REALITY.version && hit.engineId === ENGINE.id && hit.runId && getRun(db, hit.runId)) return { ...hit, cache: "hit" };
+  if (hit && hit.dataValidity?.version === DATA_VALIDITY_VERSION && hit.trial?.id && hit.integrityVersion === INTEGRITY_VERSION && hit.realityVersion === REALITY.version && hit.engineId === ENGINE.id && hit.runId && getRun(db, hit.runId)) return { ...hit, cache: "hit" };
+  const trial = beginResearchTrial(db, { kind: 'backtest', spec });
+  let outcome;
+  try {
+    outcome = await executeSpec(db, spec, { budgetMs, loadBarsFn, now, sourceFn, hash, trial });
+  } catch (error) {
+    finishResearchTrial(db, trial, { status: 'failed', detail: error.message });
+    throw error;
+  }
+  finishResearchTrial(db, trial, { status: !outcome.ok ? 'failed' : outcome.building ? 'partial' : 'completed', runId: outcome.runId });
+  return outcome;
+}
+
+async function executeSpec(db, spec, { budgetMs, loadBarsFn, now, sourceFn, hash, trial }) {
+  const receipt = researchTrialReceipt(trial);
   const t0 = Date.now();
   const deadline = t0 + budgetMs;
 
@@ -74,12 +90,12 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const loadSource = sourceFn || (spec.source === 'dataset' ? async () => { const d = getDataset(db, spec.datasetId); return d ? datasetSource(d) : { error: 'Dataset version not found.' }; } : SOURCE_FNS[spec.source]);
   const src = await loadSource(db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
   const identity = src.identity || identities(db);
-  const provenance = { source: src.dataset ? 'import' : spec.source, dataset: src.dataset || null, identity, records: src.records || [], coverage: { requested: { from: spec.filters.from || null, to: spec.filters.to || null, symbols: spec.filters.tickers || [] }, source: src.coverage || { completeness: 'unknown' }, status: 'source-loaded' }, feeds: src.feeds || [], dropped: src.dropped || {}, statistics: REALITY, runtime: process.version };
+  const provenance = { trial: receipt, source: src.dataset ? 'import' : spec.source, dataset: src.dataset || null, identity, records: src.records || [], coverage: { requested: { from: spec.filters.from || null, to: spec.filters.to || null, symbols: spec.filters.tickers || [] }, source: src.coverage || { completeness: 'unknown' }, status: 'source-loaded' }, feeds: src.feeds || [], dropped: src.dropped || {}, statistics: REALITY, runtime: process.version };
   const sourceRecords = Array.isArray(src.records) ? src.records : Object.values(src.records || {}).flat();
   const archivedRecords = sourceRecords.filter(record => record?.sourceDocument?.hash || record?.sourceDocuments?.length);
   const documentRefs = archivedRecords.flatMap(record => [...(record.sourceDocuments || []), ...(record.sourceDocument ? [record.sourceDocument] : [])]);
   provenance.coverage.originalDocuments = { records: sourceRecords.length, recordsWithDocument: archivedRecords.length, distinctDocuments: new Set(documentRefs.map(ref => ref.hash)).size, status: documentRefs.length ? 'partially-archived; see record references' : 'not-archived-by-this-path' };
-  const failed = body => { const runId = putRun(db, { inputs: null, result: body, provenance, engine: ENGINE }); return { ...body, runId }; };
+  const failed = body => { body.trial = receipt; if (provenance.dataValidity) body.dataValidity = provenance.dataValidity; const runId = putRun(db, { inputs: null, result: body, provenance, engine: ENGINE }); return { ...body, runId }; };
   if (src.error) return failed({ ok: false, error: src.error, missing: src.missing || "", building: Boolean(src.building), spec, description: describeSpec(spec) });
   const tSignals = Date.now();
 
@@ -106,6 +122,10 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const tPrices = Date.now();
   provenance.coverage.prices = { requested: need, loaded: need.filter(s => priced.bars[s]?.length), pending: priced.pending, missing: priced.missing, stale: priced.stale };
   provenance.coverage.status = 'prices-loaded';
+  const dataValidity = assessResearchDataValidity({ source: spec.source, filters: spec.filters, coverage: { ...src.coverage, selection: { matched: uncapped, eligible: eligibleSignals.length, selected: signals.length, capped: capped.notes.some(n => ['cap', 'symcap'].includes(n.id)) } },
+    signals: eligibleSignals, prices: { ...priced, requested: need } });
+  provenance.dataValidity = dataValidity;
+  notes.unshift(dataValidityNote(dataValidity));
   const benchBars = Object.fromEntries([...benchIds].map((id) => [id, priced.bars[id]]).filter(([, v]) => v?.length));
   const missingBench = [...benchIds].filter((id) => !benchBars[id]);
   if (missingBench.length === benchIds.size) {
@@ -121,7 +141,7 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
     bars: symbolBars,
     benchBars,
     rules: spec.rules,
-    context: { ...src.context, sourceFamily: spec.source, notes, unpriced: pendingSyms }
+    context: { ...src.context, dataValidity, sourceFamily: spec.source, notes, unpriced: pendingSyms }
   };
   const result = runBacktest(inputs);
   const reality = result.stats ? realityCheck({ trades: result.trades, bars: symbolBars, benchBars, rules: result.rules }) : null;
@@ -140,6 +160,8 @@ export async function runSpec(db, raw, { budgetMs = RUN_BUDGET_MS, loadBarsFn = 
   const complete = !pendingSyms.length && !missingBench.length && !src.building;
   const body = {
     ...result,
+    dataValidity,
+    trial: receipt,
     reality,
     realityVersion: REALITY.version,
     integrityVersion: INTEGRITY_VERSION,

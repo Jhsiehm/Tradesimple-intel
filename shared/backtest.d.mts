@@ -1,3 +1,4 @@
+import type { ExecutionAssessment } from "./executionAssessment.mjs";
 import type { BacktestRules } from "./backtestSpec.mjs";
 
 export type Bar = [day: number, open: number | null, close: number];
@@ -69,6 +70,8 @@ export type BacktestResult = {
   curve: { d: string; s: number | null; b: number | null }[];
   stats: BacktestStats | null;
   caveats: BacktestCaveats;
+  /** Absent on legacy archived results generated before the execution audit. */
+  executionAssessment?: ExecutionAssessment;
 };
 
 export const ENTRY_SLACK_DAYS: number;

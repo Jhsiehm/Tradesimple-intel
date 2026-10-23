@@ -1,10 +1,11 @@
+import type { InferenceApplicability } from './backtestStats.mjs';
 import type { BacktestRules } from './backtestSpec.mjs';
 import type { BacktestResult, BacktestSignal, Bar } from './backtest.mjs';
 export const CONVERGENCE_VERSION: number;
 export type AgreementPolicy = { confirmation?: 'all' | 'any'; minSources?: never } | { confirmation: 'at-least'; minSources: number };
 export type ConvergenceSpec = AgreementPolicy & { version: number; from: string; split: string; to: string; developmentEnd: string; universe: string[]; windowDays: number; embargoDays: number; rules: BacktestRules };
 export type ConvergenceInput = { kind: 'convergence'; phase: 'development' | 'evaluation'; spec: ConvergenceSpec; sources: { id: string; label: string; signals: BacktestSignal[] }[]; bars: Record<string, Bar[]>; benchBars: Record<string, Bar[]> };
-export type ConvergenceVariant = { id: string; label: string; indices: number[]; windowStats: { strategyReturn: number; benchmarkReturn: number; excess: number }; counts: { offered: number; outsideWindowOrUniverse: number; wrongSide: number; duplicateDailyVotes: number; decisions: number; executed: number; excluded: number }; evidence: { id: string; symbol: string; publicDate: string; records: { source: string; recordId: string; publicDate: string }[] }[]; result: BacktestResult; bootstrap: { low: number; high: number; mean: number; unit: string; blocks: number } | null };
+export type ConvergenceVariant = { id: string; label: string; indices: number[]; windowStats: { strategyReturn: number; benchmarkReturn: number; excess: number }; counts: { offered: number; outsideWindowOrUniverse: number; wrongSide: number; duplicateDailyVotes: number; decisions: number; executed: number; excluded: number }; evidence: { id: string; symbol: string; publicDate: string; records: { source: string; recordId: string; publicDate: string }[] }[]; result: BacktestResult; inference?: InferenceApplicability; bootstrap: { low: number; high: number; mean: number; unit: string; blocks: number } | null };
 export type ConvergencePeriod = { from: string; to: string; benchmarkDays: number; variants: ConvergenceVariant[]; ablations: { source: string; withoutVariant: string; deltaExcess: number | null; deltaMeanTradeExcess: number | null; fullTrades: number; withoutTrades: number }[] };
 export type ConvergenceReport = { version: number; phase: string; periods: { development: ConvergencePeriod; holdout?: ConvergencePeriod }; caveats: string[] };
 export function cleanConvergence(raw: unknown): ConvergenceSpec;

@@ -75,10 +75,11 @@ test('locked plans persist exact inputs, evaluate once, track exposure, and repl
     assert.throws(() => createPlan(db, { ...request, spec: { ...spec(), universe: 'MSFT' } }), /price coverage/);
   } finally { db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
-test('weekly uncertainty intervals are deterministic and zero-trade strategies retain common benchmark', () => {
+test('overlapping holds withhold uncertainty and zero-trade strategies retain common benchmark', () => {
   const i = input(); i.sources = i.sources.map(s => ({ ...s, signals: Array.from({ length: 12 }, (_, n) => sig(`${s.id}-${n}`, `2025-01-${String(n + 2).padStart(2, '0')}`)) }));
   const a = runConvergence(i), b = runConvergence(i);
-  assert.deepEqual(a, b); assert.ok(a.periods.development.variants.every(v => v.bootstrap && Number.isFinite(v.bootstrap.low)));
+  assert.deepEqual(a, b); assert.ok(a.periods.development.variants.every(v => v.bootstrap === null && v.inference.status === 'withheld'));
+  assert.ok(a.periods.development.variants.every(v => v.inference.reasons.some(r => /overlap/.test(r))));
   const h = a.periods.holdout; assert.ok(h.variants.every(v => v.counts.executed === 0 && v.windowStats.strategyReturn === 0));
 });
 

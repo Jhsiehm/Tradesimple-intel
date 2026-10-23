@@ -5,11 +5,12 @@
  * A signal carries the PUBLIC date of the record. Entry is the first bar strictly after that date, so nothing
  * trades on a day the record was not yet public (a filing may post after the close).
  *
- * The portfolio is calendar-time: each trading day it holds the open positions at equal weight (or weight by
- * disclosed size) and earns their average daily return; days with nothing open earn 0. The benchmark gets the
- * same positions, weights, and days, so excess return compares like with like.
+ * The curve is a calendar-time signal-return index: each trading day it normalizes available paths at equal
+ * weight (or disclosed-size weight); days with no paths earn 0. The benchmark gets matching path weights and
+ * dates. This is not a holdings-and-cash portfolio; executionAssessment describes its accounting limitations.
  */
 import { SECTOR_ETF, cleanRules } from "./backtestSpec.mjs";
+import { assessExecution } from "./executionAssessment.mjs";
 
 const DAY_MS = 86_400_000;
 export const ENTRY_SLACK_DAYS = 7;
@@ -311,7 +312,8 @@ export function runBacktest({ signals: allSignals = [], bars = {}, benchBars = {
     byTicker: { total: 0, rows: [] },
     curve: [],
     stats: null,
-    caveats: { items: [] }
+    caveats: { items: [] },
+    executionAssessment: assessExecution({ rules, trades, calendar: calendar || benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || null })
   };
   result.caveats = buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimated, missingSize, openFallback, benchFallback, context, c });
   if (!trades.length) return result;
@@ -468,6 +470,7 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   const lag = lagStats(signals);
   const missed = unpricedLine(signals.length, trades.length, skipped);
   if (missed) add("warn", "unpriced", missed);
+  add("warn", "executionModel", "Exploratory signal-return simulation, not an executable portfolio. No cash or share ledger, capacity, market impact, or rebalancing costs are modeled. Daily normalized curve returns and fixed-entry-notional trade returns have different accounting; see executionAssessment for execution gaps and trade-cost sensitivity.");
   if (lag) {
     if (context.sourceFamily && context.sourceFamily !== "congress") {
       add("info", "lag", `Availability gap on the ${lag.n} signals (signal date minus event date): median ${lag.median} days, mean ${lag.mean}, 90th percentile ${lag.p90}, longest ${lag.max}. Dates follow the source or dataset timing policy, including any assumed delays; see its coverage and timing caveats. Entry is on a later trading day.`);
@@ -501,7 +504,7 @@ function buildCaveats({ rules, signals, trades, skipped, skippedSymbols, estimat
   add("info", "costs", `Costs: ${rules.costBps} bps commission + ${rules.slippageBps} bps slippage per side (${r2(c * 2e4)} bps round trip). No taxes, no market impact, fills assumed at the quoted open or close.`);
   add("info", "overlap", "Trades overlap in time and cluster in a few names and members, so the sample is smaller than the trade count suggests. The t-statistic treats trades as independent and overstates confidence.");
   add("info", "survivorship", "Survivorship: prices come from Yahoo Finance for symbols that still trade. Delisted, acquired, and renamed symbols have no history and are excluded and counted above, which tends to flatter results. Joined tickers only (data/tickers.json); no symbol is matched by guess.");
-  add("info", "weights", "The portfolio rebalances to equal weight (or size weight) each day across open positions. Per-trade returns are buy-and-hold and do not include this rebalancing.");
+  add("info", "weights", "The curve normalizes equal or size weights each day across available signal paths, without charging rebalancing turnover. Missing stock bars omit that path from the denominator. Per-trade returns use fixed entry notional; the curve is not a holdings-and-cash portfolio.");
   if (trades.length < MIN_TRADES) add("warn", "sample", `Only ${trades.length} trades. Treat the result as an anecdote, not evidence.`);
   for (const note of context.notes || []) add(note.level || "info", note.id || "note", note.text);
   return { items, lag, exclusions: { ...skipped }, excludedSymbols: Object.fromEntries(Object.entries(skippedSymbols).map(([k, v]) => [k, [...v].sort()])) };

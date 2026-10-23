@@ -112,6 +112,22 @@ export function scopeCheck(answer, evidence) {
     const own = unit.refs.filter((id) => byId.has(id));
     const refs = own.length ? own : allRefs;
     const results = refs.map((id) => ({ id, tool: byId.get(id).tool, body: parse(byId.get(id).json) }));
+    // Narrow, explicit certification claims. This is a warning detector, not semantic truth verification.
+    const calculations = results.filter(r => ['run_backtest', 'search_signals'].includes(r.tool) && r.body?.ok !== false);
+    if (calculations.length) {
+      const rules = [
+        { re: /\b(?:verified|proven|validated)\s+(?:tradable|trading|investable|predictive|causal)\s+(?:edge|strategy|effect)\b|\b(?:execution[- ]ready|historically tradable)\b/gi,
+          applies: true, note: 'The cited backtest is exploratory and does not establish historical tradability, executable fills, predictive validity or causality.' },
+        { re: /\bstatistically significant\b|\b(?:proves?|establishes?)\s+(?:an?\s+)?(?:alpha|edge)\b/gi,
+          applies: calculations.some(r => (r.body.reality?.inference || r.body.isItReal?.inference)?.status === 'withheld'),
+          note: 'Statistical inference was withheld for this calculation. Retained diagnostic numbers cannot support a significance or established-edge claim.' }
+      ];
+      for (const rule of rules) if (rule.applies) {
+        for (const match of unit.text.matchAll(rule.re)) {
+          if (!negated(unit.text, match.index)) out.push({ kind: 'research', raw: match[0], refs, note: rule.note });
+        }
+      }
+    }
     for (const c of windowClaims(unit.text)) {
       const scopes = results.map((r) => ({ id: r.id, w: windowOf(r.tool, r.body) }));
       if (scopes.some((s) => !s.w)) continue;
