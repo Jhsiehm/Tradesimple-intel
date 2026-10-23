@@ -164,8 +164,12 @@ export function ResearchHome({
             {error}
           </p>
         )}
-        {ask.storageError && <p role="alert" className="bt-note warn">{ask.storageError}</p>}
-    <header className="research-home-top">
+        {ask.storageError && (
+          <p role="alert" className="bt-note warn">
+            {ask.storageError}
+          </p>
+        )}
+        <header className="research-home-top">
           <button
             ref={layout.trigger}
             className="research-library-toggle"

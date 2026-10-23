@@ -74,15 +74,26 @@ export function amendInvestigation(db, id, { revision, protocol: input, amendmen
     throw Error("An amendment request of 1–8000 characters is required.");
   const protocol = cleanWorkflowProtocol({ ...input, question: parent.protocol.question });
   if (protocol.family !== parent.protocol.family)
-    throw Error("An amendment must preserve the requested claim family. A different research question needs an explicit new study.");
+    throw Error(
+      "An amendment must preserve the requested claim family. A different research question needs an explicit new study.",
+    );
   const { refs, issues } = pinSources(db, protocol);
   const now = new Date().toISOString();
   const saved = saveWorkflowRecord(db, {
-    schemaVersion: 1, createdAt: now, updatedAt: now,
-    parentId: parent.id, parentRevision: parent.revision, amendment: amendment.trim(),
-    protocol, protocolHash: hashOf(protocol), sourceRefs: refs, sourceIssues: issues,
+    schemaVersion: 1,
+    createdAt: now,
+    updatedAt: now,
+    parentId: parent.id,
+    parentRevision: parent.revision,
+    amendment: amendment.trim(),
+    protocol,
+    protocolHash: hashOf(protocol),
+    sourceRefs: refs,
+    sourceIssues: issues,
     status: protocol.family !== "descriptive" || protocol.unresolved.length || issues.length ? "blocked" : "draft",
-    result: null, evaluation: null, notice: LIMIT_NOTICE,
+    result: null,
+    evaluation: null,
+    notice: LIMIT_NOTICE,
   });
   return getInvestigation(db, saved.existing || saved.record.id);
 }
@@ -93,15 +104,24 @@ export async function replayInvestigation(db, id, { signal } = {}) {
   const frozen = record.evaluation;
   if (!frozen) throw Error("Run and freeze this investigation before replaying it.");
   if (workflowEngine().hash !== frozen.engineHash)
-    throw Error("The installed engine differs from this frozen study. Use its exported offline archive to replay the original engine.");
+    throw Error(
+      "The installed engine differs from this frozen study. Use its exported offline archive to replay the original engine.",
+    );
   if (Buffer.byteLength(JSON.stringify(frozen.inputs)) > WORKFLOW_LIMITS.inputBytes)
     throw Error("Frozen workflow inputs exceed the bounded engine budget.");
   const result = await runWorkflowEvaluation(frozen.inputs, frozen.engineHash, { signal });
   const resultHash = hashOf(result);
   return {
     investigation: workflowView(record),
-    replay: { matches: resultHash === frozen.resultHash, resultHash, expectedResultHash: frozen.resultHash,
-      inputHash: frozen.inputHash, engineHash: frozen.engineHash, status: result.status, executed: result.executed },
+    replay: {
+      matches: resultHash === frozen.resultHash,
+      resultHash,
+      expectedResultHash: frozen.resultHash,
+      inputHash: frozen.inputHash,
+      engineHash: frozen.engineHash,
+      status: result.status,
+      executed: result.executed,
+    },
   };
 }
 

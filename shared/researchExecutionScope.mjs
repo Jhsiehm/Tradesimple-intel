@@ -1,7 +1,12 @@
 /** Explicit creation takes precedence over incidental review of its source records. */
 export function studyDesignRequested(question) {
-  const text = String(question || "").replace(/\b(?:do not|don't|never)\s+(?:create|save|draft|design|prepare)\b[^.;!?]*/gi, " ");
-  return /\b(?:create|save|draft|design|prepare)\s+(?:(?:a|an|the|new|descriptive|study|research|investigation)\s+){0,5}(?:plan|protocol|investigation|study)\b/i.test(text);
+  const text = String(question || "").replace(
+    /\b(?:do not|don't|never)\s+(?:create|save|draft|design|prepare)\b[^.;!?]*/gi,
+    " ",
+  );
+  return /\b(?:create|save|draft|design|prepare)\s+(?:(?:a|an|the|new|descriptive|study|research|investigation)\s+){0,5}(?:plan|protocol|investigation|study)\b/i.test(
+    text,
+  );
 }
 /** Explicit planning requests do not authorize executing a calculation described in the plan. */
 export function designOnlyRequested(question) {
@@ -34,7 +39,8 @@ export function executionRequested(question) {
 export function inspectionOnlyRequested(question) {
   const text = String(question || "").toLowerCase();
   return (
-    !executionRequested(text) && !studyDesignRequested(text) &&
+    !executionRequested(text) &&
+    !studyDesignRequested(text) &&
     /\b(?:inspect|review|audit|compare|explain|check|describe)\b/.test(text) &&
     (/\b(?:saved|stored|frozen)\s+(?:[\w'-]+\s+){0,8}(?:stud(?:y|ies)|investigations?|experiments?|backtests?|results?)\b/.test(
       text,
@@ -55,10 +61,22 @@ export function resolveDesignOnly(question, history = []) {
   return false;
 }
 
-const EXECUTION_TOOLS = new Set(["run_backtest", "search_signals", "research_run_investigation", "research_replay_investigation", "research_policy_collect", "research_policy_evaluate", "research_policy_replay"]);
+const EXECUTION_TOOLS = new Set([
+  "run_backtest",
+  "search_signals",
+  "research_run_investigation",
+  "research_replay_investigation",
+  "research_policy_collect",
+  "research_policy_evaluate",
+  "research_policy_replay",
+]);
 
 export function researchExecutionRefusal(intent, tool) {
-  if (intent?.inspectionOnly && (EXECUTION_TOOLS.has(tool) || ["research_create_investigation", "research_amend_investigation", "research_policy_create"].includes(tool)))
+  if (
+    intent?.inspectionOnly &&
+    (EXECUTION_TOOLS.has(tool) ||
+      ["research_create_investigation", "research_amend_investigation", "research_policy_create"].includes(tool))
+  )
     return "This task requests inspection of saved evidence, not a fresh calculation or new study. Do not create or execute a study unless the user explicitly requests it.";
   if (intent?.designOnly && EXECUTION_TOOLS.has(tool))
     return "This task requests a research design only. Inspect evidence and propose or save a protocol, but do not execute calculations until the user requests execution.";

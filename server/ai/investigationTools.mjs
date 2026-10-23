@@ -108,21 +108,33 @@ export const INVESTIGATION_TOOLS = [
   {
     name: "research_amend_investigation",
     label: "Save linked research amendment",
-    description: "Create an immutable child of an inspected investigation using its exact current revision and a complete revised protocol. Preserve its original question and claim family. The current user request is saved as the amendment. Never overwrite the original or invent source rows. Saving does not execute the child.",
-    parameters: object({ id, revision: { type: "integer", minimum: 1 }, protocol: INVESTIGATION_PROTOCOL_SCHEMA }, ["id", "revision", "protocol"]),
+    description:
+      "Create an immutable child of an inspected investigation using its exact current revision and a complete revised protocol. Preserve its original question and claim family. The current user request is saved as the amendment. Never overwrite the original or invent source rows. Saving does not execute the child.",
+    parameters: object({ id, revision: { type: "integer", minimum: 1 }, protocol: INVESTIGATION_PROTOCOL_SCHEMA }, [
+      "id",
+      "revision",
+      "protocol",
+    ]),
     run(db, args, _call, context) {
       if (!context?.question) throw Error("A user amendment request is required.");
       const intent = context.intent || interpretResearch(context.question);
       if (intent.inspectionOnly) throw Error("This task requests inspection only; do not create an amended study.");
       if (["causal", "predictive", "strategy"].includes(intent.family) && args.protocol?.family === "descriptive")
         throw Error("A descriptive amendment cannot silently replace the requested " + intent.family + " claim.");
-      return wrapped(amendInvestigation(db, args.id, { revision: args.revision, protocol: args.protocol, amendment: context.question }));
+      return wrapped(
+        amendInvestigation(db, args.id, {
+          revision: args.revision,
+          protocol: args.protocol,
+          amendment: context.question,
+        }),
+      );
     },
   },
   {
     name: "research_replay_investigation",
     label: "Verify frozen research result",
-    description: "Replay a saved evaluation from validated frozen inputs using the matching installed engine. Does not fetch sources, refresh evidence, save a new evaluation or establish new claims. Returns replay.matches. If the installed engine differs, use the offline archive instead.",
+    description:
+      "Replay a saved evaluation from validated frozen inputs using the matching installed engine. Does not fetch sources, refresh evidence, save a new evaluation or establish new claims. Returns replay.matches. If the installed engine differs, use the offline archive instead.",
     parameters: object({ id }, ["id"]),
     async run(db, args, _call, context) {
       const intent = context?.intent || interpretResearch(context?.question || "");

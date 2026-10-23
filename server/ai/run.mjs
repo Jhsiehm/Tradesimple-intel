@@ -1,3 +1,4 @@
+import { estimate, COMPUTE, WEB, REF } from "./runSupport.mjs";
 import { createChatStudies, runToolJobs, availableResearchTools, workflowModelResult } from "./researchChat.mjs";
 import { createQuickReply, handleQuickQuestion } from "./quickReply.mjs";
 import { canPlanInvestigation, investigationPlanningNote } from "./investigationPlanning.mjs";
@@ -51,14 +52,6 @@ import {
   sourcingClarify,
   toolsForSourcing,
 } from "../../shared/askModes.mjs";
-
-const estimate = (messages) =>
-  Math.ceil(
-    messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4,
-  );
-const COMPUTE = new Set(["run_backtest", "research_run_investigation", "research_replay_investigation", "research_policy_evaluate", "research_policy_replay"]);
-const WEB = new Set(["web_search", "web_fetch"]);
-const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
 /**
  * One question, start to finish. `provider.chat` and `execute` are injected, so tests never touch the network.
@@ -131,7 +124,7 @@ export async function runAsk({
   const allow = toolsForSourcing(modes.sourcing);
   const activeTools = availableResearchTools(tools, allow, memory);
 
-  const chatStudies = createChatStudies({studyId, memory, sourcing:modes.sourcing, emit});
+  const chatStudies = createChatStudies({ studyId, memory, sourcing: modes.sourcing, emit });
   const activeStudy = chatStudies.id;
   const quick = createQuickReply({ emit, now, t0, model, modes });
   const early = handleQuickQuestion({ question, history, attached, session, now, quick });
@@ -479,7 +472,9 @@ export async function runAsk({
         label: webCallLabel(call.name, call.args || {}) || labelOf(call.name, call.args || {}),
       };
     });
-    const results = await runToolJobs(jobs, async (job) => {
+    const results = await runToolJobs(
+      jobs,
+      async (job) => {
         if (job.refused) return { job, content: JSON.stringify({ ok: false, error: job.refused }) };
         const { call, id, label } = job;
         const phase = COMPUTE.has(call.name) ? "computing" : "fetching";
@@ -539,10 +534,11 @@ export async function runAsk({
           ? split
             ? split.parent
             : raw
-          : workflowModelResult(raw, limits) ?? trimForModel(
+          : (workflowModelResult(raw, limits) ??
+            trimForModel(
               raw,
               call.name === "research_audit_saved_studies" ? { ...limits, resultChars: 24_000 } : limits,
-            );
+            ));
         const ms = now() - started;
         const ev = evidenceOf(id, call.name, call.args, body, { ms, label, raw, requests });
         evidence.push(ev);
@@ -589,7 +585,9 @@ export async function runAsk({
           emit({ type: "step_end", ...cpub });
         }
         return { job, content: toolMessage(ev, body) };
-      }, signal);
+      },
+      signal,
+    );
     evidence.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
     for (const { job, content } of results)
       messages.push({ role: "tool", toolCallId: job.call.id, name: job.call.name, content });

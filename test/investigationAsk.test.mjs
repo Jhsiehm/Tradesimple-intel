@@ -333,22 +333,30 @@ test("without a full compatible study toolchain the assessment fallback stays av
 
 test("chat study receipts stream before the final answer and explicit context survives terse follow-ups", async () => {
   const s = setup((round, state) => {
-    if (!state.saved) return [tool("research_create_investigation", {protocol:state.fixture.protocol})];
+    if (!state.saved) return [tool("research_create_investigation", { protocol: state.fixture.protocol })];
     return [text("The saved design retains its source requirements [t1].")];
   });
   try {
-    const first=await s.ask({question:s.fixture.question});
-    const card=first.find(e=>e.type==='research_study').study;
-    assert.equal(card.id,s.state.saved.id);
-    assert.equal(first.find(e=>e.type==='done').studies[0].id,card.id);
-    const before=s.calls.length;
-    const second=await s.ask({question:'Explain the evidence gaps in this saved investigation.',studyId:card.id});
-    assert.equal(s.calls[before].name,'research_inspect_investigation');
-    assert.equal(s.calls[before].args.id,card.id);
-    assert.equal(second.find(e=>e.type==='research_study').study.id,card.id);
-    assert.ok(s.seen.at(-1).messages.some(m=>m.role==='tool' && m.content.includes(card.id)));
-    const count=s.calls.length;
-    await s.ask({question:'Explain available web evidence.',studyId:card.id,session:{v:1,sourcing:'web'}});
-    assert.equal(s.calls.slice(count).some(c=>c.name==='research_inspect_investigation'),false);
-  } finally {s.db.close();}
+    const first = await s.ask({ question: s.fixture.question });
+    const card = first.find((e) => e.type === "research_study").study;
+    assert.equal(card.id, s.state.saved.id);
+    assert.equal(first.find((e) => e.type === "done").studies[0].id, card.id);
+    const before = s.calls.length;
+    const second = await s.ask({
+      question: "Explain the evidence gaps in this saved investigation.",
+      studyId: card.id,
+    });
+    assert.equal(s.calls[before].name, "research_inspect_investigation");
+    assert.equal(s.calls[before].args.id, card.id);
+    assert.equal(second.find((e) => e.type === "research_study").study.id, card.id);
+    assert.ok(s.seen.at(-1).messages.some((m) => m.role === "tool" && m.content.includes(card.id)));
+    const count = s.calls.length;
+    await s.ask({ question: "Explain available web evidence.", studyId: card.id, session: { v: 1, sourcing: "web" } });
+    assert.equal(
+      s.calls.slice(count).some((c) => c.name === "research_inspect_investigation"),
+      false,
+    );
+  } finally {
+    s.db.close();
+  }
 });

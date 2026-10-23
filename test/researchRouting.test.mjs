@@ -186,12 +186,16 @@ test("an explicit narrower replacement can leave the policy assessment without i
   );
 });
 
-test('explicitly excluded return calculations do not turn obligation descriptions into strategies', () => {
- const intent=interpretResearch('Create a descriptive study plan for HII contract obligation amounts. Plan only; do not calculate returns or run the study yet.');
- assert.equal(intent.family,'descriptive'); assert.equal(intent.designOnly,true);
- assert.equal(interpretResearch('Calculate returns for HII contract awards.').family,'strategy');
+test("explicitly excluded return calculations do not turn obligation descriptions into strategies", () => {
+  const intent = interpretResearch(
+    "Create a descriptive study plan for HII contract obligation amounts. Plan only; do not calculate returns or run the study yet.",
+  );
+  assert.equal(intent.family, "descriptive");
+  assert.equal(intent.designOnly, true);
+  assert.equal(interpretResearch("Calculate returns for HII contract awards.").family, "strategy");
 });
-test('creating a plan takes precedence over reviewing its saved source records',()=>{
- const intent=interpretResearch('Review my saved HII studies and create a descriptive study plan. Plan only.');
- assert.equal(Boolean(intent.inspectionOnly),false); assert.equal(intent.designOnly,true);
+test("creating a plan takes precedence over reviewing its saved source records", () => {
+  const intent = interpretResearch("Review my saved HII studies and create a descriptive study plan. Plan only.");
+  assert.equal(Boolean(intent.inspectionOnly), false);
+  assert.equal(intent.designOnly, true);
 });

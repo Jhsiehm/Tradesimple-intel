@@ -87,24 +87,53 @@ function DataView({ value, depth = 0 }: { value: unknown; depth?: number }) {
 }
 
 function StudyResults({ study }: { study: ResearchStudy }) {
-  const amount = (value: unknown, unit: unknown) => typeof value === "number" && unit === "USD"
-    ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value;
-  const summaries = study.kind === "workflow" ? Object.entries(study.outputs).flatMap(([name, output]) => {
-    const preview = (output as { preview?: Record<string, unknown>[] })?.preview;
-    return Array.isArray(preview) ? preview.filter(row => typeof row.n === "number" && "sum" in row).map(row => ({
-      output: name, group: JSON.stringify(row.groupValues || {}), metric: row.metric, unit: row.unit,
-      count: row.n, total: amount(row.sum, row.unit), mean: amount(row.mean, row.unit),
-      minimum: amount(row.min, row.unit), maximum: amount(row.max, row.unit),
-    })) : [];
-  }) : [];
-  return <>
-    {summaries.map(({output, group, metric, ...values}, index) => <div key={`${output}:${index}`}>
-      <p className="study-note">{output} · {display(metric)}{group !== "{}" ? ` · ${group}` : ""}</p>
-      <DataView value={[values]} />
-    </div>)}
-    {summaries.length ? <p className="study-note">USD amounts displayed to two decimals; full precision is retained in the result preview and export.</p> : null}
-    <details><summary>Full result preview</summary><DataView value={study.outputs} /></details>
-  </>;
+  const amount = (value: unknown, unit: unknown) =>
+    typeof value === "number" && unit === "USD"
+      ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : value;
+  const summaries =
+    study.kind === "workflow"
+      ? Object.entries(study.outputs).flatMap(([name, output]) => {
+          const preview = (output as { preview?: Record<string, unknown>[] })?.preview;
+          return Array.isArray(preview)
+            ? preview
+                .filter((row) => typeof row.n === "number" && "sum" in row)
+                .map((row) => ({
+                  output: name,
+                  group: JSON.stringify(row.groupValues || {}),
+                  metric: row.metric,
+                  unit: row.unit,
+                  count: row.n,
+                  total: amount(row.sum, row.unit),
+                  mean: amount(row.mean, row.unit),
+                  minimum: amount(row.min, row.unit),
+                  maximum: amount(row.max, row.unit),
+                }))
+            : [];
+        })
+      : [];
+  return (
+    <>
+      {summaries.map(({ output, group, metric, ...values }, index) => (
+        <div key={`${output}:${index}`}>
+          <p className="study-note">
+            {output} · {display(metric)}
+            {group !== "{}" ? ` · ${group}` : ""}
+          </p>
+          <DataView value={[values]} />
+        </div>
+      ))}
+      {summaries.length ? (
+        <p className="study-note">
+          USD amounts displayed to two decimals; full precision is retained in the result preview and export.
+        </p>
+      ) : null}
+      <details>
+        <summary>Full result preview</summary>
+        <DataView value={study.outputs} />
+      </details>
+    </>
+  );
 }
 
 function StudyCard({ study, busy, ask }: { study: ResearchStudy; busy: boolean; ask: AskApi }) {

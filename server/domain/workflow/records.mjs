@@ -41,11 +41,18 @@ export function verifyWorkflowRecord(record, { lookupSnapshot } = {}) {
     (record.revision === 1 ? record.previousHash !== null : !digest(record.previousHash))
   )
     throw Error("Workflow investigation metadata or protocol checksum mismatch.");
-  if (record.parentId !== undefined && (
-    !/^inv_[a-f0-9]{32}$/.test(record.parentId) || record.parentId === record.id ||
-    !Number.isSafeInteger(record.parentRevision) || record.parentRevision < 1 || record.parentRevision > 100 ||
-    typeof record.amendment !== "string" || !record.amendment.trim() || record.amendment.length > 8000
-  )) throw Error("Workflow amendment lineage is invalid.");
+  if (
+    record.parentId !== undefined &&
+    (!/^inv_[a-f0-9]{32}$/.test(record.parentId) ||
+      record.parentId === record.id ||
+      !Number.isSafeInteger(record.parentRevision) ||
+      record.parentRevision < 1 ||
+      record.parentRevision > 100 ||
+      typeof record.amendment !== "string" ||
+      !record.amendment.trim() ||
+      record.amendment.length > 8000)
+  )
+    throw Error("Workflow amendment lineage is invalid.");
   const evaluation = record.evaluation;
   if (evaluation) {
     if (
@@ -101,7 +108,9 @@ function summarize(record) {
     from: record.protocol.from,
     to: record.protocol.to,
     protocolHash: record.protocolHash,
-    ...(record.parentId ? { parentId: record.parentId, parentRevision: record.parentRevision, amendment: record.amendment } : {}),
+    ...(record.parentId
+      ? { parentId: record.parentId, parentRevision: record.parentRevision, amendment: record.amendment }
+      : {}),
     archiveAvailable: Boolean(record.evaluation),
     executed: record.result?.executed || false,
   };
@@ -151,7 +160,9 @@ export function verifyWorkflowRows(rows, { lookupSnapshot } = {}) {
       (prior &&
         (prior.protocolHash !== record.protocolHash ||
           prior.createdAt !== record.createdAt ||
-          prior.parentId !== record.parentId || prior.parentRevision !== record.parentRevision || prior.amendment !== record.amendment ||
+          prior.parentId !== record.parentId ||
+          prior.parentRevision !== record.parentRevision ||
+          prior.amendment !== record.amendment ||
           hashOf(prior.sourceRefs) !== hashOf(record.sourceRefs) ||
           hashOf(prior.sourceIssues) !== hashOf(record.sourceIssues)))
     )
@@ -168,9 +179,11 @@ export function saveWorkflowRecord(db, input, expectedRevision = 0) {
   try {
     if (!expectedRevision) {
       const existing = db
-        .prepare(`SELECT id FROM research.workflow_revisions WHERE protocol_hash=? AND revision=1
+        .prepare(
+          `SELECT id FROM research.workflow_revisions WHERE protocol_hash=? AND revision=1
           AND json_extract(body,'$.parentId') IS ? AND json_extract(body,'$.parentRevision') IS ?
-          AND json_extract(body,'$.amendment') IS ?`)
+          AND json_extract(body,'$.amendment') IS ?`,
+        )
         .get(input.protocolHash, input.parentId || null, input.parentRevision || null, input.amendment || null);
       if (existing) {
         db.exec("COMMIT");
@@ -230,8 +243,11 @@ export function workflowSummaries(db) {
 
 export function findWorkflowByProtocol(db, protocolHash) {
   workflowStore(db);
-  return db.prepare("SELECT id FROM research.workflow_revisions WHERE protocol_hash=? AND revision=1 AND json_extract(body,'$.parentId') IS NULL").get(protocolHash)
-    ?.id;
+  return db
+    .prepare(
+      "SELECT id FROM research.workflow_revisions WHERE protocol_hash=? AND revision=1 AND json_extract(body,'$.parentId') IS NULL",
+    )
+    .get(protocolHash)?.id;
 }
 
 export { workflowView } from "./view.mjs";

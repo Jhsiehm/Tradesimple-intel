@@ -336,7 +336,6 @@ test("blocked designs preserve unknown dates and original sources without invent
   }
 });
 
-
 test("amendments preserve originals, isolate lineage identities, and reject stale or downgraded protocols", async () => {
   const db = new DatabaseSync(":memory:");
   try {
@@ -356,13 +355,18 @@ test("amendments preserve originals, isolate lineage identities, and reject stal
     assert.notEqual(root.id, child.id);
     assert.equal(createInvestigation(db, child.protocol).id, root.id);
     assert.notEqual(amendInvestigation(db, root.id, args).id, child.id);
-    assert.throws(() => amendInvestigation(db, parent.id, { ...args, protocol: { ...revised, family: "causal" } }), /claim family/);
+    assert.throws(
+      () => amendInvestigation(db, parent.id, { ...args, protocol: { ...revised, family: "causal" } }),
+      /claim family/,
+    );
     await runInvestigation(db, parent.id, { revision: 1 });
     assert.throws(() => amendInvestigation(db, parent.id, args), /changed/);
     const run = await runInvestigation(db, child.id, { revision: 1 });
     assert.equal(run.parentId, parent.id);
-    assert.equal(listInvestigations(db).items.find(x => x.id === child.id).parentId, parent.id);
-  } finally { db.close(); }
+    assert.equal(listInvestigations(db).items.find((x) => x.id === child.id).parentId, parent.id);
+  } finally {
+    db.close();
+  }
 });
 
 test("in-app replay uses frozen evidence without creating revisions and rejects unfrozen studies", async () => {
@@ -377,11 +381,13 @@ test("in-app replay uses frozen evidence without creating revisions and rejects 
     assert.equal(replay.replay.matches, true);
     assert.deepEqual(replay.investigation, run);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM research.workflow_revisions").get().n, 2);
-    const controller = new AbortController(); controller.abort();
+    const controller = new AbortController();
+    controller.abort();
     await assert.rejects(replayInvestigation(db, created.id, { signal: controller.signal }), /cancelled/);
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 });
-
 
 test("in-app replay refuses a different archived engine without evaluating archived code", async () => {
   const db = new DatabaseSync(":memory:");
@@ -394,9 +400,14 @@ test("in-app replay refuses a different archived engine without evaluating archi
     record.evaluation.engineHash = hashOf(record.evaluation.engineFiles);
     const body = JSON.stringify(record);
     db.exec("DROP TRIGGER research.workflow_revisions_update");
-    db.prepare("UPDATE research.workflow_revisions SET body=?,body_hash=? WHERE id=? AND revision=2")
-      .run(body, hashOf(body), created.id);
+    db.prepare("UPDATE research.workflow_revisions SET body=?,body_hash=? WHERE id=? AND revision=2").run(
+      body,
+      hashOf(body),
+      created.id,
+    );
     await assert.rejects(replayInvestigation(db, created.id), /installed engine differs/);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM research.workflow_revisions").get().n, 2);
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 });

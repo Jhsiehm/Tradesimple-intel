@@ -175,3 +175,13 @@ export type AskStatus = {
   styles?: { id: string; label: string }[];
   web?: { configured: boolean; note: string };
 };
+
+/** `fresh`: skip a reusable stored answer (the "Re-ask" button). */
+export type RunOpts = {
+  studyId?: string;
+  memory?: MemoryRequest;
+  answers?: Record<string, unknown>;
+  acceptDefaults?: boolean;
+  turnId?: string;
+  fresh?: boolean;
+};

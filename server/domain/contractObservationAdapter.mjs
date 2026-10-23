@@ -30,18 +30,31 @@ export function contractObservationInput(dataset) {
       eventAt: event.eventAt,
       availableAt: event.original.firstObservedAt,
       sourceUrl: event.sourceUrl,
-      lineage: { datasetId: dataset.id, contentHash: dataset.contentHash, rawHash: dataset.rawHash, originalSignal: event },
+      lineage: {
+        datasetId: dataset.id,
+        contentHash: dataset.contentHash,
+        rawHash: dataset.rawHash,
+        originalSignal: event,
+      },
     };
   });
   return {
     name: `Selected contract obligations · ${dataset.id}`,
     source: "Saved USAspending contract evidence; selected sample; collector-observed timing only",
     ownership: "Owner-local saved research evidence; original dataset ownership assertions retained",
-    license: "Source usage conditions remain those of the original saved evidence; this conversion grants no new rights.",
+    license:
+      "Source usage conditions remain those of the original saved evidence; this conversion grants no new rights.",
     format: "json",
     content: JSON.stringify({
       items,
-      provenance: { adapter: "selected-contract-observations-v1", datasetId: dataset.id, contentHash: dataset.contentHash, rawHash: dataset.rawHash, manifest: dataset.manifest, limits },
+      provenance: {
+        adapter: "selected-contract-observations-v1",
+        datasetId: dataset.id,
+        contentHash: dataset.contentHash,
+        rawHash: dataset.rawHash,
+        manifest: dataset.manifest,
+        limits,
+      },
     }),
   };
 }
@@ -53,9 +66,21 @@ export function listCompatibleContractDatasets(db) {
       const input = contractObservationInput(dataset);
       const preview = prepareObservations(input);
       if (!preview.ok) return [];
-      return [{ ...brief, selectedRows: dataset.events.length, underlyingReceived: dataset.coverage?.received ?? null,
-        metric: "selected_contract_obligation", unit: "USD", scope: "Selected positive-obligation signals only; not all transactions", availability: "Collector first-observed time, not verified publication", sourceDatasetCaveats: dataset.caveats || [] }];
-    } catch { return []; }
+      return [
+        {
+          ...brief,
+          selectedRows: dataset.events.length,
+          underlyingReceived: dataset.coverage?.received ?? null,
+          metric: "selected_contract_obligation",
+          unit: "USD",
+          scope: "Selected positive-obligation signals only; not all transactions",
+          availability: "Collector first-observed time, not verified publication",
+          sourceDatasetCaveats: dataset.caveats || [],
+        },
+      ];
+    } catch {
+      return [];
+    }
   });
 }
 
@@ -63,8 +88,23 @@ export function prepareContractObservations(db, datasetId) {
   const dataset = getDataset(db, datasetId);
   const input = contractObservationInput(dataset);
   const result = importObservations(db, input);
-  if (!result.ok) throw Error(`Saved contract observations failed validation: ${result.errors.map((e) => e.message).join(" ")}`);
+  if (!result.ok)
+    throw Error(`Saved contract observations failed validation: ${result.errors.map((e) => e.message).join(" ")}`);
   const { provenance } = JSON.parse(input.content);
-  return { ok: true, source: input.source, snapshot: { id: result.snapshot.id, name: result.snapshot.name, contentHash: result.snapshot.contentHash, coverage: result.snapshot.coverage, fields: [...new Set(result.snapshot.events.flatMap(Object.keys))], preview: result.snapshot.events.slice(0, 10), totalRows: result.snapshot.events.length }, provenance,
-    message: "Saved selected numeric observations. No analysis was executed. Use this exact snapshot ID in a descriptive plan." };
+  return {
+    ok: true,
+    source: input.source,
+    snapshot: {
+      id: result.snapshot.id,
+      name: result.snapshot.name,
+      contentHash: result.snapshot.contentHash,
+      coverage: result.snapshot.coverage,
+      fields: [...new Set(result.snapshot.events.flatMap(Object.keys))],
+      preview: result.snapshot.events.slice(0, 10),
+      totalRows: result.snapshot.events.length,
+    },
+    provenance,
+    message:
+      "Saved selected numeric observations. No analysis was executed. Use this exact snapshot ID in a descriptive plan.",
+  };
 }

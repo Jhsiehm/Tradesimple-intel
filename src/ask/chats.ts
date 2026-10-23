@@ -70,7 +70,12 @@ function asTurn(raw: unknown): Turn | null {
     steps: Array.isArray(t.steps) ? t.steps : [],
     notes: Array.isArray(t.notes) ? t.notes : [],
     phase: t.phase === "error" || interrupted ? "error" : "done",
-    ...(interrupted ? {error: "This conversation was interrupted. Inspect the saved investigation before retrying; server work may have finished."} : {}),
+    ...(interrupted
+      ? {
+          error:
+            "This conversation was interrupted. Inspect the saved investigation before retrying; server work may have finished.",
+        }
+      : {}),
   } as Turn;
 }
 
