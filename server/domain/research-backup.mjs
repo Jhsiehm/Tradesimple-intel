@@ -35,6 +35,8 @@ function inspect(file) {
     for (const table of present)
       counts[table] = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get().n;
     for (const table of [
+      "trial_attempts",
+      "trial_outcomes",
       "paper_accounts",
       "paper_events",
       "connector_retrievals",

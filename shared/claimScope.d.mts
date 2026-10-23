@@ -1,7 +1,9 @@
 export type WindowClaim = { raw: string; days: number; at: number };
 export type BenchmarkClaim = { raw: string; target: string; at: number };
 export type Coverage = { all: boolean; from: string; to: string; days: number | null; basis: string };
-export type ScopeFlag = { kind: "window" | "benchmark"; raw: string; refs: string[]; note: string };
+export type ScopeFlag = { kind: "window" | "benchmark" | "research"; raw: string; refs: string[]; note: string };
+export const RESEARCH_CERTIFICATION_CLAIM: RegExp;
+export const RESEARCH_SIGNIFICANCE_CLAIM: RegExp;
 export function windowClaims(text: string): WindowClaim[];
 export function benchmarkClaims(text: string): BenchmarkClaim[];
 export function windowOf(tool: string, body: unknown): Coverage | null;

@@ -17,7 +17,14 @@ export type PlaceboResult = {
   missedDraws: number;
 };
 export type RealityLevel = "few" | "luck" | "mixed" | "tickers" | "bench" | "worse" | "beat";
+export type InferenceApplicability = {
+  status: "withheld" | "exploratory";
+  basis: "entry-week";
+  blocks: number;
+  reasons: string[];
+};
 export type Reality = {
+  inference?: InferenceApplicability;
   n: number;
   seed: number;
   bootstrap: { iters: number; blocks: number; meanTrade: Interval; meanExcess: Interval } | null;
@@ -67,6 +74,8 @@ export function blockBootstrap(
 ): { mean: number; lo: number; hi: number }[] | null;
 export function lnGamma(z: number): number;
 export function betaInc(x: number, a: number, b: number): number;
+export function tSurvival(t: number, df: number): number;
+export function inferenceApplicability(trades: { entry: string; exit: string }[]): InferenceApplicability;
 export function tCdf(t: number, df: number): number;
 export function clusteredT(xs: number[], keys: (string | number)[]): ClusteredT | null;
 export function conservativeT(c: ClusteredT | null): (ClusteredT & { seCluster?: number | null }) | null;

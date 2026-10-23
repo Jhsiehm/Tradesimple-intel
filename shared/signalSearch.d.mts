@@ -1,6 +1,6 @@
 import type { Bar, BacktestSignal } from "./backtest.mjs";
 import type { BacktestSpec } from "./backtestSpec.mjs";
-import type { Interval, RealityLevel } from "./backtestStats.mjs";
+import type { Interval, RealityLevel, InferenceApplicability } from "./backtestStats.mjs";
 
 export type SearchVariant = { id: string; dim: string; label: string; spec: BacktestSpec; signals: BacktestSignal[] };
 export type SearchRow = {
@@ -21,6 +21,7 @@ export type SearchRow = {
     from: string;
     to: string;
   } | null;
+  inference?: InferenceApplicability;
   ci?: Interval | null;
   members?: number;
   nEff?: number | null;
@@ -39,7 +40,7 @@ export type SearchRanking = {
   tested: number;
   passing: number;
   findings: SearchFinding[];
-  untested: { id: string; dim: string; label: string; n: number; signals: number }[];
+  untested: { id: string; dim: string; label: string; n: number; signals: number; reasons?: string[] }[];
 };
 export type SearchOutcome = SearchRanking & { minTrades: number; fdr: number; seed: number; warning: string };
 

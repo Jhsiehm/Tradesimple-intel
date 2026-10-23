@@ -80,6 +80,31 @@ export function BacktestResults({
             : "Asking again every few seconds until it settles."}
         </p>
       ) : null}
+      {run.dataValidity ? (
+        <p className="bt-note warn">
+          Exploratory research. Historical tradability is not established.{" "}
+          {run.dataValidity.limitations
+            .slice(0, 2)
+            .map((l) => l.text)
+            .join(" ")}
+        </p>
+      ) : null}
+      {run.executionAssessment ? (
+        <p className="bt-note warn">
+          Signal-return simulation: fills, funding and rebalancing are assumed. This curve is not a validated executable
+          portfolio.
+        </p>
+      ) : null}
+      {run.trial ? (
+        <p className="bt-basis">
+          {run.trial.priorOverlappingAttempts} earlier local attempts and {run.trial.priorOverlappingVariants} search
+          variants overlap this period and universe. Earlier or external inspection is unknown; this is not a count of
+          independent tests.{" "}
+          <a href={`/api/research/trials/${run.trial.id}`} target="_blank" rel="noreferrer">
+            Inspect recorded attempts
+          </a>
+        </p>
+      ) : null}
       {!s ? (
         <p className="bt-empty">
           {run.counts.matched === 0 || run.counts.signals === 0
@@ -90,17 +115,17 @@ export function BacktestResults({
         <>
           <div className="bt-tiles">
             <Tile
-              label="Strategy"
+              label="Simulated return"
               value={pts(s.total)}
               sub={`${pts(s.annualized)} /yr · ${s.from} → ${s.to}`}
               cls={tone(s.total)}
-              title="Calendar-time portfolio: open positions at equal (or range-midpoint) weight, idle days earn 0."
+              title="Synthetic daily weighted signal-return curve; funding and daily rebalance turnover are not modeled. Idle days earn 0."
             />
             <Tile
               label={bench === "SECTOR" ? "Sector ETFs" : bench}
               value={pts(s.benchmarkTotal)}
               sub={`${pts(s.benchmarkAnnualized)} /yr · same days, same weights`}
-              title="The benchmark holds exactly the same positions on exactly the same days."
+              title="The benchmark uses corresponding signed return paths, weights and observation days; these are simulated exposures."
             />
             <Tile
               label="Excess"
@@ -143,11 +168,30 @@ export function BacktestResults({
           <p className="bt-basis">
             {s.weighting} Average {s.avgConcurrent ?? "—"} positions open (max {s.maxConcurrent}); average hold{" "}
             {s.avgHoldDays} days. Excess t-statistic {s.excessT ?? "—"} assumes independent trades, which these are not;
-            the clustered t above does not.
+            clustering and bootstrap diagnostics also require assumptions; see their applicability status above.
           </p>
         </>
       )}
 
+      {run.executionAssessment ? (
+        <details className="bt-basis">
+          <summary>Execution assumptions and trade-cost sensitivity</summary>
+          {run.executionAssessment.gates.map((gate) => (
+            <p key={gate.id}>{gate.detail}</p>
+          ))}
+          <p>
+            Mean trade return at alternative costs per side; excludes daily rebalancing, borrow and market impact. These
+            are not portfolio returns.
+          </p>
+          <ul>
+            {run.executionAssessment.costSensitivity.scenarios.map((scenario) => (
+              <li key={scenario.oneWayBps}>
+                {scenario.oneWayBps} bps per side: {pts(scenario.meanTradeReturn)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       <section className={warn.length ? "bt-caveats has-warn" : "bt-caveats"} aria-label="Data caveats">
         <h3>
           Data caveats <small>read before trusting any number above</small>

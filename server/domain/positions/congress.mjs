@@ -92,7 +92,7 @@ async function buildTrades(db, publish) {
   const people = await roster(db).catch(() => ({ items: [] }));
   const errors = [];
   const progress = {
-    house: { parsed: 0, total: 0, paper: 0, failed: 0, done: false },
+    house: { parsed: 0, total: 0, paper: 0, failed: 0, indexFailures: [], done: false },
     senate: { parsed: 0, total: 0, paper: 0, failed: 0, done: false },
   };
   const house = [];
@@ -108,7 +108,7 @@ async function buildTrades(db, publish) {
       );
     const h = progress.house;
     const s = progress.senate;
-    const notes = [...errors];
+    const notes = [...errors, ...h.indexFailures.map((f) => `House Clerk index ${f.year}: ${f.error}`)];
     if (h.paper || s.paper)
       notes.push(
         `${h.paper} House and ${s.paper || 0} Senate reports since ${TRADES_FROM} are scanned paper filings and are not parsed.`,
@@ -165,11 +165,27 @@ async function buildTrades(db, publish) {
   return compose(false);
 }
 
+/** Preserve annual enumeration failures rather than silently interpreting them as empty filing years. */
+export async function readHouseIndexYear(db, year, readIndex = clerkIndex) {
+  try {
+    const text = await readIndex(db, year);
+    if (typeof text !== "string" || !text.trim()) throw new Error("Empty filing index response; coverage is unknown.");
+    return { ok: true, year, text };
+  } catch (error) {
+    return { ok: false, year, error: error.message || String(error) };
+  }
+}
+
 async function houseTrades(db, people, progress, rows, tick) {
   const index = [];
   const year = new Date().getUTCFullYear();
   for (let y = year; y >= Number(TRADES_FROM.slice(0, 4)); y -= 1) {
-    const text = await clerkIndex(db, y).catch(() => "");
+    const receipt = await readHouseIndexYear(db, y);
+    if (!receipt.ok) {
+      progress.indexFailures.push({ year: y, error: receipt.error });
+      continue;
+    }
+    const text = receipt.text;
     for (const line of text.split(/\r?\n/).slice(1)) {
       const cols = line.split("\t");
       if (cols.length < 9 || cols[4] !== "P") continue;

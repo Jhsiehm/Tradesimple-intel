@@ -172,8 +172,9 @@ test("on random walks with random signals the placebo rarely fires, and the run 
     "deterministic",
   );
   const f = Object.fromEntries(backtestFormulas({ ...run, reality: r }).map((x) => [x.id, x]));
-  for (const id of ["bootstrap", "placebo", "cluster", "neff"]) assert.ok(f[id], id);
-  assert.match(f.placebo.worked, new RegExp(String(r.placebo.p)));
+  assert.equal(r.inference.status, "withheld");
+  for (const id of ["bootstrap", "placebo", "cluster", "neff"])
+    assert.equal(f[id], undefined, `${id} is suppressed for overlapping holdings`);
 });
 
 test("verdict wording never overclaims", () => {

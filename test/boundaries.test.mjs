@@ -29,7 +29,6 @@ const KNOWN_LARGE = new Map([
   ["server/domain/research-observations.mjs", 704],
   ["server/intel.mjs", 667],
   ["server/news.mjs", 692],
-  ["shared/backtest.mjs", 666],
   ["shared/watchlist.mjs", 607],
   ["src/App.tsx", 1468],
   ["src/backtest/backtest.css", 674],

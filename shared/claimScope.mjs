@@ -31,6 +31,11 @@ const NEGATED =
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const negated = (s, at) => NEGATED.test(s.slice(Math.max(0, at - 48), at));
+/** Shared explicit-claim vocabulary; saved audits apply their own study and clause scoping. */
+export const RESEARCH_CERTIFICATION_CLAIM =
+  /\b(?:verified|proven|validated|certified)\s+(?:tradable|trading|investable|predictive|causal|executable)\s+(?:edge|strategy|effect|portfolio|performance|skill)\b|\b(?:execution[- ]ready|historically tradable|executable portfolio)\b/i;
+export const RESEARCH_SIGNIFICANCE_CLAIM =
+  /\bstatistically significant\b|\b(?:proves?|establishes?)\s+(?:an?\s+)?(?:alpha|edge)\b/i;
 const numOf = (w) => (w == null || w === "" ? 1 : /^\d+$/.test(w) ? Number(w) : WORDS[w.toLowerCase()] || 0);
 
 /** "last 30 days", "past two weeks", "this month", "30-day window" → `{ raw, days, at }`. Hold periods are not windows. */
@@ -157,6 +162,32 @@ export function scopeCheck(answer, evidence) {
     const own = unit.refs.filter((id) => byId.has(id));
     const refs = own.length ? own : allRefs;
     const results = refs.map((id) => ({ id, tool: byId.get(id).tool, body: parse(byId.get(id).json) }));
+    // Narrow, explicit certification claims. This is a warning detector, not semantic truth verification.
+    const calculations = results.filter(
+      (r) => ["run_backtest", "search_signals"].includes(r.tool) && r.body?.ok !== false,
+    );
+    if (calculations.length) {
+      const rules = [
+        {
+          re: RESEARCH_CERTIFICATION_CLAIM,
+          applies: true,
+          note: "The cited backtest is exploratory and does not establish historical tradability, executable fills, predictive validity or causality.",
+        },
+        {
+          re: RESEARCH_SIGNIFICANCE_CLAIM,
+          applies: calculations.some(
+            (r) => (r.body.reality?.inference || r.body.isItReal?.inference)?.status === "withheld",
+          ),
+          note: "Statistical inference was withheld for this calculation. Retained diagnostic numbers cannot support a significance or established-edge claim.",
+        },
+      ];
+      for (const rule of rules)
+        if (rule.applies) {
+          for (const match of unit.text.matchAll(new RegExp(rule.re.source, "gi"))) {
+            if (!negated(unit.text, match.index)) out.push({ kind: "research", raw: match[0], refs, note: rule.note });
+          }
+        }
+    }
     for (const c of windowClaims(unit.text)) {
       const scopes = results.map((r) => ({ id: r.id, w: windowOf(r.tool, r.body) }));
       if (scopes.some((s) => !s.w)) continue;

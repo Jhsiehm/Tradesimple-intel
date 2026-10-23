@@ -1,8 +1,8 @@
 /** Deterministic, chronological multi-source confirmation and evaluation. No clock or I/O. */
 import { cleanRules } from "./backtestSpec.mjs";
 import { runBacktest, dayOf, isoOf } from "./backtest.mjs";
-import { blockBootstrap, weekOf } from "./backtestStats.mjs";
-export const CONVERGENCE_VERSION = 2;
+import { blockBootstrap, weekOf, inferenceApplicability } from "./backtestStats.mjs";
+export const CONVERGENCE_VERSION = 3;
 const validDate = (s) =>
   typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && dayOf(s) !== null && isoOf(dayOf(s)) === s;
 function agreementPolicy(raw) {
@@ -189,13 +189,15 @@ function periodReport(input, from, to) {
     const windowStats = { strategyReturn, benchmarkReturn, excess: strategyReturn - benchmarkReturn };
     const weeks = result.trades.map((t) => weekOf(dayOf(t.entry)));
     const xs = result.trades.map((t) => t.excess);
+    const inference = inferenceApplicability(result.trades);
     const bootstrap =
-      xs.length >= 10 && new Set(weeks).size >= 2
+      inference.status !== "withheld"
         ? blockBootstrap([xs], weeks, { iters: 2000, seed: 12345, alpha: 0.05 })[0]
         : null;
     return {
       ...v,
       windowStats,
+      inference,
       counts: {
         ...combined.counts,
         decisions: combined.signals.length,
@@ -250,7 +252,7 @@ export function runConvergence(input) {
       "Single-source baselines require one source. Leave-one-out comparisons keep the declared agreement rule: all means all remaining sources, any means one, and at-least keeps its fixed count even when too few sources remain (no decisions).",
       "Matching state resets at the holdout boundary. Development prices stop before the embargo, and unfinished positions are excluded; no trade crosses the split.",
       "Ablation differences describe changes in strategy performance and sample selection, not causal attribution or additive contributions.",
-      "Intervals are 95% entry-week block-bootstrap intervals for average trade excess (2,000 seeded draws), only with at least 10 trades and 2 entry weeks. They are not multiple-testing-adjusted significance claims.",
+      "Intervals are exploratory entry-week bootstrap diagnostics (2,000 seeded draws). They are withheld for insufficient entry weeks, invalid intervals or holding windows overlapping across week blocks. Passing these checks does not establish independent blocks or correct for repeated experimentation.",
       "This is a chronological holdout over historical data. Locking a plan cannot establish that a researcher has never seen the period or eliminate survivorship and source coverage bias.",
       "The first source supplies the common price snapshot. Public dates retain source-specific assumptions and imported assertions; original source caveats remain applicable.",
     ],

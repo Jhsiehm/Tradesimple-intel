@@ -1,3 +1,4 @@
+import { exportResearchTrials } from "../domain/research-trials.mjs";
 import { exportPaperArchive } from "../domain/paper-archive.mjs";
 import { createPaperAccount, getPaperAccount, listPaperAccounts, recordPaperAction } from "../domain/paper-ledger.mjs";
 import { createRetrieval, listRetrievals, getRetrieval, resumeRetrieval } from "../domain/connector-retrievals.mjs";
@@ -115,6 +116,8 @@ async function handle(ctx, methods, fn) {
   }
 }
 export const handlers = {
+  "research.trial": (ctx) =>
+    handle(ctx, ["GET"], () => ({ ok: true, inventory: exportResearchTrials(ctx.db, ctx.params.id) })),
   "research.paperArchive": (ctx) =>
     handle(ctx, ["GET"], () => {
       const bytes = exportPaperArchive(ctx.db, ctx.params.id);

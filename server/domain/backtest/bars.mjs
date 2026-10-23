@@ -1,3 +1,4 @@
+import { assessPriceCoverage } from "../../../shared/researchDataValidity.mjs";
 import { listTickers, readCache, writeCache } from "../../lib/db.mjs";
 import { BENCHMARKS } from "../../../shared/backtestSpec.mjs";
 import { PRICE_HISTORY_FROM } from "../../../shared/backtest.mjs";
@@ -80,6 +81,13 @@ export async function loadBars(db, symbols, { deadline, concurrency = 6, fetchBa
   const snapshot = { ...bars };
   return {
     bars: snapshot,
+    priceCoverage: assessPriceCoverage({
+      requested: symbols,
+      bars: snapshot,
+      pending: [...pending],
+      missing: [...missing],
+      stale: [...stale],
+    }),
     pending: [...pending].sort(),
     missing: [...missing].sort(),
     stale: [...stale].sort(),

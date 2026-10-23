@@ -3,17 +3,19 @@
  *
  * Each variant runs through the same engine as a single backtest. Variants with fewer than `minTrades` priced trades
  * are not tested (and do not count toward m). The tested ones get a one-sided p-value for "mean excess per trade > 0"
- * from a t-test clustered by member (by entry week when a variant has fewer than 5 members; SE never below the iid
+ * from a t-test clustered by member (by entry week when a variant has fewer than 10 members; SE never below the iid
  * one), then Benjamini–Hochberg
  * q-values across all m tested. The top findings also get the random-entry placebo.
  */
 import { dayOf, runBacktest } from "./backtest.mjs";
 import { clusteredT, conservativeT, realityCheck, weekOf, REALITY } from "./backtestStats.mjs";
 
-export const SEARCH = { minTrades: 30, fdr: 0.1, top: 12, minMembersForMemberCluster: 5 };
+export const SEARCH = { minTrades: 30, fdr: 0.1, top: 12, minMembersForMemberCluster: 10 };
 
 /** Benjamini–Hochberg q-values, in the input order. q_(i) = min over j ≥ i of m·p_(j)/j, capped at 1. */
 export function bhQValues(ps) {
+  if (ps.some((p) => !Number.isFinite(p) || p < 0 || p > 1))
+    throw new RangeError("BH requires finite p-values in [0, 1].");
   const m = ps.length;
   const order = ps.map((p, i) => [p, i]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const q = new Array(m);
@@ -25,8 +27,6 @@ export function bhQValues(ps) {
   }
   return q;
 }
-
-const r4 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10_000) / 10_000);
 
 /** One variant through the engine and the cheap checks (no placebo). `null` stats when it has no trades. */
 export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed }) {
@@ -50,6 +50,12 @@ export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed 
     ),
   );
   const members = reality.cluster?.members || 0;
+  const byMember = conservativeT(
+    clusteredT(
+      ex,
+      run.trades.map((t) => t.actorLabel || t.actor || ""),
+    ),
+  );
   const useMember = members >= SEARCH.minMembersForMemberCluster && reality.cluster?.pOne != null;
   return {
     ...base,
@@ -67,8 +73,10 @@ export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed 
     ci: reality.bootstrap?.meanExcess || null,
     members,
     nEff: reality.cluster?.nEff ?? null,
-    t: useMember ? reality.cluster.t : r4(byWeek?.t),
-    p: useMember ? reality.cluster.pOne : r4(byWeek?.pOne),
+    inference: reality.inference,
+    t: useMember ? byMember?.t : byWeek?.t,
+    // Preserve full precision through multiple-testing decisions.
+    p: reality.inference?.status === "withheld" ? null : useMember ? byMember?.pOne : byWeek?.pOne,
     pBasis: useMember ? "member" : "week",
   };
 }
@@ -78,17 +86,24 @@ export function evaluateVariant({ variant, bars, benchBars, seed = REALITY.seed 
  * over the tested set; `passes` when q ≤ fdr and the mean excess is positive.
  */
 export function rankFindings(rows, { minTrades = SEARCH.minTrades, fdr = SEARCH.fdr } = {}) {
-  const tested = rows.filter((r) => r.stats && r.n >= minTrades && r.p != null);
+  const tested = rows.filter((r) => r.stats && r.n >= minTrades && Number.isFinite(r.p) && r.p >= 0 && r.p <= 1);
   const q = bhQValues(tested.map((r) => r.p));
   const ranked = tested
-    .map((r, i) => ({ ...r, q: r4(q[i]), passes: q[i] <= fdr && (r.stats.avgExcess ?? 0) > 0 }))
+    .map((r, i) => ({ ...r, q: q[i], passes: q[i] <= fdr && (r.stats.avgExcess ?? 0) > 0 }))
     .sort(
       (a, b) =>
         (b.stats.avgExcess ?? -Infinity) - (a.stats.avgExcess ?? -Infinity) || String(a.id).localeCompare(String(b.id)),
     );
   const untested = rows
     .filter((r) => !tested.includes(r))
-    .map((r) => ({ id: r.id, dim: r.dim, label: r.label, n: r.n, signals: r.signals }));
+    .map((r) => ({
+      id: r.id,
+      dim: r.dim,
+      label: r.label,
+      n: r.n,
+      signals: r.signals,
+      reasons: r.inference?.reasons || [],
+    }));
   return {
     built: rows.length,
     tested: tested.length,
@@ -100,14 +115,14 @@ export function rankFindings(rows, { minTrades = SEARCH.minTrades, fdr = SEARCH.
 
 /** The warning shown with every search, with the counts filled in. */
 export function searchWarning({ built, tested, passing }, { minTrades = SEARCH.minTrades, fdr = SEARCH.fdr } = {}) {
-  const expectedFalse = passing ? Math.max(0, Math.round(passing * fdr * 10) / 10) : 0;
   return [
-    `${tested} variants were tested (${built} built; ${built - tested} had fewer than ${minTrades} priced trades and were not tested).`,
+    `${tested} variants were tested (${built} built; ${built - tested} were not tested: fewer than ${minTrades} priced trades, unavailable p-values, or failed inference safeguards).`,
     `With that many tries, some will look good by chance: at 5% significance about ${Math.round(tested * 0.05)} would pass with no real effect at all.`,
     passing
-      ? `${passing} pass a false discovery rate of ${fdr * 100}% (Benjamini–Hochberg q ≤ ${fdr}); expect about ${expectedFalse} of those to be false anyway.`
-      : `None pass a false discovery rate of ${fdr * 100}% (Benjamini–Hochberg q ≤ ${fdr}).`,
-    "Variants overlap (the same trades sit in many), all are in-sample on one period, and a pass is a lead to check out of sample, not an edge.",
+      ? `${passing} meet the nominal Benjamini–Hochberg threshold (q ≤ ${fdr}).`
+      : `None meet the nominal Benjamini–Hochberg threshold (q ≤ ${fdr}).`,
+    `The ${fdr * 100}% FDR target concerns the expected false-discovery proportion over repeated experiments under valid p-values and appropriate dependence assumptions; it does not estimate the number of false findings in this run.`,
+    "Overlapping variants may violate those assumptions. This correction covers only this search, not repeated searches or prior experimentation. All findings are exploratory and require an untouched prospective evaluation.",
   ].join(" ");
 }
 

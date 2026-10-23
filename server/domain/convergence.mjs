@@ -1,3 +1,4 @@
+import { beginResearchTrial, finishResearchTrial, researchTrialReceipt } from "./research-trials.mjs";
 import { requireAuditedSource, INTEGRITY_VERSION } from "./research-integrity.mjs";
 import { cleanConvergence, runConvergence } from "../../shared/convergence.mjs";
 import { dayOf } from "../../shared/backtest.mjs";
@@ -47,6 +48,7 @@ export function getPlan(db, id) {
     inputHash: run.inputHash,
     report: run.result.convergence,
     priorEvaluations: run.provenance.priorEvaluations,
+    trial: run.provenance.trial,
   };
 }
 function validatePrices(rows, symbol, spec) {
@@ -72,6 +74,9 @@ function validatePrices(rows, symbol, spec) {
   }
 }
 export function createPlan(db, body) {
+  return getPlan(db, createPlanRecord(db, body));
+}
+function createPlanRecord(db, body) {
   researchStore(db);
   if (typeof body.title !== "string" || !body.title.trim() || body.title.length > 200)
     throw new Error("Provide a title of 1–200 characters.");
@@ -121,8 +126,16 @@ export function createPlan(db, body) {
     bars,
     benchBars: { SPY: reference.benchBars.SPY },
   };
-  const report = runConvergence(inputs);
+  const trial = beginResearchTrial(db, { kind: "convergence-development", spec });
+  let report;
+  try {
+    report = runConvergence(inputs);
+  } catch (error) {
+    finishResearchTrial(db, trial, { status: "failed", detail: error.message });
+    throw error;
+  }
   const provenance = {
+    trial: researchTrialReceipt(trial),
     integrityVersion: INTEGRITY_VERSION,
     sourceAudits,
     sourceRuns: experiments.map((e) => ({
@@ -159,10 +172,12 @@ export function createPlan(db, body) {
       hashOf(text),
       text,
     );
+    finishResearchTrial(db, trial, { status: "completed", runId: developmentRunId });
     db.exec("RELEASE convergence_create");
-    return getPlan(db, plan.id);
+    return plan.id;
   } catch (e) {
     db.exec("ROLLBACK TO convergence_create; RELEASE convergence_create");
+    finishResearchTrial(db, trial, { status: "failed", detail: e.message });
     throw e;
   }
 }
@@ -177,8 +192,19 @@ export function evaluatePlan(db, id) {
   if (original.engineId !== CONVERGENCE_ENGINE.id)
     throw new Error("Engine changed since lock. Create a new plan with the current engine.");
   const inputs = { ...original.inputs, phase: "evaluation" };
-  const report = runConvergence(inputs);
-  const provenance = { ...original.provenance, priorEvaluations: exposure(db, plan.spec) };
+  const trial = beginResearchTrial(db, { kind: "convergence-holdout", spec: { ...plan.spec, from: plan.spec.split } });
+  let report;
+  try {
+    report = runConvergence(inputs);
+  } catch (error) {
+    finishResearchTrial(db, trial, { status: "failed", detail: error.message });
+    throw error;
+  }
+  const provenance = {
+    ...original.provenance,
+    trial: researchTrialReceipt(trial),
+    priorEvaluations: exposure(db, plan.spec),
+  };
   db.exec("SAVEPOINT convergence_evaluate");
   try {
     const runId = putRun(db, {
@@ -188,10 +214,12 @@ export function evaluatePlan(db, id) {
       engine: CONVERGENCE_ENGINE,
     });
     db.prepare("INSERT INTO research.convergence_evaluations VALUES (?,?,?)").run(id, runId, new Date().toISOString());
+    finishResearchTrial(db, trial, { status: "completed", runId });
     db.exec("RELEASE convergence_evaluate");
-    return getPlan(db, id);
   } catch (e) {
     db.exec("ROLLBACK TO convergence_evaluate; RELEASE convergence_evaluate");
+    finishResearchTrial(db, trial, { status: "failed", detail: e.message });
     throw e;
   }
+  return getPlan(db, id);
 }

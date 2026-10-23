@@ -16,6 +16,7 @@ type SearchBody = Omit<Partial<SearchOutcome>, "findings"> & {
   findings?: (SearchFinding & { open: string; description: string })[];
   notes?: string[];
   feeds?: BtFeed[];
+  trial?: { id: string; priorOverlappingAttempts: number; priorOverlappingVariants: number };
   source?: string;
   asOf?: string;
   latency?: string;
@@ -83,7 +84,7 @@ export function SignalSearch({
   return (
     <section className="bt-search" aria-label="Signal search">
       <h3>
-        Search <small>many variants at once, corrected for multiple testing</small>
+        Search <small>exploratory variants with a within-search correction</small>
       </h3>
       <div className="bt-search-bar">
         <span>
@@ -123,11 +124,35 @@ export function SignalSearch({
           <p className="bt-search-count">
             <strong>{done.tested}</strong> variants tested{" "}
             <small>
-              of {done.built} built · {done.passing} pass FDR {Math.round((done.fdr ?? 0.1) * 100)}% · hold{" "}
+              of {done.built} built · {done.passing} meet nominal FDR {Math.round((done.fdr ?? 0.1) * 100)}% · hold{" "}
               {done.opts?.holdDays} d vs {done.opts?.benchmark} · min {done.minTrades} trades
             </small>
           </p>
           <p className="bt-note warn">{done.warning}</p>
+          {done.trial ? (
+            <p className="bt-basis">
+              {done.trial.priorOverlappingAttempts} earlier recorded attempts and {done.trial.priorOverlappingVariants}{" "}
+              variants overlap this scope.{" "}
+              <a href={`/api/research/trials/${done.trial.id}`} target="_blank" rel="noreferrer">
+                Inspect attempt inventory
+              </a>
+            </p>
+          ) : null}
+          {done.untested?.length ? (
+            <details>
+              <summary>{done.untested.length} variants were not tested</summary>
+              <ul>
+                {done.untested.map((v) => (
+                  <li key={v.id}>
+                    {v.label}:{" "}
+                    {v.reasons?.length
+                      ? v.reasons.join(" ")
+                      : "Insufficient priced trades or no usable test statistic."}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
           <div className="bt-scroll">
             <table className="bt-search-table">
               <thead>
@@ -136,7 +161,7 @@ export function SignalSearch({
                   <th>Trades</th>
                   <th title="Mean excess return per trade vs the benchmark over the same days">Excess / trade</th>
                   <th title="Block bootstrap by entry week">95% CI</th>
-                  <th title="One-sided, t-test clustered by member (by week when under 5 members)">p</th>
+                  <th title="One-sided, t-test clustered by member (by week when under 10 members)">p</th>
                   <th title="Benjamini–Hochberg across every tested variant">q</th>
                   <th title="Same tickers, random public dates (top rows only)">vs random</th>
                   <th />

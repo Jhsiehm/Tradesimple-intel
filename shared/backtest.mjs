@@ -5,11 +5,14 @@
  * A signal carries the PUBLIC date of the record. Entry is the first bar strictly after that date, so nothing
  * trades on a day the record was not yet public (a filing may post after the close).
  *
- * The portfolio is calendar-time: each trading day it holds the open positions at equal weight (or weight by
- * disclosed size) and earns their average daily return; days with nothing open earn 0. The benchmark gets the
- * same positions, weights, and days, so excess return compares like with like.
+ * The curve is a calendar-time signal-return index: each trading day it normalizes available paths at equal
+ * weight (or disclosed-size weight); days with no paths earn 0. The benchmark gets matching path weights and
+ * dates. This is not a holdings-and-cash portfolio; executionAssessment describes its accounting limitations.
  */
 import { SECTOR_ETF, cleanRules } from "./backtestSpec.mjs";
+import { assessExecution } from "./executionAssessment.mjs";
+import { r4, r2, mean, median, pctile, breakdown, backtestMetrics } from "./backtestMetrics.mjs";
+export { median, maxDrawdown } from "./backtestMetrics.mjs";
 
 const DAY_MS = 86_400_000;
 export const ENTRY_SLACK_DAYS = 7;
@@ -42,54 +45,12 @@ export function lastOnOrBefore(bars, day) {
   return i === -1 ? bars.length - 1 : i - 1;
 }
 
-const r4 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10_000) / 10_000);
-const r2 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 100) / 100);
-const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-export const median = (xs) => {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  const m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-};
-const pctile = (xs, p) => {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.floor(p * s.length))];
-};
-const stdev = (xs) => {
-  if (xs.length < 2) return null;
-  const m = mean(xs);
-  return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1));
-};
-
 /** "$15,001 - $50,000" → 32,500.5. A single figure is itself; text without dollars falls back to `low`. */
 export function amountMid(textValue, low = 0) {
   const nums = [...String(textValue || "").matchAll(/\$([\d,]+)/g)].map((m) => Number(m[1].replace(/,/g, "")));
   if (nums.length >= 2) return (nums[0] + nums[1]) / 2;
   if (nums.length === 1) return nums[0];
   return low || 0;
-}
-
-/** Peak-to-trough drop of an index curve (starting value included). Dates are optional parallel labels. */
-export function maxDrawdown(values, labels = []) {
-  let peak = values[0];
-  let peakAt = 0;
-  let worst = 0;
-  let from = 0;
-  let to = 0;
-  for (let i = 0; i < values.length; i += 1) {
-    if (values[i] > peak) {
-      peak = values[i];
-      peakAt = i;
-    }
-    const dd = values[i] / peak - 1;
-    if (dd < worst) {
-      worst = dd;
-      from = peakAt;
-      to = i;
-    }
-  }
-  return { depth: worst, from: labels[from] ?? from, to: labels[to] ?? to, peak: values[from], trough: values[to] };
 }
 
 function benchmarkId(rules, signal) {
@@ -204,31 +165,6 @@ function weightOf(sizing, signal, fallback) {
   const hint = Number(signal.sizeHint);
   if (hint > 0) return { w: Math.min(hint, SIZE_CAP), estimated: Boolean(signal.sizeIsRange), missing: false };
   return { w: fallback, estimated: false, missing: true };
-}
-
-function breakdown(trades, keyOf, labelOf, limit = 30) {
-  const by = new Map();
-  for (const t of trades) {
-    const k = keyOf(t);
-    if (!k) continue;
-    const row = by.get(k) || { key: k, label: labelOf(t), rets: [], ex: [] };
-    row.rets.push(t.ret);
-    row.ex.push(t.excess);
-    by.set(k, row);
-  }
-  const rows = [...by.values()]
-    .map((r) => ({
-      key: r.key,
-      label: r.label,
-      n: r.rets.length,
-      avg: r4(mean(r.rets)),
-      median: r4(median(r.rets)),
-      hitRate: r4(r.rets.filter((v) => v > 0).length / r.rets.length),
-      avgExcess: r4(mean(r.ex)),
-      beatRate: r4(r.ex.filter((v) => v > 0).length / r.ex.length),
-    }))
-    .sort((a, b) => b.n - a.n || (b.avgExcess ?? 0) - (a.avgExcess ?? 0));
-  return { total: rows.length, rows: rows.slice(0, limit) };
 }
 
 /** First day of the daily price history backtests read (Yahoo, adjusted); the SEC insider history starts 2020Q1. */
@@ -364,6 +300,11 @@ export function runBacktest({
     curve: [],
     stats: null,
     caveats: { items: [] },
+    executionAssessment: assessExecution({
+      rules,
+      trades,
+      calendar: calendar || benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || null,
+    }),
   };
   result.caveats = buildCaveats({
     rules,
@@ -385,64 +326,9 @@ export function runBacktest({
     trades,
     calendar || benchBars[rules.benchmark === "SECTOR" ? "SPY" : rules.benchmark] || null,
   );
-  const rets = trades.map((t) => t.ret);
-  const ex = trades.map((t) => t.excess);
-  const days = curve.days;
-  const spanDays = days.length ? days.at(-1) - days[0] + 1 : 0;
-  const total = curve.s.at(-1) - 1;
-  const btotal = curve.b.at(-1) - 1;
-  const annual = (v) => (spanDays >= 90 && v > -1 ? (1 + v) ** (365 / spanDays) - 1 : null);
-  const dd = maxDrawdown(curve.s, curve.labels);
-  const bdd = maxDrawdown(curve.b, curve.labels);
-  const sd = stdev(curve.R);
-  const sdx = stdev(curve.R.map((v, i) => v - curve.B[i]));
-  const exBeat = ex.filter((v) => v > 0).length;
-  const sdEx = stdev(ex);
-  result.curve = curve.labels.map((d, i) => ({ d, s: r4(curve.s[i]), b: r4(curve.b[i]) }));
-  result.stats = {
-    trades: trades.length,
-    total: r4(total),
-    annualized: r4(annual(total)),
-    benchmarkTotal: r4(btotal),
-    benchmarkAnnualized: r4(annual(btotal)),
-    excessTotal: r4(total - btotal),
-    excessAnnualized: annual(total) != null && annual(btotal) != null ? r4(annual(total) - annual(btotal)) : null,
-    hitRate: r4(rets.filter((v) => v > 0).length / rets.length),
-    beatRate: r4(exBeat / ex.length),
-    avgTrade: r4(mean(rets)),
-    medianTrade: r4(median(rets)),
-    avgExcess: r4(mean(ex)),
-    medianExcess: r4(median(ex)),
-    excessT: sdEx ? r2(mean(ex) / (sdEx / Math.sqrt(ex.length))) : null,
-    best: r4(Math.max(...rets)),
-    worst: r4(Math.min(...rets)),
-    avgHoldDays: r2(mean(trades.map((t) => t.days))),
-    maxDrawdown: r4(dd.depth),
-    drawdownFrom: dd.from,
-    drawdownTo: dd.to,
-    benchmarkMaxDrawdown: r4(bdd.depth),
-    wins: rets.filter((v) => v > 0).length,
-    sessions: curve.R.length,
-    dailyMean: curve.R.length ? Math.round(mean(curve.R) * 1e8) / 1e8 : null,
-    dailySd: sd ? Math.round(sd * 1e8) / 1e8 : null,
-    drawdownPeak: r4(dd.peak),
-    drawdownTrough: r4(dd.trough),
-    volatility: sd ? r4(sd * Math.sqrt(252)) : null,
-    sharpeish: sd ? r2((mean(curve.R) / sd) * Math.sqrt(252)) : null,
-    infoRatioish: sdx ? r2((mean(curve.R.map((v, i) => v - curve.B[i])) / sdx) * Math.sqrt(252)) : null,
-    maxConcurrent: curve.maxOpen,
-    avgConcurrent: r2(curve.avgOpen),
-    activeShare: r4(curve.activeDays / Math.max(1, curve.R.length)),
-    from: curve.labels[0],
-    to: curve.labels.at(-1),
-    spanDays,
-    sharpeNote:
-      "Sharpe-ish: mean daily return ÷ daily standard deviation × √252, risk-free rate taken as 0, calendar-time portfolio. A rough score on a short, overlapping sample, not a risk-adjusted performance claim.",
-    weighting:
-      rules.sizing === "amountMid"
-        ? `Weighted by disclosed range midpoint (capped at $${SIZE_CAP.toLocaleString("en-US")}).`
-        : "Equal weight across open positions.",
-  };
+  const metrics = backtestMetrics(trades, curve, rules, SIZE_CAP);
+  result.curve = metrics.curve;
+  result.stats = metrics.stats;
   result.trades = trades.map((t) => ({
     id: t.id,
     symbol: t.symbol,
@@ -564,6 +450,11 @@ function buildCaveats({
   const lag = lagStats(signals);
   const missed = unpricedLine(signals.length, trades.length, skipped);
   if (missed) add("warn", "unpriced", missed);
+  add(
+    "warn",
+    "executionModel",
+    "Exploratory signal-return simulation, not an executable portfolio. No cash or share ledger, capacity, market impact, or rebalancing costs are modeled. Daily normalized curve returns and fixed-entry-notional trade returns have different accounting; see executionAssessment for execution gaps and trade-cost sensitivity.",
+  );
   if (lag) {
     if (context.sourceFamily && context.sourceFamily !== "congress") {
       add(
@@ -651,7 +542,7 @@ function buildCaveats({
   add(
     "info",
     "weights",
-    "The portfolio rebalances to equal weight (or size weight) each day across open positions. Per-trade returns are buy-and-hold and do not include this rebalancing.",
+    "The curve normalizes equal or size weights each day across available signal paths, without charging rebalancing turnover. Missing stock bars omit that path from the denominator. Per-trade returns use fixed entry notional; the curve is not a holdings-and-cash portfolio.",
   );
   if (trades.length < MIN_TRADES)
     add("warn", "sample", `Only ${trades.length} trades. Treat the result as an anecdote, not evidence.`);

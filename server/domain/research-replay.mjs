@@ -1,3 +1,4 @@
+import { exportResearchTrials } from "./research-trials.mjs";
 import { runEventStudy } from "../../shared/eventStudy.mjs";
 import { runStress } from "../../shared/researchStress.mjs";
 import { archiveEvidence } from "./research-archive.mjs";
@@ -8,7 +9,13 @@ import { realityCheck, REALITY } from "../../shared/backtestStats.mjs";
 import { zipFiles } from "../../shared/replicate.mjs";
 import { hashOf, getEngine } from "./research-store.mjs";
 
-const names = ["backtest.mjs", "backtestSpec.mjs", "backtestStats.mjs"];
+const names = [
+  "backtest.mjs",
+  "backtestSpec.mjs",
+  "backtestStats.mjs",
+  "executionAssessment.mjs",
+  "backtestMetrics.mjs",
+];
 const files = Object.fromEntries(
   names.map((name) => [name, readFileSync(new URL(`../../shared/${name}`, import.meta.url), "utf8")]),
 );
@@ -133,6 +140,11 @@ export function exportRunFiles(db, run) {
       text: "TradeSimple Intel frozen experiment\nExtract this archive and run: node replay.mjs\nNode 22.13+; no packages or network required.\nrun.json contains exact engine inputs, results, normalized event lineage, entity mappings, source metadata, exclusions, and calculation settings. evidence.json includes pinned source runs and engines, original imported datasets, and referenced frozen contract response blobs. Built-in source records remain parsed records; original provider documents are not universally archived.\nChecksums detect accidental changes, not malicious replacement of this entire archive.\nResearch only. A replay match verifies reproducibility, not predictive validity or causal interpretation.\n",
     },
   ];
+  if (run.provenance?.trial?.id)
+    files.push({
+      name: "trials.json",
+      text: JSON.stringify(exportResearchTrials(db, run.provenance.trial.id), null, 2) + "\n",
+    });
   files.push({
     name: "checksums.json",
     text: JSON.stringify(Object.fromEntries(files.map((f) => [f.name, hashOf(f.text)])), null, 2) + "\n",

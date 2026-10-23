@@ -1,3 +1,4 @@
+import type { ResearchDataValidity } from "../../shared/researchDataValidity.mjs";
 import type { BacktestResult } from "../../shared/backtest.mjs";
 import type { BacktestSpec } from "../../shared/backtestSpec.mjs";
 import type { Reality } from "../../shared/backtestStats.mjs";
@@ -6,6 +7,8 @@ export type BtFeed = { label: string; source: string; asOf: string; latency: str
 
 /** What POST /api/backtest returns on success, plus the run's own labels. */
 export type BtRun = BacktestResult & {
+  dataValidity?: ResearchDataValidity;
+  trial?: { id: string; priorOverlappingAttempts: number; priorOverlappingVariants: number; interpretation: string };
   runId?: string;
   engineId?: string;
   spec: BacktestSpec;

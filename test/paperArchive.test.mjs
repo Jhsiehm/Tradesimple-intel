@@ -173,3 +173,55 @@ test("paper verifier refuses mismatched source experiment, missing evidence and 
     }
   }
 });
+test("paper verifier accepts a frozen three-module engine and optional missing trial inventory", async () => {
+  const { db, ledger } = await fixture(),
+    dir = unpack(exportPaperArchive(db, ledger.account.id));
+  db.close();
+  try {
+    // Keep identical calculations but inline both helpers, creating a self-contained three-file closure.
+    // This exercises legacy manifest width and ordering without depending on a checked-out Git revision.
+    const sourceManifestPath = path.join(dir, "source/checksums.json");
+    const manifest = JSON.parse(fs.readFileSync(sourceManifestPath, "utf8"));
+    const helper = fs
+      .readFileSync(path.join(dir, "source/engine/executionAssessment.mjs"), "utf8")
+      .replace("export function assessExecution", "function assessExecution");
+    const metrics = fs
+      .readFileSync(path.join(dir, "source/engine/backtestMetrics.mjs"), "utf8")
+      .replace(/export (const|function) /g, "$1 ");
+    const backtestPath = path.join(dir, "source/engine/backtest.mjs");
+    const backtest = fs
+      .readFileSync(backtestPath, "utf8")
+      .replace('import { assessExecution } from "./executionAssessment.mjs";', helper)
+      .replace(/import\s*\{[^}]+\}\s*from "\.\/backtestMetrics\.mjs";/, metrics)
+      .replace('export { median, maxDrawdown } from "./backtestMetrics.mjs";', "export { median, maxDrawdown };");
+    fs.writeFileSync(backtestPath, backtest);
+    delete manifest["engine/executionAssessment.mjs"];
+    delete manifest["engine/backtestMetrics.mjs"];
+    delete manifest["trials.json"];
+    fs.unlinkSync(path.join(dir, "source/engine/executionAssessment.mjs"));
+    fs.unlinkSync(path.join(dir, "source/engine/backtestMetrics.mjs"));
+    const engine = Object.fromEntries(
+      Object.keys(manifest)
+        .filter((name) => name.startsWith("engine/"))
+        .map((name) => [name.slice(7), fs.readFileSync(path.join(dir, "source", name), "utf8")]),
+    );
+    assert.equal(Object.keys(engine).length, 3);
+    const runPath = path.join(dir, "source/run.json"),
+      run = JSON.parse(fs.readFileSync(runPath, "utf8"));
+    run.engineId = hashOf(engine);
+    fs.writeFileSync(runPath, JSON.stringify(run));
+    for (const name of Object.keys(manifest))
+      manifest[name] = hashOf(fs.readFileSync(path.join(dir, "source", name), "utf8"));
+    fs.writeFileSync(sourceManifestPath, JSON.stringify(manifest));
+    const outerPath = path.join(dir, "checksums.json"),
+      outer = JSON.parse(fs.readFileSync(outerPath, "utf8"));
+    delete outer["source/engine/executionAssessment.mjs"];
+    delete outer["source/engine/backtestMetrics.mjs"];
+    delete outer["source/trials.json"];
+    for (const name of Object.keys(outer)) outer[name] = hashOf(fs.readFileSync(path.join(dir, name), "utf8"));
+    fs.writeFileSync(outerPath, JSON.stringify(outer));
+    assert.equal((await verifyPaperDirectory(dir)).sourceReplay, true);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -27,6 +27,9 @@ export function searchForModel(out) {
     fdr: out.fdr,
     minTrades: out.minTrades,
     multipleTestingWarning: out.warning,
+    trial: out.trial || null,
+    claimPolicy:
+      "Exploratory search over a current-registry universe and assumed fills. Nominal FDR does not certify historical availability, portfolio execution or predictive skill.",
     options: out.opts,
     findings: (out.findings || []).slice(0, TOP).map((f) => ({
       label: f.label,

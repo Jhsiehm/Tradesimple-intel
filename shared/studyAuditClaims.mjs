@@ -1,5 +1,6 @@
 import { citationUnits } from "./citations.mjs";
 import { numbersIn } from "./ask.mjs";
+import { RESEARCH_CERTIFICATION_CLAIM, RESEARCH_SIGNIFICANCE_CLAIM } from "./claimScope.mjs";
 
 export function savedAuditResults(evidence) {
   return evidence.flatMap((entry) => {
@@ -31,7 +32,12 @@ function denied(text, match) {
     )
   )
     return true;
-  if (/\b(?:not|never|without evidence of|unsupported claim of|inapplicable claim of)\s*$/i.test(before)) return true;
+  if (
+    /\b(?:not|never|without evidence of|unsupported claim of|inapplicable claim of)(?:\s+(?:a|an|the|any))?\s*$/i.test(
+      before,
+    )
+  )
+    return true;
   if (
     /\b(?:cannot|can't|could not|does not|do not|did not)\s+(?:establish|prove|demonstrate|claim|confirm|verify|guarantee|rule out)(?:\s+\w+){0,4}$/i.test(
       before,
@@ -40,7 +46,7 @@ function denied(text, match) {
     return true;
   if (/\b(?:incorrect|wrong)\s+to\s+(?:claim|say|assert)\s+(?:\w+\s*){0,4}$/i.test(before)) return true;
   return (
-    /^(?:(?:is|are|was|were|remains?|has been|have been)\s+)?(?:not\s+(?:established|verified|proven|demonstrated|complete|reconciled)|unsupported|unproven|inapplicable|incorrect|wrong|false)\b/i.test(
+    /^(?:(?:is|are|was|were|remains?|has been|have been)\s+)?(?:not\s+(?:(?:independently|fully|historically)\s+)?(?:established|verified|proven|demonstrated|complete|reconciled)|unsupported|unproven|inapplicable|incorrect|wrong|false)\b/i.test(
       after,
     ) || /^(?:cannot|can't|could not)\s+(?:be\s+)?(?:established|verified|proven|demonstrated|claimed)\b/i.test(after)
   );
@@ -89,6 +95,28 @@ export function studyAuditClaims(answer, evidence, question = "") {
     const refs = selected.map((audit) => audit.id),
       studies = selected.flatMap((audit) => audit.body.studies);
     for (const text of clauses(unit.text)) {
+      // Scope each clause independently: another named study may have different inference eligibility.
+      const named = studies.filter((study) => namesStudy(text, study));
+      const relevant = /\b(?:both|all|each)\b/i.test(unit.text)
+        ? studies
+        : named.length
+          ? named
+          : studies.filter((study) => belongs(unit, study));
+      if (relevant.length && positive(text, RESEARCH_CERTIFICATION_CLAIM))
+        add(
+          text,
+          refs,
+          "Saved-study inspection does not certify an executable portfolio, historical tradability, predictive skill or causality; recorded assessments and missing legacy assessments are not independent validation.",
+        );
+      if (
+        relevant.some((study) => study.inference?.status === "withheld") &&
+        positive(text, RESEARCH_SIGNIFICANCE_CLAIM)
+      )
+        add(
+          text,
+          refs,
+          "Statistical inference was withheld for the saved study. Recorded diagnostic statistics cannot support a significance or established-edge claim.",
+        );
       if (
         positive(
           text,

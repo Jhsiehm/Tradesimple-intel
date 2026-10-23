@@ -1,3 +1,4 @@
+import type { InferenceApplicability } from "./backtestStats.mjs";
 import type { BacktestRules } from "./backtestSpec.mjs";
 import type { BacktestResult, BacktestSignal, Bar } from "./backtest.mjs";
 export const CONVERGENCE_VERSION: number;
@@ -44,6 +45,7 @@ export type ConvergenceVariant = {
     records: { source: string; recordId: string; publicDate: string }[];
   }[];
   result: BacktestResult;
+  inference?: InferenceApplicability;
   bootstrap: { low: number; high: number; mean: number; unit: string; blocks: number } | null;
 };
 export type ConvergencePeriod = {

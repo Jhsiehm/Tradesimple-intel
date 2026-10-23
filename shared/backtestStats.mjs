@@ -12,7 +12,7 @@
 import { dayOf, lastOnOrBefore, simulateTrade } from "./backtest.mjs";
 
 export const REALITY = {
-  version: 3,
+  version: 4,
   seed: 12345,
   bootIters: 2000,
   placeboIters: 1000,
@@ -138,6 +138,11 @@ export function betaInc(x, a, b) {
 }
 
 /** P(T ≤ t) for Student's t with `df` degrees of freedom. */
+export function tSurvival(t, df) {
+  const tail = 0.5 * betaInc(df / (df + t * t), df / 2, 0.5);
+  return t >= 0 ? tail : 1 - tail;
+}
+
 export function tCdf(t, df) {
   const tail = 0.5 * betaInc(df / (df + t * t), df / 2, 0.5);
   return t > 0 ? 1 - tail : tail;
@@ -158,7 +163,7 @@ export function clusteredT(xs, keys) {
   if (!(se > 0)) return { mean: m, se, seIid, t: null, df: G - 1, clusters: G, pOne: null, pTwo: null };
   const t = m / se;
   const df = G - 1;
-  return { mean: m, se, seIid, t, df, clusters: G, pOne: 1 - tCdf(t, df), pTwo: 2 * (1 - tCdf(Math.abs(t), df)) };
+  return { mean: m, se, seIid, t, df, clusters: G, pOne: tSurvival(t, df), pTwo: 2 * tSurvival(Math.abs(t), df) };
 }
 
 /**
@@ -170,7 +175,7 @@ export function conservativeT(c) {
   const se = Math.max(c.se, c.seIid);
   if (!(se > 0)) return { ...c, seCluster: c.se, t: null, pOne: null, pTwo: null };
   const t = c.mean / se;
-  return { ...c, seCluster: c.se, se, t, pOne: 1 - tCdf(t, c.df), pTwo: 2 * (1 - tCdf(Math.abs(t), c.df)) };
+  return { ...c, seCluster: c.se, se, t, pOne: tSurvival(t, c.df), pTwo: 2 * tSurvival(Math.abs(t), c.df) };
 }
 
 /** n × (iid SE / clustered SE)², the trade count an independent sample with the same precision would need. */
@@ -268,6 +273,48 @@ export function placeboTest({
   };
 }
 
+/**
+ * Applicability screen for entry-week diagnostics. This is deliberately not a new
+ * covariance estimator: when holdings link different resampling blocks we withhold
+ * inference. Passing this screen does not establish independence between weeks.
+ * Ten blocks is an operational floor, not a theorem guaranteeing calibration.
+ */
+export function inferenceApplicability(trades) {
+  const intervals = trades.map((t) => ({ start: dayOf(t.entry), end: dayOf(t.exit) }));
+  const reasons = [];
+  if (intervals.some((t) => !Number.isFinite(t.start) || !Number.isFinite(t.end) || t.end < t.start)) {
+    return {
+      status: "withheld",
+      basis: "entry-week",
+      blocks: 0,
+      reasons: ["Holding intervals are missing or invalid; dependence cannot be assessed."],
+    };
+  }
+  const blocks = new Set(intervals.map((t) => weekOf(t.start))).size;
+  if (blocks < 10) reasons.push(`Only ${blocks} entry-week blocks; at least 10 are required by the inference screen.`);
+  intervals.sort((a, b) => a.start - b.start);
+  let currentWeek = null;
+  let weekEnd = -Infinity;
+  let priorEnd = -Infinity;
+  for (const t of intervals) {
+    const week = weekOf(t.start);
+    if (week !== currentWeek) {
+      priorEnd = Math.max(priorEnd, weekEnd);
+      currentWeek = week;
+      weekEnd = -Infinity;
+    }
+    // Inclusive dates: an exit and entry on the same date may share a return.
+    if (t.start <= priorEnd) {
+      reasons.push(
+        "Holding periods overlap across entry-week blocks; week bootstrap and one-way member clustering do not establish valid inference for shared returns.",
+      );
+      break;
+    }
+    weekEnd = Math.max(weekEnd, t.end);
+  }
+  return { status: reasons.length ? "withheld" : "exploratory", basis: "entry-week", blocks, reasons };
+}
+
 /* ---------- the whole check ---------- */
 
 /**
@@ -287,8 +334,18 @@ export function realityCheck({
 }) {
   const rows = trades.filter((t) => Number.isFinite(t.ret) && Number.isFinite(t.excess) && dayOf(t.entry) != null);
   const n = rows.length;
-  if (n < 2)
-    return { n, seed, bootstrap: null, placebo: null, cluster: null, verdict: realityVerdict({ n }, rules?.benchmark) };
+  if (n < 2) {
+    const inference = inferenceApplicability(rows);
+    return {
+      n,
+      seed,
+      inference,
+      bootstrap: null,
+      placebo: null,
+      cluster: null,
+      verdict: realityVerdict({ n, inference }, rules?.benchmark),
+    };
+  }
   const rets = rows.map((t) => t.ret);
   const ex = rows.map((t) => t.excess);
   const weeks = rows.map((t) => weekOf(dayOf(t.entry)));
@@ -305,6 +362,7 @@ export function realityCheck({
   const out = {
     n,
     seed,
+    inference: inferenceApplicability(rows),
     bootstrap: boot && {
       iters: bootIters,
       blocks: new Set(weeks).size,
@@ -334,7 +392,10 @@ export function realityCheck({
       topShare: r4(Math.max(...groupsOf(members).map((g) => g.idx.length)) / n),
     },
   };
-  out.verdict = realityVerdict(out, rules?.benchmark);
+  out.verdict = realityVerdict(
+    { ...out, bootstrap: boot && { ...out.bootstrap, meanExcess: boot[1] }, placebo: pl },
+    rules?.benchmark,
+  );
   return out;
 }
 
@@ -346,6 +407,11 @@ export const pTxt = (p) => (p == null ? "n/a" : p < 0.001 ? "p<0.001" : `p=${p <
  * worse | beat. "beat" needs both a bootstrap interval above zero and a placebo p ≤ 0.05, and still says it is one test.
  */
 export function realityVerdict(r, benchmark = "SPY") {
+  if (r?.inference?.status === "withheld")
+    return {
+      level: "few",
+      text: `Inference withheld: ${r.inference.reasons.join(" ")} Displayed intervals and tests are exploratory diagnostics only.`,
+    };
   const bench = !benchmark || benchmark === "SECTOR" ? "the benchmark" : benchmark;
   if (!r || r.n < REALITY.minTrades || !r.bootstrap)
     return {
@@ -366,7 +432,7 @@ export function realityVerdict(r, benchmark = "SPY") {
     text = `Beat random entries in ${beatPct}% of ${pl.iters} trials (${pTxt(pl.p)}; ${ci}). One in-sample test, not proof of an edge.`;
   } else if (lo > 0 && pl) {
     level = "tickers";
-    text = `Beat ${bench} per trade (${ci}), but random entry dates in the same tickers did about as well (${pTxt(pl.p)}): the edge is in which tickers, not when.`;
+    text = `Beat ${bench} per trade (${ci}), but the random-entry comparison did not establish timing skill (${pTxt(pl.p)}). This does not establish stock-selection skill either.`;
   } else if (lo > 0) {
     level = "bench";
     text = `Beat ${bench} per trade (${ci}); the random-entry placebo was not run, so timing is untested.`;

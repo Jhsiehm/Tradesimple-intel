@@ -1,3 +1,9 @@
+import { beginResearchTrial, finishResearchTrial, researchTrialReceipt } from "../research-trials.mjs";
+import {
+  assessResearchDataValidity,
+  dataValidityNote,
+  DATA_VALIDITY_VERSION,
+} from "../../../shared/researchDataValidity.mjs";
 import { relationshipEligibility } from "../relationship-history.mjs";
 import { auditSignals, INTEGRITY_VERSION } from "../research-integrity.mjs";
 import { putRun, getRun, getDataset } from "../research-store.mjs";
@@ -100,6 +106,8 @@ export async function runSpec(
   const hit = fresh || sourceFn ? null : readCache(db, KEY.backtest(hash));
   if (
     hit &&
+    hit.dataValidity?.version === DATA_VALIDITY_VERSION &&
+    hit.trial?.id &&
     hit.integrityVersion === INTEGRITY_VERSION &&
     hit.realityVersion === REALITY.version &&
     hit.engineId === ENGINE.id &&
@@ -107,6 +115,23 @@ export async function runSpec(
     getRun(db, hit.runId)
   )
     return { ...hit, cache: "hit" };
+  const trial = beginResearchTrial(db, { kind: "backtest", spec });
+  let outcome;
+  try {
+    outcome = await executeSpec(db, spec, { budgetMs, loadBarsFn, now, sourceFn, hash, trial });
+  } catch (error) {
+    finishResearchTrial(db, trial, { status: "failed", detail: error.message });
+    throw error;
+  }
+  finishResearchTrial(db, trial, {
+    status: !outcome.ok ? "failed" : outcome.building ? "partial" : "completed",
+    runId: outcome.runId,
+  });
+  return outcome;
+}
+
+async function executeSpec(db, spec, { budgetMs, loadBarsFn, now, sourceFn, hash, trial }) {
+  const receipt = researchTrialReceipt(trial);
   const t0 = Date.now();
   const deadline = t0 + budgetMs;
 
@@ -122,6 +147,7 @@ export async function runSpec(
   const src = await loadSource(db, spec.filters, { deadline: t0 + Math.round(budgetMs * 0.6) });
   const identity = src.identity || identities(db);
   const provenance = {
+    trial: receipt,
     source: src.dataset ? "import" : spec.source,
     dataset: src.dataset || null,
     identity,
@@ -151,6 +177,8 @@ export async function runSpec(
     status: documentRefs.length ? "partially-archived; see record references" : "not-archived-by-this-path",
   };
   const failed = (body) => {
+    body.trial = receipt;
+    if (provenance.dataValidity) body.dataValidity = provenance.dataValidity;
     const runId = putRun(db, { inputs: null, result: body, provenance, engine: ENGINE });
     return { ...body, runId };
   };
@@ -216,6 +244,23 @@ export async function runSpec(
     stale: priced.stale,
   };
   provenance.coverage.status = "prices-loaded";
+  const dataValidity = assessResearchDataValidity({
+    source: spec.source,
+    filters: spec.filters,
+    coverage: {
+      ...src.coverage,
+      selection: {
+        matched: uncapped,
+        eligible: eligibleSignals.length,
+        selected: signals.length,
+        capped: capped.notes.some((n) => ["cap", "symcap"].includes(n.id)),
+      },
+    },
+    signals: eligibleSignals,
+    prices: { ...priced, requested: need },
+  });
+  provenance.dataValidity = dataValidity;
+  notes.unshift(dataValidityNote(dataValidity));
   const benchBars = Object.fromEntries([...benchIds].map((id) => [id, priced.bars[id]]).filter(([, v]) => v?.length));
   const missingBench = [...benchIds].filter((id) => !benchBars[id]);
   if (missingBench.length === benchIds.size) {
@@ -247,7 +292,7 @@ export async function runSpec(
     bars: symbolBars,
     benchBars,
     rules: spec.rules,
-    context: { ...src.context, sourceFamily: spec.source, notes, unpriced: pendingSyms },
+    context: { ...src.context, dataValidity, sourceFamily: spec.source, notes, unpriced: pendingSyms },
   };
   const result = runBacktest(inputs);
   const reality = result.stats
@@ -271,6 +316,8 @@ export async function runSpec(
   const complete = !pendingSyms.length && !missingBench.length && !src.building;
   const body = {
     ...result,
+    dataValidity,
+    trial: receipt,
     reality,
     realityVersion: REALITY.version,
     integrityVersion: INTEGRITY_VERSION,

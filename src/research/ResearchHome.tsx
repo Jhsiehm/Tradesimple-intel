@@ -72,7 +72,9 @@ function Methods() {
           <p>
             E is strategy return minus the same full-window SPY return. ΔE is a descriptive ablation difference, not
             causal attribution. A locked historical holdout can still have been inspected elsewhere. Available intervals
-            use 2,000 seeded entry-week bootstrap draws, at least 10 trades and 2 weeks; no multiple-testing correction.
+            use 2,000 seeded entry-week bootstrap draws. Inference is withheld for insufficient week blocks, invalid
+            intervals or cross-week overlapping holdings; remaining diagnostics are exploratory and not multiple-testing
+            corrected.
           </p>
         </article>
       </div>

@@ -8,13 +8,20 @@ const TONE: Record<string, string> = { beat: "up", worse: "down" };
 export function IsItReal({ reality, compact = false }: { reality?: Reality | null; compact?: boolean }) {
   if (!reality) return null;
   const { bootstrap: b, placebo: p, cluster: c, verdict } = reality;
+  const withheld = reality.inference?.status === "withheld";
   return (
     <section className={`bt-real${compact ? " compact" : ""}`} aria-label="Is it real?">
       <h3>
-        Is it real? <small>bootstrap, placebo, clustered t · seed {reality.seed}</small>
+        Statistical checks <small>bootstrap, placebo, clustered t · seed {reality.seed}</small>
       </h3>
       <p className={`bt-verdict ${TONE[verdict.level] || ""}`}>{verdict.text}</p>
-      {b ? (
+      {withheld ? (
+        <p className="bt-note warn">
+          Inference withheld: {reality.inference?.reasons.join(" ")} The numerical diagnostics remain available in the
+          frozen export.
+        </p>
+      ) : null}
+      {b && !withheld ? (
         <dl>
           <div title={`Resampling ${b.blocks} entry weeks, ${b.iters} times`}>
             <dt>Mean trade, 95% CI</dt>
@@ -56,8 +63,8 @@ export function IsItReal({ reality, compact = false }: { reality?: Reality | nul
       ) : null}
       {compact ? null : (
         <p className="bt-basis">
-          In-sample checks on one run. If this spec was picked after trying others, the p-value is too small: see Search
-          for a multiple-testing-corrected view.
+          Exploratory checks on one run. Selection after trying other specifications can invalidate nominal p-values.
+          Search adjusts only within its declared tested family; it does not correct earlier or repeated searches.
         </p>
       )}
     </section>

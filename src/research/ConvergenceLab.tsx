@@ -10,6 +10,7 @@ type Plan = Summary & {
   runId: string;
   inputHash: string;
   priorEvaluations: number;
+  trial?: { priorOverlappingAttempts: number; priorOverlappingVariants: number };
   report: ConvergenceReport;
   provenance: unknown;
 };
@@ -42,7 +43,13 @@ function Period({ label, period }: { label: string; period: ConvergencePeriod })
                 <td>{v.counts.excluded}</td>
                 <td>{pct(v.windowStats.excess)}</td>
                 <td>{pct(v.result.stats?.avgExcess)}</td>
-                <td>{v.bootstrap ? `${pct(v.bootstrap.low)} to ${pct(v.bootstrap.high)}` : "Insufficient sample"}</td>
+                <td>
+                  {v.bootstrap
+                    ? `${pct(v.bootstrap.low)} to ${pct(v.bootstrap.high)}`
+                    : v.inference?.status === "withheld"
+                      ? "Inference withheld"
+                      : "Insufficient sample"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -64,6 +71,9 @@ function Period({ label, period }: { label: string; period: ConvergencePeriod })
         {period.variants.map((v) => (
           <div key={v.id}>
             <h4>{v.label}</h4>
+            {v.inference?.reasons.map((reason) => (
+              <p key={reason}>{reason}</p>
+            ))}
             <p>
               {v.counts.offered} offered · {v.counts.outsideWindowOrUniverse} outside dates/universe ·{" "}
               {v.counts.wrongSide} wrong side · {v.counts.duplicateDailyVotes} duplicate daily votes.
@@ -327,6 +337,11 @@ export function ConvergenceLab() {
           <p>
             {plan.priorEvaluations} overlapping holdout evaluations were already recorded when this run was created.
             Historical data may also have been inspected elsewhere; this is not a guarantee of an unseen sample.
+          </p>
+          <p>
+            {plan.trial
+              ? `${plan.trial.priorOverlappingAttempts} earlier local research attempts and ${plan.trial.priorOverlappingVariants} search variants overlap this window and universe. These counts include other backtests; they are not independent statistical trials.`
+              : "Trial inventory unavailable for this older plan."}
           </p>
           <div className="research-actions">
             <a className="panels-btn" href={`/api/research/runs/${plan.runId}/export`}>

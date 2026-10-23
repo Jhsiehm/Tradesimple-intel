@@ -18,7 +18,7 @@ export function verifyNotebookArchive(directory) {
     if (!manifest[required]) throw Error(`Missing manifest entry: ${required}`);
   for (const [name, digest] of Object.entries(manifest)) {
     if (
-      !/^(notebook\.json|verify\.mjs|README\.txt|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/.test(
+      !/^(notebook\.json|verify\.mjs|README\.txt|runs\/run_[a-f0-9]+\/(run\.json|evidence\.json|trials\.json|checksums\.json|replay\.mjs|README\.txt|engine\/[A-Za-z0-9_-]+\.mjs))$/.test(
         name,
       )
     )

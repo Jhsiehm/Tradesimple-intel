@@ -36,7 +36,7 @@ export function backtestFormulas(run) {
     t
       ? `${tx(t.symbol)}:\\ d_{\\text{public}} = ${tx(t.signal)} \\Rightarrow t_{\\text{in}} = ${tx(t.entry)},\\ P_{\\text{in}} = ${fix(t.entryPrice)}`
       : "",
-    "The public date is the filing or posting date, never the trade date, so nothing enters before it was knowable.",
+    "Entry follows the recorded availability date. That date may be source-derived, importer-asserted or based on an assumed lag; this rule does not independently establish historical knowability.",
   );
   add(
     "exit",
@@ -78,10 +78,10 @@ export function backtestFormulas(run) {
   );
   add(
     "daily",
-    "Daily portfolio return",
+    "Daily simulated return",
     `R_t = \\frac{\\sum_{i \\in O_t} w_i\\, r_{i,t}}{\\sum_{i \\in O_t} w_i},\\qquad R_t = 0 \\text{ when } O_t = \\varnothing`,
     `${s.sessions ?? "n"}\\ \\text{sessions},\\ \\text{average } ${fix(s.avgConcurrent, 2)}\\ \\text{open},\\ \\text{max } ${s.maxConcurrent}`,
-    `O_t is the set of positions open on day t; r_{i,t} is that day's close-to-close return (net of cost on the entry and exit day). The ${bench} leg holds the same weights on the same days.`,
+    `O_t is the set of signal paths with an observation on day t. Returns are signed changes between consecutive bars, with open-to-close on a next-open entry day and costs on the first/final path day. Missing bars remove that path from the daily weight denominator. The ${bench} leg uses the same weights on the same days. Funding, daily rebalance turnover and execution are not modeled.`,
   );
   add(
     "total",
@@ -136,7 +136,8 @@ export function backtestFormulas(run) {
     "Risk-free rate taken as 0; a rough score on a short, overlapping sample.",
   );
   const q = run.reality;
-  if (q?.bootstrap) {
+  const inferenceAllowed = q?.inference?.status !== "withheld";
+  if (q?.bootstrap && inferenceAllowed) {
     const b = q.bootstrap;
     add(
       "bootstrap",
@@ -146,7 +147,7 @@ export function backtestFormulas(run) {
       `Whole entry weeks (Monday-based) are resampled with replacement, so trades bunched in one week stay together. Seed ${q.seed} (mulberry32); the Replicate scripts draw the same sequence.`,
     );
   }
-  if (q?.placebo) {
+  if (q?.placebo && inferenceAllowed) {
     const p = q.placebo;
     const span = p.window?.tradingDays;
     add(
@@ -157,7 +158,7 @@ export function backtestFormulas(run) {
       `Each trade keeps its ticker, side, benchmark and exit rules; its public date is redrawn from the ${span} trading days between the first and last real public date (up to 10 draws until the trade completes). Prices end at the last real exit. Seed ${p.seed}.`,
     );
   }
-  if (q?.cluster && q.cluster.t != null) {
+  if (q?.cluster && q.cluster.t != null && inferenceAllowed) {
     const c = q.cluster;
     add(
       "cluster",

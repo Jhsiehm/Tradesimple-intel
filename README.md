@@ -94,6 +94,7 @@ All API keys are optional for startup. Add the keys you need to `.env.local`: Co
 | --- | --- |
 | [Feature guide](docs/REFERENCE.md#what-you-can-do-with-it) | Boards, research answers, alerts, and navigation |
 | [Backtest methodology](docs/REFERENCE.md#backtest-replay-public-records-against-a-benchmark) | Signal timing, return calculations, assumptions, and caveats |
+| [Research validity review](docs/research-terminal/research-hardening.md) | Implemented safeguards, independent checks, and remaining evidence requirements |
 | [Research workspace](docs/REFERENCE.md#experiments-and-data-hub) | Frozen runs, imports, Convergence Lab, notebooks, and contract evidence |
 | [Data sources](docs/REFERENCE.md#data-sources-and-freshness) | Providers, coverage, and typical delays |
 | [Setup and hosting](docs/REFERENCE.md#getting-started) | Local installation, demo snapshots, API keys, and private hosting |
