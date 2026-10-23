@@ -45,6 +45,16 @@ This is not an all-application access log. Policy, stress, general event-study a
 
 Validation result: all 1,104 repository tests passed; TypeScript, production and demo builds passed. Eight focused rendering/replication tests also passed after final explanatory-copy changes. The dependency audit identified a preexisting high-severity Vite issue; Vite was updated within the 8.3 patch line to 8.3.5. Tests and both builds passed again, and the dependency audit reported zero vulnerabilities. This is fixture and repository validation, not a new live provider audit.
 
+## Combined-branch compatibility — October 23, 2026
+
+The research-workflow and validity-hardening branches were integrated with `main` through `6f9c2bc5`. Formatting-only merge conflicts were reconciled without replacing either branch's behavior. The extracted AI backtest-summary module retains inference limits, data-validity reports, execution assessments and trial receipts alongside the workflow tools.
+
+Saved-study inspection now carries bounded copies of those recorded assessments, with their archive origins. Explicit significance claims are checked against the cited study's withheld-inference status, and certification claims remain restricted. Missing legacy assessments stay unknown; inspection does not recalculate or alter frozen studies. The answer-cache identity was advanced to invalidate responses validated under the earlier checks.
+
+Pure numeric summaries were extracted into `backtestMetrics.mjs` to keep the main engine below 600 lines. Exact serialized outputs matched the prior implementation across 26 comparison cases. Frozen engine bundles include the new helper, and the archive tests retain a self-contained three-module legacy replay case.
+
+Final combined validation: all 1,255 repository tests passed, including six new compatibility regressions. TypeScript, production and demo builds, formatting, and staged diff checks passed. No unresolved Git conflict entries or conflict markers remained. These checks establish integration behavior, not historical source completeness or scientific validity.
+
 ## Remaining delivery sequence
 
 These are explicit unfinished stages, not claims of delivered research-grade performance.

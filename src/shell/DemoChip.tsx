@@ -12,7 +12,7 @@ export function DemoChip() {
   return (
     <span
       className="demo-chip"
-      title={`Not live. Static snapshot of the live API taken ${taken ? `${taken.slice(0, 16).replace("T", " ")} UTC` : "—"}. Every feed shows the as-of time from when the snapshot was taken. Clone the repo and add your own keys for live data.`}
+      title={`Not live. Static snapshot of the live API taken ${taken ? `${taken.slice(0, 16).replace("T", " ")} UTC` : "—"}. Detailed history may come from an earlier capture; each feed retains its own source timestamp. Clone the repo and add your own keys for live data.`}
     >
       DEMO · {taken ? taken.slice(0, 10) : "—"}
     </span>

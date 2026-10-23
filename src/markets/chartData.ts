@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, DEMO } from "../lib/api";
+import { demoChartWindow } from "../../shared/demoChart.mjs";
 import { DAY, mergeBars, requestGuard, retentionDays, windowStart, type Bar } from "../../shared/chartWorkspace.mjs";
 export type ChartData = {
   ok: boolean;
@@ -44,8 +45,10 @@ export function windowRequest(
   if (!refresh && hit && Date.now() - hit.at < 60000) return Promise.resolve({ ...hit.data, cacheStatus: "Cached" });
   const existing = pending.get(key);
   if (existing) return existing;
-  const p = api<ChartData>(`/api/markets/chart?${key}`)
-    .then((data) => {
+  const route = DEMO ? `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&span=5y` : `/api/markets/chart?${key}`;
+  const p = api<ChartData>(route)
+    .then((response) => {
+      const data = DEMO ? demoChartWindow(response, { interval, from, to, adjusted, extended }) : response;
       if (!data.ok) throw new Error(data.error || "Unavailable chart");
       if (cache.size > 100) cache.delete(cache.keys().next().value!);
       cache.set(key, { data, at: Date.now() });
@@ -82,7 +85,7 @@ export function useChartData(symbol: string, interval: string, range: string, ad
         const merged = {
           ...next,
           bars: mergeBars(previous?.bars || [], next.bars),
-          status: DEMO ? "Simulated" : next.status,
+          status: next.status,
         };
         current.current = merged;
         return merged;
