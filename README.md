@@ -72,6 +72,10 @@ Coverage and freshness vary by source. Historical relationships, public-availabi
 
 Open the [public demo](https://jhsiehm.github.io/Tradesimple-intel/) with no installation or keys. It runs from a **dated snapshot**, with a visible demo date and source timestamps. AI answers are unavailable, and data outside the snapshot is marked unavailable. Run the app locally to use connected feeds and the full research workflow.
 
+The demo includes captured boards, member timelines, company dossiers, and daily/weekly/monthly charts where source data is available. [Snapshot coverage](https://jhsiehm.github.io/Tradesimple-intel/demo-coverage.json) records unavailable sources and [deployment details](https://jhsiehm.github.io/Tradesimple-intel/deployment.json) identify the exact code version. A refreshed snapshot can retain older detailed history; individual source timestamps remain authoritative.
+
+To publish an update from the latest `main`, run `npm run publish:demo -- --snapshot` with the API running. To rebuild the interface against an existing capture, run `npm run publish:demo`. The publisher type-checks, checks snapshot files and local configuration values, generates member share pages and coverage metadata, and pushes the built site to `gh-pages`. GitHub Pages must serve **`gh-pages` / root**, not an application source branch. Snapshot data stays out of `main`.
+
 ## Run it yourself
 
 Requires **Node.js 22.13 or later**.

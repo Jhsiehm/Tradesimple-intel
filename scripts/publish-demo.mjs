@@ -50,6 +50,7 @@ if (PARTIAL ? !fs.existsSync(path.join(root, "demo", "snapshot.partial")) : !fs.
   process.exit(1);
 }
 
+run(process.execPath, ["node_modules/typescript/bin/tsc", "--noEmit"]);
 console.log(`building demo for ${URL_BASE} (base ${BASE})`);
 run(process.execPath, ["node_modules/vite/bin/vite.js", "build"], {
   env: { ...process.env, VITE_DEMO: "1", VITE_BASE: BASE, VITE_PUBLIC_URL: URL_BASE },
@@ -102,6 +103,15 @@ if (fs.existsSync(pages)) run(process.execPath, [pages, "--out", OUT, "--url", U
 
 fs.writeFileSync(path.join(OUT, ".nojekyll"), "");
 fs.copyFileSync(path.join(OUT, "index.html"), path.join(OUT, "404.html"));
+
+fs.writeFileSync(path.join(OUT, "deployment.json"), JSON.stringify({
+  builtAt: new Date().toISOString(),
+  sourceCommit: git(["rev-parse", "HEAD"]),
+  sourceDirty: Boolean(git(["status", "--porcelain"])),
+  snapshotTakenAt: manifest.takenAt,
+  retainedSnapshotTakenAt: manifest.retainedSnapshotTakenAt || null,
+}));
+run(process.execPath, ["scripts/verify-demo.mjs", OUT]);
 
 /** GitHub rejects files over 100 MB and Pages sites over 1 GB; stop well short of both. */
 function walk(dir) {

@@ -52,10 +52,13 @@ if (!RESUME) fs.rmSync(PARTIAL, { recursive: true, force: true });
 fs.mkdirSync(PARTIAL, { recursive: true });
 
 /** Routes written so far → byte size. Bodies are kept only for the list routes the snapshot enumerates. */
+const previousManifest = RESUME && fs.existsSync(path.join(PARTIAL, "manifest.json"))
+  ? JSON.parse(fs.readFileSync(path.join(PARTIAL, "manifest.json"), "utf8")) : null;
+let reused = 0;
 const written = new Map();
 const bodies = new Map();
 const KEEP =
-  /^\/api\/(tickers|congress\/(roster|bills|committees(\/[A-Za-z0-9]+)?|votes\?.*|feed|leaders)|markets\/(politicians|supply)|strait\/theaters)$/;
+  /^\/api\/(tickers|congress\/(roster|bills|committees(\/[A-Za-z0-9]+)?|votes\?.*|feed|leaders)|(fx|crypto)\/board|markets\/(politicians|supply)|strait\/theaters)$/;
 let failed = 0;
 let skipped = 0;
 let bytes = 0;
@@ -71,6 +74,7 @@ async function grab(route, { timeoutMs = 180_000, accept = null, retryMs = 0 } =
   const file = path.join(PARTIAL, demoFile(route));
   if (written.has(route)) return { cached: true };
   if (RESUME && fs.existsSync(file)) {
+    reused += 1;
     const text = fs.readFileSync(file, "utf8");
     written.set(route, text.length);
     bytes += text.length;
@@ -89,6 +93,7 @@ async function grab(route, { timeoutMs = 180_000, accept = null, retryMs = 0 } =
       for (const s of secrets) {
         if (text.includes(s)) throw new Error(`refusing to write ${route}: response contains a value from .env.local`);
       }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = JSON.parse(text);
       if (accept && !accept(body)) {
         if (attempt + 1 < (retryMs ? 2 : 1)) continue;
@@ -225,6 +230,15 @@ await pool(bodies.get("/api/markets/supply")?.items || [], 4, (s) =>
   grab(`/api/markets/supply/${encodeURIComponent(s)}`),
 );
 
+phase("benchmark, FX and crypto charts");
+const extraSymbols = [...new Set(["SPY", ...["/api/fx/board", "/api/crypto/board"].flatMap(route =>
+  (bodies.get(route)?.items || []).map(item => item.symbol).filter(Boolean))])];
+await pool(extraSymbols, 2, async (symbol) => {
+  const route = `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&span=5y`;
+  await yahooSlot(route);
+  await grab(route, { accept: okBody, retryMs: 8000 });
+});
+
 phase("contracts");
 const contractNotes = [];
 await grab("/api/contracts/board", { timeoutMs: 60_000 });
@@ -271,6 +285,8 @@ for (const name of ["states.geojson", "cd119.geojson"]) {
 }
 const manifest = {
   takenAt: new Date().toISOString(),
+  reusedRoutes: reused,
+  retainedSnapshotTakenAt: reused ? previousManifest?.retainedSnapshotTakenAt || previousManifest?.takenAt || null : null,
   base: BASE,
   routes: written.size,
   members,
