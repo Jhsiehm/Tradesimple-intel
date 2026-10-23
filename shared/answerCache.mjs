@@ -4,10 +4,17 @@
  * builds the identity and the data fingerprint text; the server hashes them and keeps the store.
  */
 import { etParts } from "./taskSchedule.mjs";
+import { INVESTIGATION_WRITE_TOOLS } from "./investigationAccess.mjs";
 
 export const ANSWER_CACHE_DEFAULT_MIN = 15;
-/** Tools whose output is the open web or changes by the second; an answer that used them is never reused. */
-export const NO_REUSE_TOOLS = new Set(["web_search", "web_fetch", "web_result", "propose_theory"]);
+/** Unstable external results and stateful study writes must never be replayed for answer reuse. */
+export const NO_REUSE_TOOLS = new Set([
+  "web_search",
+  "web_fetch",
+  "web_result",
+  "propose_theory",
+  ...INVESTIGATION_WRITE_TOOLS,
+]);
 /** Fields that change on every call without the data changing: timings, request traces, cache flags. */
 const VOLATILE =
   /^(ms|latency|elapsed|took|tookMs|durationMs|fetchedAt|generatedAt|servedAt|now|requestId|requests|cached|cacheHit|stale|age|ageMs)$/i;
@@ -45,7 +52,7 @@ export const dataText = (raw) => stableJson(raw, VOLATILE);
 export function answerIdentity(asked, { model = "", pinned = false } = {}) {
   const a = asked || {};
   return stableJson({
-    v: 6,
+    v: 10,
     memory: a.memory || null,
     q: normalizeQuestion(a.question),
     history: (a.history || []).map((t) => [
@@ -78,6 +85,7 @@ export function noReuseReason(events, calls) {
   if (!done.usage?.tokens) return "no model call";
   if (done.stopped) return "stopped early";
   if (!calls.length) return "no tool data";
+  if (calls.some((c) => INVESTIGATION_WRITE_TOOLS.has(c.tool))) return "stateful research tools";
   if (calls.some((c) => NO_REUSE_TOOLS.has(c.tool))) return "web or theory tools";
   return "";
 }

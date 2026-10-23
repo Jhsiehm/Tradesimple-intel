@@ -48,10 +48,10 @@ export function ModelPick({ ask, busy }: { ask: AskApi; busy: boolean }) {
           disabled={busy}
           onChange={(e) => ask.chooseModel(e.target.value)}
         >
-          <option value={AUTO}>Auto (recommended){strong ? ` · ${modelShort(strong)} for heavy work` : ""}</option>
+          <option value={AUTO}>Auto{strong ? ` · ${modelShort(strong)}` : ""}</option>
           {ask.models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.id}
+            <option key={m.id} value={m.id} title={m.id}>
+              {modelShort(m.id)}
               {m.id === ask.status?.model ? " · default" : ""}
               {m.small ? " · small" : ""}
             </option>

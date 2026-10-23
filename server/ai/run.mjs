@@ -1,16 +1,12 @@
 import { createQuickReply, handleQuickQuestion } from "./quickReply.mjs";
+import { canPlanInvestigation, investigationPlanningNote } from "./investigationPlanning.mjs";
+import { OWNER_RESEARCH_TOOL_NAMES } from "../../shared/investigationAccess.mjs";
+import { savedStudyAuditArgs, STUDY_AUDIT_NOTE } from "./studyAuditPlanning.mjs";
+import { researchFigures } from "../../shared/researchFigures.mjs";
+import { RESEARCH_VISUAL_NOTE } from "./researchVisualNote.mjs";
 import { researchRouting, assessmentAnswer, researchScopeNote } from "./researchRouting.mjs";
 import { researchToolRefusal } from "../../shared/researchCompatibility.mjs";
-import {
-  ASK_LIMITS,
-  caveatsFor,
-  citationRefs,
-  evidenceOf,
-  groundingCheck,
-  systemPrompt,
-  toolMessage,
-  trimForModel,
-} from "../../shared/ask.mjs";
+import { ASK_LIMITS, caveatsFor, evidenceOf, systemPrompt, toolMessage, trimForModel } from "../../shared/ask.mjs";
 import { attachedNote, contextNote, fallbackTable, figureCount, retryReason } from "../../shared/agent.mjs";
 import {
   asksAboutResult,
@@ -27,8 +23,8 @@ import {
 } from "../../shared/backtestAsk.mjs";
 import { describeSpec } from "../../shared/backtestSpec.mjs";
 import { mislabelNote } from "../../shared/countLabels.mjs";
-import { citationCheck, stripRefs } from "../../shared/citations.mjs";
-import { scopeCheck } from "../../shared/claimScope.mjs";
+import { stripRefs } from "../../shared/citations.mjs";
+import { checkAnswerEvidence, guardedStudyReport } from "./answerChecks.mjs";
 import { MARKET_NOTE, marketTail, wantsMarkets } from "../../shared/marketAsk.mjs";
 import { WORLD_NOTE, worldRegions, worldTail } from "../../shared/worldMarkets.mjs";
 import {
@@ -44,7 +40,7 @@ import {
 } from "../../shared/webAsk.mjs";
 import { followUpOutcome, handOffNote } from "../../shared/followUpReply.mjs";
 import { heavyReason } from "../../shared/modelRoute.mjs";
-import { SLOT_NOTE, renderSlots, slotEvidence, slotStream } from "../../shared/slots.mjs";
+import { SLOT_NOTE, renderSlots, slotStream } from "../../shared/slots.mjs";
 import { revisePass } from "./revise.mjs";
 import {
   describeModes,
@@ -60,7 +56,7 @@ const estimate = (messages) =>
   Math.ceil(
     messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4,
   );
-const COMPUTE = new Set(["run_backtest"]);
+const COMPUTE = new Set(["run_backtest", "research_run_investigation"]);
 const WEB = new Set(["web_search", "web_fetch"]);
 const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
@@ -135,23 +131,31 @@ export async function runAsk({
   const activeTools = (tools || []).filter(
     (t) =>
       (allow.has(t.name) || (memory?.mode === "context-aware" && t.name === "research_memory")) &&
-      !(memory?.mode === "isolated" && t.name === "research_memory"),
+      !(memory?.mode === "isolated" && t.name === "research_memory") &&
+      !(memory && OWNER_RESEARCH_TOOL_NAMES.has(t.name)),
   );
 
   const quick = createQuickReply({ emit, now, t0, model, modes });
   const early = handleQuickQuestion({ question, history, attached, session, now, quick });
   if (early) return early;
 
-  const previous = priors?.at(-1) || prior;
+  // Saved-record inspection is a new evidence request, not a refinement of a prior trading specification.
+  const savedReview = savedStudyAuditArgs(question);
+  const previous = savedReview ? null : priors?.at(-1) || prior;
   const research = researchRouting(question, {
     prior: previous,
-    priors: priors || [],
-    history,
+    priors: savedReview ? [] : priors || [],
+    history: savedReview ? [] : history,
     context,
     env: researchEnv,
   });
+  if (savedReview) {
+    research.intent = { ...research.intent, inspectionOnly: true };
+    research.assessment = null;
+  }
   log({ event: "research_route", intent: research.intent, status: research.assessment?.status || "resolved" });
-  if (research.assessment)
+  const investigationMode = canPlanInvestigation(research.assessment, activeTools, memory, modes.sourcing);
+  if (research.assessment && !investigationMode)
     return quick(assessmentAnswer(research.assessment), { research: research.assessment, model: "" });
 
   const sourceQs = sourcingClarify({ question, session, answers, acceptDefaults });
@@ -170,9 +174,9 @@ export async function runAsk({
   }
 
   // A follow-up on a turn that ran several sources changes each of them (or only the ones it names), all re-run here.
-  const priorList = priors?.length ? priors : prior ? [prior] : [];
+  const priorList = savedReview ? [] : priors?.length ? priors : prior ? [prior] : [];
   const lastPrior = priorList.at(-1) || null;
-  const follow = research.intent.route === "legacy" && isFollowUp(question, lastPrior);
+  const follow = !savedReview && research.intent.route === "legacy" && isFollowUp(question, lastPrior);
   const planned =
     follow && priorList.length > 1 ? planFollowUps({ question, today, priors: priorList, answers }) : null;
   // A follow-up that sets no spec field ("why did contracts do better?") goes to the model; one that changes nothing says which value already matched.
@@ -195,15 +199,17 @@ export async function runAsk({
         : [];
   if (multi && !reruns.length) return quick(outcome.text);
   for (const note of multi?.notes || []) emit({ type: "plan_note", note });
-  const plan = handOff
+  const plan = savedReview
     ? null
-    : multi
-      ? reruns.length === 1
-        ? reruns[0]
-        : null
-      : (wantsBacktest(question) && research.intent.route === "legacy") || follow
-        ? buildSpec({ question, today, prefs, prior: lastPrior, answers })
-        : null;
+    : handOff
+      ? null
+      : multi
+        ? reruns.length === 1
+          ? reruns[0]
+          : null
+        : (wantsBacktest(question) && research.intent.route === "legacy") || follow
+          ? buildSpec({ question, today, prefs, prior: lastPrior, answers })
+          : null;
   if (plan && !multi) {
     const questions = clarifyQuestions({ question, today, prefs, prior: lastPrior, answers, acceptDefaults });
     if (questions.length) {
@@ -234,6 +240,7 @@ export async function runAsk({
   // Only tools this turn's sourcing allows: platform-only never pre-fetches the web.
   const has = (name) => activeTools.some((t) => t.name === name);
   const free = !plan && !reruns.length && !handOff;
+  const savedAudit = free && has("research_audit_saved_studies") ? savedReview : null;
   // Non-US market questions fetch world_markets (and the web for context) first, so a small model answers from data.
   const regions = free && has("world_markets") ? worldRegions(question) : [];
   const webFirst = free && has("web_search") && wantsWeb(question);
@@ -257,6 +264,12 @@ export async function runAsk({
       : "",
     SLOT_NOTE,
     researchScopeNote(research.intent),
+    investigationMode ? investigationPlanningNote(research.assessment) : "",
+    has("research_audit_saved_studies") ? STUDY_AUDIT_NOTE : "",
+    RESEARCH_VISUAL_NOTE,
+    savedReview
+      ? "This turn requests saved-study inspection. Earlier chat messages provide context, not frozen evidence or an instruction to rerun earlier strategies. Match the saved evidence to the current question."
+      : "",
     coverageNote(has("web_search")),
     contextNote(context),
     plan ? planNote(plan, plan.followUp ? plan.prior : null) : rerunNote,
@@ -291,6 +304,11 @@ export async function runAsk({
 
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
+
+  if (savedAudit) {
+    await runCalls("", [{ id: "saved_study_audit", name: "research_audit_saved_studies", args: savedAudit }]);
+    if (abort()) return;
+  }
 
   if (reruns.length > 1 || (handOff && reruns.length)) {
     emit({ type: "step_progress", phase: "computing" });
@@ -508,13 +526,22 @@ export async function runAsk({
               emit({ type: "step_progress", id, request: r });
             },
             sourcing: modes.sourcing,
+            researchIntent: research.intent,
+            signal,
           });
         } finally {
           clearInterval(beat);
         }
         // A search becomes one cited step per result page; web text is already capped, so it is not cut to 320 characters.
         const split = call.name === "web_search" ? splitWebResults(raw, () => `t${++seq}`) : null;
-        const body = WEB.has(call.name) ? (split ? split.parent : raw) : trimForModel(raw, limits);
+        const body = WEB.has(call.name)
+          ? split
+            ? split.parent
+            : raw
+          : trimForModel(
+              raw,
+              call.name === "research_audit_saved_studies" ? { ...limits, resultChars: 24_000 } : limits,
+            );
         const ms = now() - started;
         const ev = evidenceOf(id, call.name, call.args, body, { ms, label, raw, requests });
         evidence.push(ev);
@@ -574,12 +601,7 @@ export async function runAsk({
     answer = "I ran out of room before I could write an answer. The tool results are listed in the steps above.";
     emit({ type: "token", delta: answer });
   }
-  const checkAnswer = (a) => {
-    const { cited, unknown } = citationRefs(a, evidence);
-    const pool = slotEvidence(evidence, filled.used);
-    const grounding = { ...groundingCheck(a, pool), ...citationCheck(a, pool), scope: scopeCheck(a, evidence) };
-    return { cited, unknown, grounding, uncited: evidence.length > 0 && cited.length === 0 && a.length > 0 };
-  };
+  const checkAnswer = (a) => checkAnswerEvidence(a, evidence, { used: filled.used, question });
   const revised = await revisePass({
     question,
     answer,
@@ -609,6 +631,14 @@ export async function runAsk({
         used: new Map([...filled.used, ...again.used]),
       };
     }
+  }
+  const auditReport = guardedStudyReport(answer, evidence, checkAnswer);
+  if (auditReport) {
+    answer = auditReport;
+    emit({
+      type: "plan_note",
+      note: "The narrative retained verification problems. Showing the saved evidence audit and its limits.",
+    });
   }
   const snap = evidence.find((e) => e.tool === "market_snapshot");
   const world = evidence.find((e) => e.tool === "world_markets");
@@ -656,6 +686,7 @@ export async function runAsk({
   emit({
     type: "done",
     answer,
+    figures: researchFigures(evidence, raws),
     cited,
     unknown,
     grounding,

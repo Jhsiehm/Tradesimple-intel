@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { ANSWER_CACHE_DEFAULT_MIN, dataText } from "../../shared/answerCache.mjs";
+import { INVESTIGATION_WRITE_TOOLS } from "../../shared/investigationAccess.mjs";
 
 /**
  * Finished answers kept for reuse (`ask_answers` in the cache database). An entry holds the turn's events and, for
@@ -54,6 +55,7 @@ export function keepAnswer(db, key, { at, model, events, calls }) {
 /** Re-runs each recorded call; true only when every one returns the same data. Any failure means "changed". */
 export async function sameData(calls, execute) {
   if (!calls?.length) return false;
+  if (calls.some((call) => INVESTIGATION_WRITE_TOOLS.has(call.tool))) return false;
   try {
     const now = await Promise.all(calls.map((c) => execute(c.tool, structuredClone(c.args ?? {}), {})));
     return now.every((raw, i) => dataHash(raw) === calls[i].hash);

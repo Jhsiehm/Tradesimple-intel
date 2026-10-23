@@ -13,7 +13,7 @@ const UNDO_MS = 8_000;
  * Kept chats: pinned first, then most recent. Each row opens the chat; the row tools pin it, rename it in place
  * (Enter saves, Esc cancels, an empty name goes back to the automatic title), or delete it with an Undo.
  */
-export function SavedChats({ ask }: { ask: AskApi }) {
+export function SavedChats({ ask, displayLimit }: { ask: AskApi; displayLimit?: number }) {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -29,7 +29,8 @@ export function SavedChats({ ask }: { ask: AskApi }) {
     return () => window.clearTimeout(timer);
   }, [deleted, dropUndo]);
 
-  const list = filterChats(orderChats(ask.chats), query);
+  const matches = filterChats(orderChats(ask.chats), query);
+  const list = query.trim() ? matches : matches.slice(0, displayLimit);
   const save = (cid: string) => {
     ask.rename(cid, name);
     setEditing(null);
@@ -39,7 +40,7 @@ export function SavedChats({ ask }: { ask: AskApi }) {
     <>
       <div className="ask-saved-head">
         <h2>Saved</h2>
-        {ask.chats.length > SEARCH_AT ? (
+        {ask.chats.length > SEARCH_AT || query ? (
           <input
             className="ask-saved-find"
             type="search"

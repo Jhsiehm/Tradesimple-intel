@@ -6,6 +6,11 @@
  *   snapshot  part of the fixed list scripts/snapshot.mjs freezes before enumerating entities
  */
 export const MANIFEST = [
+  { id: "workflow.investigations", path: "/api/research/investigations" },
+  { id: "workflow.investigation", path: "/api/research/investigations/:id(inv_[a-f0-9]+)" },
+  { id: "workflow.run", path: "/api/research/investigations/:id(inv_[a-f0-9]+)/run" },
+  { id: "workflow.export", path: "/api/research/investigations/:id(inv_[a-f0-9]+)/export" },
+  { id: "workflow.archive", path: "/api/research/investigations/:id(inv_[a-f0-9]+)/archive" },
   { id: "policy.investigations", path: "/api/research/policy" },
   { id: "policy.investigation", path: "/api/research/policy/:id(policy_[a-f0-9]+)" },
   { id: "policy.collect", path: "/api/research/policy/:id(policy_[a-f0-9]+)/collect" },

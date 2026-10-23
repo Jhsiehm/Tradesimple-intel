@@ -4,6 +4,8 @@ Companion to [the delivery plan](plan.md) and [research methodology](methodology
 
 October 21 scope extension: [open sandbox workflow composition](sandbox.md), [historical corpus acquisition](historical-corpus.md), and the [terminal-rs source audit](terminal-rs-reference.md). A later isolated scientific job service can support custom analyses after its validation/isolation gate; fixed trusted calculation engines remain the current execution boundary.
 
+The [October 22 workflow slice](workflow-release.md) implements a bounded descriptive graph over saved observations with durable investigation records, worker execution, Ask tools and original-engine replay. It does not implement all the proposed contracts/methods below.
+
 ## Execution flow
 
 ```mermaid

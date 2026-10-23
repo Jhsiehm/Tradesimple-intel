@@ -1,0 +1,108 @@
+/* Keep the question primary; draft help and preferences remain optional. */
+.research-composer-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin: 6px 0 16px;
+  color: var(--dim);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+}
+.research-composer-help p {
+  margin: 0;
+}
+.research-composer-help > :first-child {
+  max-width: 75ch;
+}
+.research-question-length {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.research-composer-controls {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.research-composer-controls .ask-model {
+  max-width: none;
+}
+.research-composer-controls select {
+  width: 100%;
+}
+.research-composer-controls .ask-nudge {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.research-home .research-submit,
+.research-home .research-stop {
+  min-height: 36px;
+  margin-left: 0;
+  white-space: nowrap;
+}
+.research-home .research-submit:hover:not(:disabled) {
+  background: var(--focus);
+}
+.research-home .research-submit:active:not(:disabled) {
+  background: var(--accent);
+}
+.research-home .research-stop {
+  padding: 9px 14px;
+  color: var(--amber);
+  border-color: var(--control-border);
+  border-radius: var(--radius-control);
+  font-size: var(--text-ui);
+}
+.research-home .research-stop:hover {
+  background: var(--surface-hover);
+}
+.research-composer .research-keep {
+  margin-top: 12px;
+  padding: 4px 0;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+.research-composer .research-keep:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.research-provider-note {
+  margin: 12px 0 0;
+  max-width: 75ch;
+  color: var(--amber);
+  font-size: var(--text-ui);
+  line-height: 1.5;
+}
+.research-provider-note button {
+  padding: 4px 0;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.research-composer textarea {
+  caret-color: var(--focus);
+}
+@media (max-width: 760px) {
+  .research-chat-stage {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  .research-composer-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .research-composer-controls .ask-nudge {
+    grid-row: auto;
+  }
+  .research-composer-controls :is(.research-submit, .research-stop) {
+    grid-column: 2;
+    justify-self: end;
+    min-height: 40px;
+  }
+  .research-composer-help {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+}

@@ -4,6 +4,8 @@
  * specialized instructions for whichever data layers the enabled tools cover.
  */
 
+import { OWNER_RESEARCH_TOOL_NAMES } from "./investigationAccess.mjs";
+
 export const SOURCING = ["platform", "both", "web"];
 export const STYLES = ["terminal", "professional", "simplified"];
 
@@ -26,6 +28,7 @@ const lc = (s) => String(s ?? "").toLowerCase();
 
 /** Platform-only tools: every in-app feed Ask may call. Web tools are separate. */
 export const PLATFORM_TOOLS = new Set([
+  ...OWNER_RESEARCH_TOOL_NAMES,
   "research_memory",
   "assess_research_capabilities",
   "weather_hazards",

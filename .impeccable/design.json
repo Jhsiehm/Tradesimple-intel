@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T08:08:17Z",
+  "title": "Design System: TradeSimple Intel",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Muted brass action accent" },
+      "cyan": { "role": "primary", "displayName": "Pale teal inspection accent" },
+      "terminal-bg": { "role": "neutral", "displayName": "Matte near-black green" },
+      "terminal-panel": { "role": "neutral", "displayName": "Dark green panel" },
+      "ink": { "role": "neutral", "displayName": "Warm terminal ink" },
+      "positive": { "displayName": "Positive data" },
+      "negative": { "displayName": "Negative data" },
+      "navigation-cyan": { "role": "secondary", "displayName": "Research and strait" },
+      "navigation-amber": { "role": "secondary", "displayName": "Today and districts" },
+      "navigation-blue": { "role": "secondary", "displayName": "Congress" },
+      "navigation-lime": { "role": "secondary", "displayName": "Markets" },
+      "navigation-orange": { "role": "secondary", "displayName": "Contracts" },
+      "navigation-violet": { "role": "secondary", "displayName": "News" },
+      "navigation-pink": { "role": "secondary", "displayName": "Map" },
+      "navigation-crimson": { "role": "secondary", "displayName": "Calendar" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page heading", "purpose": "Research page headings." },
+      "title": { "displayName": "Panel heading", "purpose": "Section and panel headings." },
+      "body": { "displayName": "Body", "purpose": "Operational body content and values." },
+      "ui": { "displayName": "Interface", "purpose": "Dense controls and navigation." },
+      "prose": { "displayName": "Research prose", "purpose": "Longer answer text." },
+      "label": { "displayName": "Metadata", "purpose": "Supporting labels and caveats." },
+      "code": { "displayName": "Technical records", "purpose": "Code, hashes and source paths." }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 8px 24px rgb(0 0 0 / 0.32)",
+        "purpose": "Shared floating overlay token in src/design/tokens.css."
+      },
+      {
+        "name": "ask-overlay",
+        "value": "0 18px 60px rgba(0, 0, 0, 0.6)",
+        "purpose": "Ask panel overlay in src/agent/ask.css."
+      }
+    ],
+    "motion": [
+      {
+        "name": "navigation-state",
+        "value": "color 160ms ease, border-color 160ms ease, background 160ms ease",
+        "purpose": "Existing navigation and ghost-control state transition in src/styles.css; reduced motion overrides durations."
+      }
+    ],
+    "breakpoints": [
+      { "name": "research-tools", "value": "720px" },
+      { "name": "research-home", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Research submit",
+      "kind": "button",
+      "refersTo": "research-submit",
+      "description": "Primary composer action extracted from src/research/home.css.",
+      "html": "<button class=\"ds-research-submit\">Ask</button>",
+      "css": ".ds-research-submit { min-height: var(--control-height, 32px); padding: 9px 14px; border: 1px solid transparent; border-radius: var(--radius-control, 2px); background: var(--accent, #c7b58e); color: var(--bg, #030705); font: var(--text-ui, 13px)/var(--leading-ui, 1.45) var(--font-ui, system-ui); cursor: pointer; } .ds-research-submit:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; } .ds-research-submit:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "New conversation",
+      "kind": "button",
+      "refersTo": "research-new",
+      "description": "Raised secondary action extracted from src/research/home.css.",
+      "html": "<button class=\"ds-research-new\">New conversation</button>",
+      "css": ".ds-research-new { display: flex; align-items: center; gap: 10px; min-height: var(--control-height, 32px); padding: 11px 12px; background: var(--surface-raised, #0b130f); color: var(--ink, #e7e7da); border: 1px solid var(--control-border, #637c70); border-radius: var(--radius-control, 2px); text-align: left; font: var(--text-ui, 13px)/var(--leading-ui, 1.45) var(--font-ui, system-ui); cursor: pointer; } .ds-research-new:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Research field",
+      "kind": "input",
+      "refersTo": "research-field",
+      "description": "Research Home field extracted from src/research/home.css and shared focus styles.",
+      "html": "<input class=\"ds-research-field\" aria-label=\"Find a saved study\" placeholder=\"Find a saved study\" />",
+      "css": ".ds-research-field { min-width: 0; max-width: 100%; min-height: var(--control-height, 32px); padding: 7px; background: var(--surface-raised, #0b130f); color: var(--ink, #e7e7da); border: 1px solid var(--control-border, #637c70); border-radius: var(--radius-control, 2px); font: var(--text-ui, 13px)/var(--leading-ui, 1.45) var(--font-ui, system-ui); caret-color: var(--ink, #e7e7da); } .ds-research-field::placeholder { color: var(--faint, #8fa597); opacity: 1; } .ds-research-field:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ask chip",
+      "kind": "chip",
+      "refersTo": "ask-chip",
+      "description": "Outlined choice extracted from src/ask/chat.css.",
+      "html": "<button class=\"ds-ask-chip\" aria-pressed=\"false\">Platform feeds</button>",
+      "css": ".ds-ask-chip { min-height: var(--control-height, 32px); padding: 3px 8px; background: transparent; color: var(--ink, #e7e7da); border: 1px solid var(--line, #233129); border-radius: var(--radius-control, 2px); font: var(--text-meta, 12px)/1.35 var(--font-ui, system-ui); text-align: left; cursor: pointer; } .ds-ask-chip:hover:not(:disabled) { border-color: var(--amber, #d8b77a); color: var(--amber, #d8b77a); } .ds-ask-chip[aria-pressed=\"true\"] { border-color: var(--amber, #d8b77a); background: var(--amber, #d8b77a); color: #07090c; } .ds-ask-chip:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; } .ds-ask-chip:disabled { opacity: 0.45; cursor: default; }"
+    },
+    {
+      "name": "Research composer container",
+      "kind": "card",
+      "refersTo": "research-composer",
+      "description": "Composer boundary extracted from src/research/home.css; content here is a preview label.",
+      "html": "<div class=\"ds-research-composer\"><label>Research question <input aria-label=\"Research question\" /></label></div>",
+      "css": ".ds-research-composer { padding: 18px; border: 1px solid var(--control-border, #637c70); border-radius: var(--radius-panel, 3px); background: var(--panel, #060c08); color: var(--ink, #e7e7da); font: var(--text-ui, 13px)/var(--leading-ui, 1.45) var(--font-ui, system-ui); } .ds-research-composer:focus-within { border-color: var(--focus, #d8c69f); } .ds-research-composer input { display: block; min-height: var(--control-height, 32px); padding: 7px; background: var(--surface-raised, #0b130f); color: var(--ink, #e7e7da); border: 1px solid var(--control-border, #637c70); border-radius: var(--radius-control, 2px); font: inherit; } .ds-research-composer input:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Destination label states",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Text and boundary states extracted from src/styles.css and src/design/terminalTheme.css; destination icon pigments are documented separately.",
+      "html": "<nav class=\"ds-navigation\" aria-label=\"Destinations\"><button aria-current=\"page\">Research</button><button>Markets</button></nav>",
+      "css": ".ds-navigation { display: flex; align-items: center; gap: 2px; background: var(--bg, #030705); } .ds-navigation button { min-height: var(--control-height, 32px); padding: 6px 9px; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--dim, #b0bdb3); font: var(--text-ui, 13px)/var(--leading-ui, 1.45) var(--font-ui, system-ui); letter-spacing: 0.04em; cursor: pointer; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; } .ds-navigation button[aria-current=\"page\"] { color: var(--ink, #e7e7da); border-bottom-color: var(--accent, #c7b58e); background: var(--surface-raised, #0b130f); } .ds-navigation button:hover { color: var(--ink, #e7e7da); background: var(--surface-hover, #101c15); } .ds-navigation button:focus-visible { outline: 2px solid var(--focus, #d8c69f); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-navigation button { transition-duration: 0.01ms; } }"
+    }
+  ],
+  "narrative": {
+    "overview": "This is an extraction of the implemented terminal, not a replacement identity. The user's established direction is a matte near-black surface with a green cast, bright useful navigation icons, and system typography. The interface favors dense inspection, readable values, and visible provenance.",
+    "keyCharacteristics": [
+      "Flat, quiet terminal surfaces with fine boundaries.",
+      "Bright destination icons against restrained labels and controls.",
+      "System sans-serif text, technical monospace, and aligned numeric columns.",
+      "Evidence, assumptions, and coverage limits remain close to results."
+    ],
+    "rules": [],
+    "dos": [
+      "Do preserve matte near-black green terminal surfaces.",
+      "Do preserve bright navigation icons and existing semantic color mappings.",
+      "Do reuse shared system typography, spacing, focus, and numeric alignment.",
+      "Do keep values, provenance, and material limitations readable together."
+    ],
+    "donts": [
+      "Don't add a gradient to the terminal surface.",
+      "Don't use decorative color changes to imply new data meaning.",
+      "Don't replace accessible labels or selected-state markers with color alone.",
+      "Don't promote one figure's composition, palette, or breakpoint into a global requirement."
+    ]
+  }
+}

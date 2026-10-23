@@ -10,6 +10,10 @@ export type ResearchIntent = {
   allowedSources: string[];
   windows: string[];
   benchmark: string | null;
+  /** Set by task orchestration for an explicit saved-evidence inspection; overrides replay vocabulary. */
+  inspectionOnly?: boolean;
+  /** Explicit planning scope; evidence inspection and protocol creation are allowed, calculations are not. */
+  designOnly?: boolean;
 };
 export const RESEARCH_ROUTING_VERSION: number;
 export function researchWords(question: unknown): string;

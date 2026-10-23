@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { AskApi } from "../ask/useAsk";
 import type { AgentContext } from "../agent/context";
-import { contextLine } from "../agent/context";
-import { hasContext } from "../ask/useAsk";
-import { SavedChats } from "../ask/SavedChats";
 import { ScheduledTaskList } from "../tasks/ScheduledTasks";
 import { useTasks } from "../tasks/useTasks";
 import { Icon, type IconName } from "../ui/icons/Icon";
+import { ResearchRunContext } from "./ResearchRunContext";
+import { ResearchSavedConversations } from "./ResearchSavedConversations";
+import "./sidebar.css";
 export type ResearchTool =
   | "experiments"
   | "data"
@@ -121,16 +121,6 @@ export function ResearchSidebar({
 }) {
   const { res } = useTasks(true),
     closeRef = useRef<HTMLButtonElement>(null);
-  const last = ask.turns.at(-1),
-    steps = last?.steps || [],
-    running = steps
-      .slice()
-      .reverse()
-      .find((s) => s.state === "running"),
-    failed = steps.filter((s) => s.state === "error"),
-    sources = steps.filter((s) => s.source);
-  const lastSource = sources.at(-1),
-    mode = last?.done?.memory?.mode || last?.memory?.mode;
   useEffect(() => {
     if (layout.mobile && layout.open) closeRef.current?.focus();
   }, [layout.mobile, layout.open]);
@@ -145,6 +135,23 @@ export function ResearchSidebar({
           } as Partial<Record<ResearchTool, number>>
         )[id]
       : undefined;
+  const tools = (items: (typeof groups)[number]["items"]) =>
+    items.map((tool) => (
+      <button
+        key={tool.id}
+        data-tool={tool.id}
+        onClick={() => {
+          onTool(tool.id);
+          layout.afterSelection();
+        }}
+      >
+        <Icon name={tool.icon} size={15} />
+        <span>{tool.title}</span>
+        {badge(tool.id) !== undefined && (
+          <small aria-label={`${badge(tool.id)} recent records`}>{badge(tool.id)}</small>
+        )}
+      </button>
+    ));
   return (
     <aside
       id="research-workspace-sidebar"
@@ -183,85 +190,25 @@ export function ResearchSidebar({
         <Icon name="draw" size={15} />
         New conversation
       </button>
-      <section className="research-awareness" aria-label="Current research context">
-        <div className="research-awareness-heading">
-          <h2>Current investigation</h2>
-          <span className="research-state" data-state={ask.busy ? "active" : last?.error ? "error" : "idle"}>
-            {ask.busy ? "Running" : last?.error ? "Interrupted" : last ? "Recorded" : "Ready"}
-          </span>
-        </div>
-        <p className="research-current-question">{last?.question || "No investigation started"}</p>
-        <dl>
-          <div>
-            <dt>Model</dt>
-            <dd>{ask.status ? (ask.status.configured ? "Configured" : "Not configured") : "Checking…"}</dd>
-          </div>
-          <div>
-            <dt>Next sources</dt>
-            <dd>
-              {({ platform: "Platform feeds", both: "Platform + web", web: "Web only" } as Record<string, string>)[
-                ask.session.sourcing || "platform"
-              ] || "Platform feeds"}
-            </dd>
-          </div>
-          <div>
-            <dt>Memory</dt>
-            <dd>
-              {mode === "isolated" ? "Isolated" : mode === "context-aware" ? "Approved snapshot" : "Standard context"}
-            </dd>
-          </div>
-        </dl>
-        <p className="research-context-note">
-          {hasContext(context) && !ask.detached ? `Attached: ${contextLine(context)}` : "No screen selection attached"}
-          {ask.attachId ? " · Saved chat attached" : ""}
-        </p>
-        {last && (
-          <div className="research-step-status">
-            <span>{steps.filter((s) => s.state === "ok").length} completed tools</span>
-            <span>{failed.length} failed</span>
-          </div>
-        )}
-        {running && (
-          <p role="status" className="research-active-step">
-            {running.label}
-          </p>
-        )}
-        {lastSource && (
-          <details className="research-last-source">
-            <summary>Latest tool source</summary>
-            <p>{lastSource.source}</p>
-            <p>
-              As of {lastSource.asOf || "not supplied"} · {lastSource.latency || "latency not supplied"}
-            </p>
-            <p>
-              {lastSource.state === "error"
-                ? "This retrieval failed."
-                : "Reported by the tool; completeness is not certified."}
-            </p>
-          </details>
-        )}
-      </section>
+      <ResearchRunContext ask={ask} context={context} />
+      <ResearchSavedConversations ask={ask} afterSelection={layout.afterSelection} />
       <nav aria-label="Research tools">
-        {groups.map((group) => (
-          <section className="research-nav-group" key={group.title}>
-            <h2>{group.title}</h2>
-            {group.items.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => {
-                  onTool(tool.id);
-                  layout.afterSelection();
-                }}
-              >
-                <Icon name={tool.icon} size={15} />
-                <span>{tool.title}</span>
-                {badge(tool.id) !== undefined && (
-                  <small aria-label={`${badge(tool.id)} recent records`}>{badge(tool.id)}</small>
-                )}
-              </button>
-            ))}
-          </section>
-        ))}
+        {groups.map((group) =>
+          group.title === "Evidence" ? (
+            <section className="research-nav-group" key={group.title}>
+              <h2>{group.title}</h2>
+              {tools(group.items)}
+            </section>
+          ) : (
+            <details className="research-nav-group" key={group.title}>
+              <summary>
+                <span>{group.title}</span>
+                <small>{group.items.length} tools</small>
+              </summary>
+              {tools(group.items)}
+            </details>
+          ),
+        )}
       </nav>
       <div className="research-registry-status">
         <span>
@@ -274,7 +221,7 @@ export function ResearchSidebar({
         <button onClick={onRefresh} disabled={refreshing} aria-label="Refresh research registry">
           <Icon name="reset" size={13} />
         </button>
-        <small>Counts show the latest 20 per category.</small>
+        <span className="research-registry-count-note">Counts: latest 20 per category.</span>
         {error && (
           <p role="alert">
             Could not refresh. {catalog ? "Showing the previous snapshot." : "Retry to load saved records."}
@@ -306,17 +253,6 @@ export function ResearchSidebar({
           res={res}
         />
       </details>
-      <div className="research-saved">
-        <SavedChats
-          ask={{
-            ...ask,
-            openSaved: (id) => {
-              ask.openSaved(id);
-              layout.afterSelection();
-            },
-          }}
-        />
-      </div>
       <p className="research-local-note">
         <Icon name="dossier" size={12} />
         Conversations stay in this browser. Research records are stored on this server.

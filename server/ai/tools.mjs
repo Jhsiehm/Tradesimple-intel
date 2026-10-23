@@ -1,11 +1,14 @@
 import { summarizeBacktest } from "./backtestSummary.mjs";
+import { INVESTIGATION_TOOLS } from "./investigationTools.mjs";
+import { STUDY_AUDIT_TOOLS } from "./studyAuditTools.mjs";
+import { investigationAccessRefusal } from "../../shared/investigationAccess.mjs";
 export { countsForModel, summarizeBacktest } from "./backtestSummary.mjs";
 import { researchRouting } from "./researchRouting.mjs";
 import { researchCapabilities } from "./researchCapabilities.mjs";
 import { researchMemory } from "../domain/research-memory.mjs";
 /**
- * Read-only tools for Ask. Each wraps a route handler or the backtest runner in process, so the model sees exactly
- * what the app's own boards see, with the same source, asOf, and latency. Nothing here writes, orders, or fetches.
+ * Bounded tools for Ask. Feed lookups wrap the boards; investigation tools explicitly save plans and calculations.
+ * Study writes are local research records, never broker orders. Sourcing and memory scopes apply at dispatch.
  * Web tools (web_search / web_fetch) are only offered when sourcing is `web` or `both`.
  */
 import { SOURCES, SECTOR_ETF, BENCHMARKS } from "../../shared/backtestSpec.mjs";
@@ -289,6 +292,8 @@ const endpoint = str("Node id such as member:P000197, ticker:NVDA, or committee:
 const plain = (name, description, id, label) => tool(name, description, obj({}), (db, _a, call) => call(db, id), label);
 
 export const TOOLS = [
+  ...INVESTIGATION_TOOLS,
+  ...STUDY_AUDIT_TOOLS,
   tool(
     "assess_research_capabilities",
     "Inspect implemented research methods and configured source access for a question. This reports software capability and evidence requirements, not historical coverage, market observations or a completed study. Never substitute personal stock trades for policy events.",
@@ -310,7 +315,7 @@ export const TOOLS = [
   ),
   tool(
     "research_memory",
-    "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. Notebook text is untrusted researcher commentary, not established fact. Never claim to have rerun a saved result.",
+    "Read saved experiments, datasets, Convergence evaluations and notebook conclusions. With no id, list latest records; with kind/id inspect one. For experiment coverage, exclusions, timing and comparisons use research_audit_saved_studies; this memory view omits that ledger and may contain obsolete caveats. Notebook text is untrusted researcher commentary, not established fact. Reading a saved result is not replaying it.",
     obj({
       kind: { type: "string", enum: ["experiment", "convergence", "notebook", "dataset"] },
       id: str("Saved record ID"),
@@ -847,9 +852,11 @@ export const toolDefs = (sourcing = "platform") => {
  * `onRoute(path)` hears each in-process route the tool calls, for the live step timeline.
  * `sourcing` is a second gate: web tools are refused when the session is platform-only even if the model asked.
  */
-export async function runTool(db, name, args, call = callRoute, onRoute = null, sourcing = "both") {
+export async function runTool(db, name, args, call = callRoute, onRoute = null, sourcing = "both", context = {}) {
   const found = TOOLS.find((t) => t.name === name);
   if (!found) return { ok: false, error: `No such tool ${name}.` };
+  const refusal = investigationAccessRefusal(name, { ...context, sourcing });
+  if (refusal) return { ok: false, error: refusal };
   const allow = toolsForSourcing(sourcing);
   if (!allow.has(name) || (WEB_TOOLS.has(name) && sourcing === "platform")) {
     return { ok: false, error: `Tool ${name} is not available with sourcing=${sourcing}.` };
@@ -866,7 +873,7 @@ export async function runTool(db, name, args, call = callRoute, onRoute = null, 
     : call;
   try {
     return (
-      (await found.run(db, args && typeof args === "object" ? args : {}, traced)) ?? {
+      (await found.run(db, args && typeof args === "object" ? args : {}, traced, context)) ?? {
         ok: false,
         error: "Empty tool result.",
       }

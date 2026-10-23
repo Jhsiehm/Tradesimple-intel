@@ -1,0 +1,126 @@
+.research-question-guide {
+  margin-top: 16px;
+  color: var(--ink);
+  font-size: var(--text-ui);
+}
+.research-question-guide > summary {
+  width: fit-content;
+  padding: 8px 0;
+  min-height: var(--control-height);
+  color: var(--dim);
+  cursor: pointer;
+}
+.research-question-guide > summary:hover {
+  color: var(--ink);
+}
+.research-question-guide fieldset {
+  border: 0;
+  margin: 0;
+  padding: 4px 0 0;
+  min-width: 0;
+}
+.research-question-guide p {
+  max-width: 75ch;
+  color: var(--dim);
+  line-height: 1.5;
+  margin: 6px 0 10px;
+  font-size: var(--text-meta);
+}
+.research-question-intent {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 7px 12px;
+  align-items: center;
+}
+.research-question-intent label {
+  color: var(--dim);
+}
+.research-question-intent p {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.research-question-guide button {
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  padding: 7px 10px;
+  background: var(--surface-raised);
+  font-size: var(--text-ui);
+}
+.research-question-guide button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.research-question-guide button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.research-question-guide :is(input, select, button):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.research-question-guide select,
+.research-question-guide input {
+  width: 100%;
+}
+.research-question-guide fieldset:disabled {
+  opacity: 0.65;
+}
+.research-question-scope {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.research-question-scope > summary {
+  color: var(--dim);
+  padding: 7px 0;
+  cursor: pointer;
+}
+.research-question-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding-top: 8px;
+}
+.research-question-fields label {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  color: var(--dim);
+  font-size: var(--text-meta);
+  min-width: 0;
+}
+.research-question-wide {
+  grid-column: 1 / -1;
+}
+.research-question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.research-question-actions span {
+  color: var(--dim);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+}
+.research-question-guide [role="alert"],
+.research-question-actions [data-over-limit="true"] {
+  color: var(--amber);
+}
+.research-question-guide .research-question-help {
+  margin-top: 12px;
+}
+.research-question-notice button {
+  margin-top: 4px;
+}
+@media (max-width: 760px) {
+  .research-question-intent,
+  .research-question-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .research-question-intent p {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .research-question-intent button {
+    justify-self: start;
+  }
+}

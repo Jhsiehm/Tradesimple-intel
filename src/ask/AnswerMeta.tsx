@@ -27,9 +27,10 @@ export function AnswerMeta({ turn }: { turn: Turn }) {
         rev.status === "applied" ? (
           <details className="ask-revised">
             <summary>
-              {summary}
-              {rev.model ? ` · ${rev.model}` : ""}
+              Review notes{rev.remaining ? ` · ${rev.remaining} unresolved check${rev.remaining === 1 ? "" : "s"}` : ""}
             </summary>
+            <p>{summary}</p>
+            {rev.model ? <p>Review model: {rev.model}</p> : null}
             <ul>
               {rev.changes.map((c, i) => (
                 <li key={i} data-status={c.status}>

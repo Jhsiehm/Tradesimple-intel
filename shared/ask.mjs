@@ -313,7 +313,8 @@ const stripNoise = (s) =>
     .replace(/\b[A-Z]{2}-\d{1,2}\b/g, " ")
     .replace(/\bt\d+\b/g, " ");
 
-const NUMBER = /(?<![\w.])([-−+]?)\$?(\d[\d,]*(?:\.\d+)?)\s?(%|bps|bn|billion|million|thousand|[kKmMbB](?![A-Za-z]))?/g;
+const NUMBER =
+  /(?<![\w.])([-−+]?)\$?(\d[\d,]*(?:\.\d+)?)\s?(%|percentage points?|pp\b|bps|bn|billion|million|thousand|[kKmMbB](?![A-Za-z]))?/g;
 
 /** Numbers in prose: `{ raw, value, decimals, pct, scale }`. Years, dates, bill and district codes are not numbers here. */
 export function numbersIn(s) {
@@ -324,7 +325,14 @@ export function numbersIn(s) {
     if (!Number.isFinite(value)) continue;
     const unit = (m[3] || "").toLowerCase();
     const decimals = body.includes(".") ? body.split(".")[1].length : 0;
-    out.push({ raw: m[0].trim(), value, decimals, pct: unit === "%", bps: unit === "bps", scale: SCALE[unit] || 1 });
+    out.push({
+      raw: m[0].trim(),
+      value,
+      decimals,
+      pct: unit === "%" || unit === "pp" || unit.startsWith("percentage point"),
+      bps: unit === "bps",
+      scale: SCALE[unit] || 1,
+    });
   }
   return out;
 }
