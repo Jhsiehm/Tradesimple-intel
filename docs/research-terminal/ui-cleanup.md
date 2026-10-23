@@ -36,9 +36,23 @@ Desktop captures are `/tmp/tradesimple-ui-clean-desktop.png` and `/tmp/tradesimp
 
 The manual detector invocation exited successfully with empty output. That is not recorded as a substantive clean scan or an accessibility certification.
 
-## Remaining task checks
+## Follow-up acceptance on 2026-10-22
 
-- Complete a fresh question through a final answer after the browser connection recovers, then inspect its tool trace, comparison context, and export.
-- Repeat acceptance on the actual mobile preview at 390px, including question entry, guide controls, sidebar disclosures, result selection, and provenance inspection.
+Both outstanding core flows were subsequently completed through the actual preview UI, using fresh questions that explicitly identified the same two saved studies. Neither question authorized new calculations or replay.
+
+| Check | Desktop | Mobile layout |
+| --- | --- | --- |
+| Fresh answer completed | 44.4 seconds; one saved-study audit | 43.3 seconds; one saved-study audit |
+| Interactive figures | Four figures; exact excess return inspected | Four figures; selection and arrow-key navigation verified |
+| Source inspection | Source chip opened the matching audit step | Same audit source, with exact selected observation path |
+| Save and reopen | Saved as “Usability desktop · LMT & HII”; reopened with charts and review intact | Saved as “Usability mobile · LMT & HII”; reopened with charts and review intact |
+
+The mobile viewport was verified from the rendered page as 390×844, with document width 390px after the answer rendered. The sidebar opened, Escape closed it and restored focus, and selecting a saved answer closed it. The background main region carried its inert attribute while the sidebar was open. This verifies the responsive browser layout, not physical-device touch or virtual-keyboard behavior.
+
+The mobile chart CSV download preserved raw excess fractions `-0.0742` and `0.0138`, percentage-point display values, exact study IDs, source paths, comparison checks, and uncertainty. The exported scope explicitly remained the displayed data.
+
+The desktop narrative failed its verification gate and correctly fell back to recorded evidence with a visible explanation. The mobile answer retained a generated narrative. Passing these interaction checks does not certify every generated statement; narrative reliability remains an answer-quality follow-up.
+
+Evidence: `/tmp/tradesimple-usability-desktop-reopened.png`, `/tmp/tradesimple-usability-mobile-entry.png`, `/tmp/tradesimple-usability-mobile-chart.png`, and `/tmp/tradesimple-usability-mobile-saved.png`. Application code was unchanged during this acceptance run.
 
 These checks concern the user flow. Neither a cleaner interface nor passing software tests establishes historical completeness, public availability before news coverage, causal validity, or a profitable strategy.
