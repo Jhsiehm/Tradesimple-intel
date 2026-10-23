@@ -1,0 +1,1 @@
+export{i as FxBoard}from"./CalendarBoard-DZCnyDvM.js";

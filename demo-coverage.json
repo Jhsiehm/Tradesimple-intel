@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-23T07:33:36.947Z",
+  "snapshotTakenAt": "2026-10-23T07:29:33.679Z",
+  "retainedSnapshotTakenAt": "2026-10-19T04:34:08.775Z",
+  "routes": 15281,
+  "members": 539,
+  "symbols": 1500,
+  "available": 15279,
+  "unavailable": [
+    {
+      "file": "api_congress_votes_senate_119_2_253.json",
+      "error": "HTTP 403"
+    },
+    {
+      "file": "api_congress_votes_senate_119_2_256.json",
+      "error": "HTTP 403"
+    }
+  ],
+  "missing": [],
+  "sourceDateRange": [
+    "2025-01-22",
+    "September 30, 2026, 12:51 PM"
+  ],
+  "localServerRequired": [
+    "AI answers",
+    "Research registry and saved records",
+    "Backtest execution",
+    "Scheduled tasks",
+    "Live feeds",
+    "Data outside this snapshot"
+  ]
+}
