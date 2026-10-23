@@ -52,8 +52,10 @@ if (!RESUME) fs.rmSync(PARTIAL, { recursive: true, force: true });
 fs.mkdirSync(PARTIAL, { recursive: true });
 
 /** Routes written so far → byte size. Bodies are kept only for the list routes the snapshot enumerates. */
-const previousManifest = RESUME && fs.existsSync(path.join(PARTIAL, "manifest.json"))
-  ? JSON.parse(fs.readFileSync(path.join(PARTIAL, "manifest.json"), "utf8")) : null;
+const previousManifest =
+  RESUME && fs.existsSync(path.join(PARTIAL, "manifest.json"))
+    ? JSON.parse(fs.readFileSync(path.join(PARTIAL, "manifest.json"), "utf8"))
+    : null;
 let reused = 0;
 const written = new Map();
 const bodies = new Map();
@@ -231,8 +233,14 @@ await pool(bodies.get("/api/markets/supply")?.items || [], 4, (s) =>
 );
 
 phase("benchmark, FX and crypto charts");
-const extraSymbols = [...new Set(["SPY", ...["/api/fx/board", "/api/crypto/board"].flatMap(route =>
-  (bodies.get(route)?.items || []).map(item => item.symbol).filter(Boolean))])];
+const extraSymbols = [
+  ...new Set([
+    "SPY",
+    ...["/api/fx/board", "/api/crypto/board"].flatMap((route) =>
+      (bodies.get(route)?.items || []).map((item) => item.symbol).filter(Boolean),
+    ),
+  ]),
+];
 await pool(extraSymbols, 2, async (symbol) => {
   const route = `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&span=5y`;
   await yahooSlot(route);
@@ -286,7 +294,9 @@ for (const name of ["states.geojson", "cd119.geojson"]) {
 const manifest = {
   takenAt: new Date().toISOString(),
   reusedRoutes: reused,
-  retainedSnapshotTakenAt: reused ? previousManifest?.retainedSnapshotTakenAt || previousManifest?.takenAt || null : null,
+  retainedSnapshotTakenAt: reused
+    ? previousManifest?.retainedSnapshotTakenAt || previousManifest?.takenAt || null
+    : null,
   base: BASE,
   routes: written.size,
   members,

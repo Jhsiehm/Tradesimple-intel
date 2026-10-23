@@ -104,13 +104,16 @@ if (fs.existsSync(pages)) run(process.execPath, [pages, "--out", OUT, "--url", U
 fs.writeFileSync(path.join(OUT, ".nojekyll"), "");
 fs.copyFileSync(path.join(OUT, "index.html"), path.join(OUT, "404.html"));
 
-fs.writeFileSync(path.join(OUT, "deployment.json"), JSON.stringify({
-  builtAt: new Date().toISOString(),
-  sourceCommit: git(["rev-parse", "HEAD"]),
-  sourceDirty: Boolean(git(["status", "--porcelain"])),
-  snapshotTakenAt: manifest.takenAt,
-  retainedSnapshotTakenAt: manifest.retainedSnapshotTakenAt || null,
-}));
+fs.writeFileSync(
+  path.join(OUT, "deployment.json"),
+  JSON.stringify({
+    builtAt: new Date().toISOString(),
+    sourceCommit: git(["rev-parse", "HEAD"]),
+    sourceDirty: Boolean(git(["status", "--porcelain"])),
+    snapshotTakenAt: manifest.takenAt,
+    retainedSnapshotTakenAt: manifest.retainedSnapshotTakenAt || null,
+  }),
+);
 run(process.execPath, ["scripts/verify-demo.mjs", OUT]);
 
 /** GitHub rejects files over 100 MB and Pages sites over 1 GB; stop well short of both. */
