@@ -1,3 +1,4 @@
+import type { ResearchStudy } from "../../shared/researchChat.mjs";
 export type MemoryRequest = { mode: "isolated" | "context-aware"; snapshotId?: string };
 export type MemoryReceipt = {
   mode: "isolated" | "context-aware";
@@ -68,6 +69,7 @@ export type BacktestRef = {
 };
 
 export type Done = {
+  studies?: ResearchStudy[];
   research?: {
     version: number;
     kind: string;
@@ -128,6 +130,7 @@ export type ClarifyAsk = {
 
 /** One exchange: the question and everything the answer streamed. */
 export type Turn = {
+  studies?: ResearchStudy[];
   memory?: MemoryRequest;
   id: string;
   question: string;

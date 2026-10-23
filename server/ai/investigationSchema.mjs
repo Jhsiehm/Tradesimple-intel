@@ -30,8 +30,8 @@ export const INVESTIGATION_PROTOCOL_SCHEMA = object({
     description:
       "UTC knowledge cutoff; null only for a blocked design with unresolved timing. Availability assertions remain unverified.",
   },
-  assumptions: strings("Material assumption and its rationale."),
-  unresolved: strings("Missing data, unsupported method or material unresolved design requirement."),
+  assumptions: strings("Material assumption and its rationale. For a retrospective descriptive summary of an explicitly selected saved sample, retain unverified publication dates, historical entity mapping, and sample-selection limits here. They limit interpretation but do not prevent arithmetic over those saved rows."),
+  unresolved: strings("Only requirements whose absence prevents the requested calculation or claim. Use [] for a fully specified descriptive summary over an existing saved numeric snapshot. Plan-only is not a blocker. A bounded inspection preview does not mean the remaining frozen rows are missing. Unverified original publication or historical ownership belongs in assumptions for retrospective selected-sample descriptions; it is a blocker for historical trading or causal claims."),
   nodes: {
     type: "array",
     maxItems: 16,
@@ -71,7 +71,7 @@ export const INVESTIGATION_PROTOCOL_SCHEMA = object({
           id: ref,
           op: { const: "summarize", type: "string" },
           input: ref,
-          value: ref,
+          value: str("Exact numeric column name from inspected fields, usually value for source observations. The metric label such as selected_contract_obligation is not a numeric column name."),
           groupBy: strings("Exact group field name; preserve metric and unit compatibility."),
         }),
       ],

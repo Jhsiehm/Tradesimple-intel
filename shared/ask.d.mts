@@ -30,6 +30,7 @@ export function cleanAsk(
       ok: true;
       memory?: { mode: "isolated" | "context-aware"; snapshotId?: string };
       question: string;
+      studyId: string | null;
       history: AskTurn[];
       model: string;
       context: AskContext | null;

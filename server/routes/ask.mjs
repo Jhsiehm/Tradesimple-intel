@@ -236,6 +236,7 @@ export function makeAskHandler({
         question: asked.question,
         memory,
         history: asked.history,
+        studyId: asked.studyId,
         context: asked.context,
         attached: asked.attached,
         prefs: asked.prefs,

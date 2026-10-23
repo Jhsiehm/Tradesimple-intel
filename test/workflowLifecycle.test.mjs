@@ -14,6 +14,8 @@ import {
 } from "../server/domain/research-backup.mjs";
 import {
   createInvestigation,
+  amendInvestigation,
+  replayInvestigation,
   getInvestigation,
   listInvestigations,
   runInvestigation,
@@ -332,4 +334,69 @@ test("blocked designs preserve unknown dates and original sources without invent
     db.close();
     fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+
+test("amendments preserve originals, isolate lineage identities, and reject stale or downgraded protocols", async () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    const plan = protocol(snapshot(db).id);
+    const parent = createInvestigation(db, plan);
+    const revised = { ...plan, title: "Revised mean", question: "Discard original" };
+    const args = { revision: 1, protocol: revised, amendment: "Rename this study" };
+    const child = amendInvestigation(db, parent.id, args);
+    assert.notEqual(child.id, parent.id);
+    assert.equal(child.parentId, parent.id);
+    assert.equal(child.parentRevision, 1);
+    assert.equal(child.protocol.question, parent.protocol.question);
+    assert.equal(child.result, null);
+    assert.deepEqual(getInvestigation(db, parent.id), parent);
+    assert.equal(amendInvestigation(db, parent.id, args).id, child.id);
+    const root = createInvestigation(db, child.protocol);
+    assert.notEqual(root.id, child.id);
+    assert.equal(createInvestigation(db, child.protocol).id, root.id);
+    assert.notEqual(amendInvestigation(db, root.id, args).id, child.id);
+    assert.throws(() => amendInvestigation(db, parent.id, { ...args, protocol: { ...revised, family: "causal" } }), /claim family/);
+    await runInvestigation(db, parent.id, { revision: 1 });
+    assert.throws(() => amendInvestigation(db, parent.id, args), /changed/);
+    const run = await runInvestigation(db, child.id, { revision: 1 });
+    assert.equal(run.parentId, parent.id);
+    assert.equal(listInvestigations(db).items.find(x => x.id === child.id).parentId, parent.id);
+  } finally { db.close(); }
+});
+
+test("in-app replay uses frozen evidence without creating revisions and rejects unfrozen studies", async () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    const created = createInvestigation(db, protocol(snapshot(db).id));
+    await assert.rejects(replayInvestigation(db, created.id), /Run and freeze/);
+    const run = await runInvestigation(db, created.id, { revision: 1 });
+    db.exec("DROP TRIGGER research.observation_snapshots_delete");
+    db.prepare("DELETE FROM research.observation_snapshots").run();
+    const replay = await replayInvestigation(db, created.id);
+    assert.equal(replay.replay.matches, true);
+    assert.deepEqual(replay.investigation, run);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM research.workflow_revisions").get().n, 2);
+    const controller = new AbortController(); controller.abort();
+    await assert.rejects(replayInvestigation(db, created.id, { signal: controller.signal }), /cancelled/);
+  } finally { db.close(); }
+});
+
+
+test("in-app replay refuses a different archived engine without evaluating archived code", async () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    const created = createInvestigation(db, protocol(snapshot(db).id));
+    await runInvestigation(db, created.id, { revision: 1 });
+    const row = db.prepare("SELECT body FROM research.workflow_revisions WHERE id=? AND revision=2").get(created.id);
+    const record = JSON.parse(row.body);
+    record.evaluation.engineFiles["workflow.mjs"] += "\n// Earlier archived engine version\n";
+    record.evaluation.engineHash = hashOf(record.evaluation.engineFiles);
+    const body = JSON.stringify(record);
+    db.exec("DROP TRIGGER research.workflow_revisions_update");
+    db.prepare("UPDATE research.workflow_revisions SET body=?,body_hash=? WHERE id=? AND revision=2")
+      .run(body, hashOf(body), created.id);
+    await assert.rejects(replayInvestigation(db, created.id), /installed engine differs/);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM research.workflow_revisions").get().n, 2);
+  } finally { db.close(); }
 });

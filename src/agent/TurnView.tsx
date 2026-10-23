@@ -6,6 +6,7 @@ import { AnswerMeta } from "../ask/AnswerMeta";
 import { ReuseNote } from "../ask/Spend";
 import { BacktestCard } from "../ask/BacktestCard";
 import { ResearchFigures } from "../ask/figures/ResearchFigures";
+import { ResearchStudyCards } from "../ask/ResearchStudyCards";
 import { Clarify } from "../ask/Clarify";
 import { ScheduleControl } from "../tasks/ScheduleControl";
 import { revealStep, Steps } from "../ask/Steps";
@@ -72,6 +73,9 @@ export function TurnView({
         {done?.figures?.length ? <ResearchFigures figures={done.figures} steps={turn.steps} onChip={chip} /> : null}
         {turn.text ? (
           <Answer text={done?.greeting ? turn.text.split("\n\n")[0] : turn.text} steps={turn.steps} onChip={chip} />
+        ) : null}
+        {(done?.studies || turn.studies)?.length ? (
+          <ResearchStudyCards studies={done?.studies || turn.studies || []} busy={busy} ask={ask} />
         ) : null}
         {done?.greeting ? (
           <div className="ask-examples">

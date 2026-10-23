@@ -1,0 +1,187 @@
+.research-studies {
+  min-width: 0;
+}
+.research-study {
+  margin: 18px 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  color: var(--ink);
+  font-size: var(--text-body);
+  overflow-wrap: anywhere;
+}
+.research-study header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+}
+.research-study h3 {
+  margin: 0;
+  flex: 1 1 240px;
+  font-size: var(--text-panel);
+  line-height: var(--leading-panel);
+}
+.research-study p {
+  margin: 8px 0;
+}
+.study-status,
+.study-note {
+  color: var(--dim);
+  font-size: var(--text-ui);
+}
+.study-status {
+  text-transform: capitalize;
+}
+.study-question {
+  line-height: var(--leading-prose);
+}
+.study-next {
+  font-weight: var(--weight-medium);
+}
+.study-gaps,
+.study-limits {
+  margin: 14px 0;
+  line-height: var(--leading-prose);
+}
+.study-gaps {
+  color: var(--amber);
+}
+.research-study ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.study-section {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.research-study summary {
+  cursor: pointer;
+  min-height: var(--control-height);
+  align-content: center;
+}
+.study-data {
+  margin: 6px 0;
+}
+.study-data > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  padding: 6px 0;
+}
+.study-data dt {
+  color: var(--dim);
+  text-transform: capitalize;
+}
+.study-data dd {
+  margin: 0;
+  min-width: 0;
+}
+.study-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.study-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-ui);
+  font-variant-numeric: tabular-nums;
+}
+.study-table th,
+.study-table td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  min-width: 90px;
+  vertical-align: top;
+}
+.study-table th {
+  color: var(--dim);
+  text-transform: capitalize;
+}
+.study-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  align-items: center;
+}
+.research-study button,
+.study-amend input {
+  font: inherit;
+  min-height: var(--control-height);
+  padding: 7px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  background: var(--surface-raised);
+}
+.research-study button {
+  cursor: pointer;
+}
+.research-study button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.research-study button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.research-study .study-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.research-study .study-primary:hover:not(:disabled) {
+  background: var(--focus);
+}
+.study-actions a {
+  color: var(--cyan);
+  text-underline-offset: 3px;
+  padding: 6px 0;
+  font-size: var(--text-ui);
+}
+.study-amend {
+  margin-top: 16px;
+}
+.study-amend label {
+  display: block;
+  margin-bottom: 6px;
+}
+.study-amend > div {
+  display: flex;
+  gap: 8px;
+}
+.study-amend input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  caret-color: var(--accent);
+}
+.study-amend input::placeholder {
+  color: var(--dim);
+}
+.research-study :is(button, input, summary, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.study-record {
+  margin-top: 12px;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+@media (max-width: 600px) {
+  .research-study {
+    padding: 12px;
+  }
+  .study-data > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .study-amend > div {
+    flex-direction: column;
+  }
+  .study-actions button {
+    flex: 1 1 160px;
+  }
+}

@@ -1,4 +1,5 @@
 import type { ResearchIntent } from "./researchIntent.mjs";
+export function studyDesignRequested(question: unknown): boolean;
 export function designOnlyRequested(question: unknown): boolean;
 export function executionRequested(question: unknown): boolean;
 export function inspectionOnlyRequested(question: unknown): boolean;

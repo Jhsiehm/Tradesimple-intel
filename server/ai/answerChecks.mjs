@@ -1,3 +1,4 @@
+import { studyDesignRequested, designOnlyRequested } from "../../shared/researchExecutionScope.mjs";
 import { citationRefs, groundingCheck } from "../../shared/ask.mjs";
 import { citationCheck } from "../../shared/citations.mjs";
 import { scopeCheck } from "../../shared/claimScope.mjs";
@@ -17,6 +18,7 @@ export function checkAnswerEvidence(answer, evidence, { used, question } = {}) {
   return { cited, unknown, grounding, uncited: evidence.length > 0 && cited.length === 0 && answer.length > 0 };
 }
 
-export function guardedStudyReport(answer, evidence, check) {
+export function guardedStudyReport(answer, evidence, check, question = "") {
+  if (studyDesignRequested(question) || designOnlyRequested(question)) return null;
   return flaggedItems(check(answer)).length ? studyAuditReport(evidence) : null;
 }

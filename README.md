@@ -37,6 +37,8 @@ Questions to explore:
 >
 > What federal contract obligations does the app show for Lockheed Martin this fiscal year?
 
+Saved investigations now appear directly in the research conversation with their plan, evidence gaps, results, and export controls. Ask the assistant to inspect, run, revise, or verify a supported study; specialist tools remain available. Research conversations save in this browser, while investigation records remain in the server’s research store. See the [chat-first delivery plan](docs/research-terminal/chat-first-plan.md) for supported operations and limits.
+
 Available answers depend on configured sources and their coverage. Research answers require an AI provider; the guided experiment workflow does not.
 
 ### Follow congressional disclosures

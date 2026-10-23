@@ -88,6 +88,7 @@ const REFINEMENT =
 // Keep analysis commands elsewhere in the question: a descriptive label must not hide a backtest.
 function analysisWords(question) {
   return positiveWords(question)
+    .replace(/\b(?:do not|don't|never)\s+(?:calculate|compute|report)\s+(?:stock\s+|market\s+)?returns?\b/g, " ")
     .replace(
       /\b(?:do not|don't|never|without)\s+(?:re-?run|back-?test|replay)(?:\s+(?:or|and)\s+(?:re-?run|back-?test|replay))*/g,
       " ",

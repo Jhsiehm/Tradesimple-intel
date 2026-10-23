@@ -1,3 +1,4 @@
+import { latestStudyId, mergeResearchStudies } from "../../shared/researchChat.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, DEMO, waitForApi } from "../lib/api";
 import { isRestart, mayResend } from "../lib/retry";
@@ -33,6 +34,7 @@ import type { MemoryRequest, AskStatus, ClarifyAsk, Done, SavedChat, Step, Turn 
 export type AskApi = ReturnType<typeof useAsk>;
 /** `fresh`: skip a reusable stored answer (the "Re-ask" button). */
 type RunOpts = {
+  studyId?: string;
   memory?: MemoryRequest;
   answers?: Record<string, unknown>;
   acceptDefaults?: boolean;
@@ -70,9 +72,15 @@ export function useAsk() {
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState(0);
   const [draft, setDraft] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [chatId, setChatId] = useState<string | null>(null);
-  const [kept, setKept] = useState(false);
+  const [restored] = useState<SavedChat | null>(() => {
+    try { const id = localStorage.getItem("intel:research:active-chat"); return loadChats().find(c => c.id === id) || null; }
+    catch { return null; }
+  });
+  const autoSaveSuppressed = useRef(false);
+  const [turns, setTurns] = useState<Turn[]>(restored?.turns || []);
+  const [chatId, setChatId] = useState<string | null>(restored?.id || null);
+  const [kept, setKept] = useState(Boolean(restored));
+  const [storageError, setStorageError] = useState("");
   const [chats, setChats] = useState<SavedChat[]>(() => loadChats());
   const [status, setStatus] = useState<AskStatus | null>(null);
   const [choice, setChoice] = useState(loadModelChoice);
@@ -121,6 +129,20 @@ export function useAsk() {
     const list = upsertChat(loadChats(), chat);
     if (saveChats(list)) setChats(list);
   }, []);
+
+  useEffect(() => {
+    if (autoSaveSuppressed.current || !turns.length || (!homeRef.current && !kept)) return;
+    const timer = setTimeout(() => {
+      const cid = chatId || newChatId();
+      const list = upsertChat(loadChats(), {id:cid, title:chatTitle(turns), turns, updated:new Date().toISOString()});
+      if (!saveChats(list)) { setStorageError("This browser could not save the conversation. Saved studies remain on the server; export important results before closing."); return; }
+      try { localStorage.setItem("intel:research:active-chat", cid); } catch { setStorageError("Conversation saved, but automatic reopening is unavailable."); return; }
+      setStorageError(""); setChats(list);
+      if (!chatId) setChatId(cid);
+      if (!kept) setKept(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [turns, chatId, kept]);
 
   const run = useCallback(
     async (raw: string, opts: RunOpts = {}) => {
@@ -176,6 +198,7 @@ export function useAsk() {
       const payload = JSON.stringify({
         question,
         history: historyOf(prior),
+        studyId: !memory && s.session.sourcing !== "web" ? opts.studyId || latestStudyId(prior) : null,
         ...(memory ? { memory } : {}),
         model: used,
         context: ctx ? { node: ctx.node, theory: ctx.theory, label: ctx.label || "" } : null,
@@ -318,6 +341,9 @@ export function useAsk() {
                 preview: String(e.preview || ""),
               }));
               break;
+            case "research_study":
+              patch(t => ({...t, studies: mergeResearchStudies(t.studies, [e.study])}));
+              break;
             case "token":
               patch((t) => ({ ...t, text: t.text + String(e.delta || "") }));
               break;
@@ -406,6 +432,8 @@ export function useAsk() {
   }, []);
   const newChat = useCallback(() => {
     stop();
+    autoSaveSuppressed.current = false;
+    try { localStorage.removeItem("intel:research:active-chat"); } catch { /* optional restoration */ }
     setTurns([]);
     setChatId(null);
     setKept(false);
@@ -424,6 +452,7 @@ export function useAsk() {
       updated: new Date().toISOString(),
     });
     if (!saveChats(list)) return false;
+    autoSaveSuppressed.current = false;
     setChats(list);
     setChatId(cid);
     setKept(true);
@@ -435,6 +464,7 @@ export function useAsk() {
       const chat = state.current.chats.find((c) => c.id === cid);
       if (!chat) return;
       stop();
+      autoSaveSuppressed.current = false;
       setTurns(chat.turns);
       setChatId(chat.id);
       setKept(true);
@@ -469,14 +499,18 @@ export function useAsk() {
       if (index < 0) return;
       setDeleted({ chat: all[index], index });
       store(removeChat(all, cid));
-      if (state.current.chatId === cid) setKept(false);
+      if (state.current.chatId === cid) {
+        autoSaveSuppressed.current = true;
+        setKept(false);
+        try { localStorage.removeItem("intel:research:active-chat"); } catch { /* deletion remains effective */ }
+      }
     },
     [store],
   );
   const undoForget = useCallback(() => {
     if (!deleted) return;
     store(restoreChat(loadChats(), deleted.chat, deleted.index));
-    if (state.current.chatId === deleted.chat.id) setKept(true);
+    if (state.current.chatId === deleted.chat.id) { autoSaveSuppressed.current = false; setKept(true); }
     setDeleted(null);
   }, [deleted, store]);
   const dropUndo = useCallback(() => setDeleted(null), []);
@@ -518,6 +552,7 @@ export function useAsk() {
   );
   return {
     setHome,
+    storageError,
     open,
     shown,
     show,

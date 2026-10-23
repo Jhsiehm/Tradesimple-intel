@@ -1,6 +1,6 @@
+import { createChatStudies, runToolJobs, availableResearchTools, workflowModelResult } from "./researchChat.mjs";
 import { createQuickReply, handleQuickQuestion } from "./quickReply.mjs";
 import { canPlanInvestigation, investigationPlanningNote } from "./investigationPlanning.mjs";
-import { OWNER_RESEARCH_TOOL_NAMES } from "../../shared/investigationAccess.mjs";
 import { savedStudyAuditArgs, STUDY_AUDIT_NOTE } from "./studyAuditPlanning.mjs";
 import { researchFigures } from "../../shared/researchFigures.mjs";
 import { RESEARCH_VISUAL_NOTE } from "./researchVisualNote.mjs";
@@ -56,7 +56,7 @@ const estimate = (messages) =>
   Math.ceil(
     messages.reduce((n, m) => n + String(m.content || "").length + JSON.stringify(m.toolCalls || "").length, 0) / 4,
   );
-const COMPUTE = new Set(["run_backtest", "research_run_investigation"]);
+const COMPUTE = new Set(["run_backtest", "research_run_investigation", "research_replay_investigation", "research_policy_evaluate", "research_policy_replay"]);
 const WEB = new Set(["web_search", "web_fetch"]);
 const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 
@@ -93,6 +93,7 @@ const REF = /\[(t\d+(?:\s*,\s*t\d+)*)\]/g;
 export async function runAsk({
   question,
   history = [],
+  studyId = null,
   memory = null,
   context = null,
   attached = null,
@@ -128,23 +129,20 @@ export async function runAsk({
   let theory = null;
   const modes = resolveModes({ question, session, answers, acceptDefaults });
   const allow = toolsForSourcing(modes.sourcing);
-  const activeTools = (tools || []).filter(
-    (t) =>
-      (allow.has(t.name) || (memory?.mode === "context-aware" && t.name === "research_memory")) &&
-      !(memory?.mode === "isolated" && t.name === "research_memory") &&
-      !(memory && OWNER_RESEARCH_TOOL_NAMES.has(t.name)),
-  );
+  const activeTools = availableResearchTools(tools, allow, memory);
 
+  const chatStudies = createChatStudies({studyId, memory, sourcing:modes.sourcing, emit});
+  const activeStudy = chatStudies.id;
   const quick = createQuickReply({ emit, now, t0, model, modes });
   const early = handleQuickQuestion({ question, history, attached, session, now, quick });
   if (early) return early;
 
   // Saved-record inspection is a new evidence request, not a refinement of a prior trading specification.
   const savedReview = savedStudyAuditArgs(question);
-  const previous = savedReview ? null : priors?.at(-1) || prior;
+  const previous = savedReview || activeStudy ? null : priors?.at(-1) || prior;
   const research = researchRouting(question, {
     prior: previous,
-    priors: savedReview ? [] : priors || [],
+    priors: savedReview || activeStudy ? [] : priors || [],
     history: savedReview ? [] : history,
     context,
     env: researchEnv,
@@ -174,7 +172,7 @@ export async function runAsk({
   }
 
   // A follow-up on a turn that ran several sources changes each of them (or only the ones it names), all re-run here.
-  const priorList = savedReview ? [] : priors?.length ? priors : prior ? [prior] : [];
+  const priorList = savedReview || activeStudy ? [] : priors?.length ? priors : prior ? [prior] : [];
   const lastPrior = priorList.at(-1) || null;
   const follow = !savedReview && research.intent.route === "legacy" && isFollowUp(question, lastPrior);
   const planned =
@@ -267,6 +265,7 @@ export async function runAsk({
     investigationMode ? investigationPlanningNote(research.assessment) : "",
     has("research_audit_saved_studies") ? STUDY_AUDIT_NOTE : "",
     RESEARCH_VISUAL_NOTE,
+    chatStudies.note,
     savedReview
       ? "This turn requests saved-study inspection. Earlier chat messages provide context, not frozen evidence or an instruction to rerun earlier strategies. Match the saved evidence to the current question."
       : "",
@@ -305,6 +304,8 @@ export async function runAsk({
   const timeLeft = () => limits.totalMs - (now() - t0);
   const abort = () => signal?.aborted;
 
+  await chatStudies.inspect(has, runCalls);
+  if (abort()) return;
   if (savedAudit) {
     await runCalls("", [{ id: "saved_study_audit", name: "research_audit_saved_studies", args: savedAudit }]);
     if (abort()) return;
@@ -478,8 +479,7 @@ export async function runAsk({
         label: webCallLabel(call.name, call.args || {}) || labelOf(call.name, call.args || {}),
       };
     });
-    const results = await Promise.all(
-      jobs.map(async (job) => {
+    const results = await runToolJobs(jobs, async (job) => {
         if (job.refused) return { job, content: JSON.stringify({ ok: false, error: job.refused }) };
         const { call, id, label } = job;
         const phase = COMPUTE.has(call.name) ? "computing" : "fetching";
@@ -532,13 +532,14 @@ export async function runAsk({
         } finally {
           clearInterval(beat);
         }
+        chatStudies.accept(raw);
         // A search becomes one cited step per result page; web text is already capped, so it is not cut to 320 characters.
         const split = call.name === "web_search" ? splitWebResults(raw, () => `t${++seq}`) : null;
         const body = WEB.has(call.name)
           ? split
             ? split.parent
             : raw
-          : trimForModel(
+          : workflowModelResult(raw, limits) ?? trimForModel(
               raw,
               call.name === "research_audit_saved_studies" ? { ...limits, resultChars: 24_000 } : limits,
             );
@@ -588,8 +589,7 @@ export async function runAsk({
           emit({ type: "step_end", ...cpub });
         }
         return { job, content: toolMessage(ev, body) };
-      }),
-    );
+      }, signal);
     evidence.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
     for (const { job, content } of results)
       messages.push({ role: "tool", toolCallId: job.call.id, name: job.call.name, content });
@@ -632,7 +632,7 @@ export async function runAsk({
       };
     }
   }
-  const auditReport = guardedStudyReport(answer, evidence, checkAnswer);
+  const auditReport = guardedStudyReport(answer, evidence, checkAnswer, question);
   if (auditReport) {
     answer = auditReport;
     emit({
@@ -687,6 +687,7 @@ export async function runAsk({
     type: "done",
     answer,
     figures: researchFigures(evidence, raws),
+    studies: chatStudies.studies,
     cited,
     unknown,
     grounding,

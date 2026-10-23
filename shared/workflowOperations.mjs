@@ -207,6 +207,11 @@ export function summarizeRows(node, table) {
     "id",
     "n",
     "mean",
+    "sum",
+    "sumReason",
+    "sum_unit",
+    "sum_metric",
+    "sum_semantics",
     "min",
     "max",
     "lineage",
@@ -232,7 +237,7 @@ export function summarizeRows(node, table) {
     .map(([, group], index) => {
       const { unit, metric, semantics } = group.descriptor;
       const numericFields = Object.fromEntries(
-        ["mean", "min", "max"].flatMap((field) => [
+        ["sum", "mean", "min", "max"].flatMap((field) => [
           [`${field}_unit`, unit],
           [`${field}_metric`, JSON.stringify([field, metric])],
           [`${field}_semantics`, semantics],
@@ -248,6 +253,8 @@ export function summarizeRows(node, table) {
             lineage.push(entry);
           }
         }
+      const mean = compensatedMean(group.members, node.value);
+      const total = mean * group.members.length;
       return {
         ...group.fields,
         groupValues: group.fields,
@@ -257,7 +264,9 @@ export function summarizeRows(node, table) {
         unit,
         semantics,
         n: group.members.length,
-        mean: compensatedMean(group.members, node.value),
+        mean,
+        sum: Number.isFinite(total) ? total : null,
+        sumReason: Number.isFinite(total) ? null : "Sum exceeds finite numeric range; not reported.",
         min: group.min,
         max: group.max,
         ...numericFields,

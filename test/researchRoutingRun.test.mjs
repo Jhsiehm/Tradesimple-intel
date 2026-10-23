@@ -116,6 +116,6 @@ test("capability tool is read-only, typed and explicit about unaudited source hi
 
 test("new routing and claim checks invalidate old answer identities without destroying saved conversations", () => {
   const identity = JSON.parse(answerIdentity({ question: POLICY_QUESTION }));
-  assert.equal(identity.v, 11);
+  assert.equal(identity.v, 12);
   assert.equal(typeof identity.q, "string");
 });

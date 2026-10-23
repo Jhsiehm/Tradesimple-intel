@@ -1,3 +1,4 @@
+import { studyDesignRequested } from "../../shared/researchExecutionScope.mjs";
 /** Saved-result review is evidence inspection, never an instruction to run a replacement strategy. */
 export function savedStudyNames(question) {
   const text = String(question || "");
@@ -49,6 +50,7 @@ export function savedStudyNames(question) {
     .slice(0, 4);
 }
 export function savedStudyAuditArgs(question) {
+  if (studyDesignRequested(question)) return null;
   const text = String(question || "");
   if (
     !/\b(?:saved|stored|frozen)\s+[^!?;\n]{0,240}?\b(?:stud(?:y|ies)|experiments?|backtests?|results?)\b/i.test(text) ||

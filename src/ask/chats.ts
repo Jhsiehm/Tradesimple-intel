@@ -1,3 +1,4 @@
+import { cleanResearchStudies } from "../../shared/researchChat.mjs";
 import { cleanPrefs, mergePrefs, PREFS_KEY, type Prefs } from "../../shared/backtestAsk.mjs";
 import { stripRefs } from "../../shared/citations.mjs";
 import { ASK_SESSION_KEY, cleanSession, mergeSession } from "../../shared/askModes.mjs";
@@ -49,6 +50,7 @@ const slimStep = (s: Step): Step => ({
 const slimTurn = (t: Turn): Turn => ({
   ...t,
   text: t.text.slice(0, TEXT_CAP),
+  studies: cleanResearchStudies(t.studies || t.done?.studies),
   steps: t.steps.map(slimStep),
   done: t.done
     ? { ...t.done, answer: t.done.answer.slice(0, TEXT_CAP), figures: cleanResearchFigures(t.done.figures) }
@@ -59,13 +61,16 @@ function asTurn(raw: unknown): Turn | null {
   if (!raw || typeof raw !== "object") return null;
   const t = raw as Partial<Turn>;
   if (typeof t.question !== "string") return null;
+  const interrupted = !t.done && ["planning", "fetching", "computing", "writing"].includes(t.phase || "");
   return {
     ...blankTurn(t.question),
     ...t,
+    studies: cleanResearchStudies(t.studies || t.done?.studies),
     done: t.done ? { ...t.done, figures: cleanResearchFigures(t.done.figures) } : null,
     steps: Array.isArray(t.steps) ? t.steps : [],
     notes: Array.isArray(t.notes) ? t.notes : [],
-    phase: t.phase === "error" ? "error" : "done",
+    phase: t.phase === "error" || interrupted ? "error" : "done",
+    ...(interrupted ? {error: "This conversation was interrupted. Inspect the saved investigation before retrying; server work may have finished."} : {}),
   } as Turn;
 }
 

@@ -1,3 +1,5 @@
+import { DATASET_OBSERVATION_TOOLS } from "./datasetObservationTools.mjs";
+import { POLICY_TOOLS } from "./policyTools.mjs";
 import { summarizeBacktest } from "./backtestSummary.mjs";
 import { INVESTIGATION_TOOLS } from "./investigationTools.mjs";
 import { STUDY_AUDIT_TOOLS } from "./studyAuditTools.mjs";
@@ -293,6 +295,8 @@ const plain = (name, description, id, label) => tool(name, description, obj({}),
 
 export const TOOLS = [
   ...INVESTIGATION_TOOLS,
+  ...DATASET_OBSERVATION_TOOLS,
+  ...POLICY_TOOLS,
   ...STUDY_AUDIT_TOOLS,
   tool(
     "assess_research_capabilities",

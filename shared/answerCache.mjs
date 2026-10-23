@@ -52,7 +52,8 @@ export const dataText = (raw) => stableJson(raw, VOLATILE);
 export function answerIdentity(asked, { model = "", pinned = false } = {}) {
   const a = asked || {};
   return stableJson({
-    v: 11,
+    v: 12,
+    studyId: a.studyId || null,
     memory: a.memory || null,
     q: normalizeQuestion(a.question),
     history: (a.history || []).map((t) => [

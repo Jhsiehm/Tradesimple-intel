@@ -386,3 +386,9 @@ test("maximum-size summary unions provenance once without losing member IDs", ()
   assert.equal(result.outputs.summary.rows[0].memberIds.length, 5000);
   assert.ok(Math.abs(result.outputs.summary.rows[0].mean - 2499.5) < 1e-9);
 });
+
+test('descriptive summaries include a finite total and preserve compensated cancellation', () => {
+ const fixture=macroExample();
+ const row=evaluateWorkflow(fixture.protocol,fixture.sources).outputs.summary.rows[0];
+ assert.equal(row.sum,2); assert.equal(row.sum_unit,'percent'); assert.equal(row.sumReason,null);
+});

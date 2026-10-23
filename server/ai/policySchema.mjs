@@ -1,0 +1,43 @@
+const string = { type: "string" };
+const strings = (items = string) => ({ type: "array", minItems: 1, maxItems: 100, items });
+export const POLICY_PROTOCOL_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    schemaVersion: { type: "integer", enum: [1] },
+    title: { type: "string", minLength: 3, maxLength: 200 },
+    from: { type: "string", description: "User-selected start date YYYY-MM-DD." },
+    to: { type: "string", description: "User-selected end date YYYY-MM-DD." },
+    holdoutFrom: {
+      type: "string",
+      description: "Explicit chronological split date; retrospective splits are not untouched holdouts.",
+    },
+    billIds: strings({ type: "string", description: "Verified Congress bill ID, e.g. hr-119-1968; never infer IDs." }),
+    universe: strings(),
+    eventTypes: strings({ type: "string", enum: ["vote", "markup", "introduced", "passed", "enacted"] }),
+    benchmark: { type: "string", enum: ["SPY"] },
+    sectorBenchmark: { type: ["string", "null"] },
+    latencySeconds: { type: "integer", minimum: 0, maximum: 3600 },
+    holdingMinutes: { type: "integer", minimum: 1, maximum: 390 },
+    costBps: { type: "number", minimum: 0, maximum: 1000 },
+    newsArchive: string,
+    newsTimeBasis: { type: "string", enum: ["publication", "archive-first-seen"] },
+  },
+  required: [
+    "schemaVersion",
+    "title",
+    "from",
+    "to",
+    "holdoutFrom",
+    "billIds",
+    "universe",
+    "eventTypes",
+    "benchmark",
+    "sectorBenchmark",
+    "latencySeconds",
+    "holdingMinutes",
+    "costBps",
+    "newsArchive",
+    "newsTimeBasis",
+  ],
+};

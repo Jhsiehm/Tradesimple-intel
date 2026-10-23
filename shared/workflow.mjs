@@ -3,7 +3,7 @@ import { cleanWorkflowProtocol, WORKFLOW_LIMITS, plainObject } from "./workflowP
 import { boundedJson, sourceRows } from "./workflowRows.mjs";
 import { filterRows, joinRows, differenceRows, summarizeRows } from "./workflowOperations.mjs";
 export { cleanWorkflowProtocol, WORKFLOW_LIMITS } from "./workflowProtocol.mjs";
-export const WORKFLOW_VERSION = 1;
+export const WORKFLOW_VERSION = 2;
 const LIMITATIONS = [
   "Descriptive transformations of explicitly pinned observations only. No causal, predictive, strategy, significance or investability validity is established.",
   "Revision selection is supplied by the domain resolver and frozen with its provenance and decisions. Missing history, inaccurate availability assertions and incomplete source coverage cannot be detected from these rows alone.",
@@ -12,7 +12,7 @@ const LIMITATIONS = [
   "Joined rows retain original left availableAt and prefixed right fields. derivedAvailableAt is the latest availability bound of all required operands, including in differences and summaries; original source timestamps must not be mistaken for derived feature availability.",
   "Joins require exact typed keys and one-to-one non-null key values on both inputs. Missing/null keys do not match; time strings with different precision or representation are not equated.",
   "Differences preserve ordered operand metric and observation semantics. Matching units does not establish economic comparability; subtraction is the protocol author’s explicit descriptive choice.",
-  "Summaries report observed numeric n, mean, min and max, excluding missing values. They do not estimate sampling uncertainty, validate independent observations, or turn missing records into zero.",
+  "Summaries report observed numeric n, sum, mean, min and max, excluding missing values. They do not estimate sampling uncertainty, validate independent observations, or turn missing records into zero.",
 ];
 const blocked = (gaps, steps = []) => ({
   version: WORKFLOW_VERSION,

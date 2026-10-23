@@ -1,6 +1,9 @@
+import { listCompatibleContractDatasets } from "../domain/contractObservationAdapter.mjs";
 import { listObservations, getObservations } from "../domain/research-observations.mjs";
 import {
   createInvestigation,
+  amendInvestigation,
+  replayInvestigation,
   getInvestigation,
   listInvestigations,
   runInvestigation,
@@ -17,7 +20,7 @@ const wrapped = (investigation) => ({
   latency: "Saved local-owner protocol/result; source assertions and historical completeness remain unverified.",
   investigation,
   protocolLifecycle:
-    "Saved protocols are immutable. A blocked design does not automatically become executable after import; create a new resolved protocol with actual snapshot IDs and required design choices, then execute it.",
+    "Saved protocols are immutable. A blocked design does not automatically become executable after import; amend the saved protocol with actual snapshot IDs and required design choices, then execute the linked child.",
   downloads: {
     json: `/api/research/investigations/${investigation.id}/export`,
     archive: investigation.archiveAvailable ? `/api/research/investigations/${investigation.id}/archive` : null,
@@ -29,7 +32,7 @@ export const INVESTIGATION_TOOLS = [
     name: "research_sources",
     label: "Research source inventory",
     description:
-      "List up to 200 saved numeric observation snapshots, or inspect one exact snapshot's fields, coverage, source conditions and first 10 rows. No new data is collected. Importer assertions and unaudited history remain limits. IDs are needed for a composed study; never invent them.",
+      "List up to 200 saved numeric observation snapshots and compatible saved contract datasets that research_prepare_dataset_observations can prepare, or inspect one exact snapshot's fields, coverage, source conditions and first 10 rows. No new data is collected. Importer assertions and unaudited history remain limits. IDs are needed for a composed study; never invent them.",
     parameters: object({ snapshotId: { type: "string", description: "Optional exact obs_ ID to inspect." } }),
     run(db, args) {
       if (!args.snapshotId)
@@ -37,10 +40,16 @@ export const INVESTIGATION_TOOLS = [
           ok: true,
           source: "Saved observation inventory",
           items: listObservations(db),
+          compatibleDatasets: listCompatibleContractDatasets(db),
           limit: 200,
           coverage: "Latest saved snapshots only; not an exhaustive source or historical coverage census.",
         };
       const snapshot = getObservations(db, args.snapshotId);
+      let selectionProvenance = null;
+      if (snapshot.format === "json") {
+        const raw = JSON.parse(snapshot.rawContent);
+        if (raw?.provenance?.adapter === "selected-contract-observations-v1") selectionProvenance = raw.provenance;
+      }
       return {
         ok: true,
         source: snapshot.source,
@@ -54,7 +63,8 @@ export const INVESTIGATION_TOOLS = [
           coverage: snapshot.coverage,
           ownership: snapshot.ownership,
           license: snapshot.license,
-          caveats: snapshot.caveats,
+          caveats: [...snapshot.caveats, ...(selectionProvenance?.limits || [])],
+          selectionProvenance,
           preview: snapshot.events.slice(0, 10),
           totalRows: snapshot.events.length,
         },
@@ -65,7 +75,7 @@ export const INVESTIGATION_TOOLS = [
     name: "research_create_investigation",
     label: "Save research design",
     description:
-      "Save an immutable general investigation protocol and composed workflow over exact saved observations. Retain the requested family and record missing requirements. Descriptive operations can execute; causal/predictive/strategy/document plans remain blocked until supported. A blocked design cannot automatically resume after import: create a new resolved protocol. Saving is not execution. Never submit invented rows. Render downloads.json as an exact Markdown link; offer downloads.archive only when non-null.",
+      "Save an immutable general investigation protocol and composed workflow over exact saved observations. Retain the requested family and record missing requirements. Descriptive operations can execute; causal/predictive/strategy/document plans remain blocked until supported. A blocked design cannot automatically resume after import: amend it into a linked resolved protocol. Saving is not execution. Never submit invented rows. Render downloads.json as an exact Markdown link; offer downloads.archive only when non-null.",
     parameters: object({ protocol: INVESTIGATION_PROTOCOL_SCHEMA }, ["protocol"]),
     run(db, args, _call, context) {
       if (!context?.question) throw Error("An original user question is required to create a study through Ask.");
@@ -94,6 +104,33 @@ export const INVESTIGATION_TOOLS = [
     ),
     run: async (db, args, _call, context) =>
       wrapped(await runInvestigation(db, args.id, { revision: args.revision, signal: context?.signal })),
+  },
+  {
+    name: "research_amend_investigation",
+    label: "Save linked research amendment",
+    description: "Create an immutable child of an inspected investigation using its exact current revision and a complete revised protocol. Preserve its original question and claim family. The current user request is saved as the amendment. Never overwrite the original or invent source rows. Saving does not execute the child.",
+    parameters: object({ id, revision: { type: "integer", minimum: 1 }, protocol: INVESTIGATION_PROTOCOL_SCHEMA }, ["id", "revision", "protocol"]),
+    run(db, args, _call, context) {
+      if (!context?.question) throw Error("A user amendment request is required.");
+      const intent = context.intent || interpretResearch(context.question);
+      if (intent.inspectionOnly) throw Error("This task requests inspection only; do not create an amended study.");
+      if (["causal", "predictive", "strategy"].includes(intent.family) && args.protocol?.family === "descriptive")
+        throw Error("A descriptive amendment cannot silently replace the requested " + intent.family + " claim.");
+      return wrapped(amendInvestigation(db, args.id, { revision: args.revision, protocol: args.protocol, amendment: context.question }));
+    },
+  },
+  {
+    name: "research_replay_investigation",
+    label: "Verify frozen research result",
+    description: "Replay a saved evaluation from validated frozen inputs using the matching installed engine. Does not fetch sources, refresh evidence, save a new evaluation or establish new claims. Returns replay.matches. If the installed engine differs, use the offline archive instead.",
+    parameters: object({ id }, ["id"]),
+    async run(db, args, _call, context) {
+      const intent = context?.intent || interpretResearch(context?.question || "");
+      if (intent.designOnly || intent.inspectionOnly)
+        throw Error("This task requests design or inspection only; do not execute replay calculations.");
+      const { investigation, replay } = await replayInvestigation(db, args.id, { signal: context?.signal });
+      return { ...wrapped(investigation), replay };
+    },
   },
   {
     name: "research_inspect_investigation",

@@ -15,13 +15,17 @@ export function policyEngine() {
   return { hash: hashOf(files), files };
 }
 
-export async function replayPolicyInvestigation(db, id) {
+export async function replayPolicyInvestigation(db, id, options = {}) {
+  options.signal?.throwIfAborted();
   const record = getPolicyRecord(db, id);
   if (!record?.evaluation) throw Error("Evaluate and freeze this investigation before replaying it.");
   const { inputs, inputHash, resultHash, engineHash } = record.evaluation;
   if (engineHash !== policyEngine().hash)
     throw Error("The engine changed. Export the frozen archive to replay its original version.");
-  const actual = await runPolicyMethod("evaluate", inputs.protocol, inputs.evidence, { asOf: inputs.asOf });
+  const actual = await runPolicyMethod("evaluate", inputs.protocol, inputs.evidence, {
+    asOf: inputs.asOf,
+    signal: options.signal,
+  });
   return {
     ok: true,
     matches: hashOf(actual) === resultHash,

@@ -2,6 +2,7 @@
  * Ask, pure. Limits, the grounding prompt, how a tool result becomes evidence, the numeric grounding check, the
  * per-IP limiter, and the follow action each citation chip opens. Nothing here reads the network, the clock, or env.
  */
+import { studyId } from "./researchChat.mjs";
 import { cleanSpec, encodeSpec } from "./backtestSpec.mjs";
 import { PREF_FIELDS, cleanPrefs } from "./backtestAsk.mjs";
 import { cleanAttached, cleanContext, rowCount } from "./agent.mjs";
@@ -52,7 +53,7 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
       return { ok: false, error: "Choose a frozen memory snapshot." };
     if (m.mode === "isolated" && m.snapshotId)
       return { ok: false, error: "An isolated request cannot select saved context." };
-    if (history.length || raw.attached || raw.context || raw.prior || raw.priors?.length)
+    if (history.length || raw.attached || raw.context || raw.prior || raw.priors?.length || raw.studyId)
       return {
         ok: false,
         error:
@@ -64,6 +65,7 @@ export function cleanAsk(raw, limits = ASK_LIMITS) {
     ok: true,
     ...(memory ? { memory } : {}),
     question,
+    studyId: studyId(raw.studyId),
     history: history.slice(-limits.history),
     model: text(raw.model, 120),
     context: cleanContext(raw.context),
