@@ -103,11 +103,10 @@ export function makeAskHandler({
     if (!body.ok) return reply(body.status, { ok: false, error: body.error, missing: "" });
     if (publicBeta) {
       const input = body.value;
-      // Do not accept caller-provided memory, saved work, tools, model, or
-      // attachments. They may reference someone else's research on this server.
-      if (!input || typeof input !== "object" || Array.isArray(input) ||
-        ["memory", "studyId", "context", "attached", "prior", "priors", "answers", "prefs"].some((key) => Object.hasOwn(input, key))) {
-        return reply(403, { ok: false, error: "Private research context is unavailable in the public beta." });
+      // Ignore untrusted fields rather than trusting saved context from the
+      // frontend (which routinely sends null fields for an ordinary question).
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return reply(400, { ok: false, error: "A question is required." });
       }
       body.value = {
         question: input.question,
