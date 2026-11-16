@@ -5,6 +5,7 @@
  *
  * INTEL_PUBLIC_BETA=on enables this only in production with owner auth.
  */
+import crypto from "node:crypto";
 import { MANIFEST } from "../routes/manifest.mjs";
 import { compile } from "../router.mjs";
 import { clientIp } from "./auth.mjs";
@@ -77,6 +78,17 @@ export function publicBetaPermission(req) {
 /** Conservative IP caps in addition to Ask's own limits and the monthly hard stop. */
 export function createPublicBetaGate({ now = Date.now } = {}) {
   const reads = makeLimiter({ max: 120, windowMs: 60_000 });
+  const globalWork = makeLimiter({ max: 120, windowMs: 10 * 60_000 });
+  const secret = process.env.INTEL_PROXY_SECRET || "";
+  const visitorOf = (req) => {
+    const v = String(req.headers?.["x-intel-beta-visitor"] || "");
+    const sig = String(req.headers?.["x-intel-beta-signature"] || "");
+    if (secret.length < 32 || !/^[a-f0-9]{64}$/.test(v) || !/^[a-f0-9]{64}$/.test(sig))
+      return clientIp(req);
+    const expected = crypto.createHmac("sha256", secret).update(v).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+      ? v : clientIp(req);
+  };
   const work = makeLimiter({ max: 8, windowMs: 10 * 60_000 });
   return (req) => {
     const access = publicBetaPermission(req);
@@ -84,7 +96,14 @@ export function createPublicBetaGate({ now = Date.now } = {}) {
     const method = String(req.method || "GET").toUpperCase();
     const workRequest = method === "POST";
     const limiter = workRequest ? work : reads;
-    const slot = limiter.take(clientIp(req), now());
+    const visitor = visitorOf(req);
+    const slot = limiter.take(visitor, now());
+    // Independently cap total expensive work, including through multiple visitors.
+    const global = workRequest ? globalWork.take("all", now()) : { ok: true };
+    if (workRequest && !global.ok) {
+      return { ok: false, status: 429, error: "Public beta compute capacity reached. Please try again later.",
+        retryAfterS: Math.max(1, Math.ceil(global.retryMs / 1000)) };
+    }
     if (!slot.ok) {
       return {
         ok: false,
