@@ -17,6 +17,7 @@ import { answerIdentity, noReuseReason, replayEvents } from "../../shared/answer
 import { scheduleReply } from "./tasks.mjs";
 import { SOURCING, SOURCING_LABEL, STYLES, STYLE_LABEL } from "../../shared/askModes.mjs";
 import { webConfig } from "../feeds/web.mjs";
+import { PUBLIC_BETA_ASK_TOOLS } from "../lib/publicBeta.mjs";
 
 export function askStatus(env = process.env, db = null, at = Date.now()) {
   const cfg = askConfig(env);
@@ -77,7 +78,19 @@ export function makeAskHandler({
 } = {}) {
   let running = 0;
   return async ({ req, res, db }) => {
-    if (!req || req.method !== "POST") return askStatus(env, db, now());
+    const publicBeta = Boolean(req?.publicBeta);
+    if (!req || req.method !== "POST") {
+      const status = askStatus(env, db, now());
+      return publicBeta ? {
+        ...status,
+        tools: status.tools.filter((name) => PUBLIC_BETA_ASK_TOOLS.has(name)),
+        models: [],
+        strong: "",
+        spend: null,
+        sourcing: status.sourcing.filter((mode) => mode.id === "platform"),
+        web: { configured: false, note: "Not available in the public beta." },
+      } : status;
+    }
     const cfg = askConfig(env);
     if (!cfg.configured)
       return reply(503, {
@@ -88,6 +101,21 @@ export function makeAskHandler({
       });
     const body = await readJson(req, 32 * 1024);
     if (!body.ok) return reply(body.status, { ok: false, error: body.error, missing: "" });
+    if (publicBeta) {
+      const input = body.value;
+      // Do not accept caller-provided memory, saved work, tools, model, or
+      // attachments. They may reference someone else's research on this server.
+      if (!input || typeof input !== "object" || Array.isArray(input) ||
+        ["memory", "studyId", "context", "attached", "prior", "priors", "answers", "prefs"].some((key) => Object.hasOwn(input, key))) {
+        return reply(403, { ok: false, error: "Private research context is unavailable in the public beta." });
+      }
+      body.value = {
+        question: input.question,
+        history: input.history,
+        session: { sourcing: "platform", style: "professional" },
+        acceptDefaults: true,
+      };
+    }
     const asked = cleanAsk(body.value);
     if (!asked.ok) return reply(400, { ok: false, error: asked.error, missing: "" });
     let memory;
@@ -97,7 +125,7 @@ export function makeAskHandler({
       return reply(400, { ok: false, error: error.message, missing: "" });
     }
     if (memory) asked.memory = memory;
-    if (scheduleReply(asked, res, now)) return undefined;
+    if (!publicBeta && scheduleReply(asked, res, now)) return undefined;
     const client = clientOf(req, env);
     const slot = limiter.take(client, now());
     if (!slot.ok)
@@ -116,7 +144,9 @@ export function makeAskHandler({
       return reply(402, { ok: false, error: spend.note, missing: "", spend });
     }
     const over = spend?.level === "over" && Boolean(spend.cheap);
-    const route = over ? { model: spend.cheap, auto: false, pinned: false } : routeModel(asked.model, cfg);
+    const route = publicBeta
+      ? { model: cfg.model, auto: false, pinned: true }
+      : over ? { model: spend.cheap, auto: false, pinned: false } : routeModel(asked.model, cfg);
     const model = route.model;
     const askId = `a${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     let analysis = null;
@@ -151,10 +181,12 @@ export function makeAskHandler({
             provider: cfg.strong === model ? null : meter(makeProvider({ ...cfg, model: cfg.strong })),
           }
         : null;
-    const ttl = cacheTtlMs(env);
+    const ttl = publicBeta ? 0 : cacheTtlMs(env);
     const key = ttl && !memory ? sha(answerIdentity(asked, { model, pinned: route.pinned })) : "";
     const fresh = body.value?.fresh === true;
     const exec = async (name, args, hooks) => {
+      if (publicBeta && !PUBLIC_BETA_ASK_TOOLS.has(name))
+        return { ok: false, error: "This tool is not available in the public beta." };
       const refusal = investigationAccessRefusal(name, { memory, sourcing: hooks?.sourcing });
       if (refusal) return { ok: false, error: refusal };
       analysis?.append("tool_input", { name, args });
@@ -250,6 +282,7 @@ export function makeAskHandler({
         auto: route.auto,
         strong,
         tools: toolDefs("both")
+          .filter((t) => !publicBeta || PUBLIC_BETA_ASK_TOOLS.has(t.name))
           .filter((t) => memory?.mode !== "isolated" || t.name !== "research_memory")
           .map((t) =>
             memory && t.name === "research_memory"
