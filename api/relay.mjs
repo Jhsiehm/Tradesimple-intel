@@ -9,8 +9,14 @@ import crypto from "node:crypto";
 
 const allowed = /^(api|geo)\/[A-Za-z0-9_./-]+$/;
 const filteredHeaders = [
-  "content-type", "cache-control", "retry-after", "content-encoding",
-  "content-disposition", "vary", "last-modified", "etag",
+  "content-type",
+  "cache-control",
+  "retry-after",
+  "content-encoding",
+  "content-disposition",
+  "vary",
+  "last-modified",
+  "etag",
 ];
 const clean = (value) => String(Array.isArray(value) ? value[0] : value || "");
 
@@ -28,7 +34,8 @@ export default async function handler(req, res) {
       upstream.search ||
       upstream.hash ||
       secret.length < 32
-    ) throw new Error("Invalid backend configuration");
+    )
+      throw new Error("Invalid backend configuration");
   } catch {
     res.statusCode = 503;
     return res.end("The public beta backend is not configured.");
@@ -46,12 +53,15 @@ export default async function handler(req, res) {
   // x-forwarded-for header. The backend validates the signature independently.
   const ip = clean(req.headers["x-vercel-forwarded-for"] || req.socket?.remoteAddress);
   const ua = clean(req.headers["user-agent"]).slice(0, 250);
-  const visitor = crypto.createHmac("sha256", secret).update(ip + "\n" + ua).digest("hex");
+  const visitor = crypto
+    .createHmac("sha256", secret)
+    .update(ip + "\n" + ua)
+    .digest("hex");
   const signature = crypto.createHmac("sha256", secret).update(visitor).digest("hex");
   const headers = {
-    "accept": clean(req.headers.accept) || "*/*",
+    accept: clean(req.headers.accept) || "*/*",
     "accept-encoding": "identity",
-    "origin": upstream.origin,
+    origin: upstream.origin,
     "content-type": "application/json",
     "x-intel-beta-visitor": visitor,
     "x-intel-beta-signature": signature,

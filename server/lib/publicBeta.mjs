@@ -12,36 +12,107 @@ import { clientIp } from "./auth.mjs";
 import { makeLimiter } from "../../shared/ask.mjs";
 
 const READ_ROUTE_IDS = new Set([
-  "health", "geo", "universe", "tickers", "ticker", "sites",
-  "congress.bills", "congress.billRolls", "congress.billVote", "congress.bill",
-  "congress.calendar", "congress.votes", "congress.vote", "congress.members",
-  "congress.compare", "congress.roster", "congress.committees", "congress.committee",
-  "congress.memberTrades", "congress.memberTimeline", "congress.member",
-  "congress.leaders", "congress.feed",
-  "lobby", "fec", "contracts", "contracts.feed", "contracts.board", "contracts.dod",
-  "markets.politicians", "markets.insiders", "markets.whales", "markets.shorts",
-  "markets.positions", "markets.position", "markets.globals", "markets.supply",
-  "markets.supplyChain", "markets.board", "markets.chart", "markets.events",
-  "news", "news.xpulse", "news.x",
-  "fx.board", "crypto.board", "macro.strip", "macro.fomc",
-  "calendar.macro", "calendar.earnings", "calendar.lobbying", "calendar.pacs",
-  "weather.hazards", "weather.forecast",
-  "air", "air.near", "air.route",
-  "strait.news", "strait.ais", "strait.theaters",
-  "earth.imagery", "earth.live", "earth.lanes",
-  "corporate", "search",
+  "health",
+  "geo",
+  "universe",
+  "tickers",
+  "ticker",
+  "sites",
+  "congress.bills",
+  "congress.billRolls",
+  "congress.billVote",
+  "congress.bill",
+  "congress.calendar",
+  "congress.votes",
+  "congress.vote",
+  "congress.members",
+  "congress.compare",
+  "congress.roster",
+  "congress.committees",
+  "congress.committee",
+  "congress.memberTrades",
+  "congress.memberTimeline",
+  "congress.member",
+  "congress.leaders",
+  "congress.feed",
+  "lobby",
+  "fec",
+  "contracts",
+  "contracts.feed",
+  "contracts.board",
+  "contracts.dod",
+  "markets.politicians",
+  "markets.insiders",
+  "markets.whales",
+  "markets.shorts",
+  "markets.positions",
+  "markets.position",
+  "markets.globals",
+  "markets.supply",
+  "markets.supplyChain",
+  "markets.board",
+  "markets.chart",
+  "markets.events",
+  "news",
+  "news.xpulse",
+  "news.x",
+  "fx.board",
+  "crypto.board",
+  "macro.strip",
+  "macro.fomc",
+  "calendar.macro",
+  "calendar.earnings",
+  "calendar.lobbying",
+  "calendar.pacs",
+  "weather.hazards",
+  "weather.forecast",
+  "air",
+  "air.near",
+  "air.route",
+  "strait.news",
+  "strait.ais",
+  "strait.theaters",
+  "earth.imagery",
+  "earth.live",
+  "earth.lanes",
+  "corporate",
+  "search",
 ]);
 
 /** Public Ask is restricted to known public-feed tools and bounded backtests. */
 export const PUBLIC_BETA_ASK_TOOLS = new Set([
-  "search", "member_profile", "member_timeline", "ticker_dossier", "case_file",
-  "committee", "hearings", "bill", "bill_votes", "votes",
-  "contracts", "corporate", "lobbying_client", "pac_committee",
-  "positions", "insiders", "congress_feed", "congress_leaders",
-  "market_snapshot", "world_markets", "run_backtest",
-  "news", "news_desk", "x_pulse", "x_posts",
-  "world_calendar", "satellite", "shipping", "air_theater",
-  "macro_strip", "strait_news", "strait_ships",
+  "search",
+  "member_profile",
+  "member_timeline",
+  "ticker_dossier",
+  "case_file",
+  "committee",
+  "hearings",
+  "bill",
+  "bill_votes",
+  "votes",
+  "contracts",
+  "corporate",
+  "lobbying_client",
+  "pac_committee",
+  "positions",
+  "insiders",
+  "congress_feed",
+  "congress_leaders",
+  "market_snapshot",
+  "world_markets",
+  "run_backtest",
+  "news",
+  "news_desk",
+  "x_pulse",
+  "x_posts",
+  "world_calendar",
+  "satellite",
+  "shipping",
+  "air_theater",
+  "macro_strip",
+  "strait_news",
+  "strait_ships",
 ]);
 
 const ROUTES = MANIFEST.map((route) => ({ id: route.id, match: compile(route.path) }));
@@ -71,7 +142,8 @@ export function publicBetaPermission(req) {
   return {
     ok: false,
     status: 403,
-    error: "This feature is not available in the public beta. Saved research and administrative actions require owner sign-in.",
+    error:
+      "This feature is not available in the public beta. Saved research and administrative actions require owner sign-in.",
   };
 }
 
@@ -83,11 +155,9 @@ export function createPublicBetaGate({ now = Date.now } = {}) {
   const visitorOf = (req) => {
     const v = String(req.headers?.["x-intel-beta-visitor"] || "");
     const sig = String(req.headers?.["x-intel-beta-signature"] || "");
-    if (secret.length < 32 || !/^[a-f0-9]{64}$/.test(v) || !/^[a-f0-9]{64}$/.test(sig))
-      return clientIp(req);
+    if (secret.length < 32 || !/^[a-f0-9]{64}$/.test(v) || !/^[a-f0-9]{64}$/.test(sig)) return clientIp(req);
     const expected = crypto.createHmac("sha256", secret).update(v).digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
-      ? v : clientIp(req);
+    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)) ? v : clientIp(req);
   };
   const work = makeLimiter({ max: 8, windowMs: 10 * 60_000 });
   return (req) => {
@@ -101,8 +171,12 @@ export function createPublicBetaGate({ now = Date.now } = {}) {
     // Independently cap total expensive work, including through multiple visitors.
     const global = workRequest ? globalWork.take("all", now()) : { ok: true };
     if (workRequest && !global.ok) {
-      return { ok: false, status: 429, error: "Public beta compute capacity reached. Please try again later.",
-        retryAfterS: Math.max(1, Math.ceil(global.retryMs / 1000)) };
+      return {
+        ok: false,
+        status: 429,
+        error: "Public beta compute capacity reached. Please try again later.",
+        retryAfterS: Math.max(1, Math.ceil(global.retryMs / 1000)),
+      };
     }
     if (!slot.ok) {
       return {

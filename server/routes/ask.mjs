@@ -81,15 +81,17 @@ export function makeAskHandler({
     const publicBeta = Boolean(req?.publicBeta);
     if (!req || req.method !== "POST") {
       const status = askStatus(env, db, now());
-      return publicBeta ? {
-        ...status,
-        tools: status.tools.filter((name) => PUBLIC_BETA_ASK_TOOLS.has(name)),
-        models: [],
-        strong: "",
-        spend: null,
-        sourcing: status.sourcing.filter((mode) => mode.id === "platform"),
-        web: { configured: false, note: "Not available in the public beta." },
-      } : status;
+      return publicBeta
+        ? {
+            ...status,
+            tools: status.tools.filter((name) => PUBLIC_BETA_ASK_TOOLS.has(name)),
+            models: [],
+            strong: "",
+            spend: null,
+            sourcing: status.sourcing.filter((mode) => mode.id === "platform"),
+            web: { configured: false, note: "Not available in the public beta." },
+          }
+        : status;
     }
     const cfg = askConfig(env);
     if (!cfg.configured)
@@ -145,7 +147,9 @@ export function makeAskHandler({
     const over = spend?.level === "over" && Boolean(spend.cheap);
     const route = publicBeta
       ? { model: cfg.model, auto: false, pinned: true }
-      : over ? { model: spend.cheap, auto: false, pinned: false } : routeModel(asked.model, cfg);
+      : over
+        ? { model: spend.cheap, auto: false, pinned: false }
+        : routeModel(asked.model, cfg);
     const model = route.model;
     const askId = `a${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     let analysis = null;

@@ -26,10 +26,7 @@ test("public beta explicitly exposes only public feeds and bounded compute", () 
 });
 
 test("anonymous model capabilities exclude local data and web tools", () => {
-  for (const name of [
-    "research_memory", "web_search", "web_fetch",
-    "research_audit_saved_studies", "propose_theory",
-  ]) assert.ok(!PUBLIC_BETA_ASK_TOOLS.has(name), name);
-  for (const name of ["search", "run_backtest", "ticker_dossier"])
-    assert.ok(PUBLIC_BETA_ASK_TOOLS.has(name), name);
+  for (const name of ["research_memory", "web_search", "web_fetch", "research_audit_saved_studies", "propose_theory"])
+    assert.ok(!PUBLIC_BETA_ASK_TOOLS.has(name), name);
+  for (const name of ["search", "run_backtest", "ticker_dossier"]) assert.ok(PUBLIC_BETA_ASK_TOOLS.has(name), name);
 });

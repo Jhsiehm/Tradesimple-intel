@@ -39,11 +39,8 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
     log(`intel auth: WARNING ${cfg.origin} is plain http; the password and session cookie travel unencrypted.`);
   // Public beta is opt-in, requires owner authentication and a bounded AI budget.
   const publicBeta = cfg.production && env.INTEL_PUBLIC_BETA === "on";
-  if (publicBeta && (
-    !cfg.secure ||
-    env.ASK_BUDGET_HARD_STOP !== "1" ||
-    !(Number(env.ASK_MONTHLY_BUDGET_USD) > 0)
-  )) throw new Error("Public beta requires HTTPS, ASK_BUDGET_HARD_STOP=1 and a positive monthly Ask budget.");
+  if (publicBeta && (!cfg.secure || env.ASK_BUDGET_HARD_STOP !== "1" || !(Number(env.ASK_MONTHLY_BUDGET_USD) > 0)))
+    throw new Error("Public beta requires HTTPS, ASK_BUDGET_HARD_STOP=1 and a positive monthly Ask budget.");
   const betaGate = publicBeta ? createPublicBetaGate({ now }) : null;
   const limiter = createLimiter();
   const serveStatic =
@@ -136,7 +133,14 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
       if (p === "/logout") return logout(req, res);
       if (p === "/api/session") {
         res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-        return res.end(JSON.stringify({ ok: true, auth: needsLogin(req, cfg) && !publicBeta, signedIn: Boolean(session(req)), publicBeta }));
+        return res.end(
+          JSON.stringify({
+            ok: true,
+            auth: needsLogin(req, cfg) && !publicBeta,
+            signedIn: Boolean(session(req)),
+            publicBeta,
+          }),
+        );
       }
       if (!OPEN.has(p) && needsLogin(req, cfg)) {
         const s = session(req);
