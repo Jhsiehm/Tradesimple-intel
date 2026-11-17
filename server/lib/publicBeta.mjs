@@ -186,6 +186,6 @@ export function createPublicBetaGate({ now = Date.now } = {}) {
         retryAfterS: Math.max(1, Math.ceil(slot.retryMs / 1000)),
       };
     }
-    return { ok: true, id: access.id };
+    return { ok: true, id: access.id, visitor };
   };
 }
