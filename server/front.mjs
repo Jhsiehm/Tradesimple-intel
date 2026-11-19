@@ -136,9 +136,9 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
         return res.end(
           JSON.stringify({
             ok: true,
-            auth: needsLogin(req, cfg) && !publicBeta,
+            auth: needsLogin(req, cfg) && (!publicBeta || Boolean(session(req))),
             signedIn: Boolean(session(req)),
-            publicBeta,
+            ...(publicBeta ? { publicBeta: true } : {}),
           }),
         );
       }
