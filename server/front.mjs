@@ -158,6 +158,7 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
           }
           // Ask's public-mode tool allowlist is enforced in the handler too.
           req.publicBeta = true;
+          req.publicBetaVisitor = access.visitor;
         } else if (!s && publicBeta && (req.method === "GET" || req.method === "HEAD") && !API.test(p)) {
           // Public frontend assets can be viewed anonymously.
         } else if (!s) {
