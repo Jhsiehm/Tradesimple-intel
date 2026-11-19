@@ -5,6 +5,7 @@
  * outside /api and /geo, and finally the API router. In development on loopback this is a pass-through.
  */
 import path from "node:path";
+import { createPublicBetaGate } from "./lib/publicBeta.mjs";
 import {
   authConfig,
   checkTotp,
@@ -36,6 +37,11 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
     throw new Error(`Sign-in is not configured:\n  - ${cfg.problems.join("\n  - ")}`);
   if (cfg.production && !cfg.secure)
     log(`intel auth: WARNING ${cfg.origin} is plain http; the password and session cookie travel unencrypted.`);
+  // Public beta is opt-in, requires owner authentication and a bounded AI budget.
+  const publicBeta = cfg.production && env.INTEL_PUBLIC_BETA === "on";
+  if (publicBeta && (!cfg.secure || env.ASK_BUDGET_HARD_STOP !== "1" || !(Number(env.ASK_MONTHLY_BUDGET_USD) > 0)))
+    throw new Error("Public beta requires HTTPS, ASK_BUDGET_HARD_STOP=1 and a positive monthly Ask budget.");
+  const betaGate = publicBeta ? createPublicBetaGate({ now }) : null;
   const limiter = createLimiter();
   const serveStatic =
     cfg.production || env.INTEL_SERVE_DIST === "1" ? staticSite(path.join(root, env.INTEL_DIST || "dist")) : null;
@@ -127,18 +133,42 @@ export function createFront({ handle, root, env = process.env, now = () => Date.
       if (p === "/logout") return logout(req, res);
       if (p === "/api/session") {
         res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-        return res.end(JSON.stringify({ ok: true, auth: needsLogin(req, cfg), signedIn: Boolean(session(req)) }));
+        return res.end(
+          JSON.stringify({
+            ok: true,
+            auth: needsLogin(req, cfg) && (!publicBeta || Boolean(session(req))),
+            signedIn: Boolean(session(req)),
+            ...(publicBeta ? { publicBeta: true } : {}),
+          }),
+        );
       }
       if (!OPEN.has(p) && needsLogin(req, cfg)) {
         const s = session(req);
-        if (!s) {
+        // Anonymous beta visitors may view static assets and explicitly listed
+        // APIs only. The same gate applies even when bypassing the Vercel frontend.
+        if (!s && publicBeta && API.test(p)) {
+          const access = betaGate(req);
+          if (!access.ok) {
+            res.writeHead(access.status, {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+              ...(access.retryAfterS ? { "Retry-After": String(access.retryAfterS) } : {}),
+            });
+            return res.end(JSON.stringify({ ok: false, error: access.error }));
+          }
+          // Ask's public-mode tool allowlist is enforced in the handler too.
+          req.publicBeta = true;
+          req.publicBetaVisitor = access.visitor;
+        } else if (!s && publicBeta && (req.method === "GET" || req.method === "HEAD") && !API.test(p)) {
+          // Public frontend assets can be viewed anonymously.
+        } else if (!s) {
           if (API.test(p) || (req.method !== "GET" && req.method !== "HEAD")) {
             res.writeHead(401, { "Content-Type": "application/json", "Cache-Control": "no-store" });
             return res.end(JSON.stringify({ ok: false, error: "Sign in required.", login: "/login", missing: "" }));
           }
           return redirect(res, `/login?next=${encodeURIComponent(safeNext(p + url.search))}`);
         }
-        if (s.exp - now() < cfg.ttlMs / 2) issue(res);
+        if (s && s.exp - now() < cfg.ttlMs / 2) issue(res);
       }
       if (serveStatic && !API.test(p) && (req.method === "GET" || req.method === "HEAD"))
         return await serveStatic(req, res, url);
