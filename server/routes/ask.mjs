@@ -127,7 +127,7 @@ export function makeAskHandler({
     }
     if (memory) asked.memory = memory;
     if (!publicBeta && scheduleReply(asked, res, now)) return undefined;
-    const client = clientOf(req, env);
+    const client = publicBeta ? req.publicBetaVisitor || clientOf(req, env) : clientOf(req, env);
     const slot = limiter.take(client, now());
     if (!slot.ok)
       return reply(429, {
